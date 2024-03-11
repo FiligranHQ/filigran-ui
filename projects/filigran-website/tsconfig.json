@@ -19,7 +19,7 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "filigran-component-library": ["../../packages/filigran-component-library/lib/main"]
+      "filigran-ui": ["../../packages/filigran-ui/lib/main"]
     },
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

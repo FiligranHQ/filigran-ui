@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import {Button} from 'filigran-component-library'
+import {Button} from 'filigran-ui'
 export default async function Home() {
   return (
     <main className="prose mx-auto flex max-w-4xl flex-1 dark:prose-invert">
