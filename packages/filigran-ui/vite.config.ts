@@ -7,11 +7,7 @@ import dts from 'vite-plugin-dts';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
-    dts({
-      insertTypesEntry: true,
-      include: ['lib/**/!(*.spec|*.test).{ts,tsx}']
-    })
+    react()
   ],
   resolve: {
     alias: {
@@ -23,10 +19,15 @@ export default defineConfig({
         entry: resolve(__dirname, 'lib/main.ts'),
         formats: ['es']
       },
-      copyPublicDir: false,
-      rollupOptions: {
-        external: ['react', 'react/jsx-runtime']
-      }
+    copyPublicDir: false,
+    rollupOptions: {
+      external: ['react', 'react/jsx-runtime'],
+      // output: {
+      //   preserveModules: true,
+      //   entryFileNames: ({ name: fileName }) => {
+      //     return `${fileName}.js`
+      //   },
+      // },
+    }
     },
-
 })
