@@ -1,12 +1,12 @@
 import type {Metadata} from 'next'
 import Link from 'next/link'
-import {ContentMenu, getAllContents, getContentMenu} from '@/utils/mdx.util'
+import {getContentMenu} from '@/utils/mdx.util'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion'
+} from 'filigran-tsup/accordion'
 
 export const metadata: Metadata = {
   title: 'Filigran docs',

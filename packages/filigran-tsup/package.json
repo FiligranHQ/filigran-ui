@@ -1,0 +1,45 @@
+{
+  "name": "filigran-tsup",
+  "version": "0.0.29",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.22",
+    "@types/react-dom": "^18.2.7",
+    "autoprefixer": "10.4.15",
+    "postcss": "8.4.30",
+    "tailwindcss": "3.3.3",
+    "tsup": "7.2.0",
+    "typescript": "5.1.6"
+  },
+  "dependencies": {
+    "@radix-ui/react-accordion": "^1.1.2",
+    "@radix-ui/react-slot": "^1.0.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "lucide-react": "^0.279.0",
+    "tailwind-merge": "^1.14.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./button": {
+      "import":"./dist/components/servers/button/button.js",
+      "types":"./dist/components/servers/button/button.d.ts"
+    },
+    "./accordion": {
+      "import":"./dist/components/clients/accordion/accordion.js",
+      "types":"./dist/components/clients/accordion/accordion.d.ts"
+    }
+  }
+}
