@@ -1,6 +1,6 @@
 {
   "name": "filigran-tsup",
-  "version": "0.0.29",
+  "version": "0.0.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -34,12 +34,12 @@
       "types": "./dist/index.d.ts"
     },
     "./button": {
-      "import":"./dist/components/servers/button/button.js",
-      "types":"./dist/components/servers/button/button.d.ts"
+      "import":"./dist/components/servers/button.js",
+      "types":"./dist/components/servers/button.d.ts"
     },
     "./accordion": {
-      "import":"./dist/components/clients/accordion/accordion.js",
-      "types":"./dist/components/clients/accordion/accordion.d.ts"
+      "import":"./dist/components/clients/accordion.js",
+      "types":"./dist/components/clients/accordion.d.ts"
     }
   }
 }
