@@ -1,5 +1,5 @@
 import {ModeToggle} from '@/components/mode-toggle'
-import {Button} from '@/components/ui/button'
+import {Button} from 'filigran-ui/servers'
 import Link from 'next/link'
 import Logo from '../public/logo.svg'
 export function SiteHeader() {

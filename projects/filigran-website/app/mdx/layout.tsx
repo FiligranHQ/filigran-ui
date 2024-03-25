@@ -6,7 +6,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from 'filigran-tsup/accordion'
+} from 'filigran-ui/clients'
 
 export const metadata: Metadata = {
   title: 'Filigran docs',

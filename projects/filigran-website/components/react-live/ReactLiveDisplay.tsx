@@ -3,7 +3,7 @@
 import {LiveProvider, LiveEditor, LiveError, LivePreview} from 'react-live'
 import {FunctionComponent} from 'react'
 import {tw} from 'twind'
-import {Button} from '@/components/ui/button'
+import {Button} from 'filigran-ui/servers'
 
 interface ReactLiveDisplayProps {
   scope?: any

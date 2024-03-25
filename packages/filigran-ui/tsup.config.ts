@@ -3,7 +3,6 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path'
 import { defineConfig } from "tsup";
 
-
 function readFilesRecursively(directory: string) {
   const files: string[] = [];
 
@@ -40,7 +39,6 @@ async function addDirectivesToChunkFiles(distPath = 'dist'): Promise<void> {
         !file.includes('clients');
 
       if (isIgnoreFile) {
-        console.log(`⏭️ Directive 'use client'; has been skipped for ${file}`);
         continue;
       }
 
@@ -59,22 +57,10 @@ async function addDirectivesToChunkFiles(distPath = 'dist'): Promise<void> {
     console.error('⚠️ Something error:', err);
   }
 }
-// import { defineConfig } from 'tsup';
-//
-// export default defineConfig({
-//   dts: true, // Generate .d.ts files
-//   minify: true, // Minify output
-//   sourcemap: true, // Generate sourcemaps
-//   treeshake: true, // Remove unused code
-//   clean: true, // Clean output directory before building
-//   outDir:"dist", // Output directory
-//   entry: ['src/index.ts', 'src/components/**/index.ts'], // Entry point(s)
-//   format: ['esm'], // Output format(s)
-// });
 
 export default defineConfig(() => {
   return {
-    entry: ["src/index.ts", "src/components/**/*.{ts,tsx}"],
+    entry: ["src/index.ts","src/plugin.ts", "src/components/**/*.{ts,tsx}"],
     splitting: true,
     treeshake: true,
     sourcemap: true,
