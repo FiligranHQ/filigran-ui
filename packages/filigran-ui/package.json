@@ -1,6 +1,6 @@
 {
   "name": "filigran-ui",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Filigran UI library",
   "author": "Filigran",
   "main": "./dist/index.js",
@@ -42,18 +42,22 @@
   },
   "exports": {
     ".": {
+      "require": "./dist/index.js",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./plugin": {
+      "require": "./dist/plugin.js",
       "import": "./dist/plugin.js",
       "types": "./dist/plugin.d.ts"
     },
     "./clients": {
+      "require": "./dist/clients/index.js",
       "import": "./dist/clients/index.js",
       "types": "./dist/clients/index.d.ts"
     },
     "./servers": {
+      "require": "./dist/servers/index.js",
       "import": "./dist/servers/index.js",
       "types": "./dist/servers/index.d.ts"
     }
