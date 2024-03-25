@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "build:filigran-website": "npm run build -w filigran-website",
     "dev:filigran-website": "npm run dev -w filigran-website"
   },
   "private": true,
