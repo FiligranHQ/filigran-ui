@@ -5,6 +5,7 @@ const config = {
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
+    '../../packages/filigran-ui/src/components/**/*.{ts,tsx}'
   ],
   prefix: '',
   theme: {
