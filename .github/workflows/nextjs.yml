@@ -24,6 +24,8 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
+env:
+  BASE_PATH: '/filigran-ui'
 jobs:
   # Build job
   build:
