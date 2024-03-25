@@ -2,7 +2,6 @@ import fs from 'fs'
 import path from 'path'
 import {serialize} from 'next-mdx-remote/serialize'
 
-const regexMdx = /\.mdx?$;/
 export interface ContentMenu {
   title: string
   content: ContentMenu[]
@@ -52,7 +51,7 @@ async function getMDXMenu(
       } else {
         data.content.push({
           title: metadata?.frontmatter.title as string,
-          slug: `${parentDir ? `${parentDir}/` : ''}${file.replace(regexMdx, '')}`,
+          slug: `${parentDir ? `${parentDir}/` : ''}${file.replace('.mdx', '')}`,
           content: [],
         })
       }
@@ -82,9 +81,9 @@ async function getMDXData(dir: string) {
   const mdxFiles = getMDXFiles(dir)
   const data = []
   for (const file of mdxFiles) {
-    const {content, metadata} = await readMDXFile(path.join(dir, file))
+    const {content, metadata} = await readMDXFile(path.join(dir, file));
     data.push({
-      slug: file.replace(regexMdx, ''),
+      slug: file.replace('.mdx', ''),
       content,
       metadata,
     })

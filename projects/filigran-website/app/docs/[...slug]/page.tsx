@@ -4,7 +4,9 @@ import {CustomMDX} from '@/components/mdx-component'
 
 export async function generateStaticParams() {
   const allContents = await getAllContents()
-  return allContents.map(({slug}) => slug)
+  return allContents.map(({slug}) => ({
+    slug: slug.split('/')
+  }))
 }
 export default async function Blog({params}: {params: {slug: string[]}}) {
   const slug = params.slug.join('/')

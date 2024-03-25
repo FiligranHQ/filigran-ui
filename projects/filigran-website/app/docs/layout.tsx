@@ -40,7 +40,7 @@ export default async function RootLayout({
                         <Link
                           key={m.slug}
                           className="my-2 flex flex-col space-y-1"
-                          href={`/mdx/${m.slug}`}>
+                          href={`/docs/${m.slug}`}>
                           {m.title}
                         </Link>
                       )
@@ -54,7 +54,7 @@ export default async function RootLayout({
             <Link
               key={menu.slug}
               className="my-2 flex flex-col space-y-1"
-              href={`/mdx/${menu.slug}`}>
+              href={`/docs/${menu.slug}`}>
               {menu.title}
             </Link>
           )

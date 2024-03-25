@@ -10,7 +10,7 @@ export default async function BlogPage() {
         <Link
           key={content.slug}
           className="mb-4 flex flex-col space-y-1"
-          href={`/mdx/${content.slug}`}>
+          href={`/docs/${content.slug}`}>
           {content.slug}
         </Link>
       ))}
