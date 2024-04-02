@@ -3,7 +3,7 @@
 import {LiveProvider, LiveEditor, LiveError, LivePreview} from 'react-live'
 import {FunctionComponent} from 'react'
 import {tw} from 'twind'
-import {Button} from 'filigran-ui'
+import * as FiligranUIComponent from 'filigran-ui'
 
 interface ReactLiveDisplayProps {
   scope?: any
@@ -15,7 +15,7 @@ const ReactLiveDisplay: FunctionComponent<ReactLiveDisplayProps> = ({
   codeExample,
   noInline,
 }) => {
-  const customComponent = {Button}
+  const customComponent = {...FiligranUIComponent}
   return (
     <div className="py-4">
       <LiveProvider

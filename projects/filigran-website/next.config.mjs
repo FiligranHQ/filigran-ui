@@ -2,15 +2,6 @@
 const nextConfig = {
   output: 'export',
   basePath: process.env.BASE_PATH ?? '',
-  async redirects() {
-    return [
-      {
-        source: '/docs',
-        destination: '/docs/button',
-        permanent: true,
-      },
-    ]
-  },
   webpack(config) {
     // Grab the existing rule that handles SVG imports
     const fileLoaderRule = config.module.rules.find((rule) =>
