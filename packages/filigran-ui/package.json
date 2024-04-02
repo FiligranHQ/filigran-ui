@@ -52,14 +52,15 @@
       "types": "./dist/plugin.d.ts"
     },
     "./clients": {
-      "require": "./dist/clients/index.js",
-      "import": "./dist/clients/index.js",
-      "types": "./dist/clients/index.d.ts"
+      "require": "./dist/components/clients/index.js",
+      "import": "./dist/components/clients/index.js",
+      "types": "./dist/components/clients/index.d.ts"
     },
     "./servers": {
-      "require": "./dist/servers/index.js",
-      "import": "./dist/servers/index.js",
-      "types": "./dist/servers/index.d.ts"
-    }
+      "require": "./dist/components/servers/index.js",
+      "import": "./dist/components/servers/index.js",
+      "types": "./dist/components/servers/index.d.ts"
+    },
+    "./theme.css": "./dist/index.css"
   }
 }

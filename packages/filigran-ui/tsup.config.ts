@@ -50,7 +50,7 @@ async function addDirectivesToChunkFiles(distPath = 'dist'): Promise<void> {
 
       await fsPromises.writeFile(filePath, updatedContent, 'utf8');
 
-      console.log(`💚 Directive 'use client'; has been added to ${file}`);
+      // console.log(`💚 Directive 'use client'; has been added to ${file}`);
     }
   } catch (err) {
     // eslint-disable-next-line no-console -- We need to log the error
@@ -60,7 +60,7 @@ async function addDirectivesToChunkFiles(distPath = 'dist'): Promise<void> {
 
 export default defineConfig(() => {
   return {
-    entry: ["src/index.ts","src/plugin.ts", "src/components/**/*.{ts,tsx}"],
+    entry: ["src/index.ts","src/plugin.ts", "src/global.css", "src/components/**/*.{ts,tsx}"],
     splitting: true,
     treeshake: true,
     sourcemap: true,
