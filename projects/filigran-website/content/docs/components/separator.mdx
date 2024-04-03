@@ -1,3 +1,47 @@
 ---
 title: Separator
 ---
+
+## Example
+
+Tailwind is not working well directly in MDX
+TODO: make it work or wrapper in code display component
+<div>
+  <div className={(`space-y-1`)}>
+    <h4 className={(`text-sm font-medium leading-none`)}>Radix Primitives</h4>
+    <p className={(`text-sm text-muted-foreground`)}>
+      An open-source UI component library.
+    </p>
+  </div>
+  <Separator className={(`my-4`)}/>
+  <div className={(`flex h-[1.25rem] items-center space-x-4 text-sm gap-2`)}>
+    <div>Blog</div>
+    <Separator orientation="vertical" />
+    <div>Docs</div>
+    <Separator orientation="vertical" />
+    <div>Source</div>
+  </div>
+</div>
+
+## Playground
+
+<ReactLiveDisplay
+  codeExample={`
+          <div className={tw(\`flex gap-2 bg-white p-4\`)}>
+            <div>
+              <div className={tw(\`space-y-1\`)}>
+                <h4 className={tw(\`text-sm font-medium leading-none\`)}>Radix Primitives</h4>
+                <p className={tw(\`text-sm text-muted-foreground\`)}>
+                  An open-source UI component library.
+                </p>
+              </div>
+              <Separator className={tw(\`my-4\`)} />
+              <div className={tw(\`flex h-5 items-center space-x-4 text-sm\`)}>
+                <div>Blog</div>
+                <Separator orientation="vertical" />
+                <div>Docs</div>
+                <Separator orientation="vertical" />
+                <div>Source</div>
+              </div>
+            </div>
+          </div>`} />
