@@ -1,10 +1,9 @@
 {
   "name": "filigran-icon",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Filigran icon",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "devDependencies": {
     "@svgr/cli": "8.1.0",
     "tsup": "8.0.2",
@@ -19,8 +18,14 @@
   "exports": {
     ".": {
       "require": "./dist/index.js",
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/index.js"
     }
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FiligranHQ/filigran-ui/tree/main/packages/filigran-icon"
+  },
+  "files": [
+    "dist"
+  ]
 }
