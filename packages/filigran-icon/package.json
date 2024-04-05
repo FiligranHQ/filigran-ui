@@ -1,0 +1,26 @@
+{
+  "name": "filigran-icon",
+  "version": "1.0.0",
+  "description": "Filigran icon",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "devDependencies": {
+    "@svgr/cli": "8.1.0",
+    "tsup": "8.0.2",
+    "typescript": "5.4.3"
+  },
+  "scripts": {
+    "build": "rimraf dist && yarn svgr && tsup",
+    "svgr": "svgr --icon --no-dimensions --title-prop --typescript --svg-props role=img -d src --index-template index-template.js -- assets"
+  },
+  "author": "Filigran",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  }
+}
