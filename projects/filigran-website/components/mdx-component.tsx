@@ -6,6 +6,7 @@ import rehypeSlug from 'rehype-slug'
 import rehypeToc from '@jsdevtools/rehype-toc'
 import {customizeTOCUtil} from '@/utils/customizeTOC.util' // https://unifiedjs.com/explore/package/remark-toc/
 import * as FiligranUIComponent from 'filigran-ui'
+import * as FiligranIcon from 'filigran-icon'
 
 const options = {
   mdxOptions: {
@@ -16,6 +17,7 @@ const options = {
 
 const components = {
   ...FiligranUIComponent,
+  ...FiligranIcon,
   ReactLiveDisplay: ReactLiveDisplay,
 }
 

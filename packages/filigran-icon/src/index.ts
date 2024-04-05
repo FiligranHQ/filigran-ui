@@ -1,2 +1,4 @@
 import { lazy } from "react";
-const PolarArea = lazy(() => import("./PolarArea"));
+export const LogoFiligran = lazy(() => import("./LogoFiligran"));
+export const LogoLoader = lazy(() => import("./LogoLoader"));
+export const PolarArea = lazy(() => import("./PolarArea"));

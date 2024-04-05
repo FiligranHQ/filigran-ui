@@ -1,1 +1,3 @@
-export { default as PolarArea } from "./PolarArea";
+import { lazy } from "react";
+export const LogoFiligran = lazy(() => import("./LogoFiligran"));
+export const PolarArea = lazy(() => import("./PolarArea"));
