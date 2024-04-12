@@ -16,7 +16,10 @@ const ReactLiveDisplay: FunctionComponent<ReactLiveDisplayProps> = ({
   codeExample,
   noInline,
 }) => {
-  const customComponent = {...FiligranUIComponent, ...FiligranIcon}
+  const customIcon = { ...FiligranIcon };
+  // @ts-ignore
+  delete customIcon['default'];
+  const customComponent = {...FiligranUIComponent, ...customIcon}
   return (
     <div className="py-4">
       <LiveProvider
