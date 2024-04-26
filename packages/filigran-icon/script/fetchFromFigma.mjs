@@ -2,8 +2,12 @@ import * as fs from 'fs'
 
 const FIGMA_API_TOKEN = process.env.FIGMA_API_TOKEN;
 const FIGMA_FILE_ID = process.env.FIGMA_FILE_ID;
-const FIGMA_NODE_ID = '207:3731';
+const FIGMA_NODE_ID = '30:39';
 
+const replaceSvg = (svgContent) => {
+  const hexColorRegex = /#([0-9A-Fa-f]{3,6})/g;
+  return svgContent.replace(hexColorRegex, "currentColor");
+}
 const createFiles = (illustrations) => {
   illustrations.forEach(obj => {
     const fileName = `${obj.name}.svg`; // File name based on object's name
@@ -25,7 +29,7 @@ const getIllustrationName = (components) => {
         .then(response => response.text())
         .then(svg => ({
           name, // or "name: getIllustrationName,"
-          svg, // or "svg,"
+          svg: replaceSvg(svg), // or "svg,"
         }))
       )));
 };
@@ -40,7 +44,7 @@ const fetchFigmaFile = () => {
 }
 
 const getComponentsFromNode = (node) => {
-  return node.nodes['207:3731'].document.children;
+  return node.nodes['30:39'].document.children;
 }
 async function run () {
   if(!FIGMA_API_TOKEN){

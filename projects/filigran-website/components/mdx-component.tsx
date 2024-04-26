@@ -7,6 +7,7 @@ import rehypeToc from '@jsdevtools/rehype-toc'
 import {customizeTOCUtil} from '@/utils/customizeTOC.util' // https://unifiedjs.com/explore/package/remark-toc/
 import * as FiligranUIComponent from 'filigran-ui'
 import * as FiligranIcon from 'filigran-icon'
+import {DisplayAllIcons} from '@/components/display-all-icons'
 
 const options = {
   mdxOptions: {
@@ -19,6 +20,7 @@ const components = {
   ...FiligranUIComponent,
   ...FiligranIcon,
   ReactLiveDisplay: ReactLiveDisplay,
+  DisplayAllIcons: DisplayAllIcons
 }
 
 export async function CustomMDX(props: any) {
