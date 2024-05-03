@@ -4,7 +4,6 @@ const FiligranUIPlugin = () => {
   return plugin(
     ({ addUtilities, addComponents }) => {
     },
-    // extend the colors config
     {
       darkMode: ['class'],
       theme: {
@@ -70,6 +69,15 @@ const FiligranUIPlugin = () => {
             'accordion-down': 'accordion-down 0.2s ease-out',
             'accordion-up': 'accordion-up 0.2s ease-out',
           },
+          spacing: {
+            'xxs': '0.125rem',
+            'xs': '0.25rem',
+            's': '0.5rem',
+            'm': '0.75rem',
+            'l': '1rem',
+            'xl': '1.5rem',
+            'xxl': '2rem'
+          }
         },
       },
     },

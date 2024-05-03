@@ -20,6 +20,7 @@ export const CourseOfActionIcon = lazy(() => import("./CourseOfAction"));
 export const DashboardIcon = lazy(() => import("./Dashboard"));
 export const DataSourceIcon = lazy(() => import("./DataSource"));
 export const DatabaseOutline1Icon = lazy(() => import("./DatabaseOutline1"));
+export const DeleteIcon = lazy(() => import("./Delete"));
 export const EventIcon = lazy(() => import("./Event"));
 export const ExternalReferenceIcon = lazy(() => import("./ExternalReference"));
 export const GlobeLine1Icon = lazy(() => import("./GlobeLine1"));
