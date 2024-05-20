@@ -11,8 +11,9 @@
   },
   "scripts": {
     "build": "rimraf dist && yarn svgr && tsup",
+    "tsup": "tsup",
     "extract-icons": "node script/fetchFromFigma.mjs FIGMA_FILE_ID=$FIGMA_FILE_ID FIGMA_API_TOKEN=$FIGMA_API_TOKEN",
-    "svgr": "svgr --icon --no-dimensions --title-prop --typescript --svg-props role=img -d src --index-template index-template.js -- assets",
+    "svgr": "svgr --icon --no-dimensions  --title-prop --typescript --svg-props role=img -d src --index-template index-template.js  --template svg-template.js -- assets ",
     "build:all": "yarn extract-icons && yarn svgr && yarn build"
   },
   "author": "Filigran",
@@ -20,7 +21,8 @@
   "exports": {
     ".": {
       "require": "./dist/index.js",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
   "repository": {

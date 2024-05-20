@@ -1,9 +1,6 @@
 import * as React from "react";
 import type { SVGProps } from "react";
-interface SVGRProps {
-  title?: string;
-  titleId?: string;
-}
+import type { SVGRProps } from "../model/svgr";
 const SvgCaseRft = ({
   title,
   titleId,
