@@ -1,4 +1,5 @@
 import type {Metadata} from 'next'
+import 'filigran-ui/theme.css'
 import './globals.css'
 import {ThemeProvider} from '@/components/providers'
 import {SiteHeader} from '@/components/site-header'
