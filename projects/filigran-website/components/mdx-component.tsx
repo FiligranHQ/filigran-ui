@@ -8,6 +8,8 @@ import {customizeTOCUtil} from '@/utils/customizeTOC.util' // https://unifiedjs.
 import * as FiligranUIComponent from 'filigran-ui'
 import * as FiligranIcon from 'filigran-icon'
 import {DisplayAllIcons} from '@/components/display-all-icons'
+import {ExampleTable} from '@/components/example-table'
+import {ExampleDataTable} from '@/components/example-data-table'
 
 const options = {
   mdxOptions: {
@@ -20,7 +22,9 @@ const components = {
   ...FiligranUIComponent,
   ...FiligranIcon,
   ReactLiveDisplay: ReactLiveDisplay,
-  DisplayAllIcons: DisplayAllIcons
+  DisplayAllIcons: DisplayAllIcons,
+  ExampleTable: ExampleTable,
+  ExampleDataTable: ExampleDataTable
 }
 
 export async function CustomMDX(props: any) {
