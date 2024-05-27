@@ -7,6 +7,7 @@ import rehypeToc from '@jsdevtools/rehype-toc'
 import {customizeTOCUtil} from '@/utils/customizeTOC.util' // https://unifiedjs.com/explore/package/remark-toc/
 import * as FiligranUIComponent from 'filigran-ui'
 import * as FiligranIcon from 'filigran-icon'
+import * as LucidIcon from 'lucide-react'
 import {DisplayAllIcons} from '@/components/display-all-icons'
 import {ExampleTable} from '@/components/example-table'
 import {ExampleDataTable} from '@/components/example-data-table'
@@ -20,6 +21,7 @@ const options = {
 }
 
 const components = {
+  ...LucidIcon,
   ...FiligranUIComponent,
   ...FiligranIcon,
   ReactLiveDisplay: ReactLiveDisplay,
