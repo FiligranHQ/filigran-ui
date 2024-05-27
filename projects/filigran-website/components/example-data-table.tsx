@@ -151,7 +151,6 @@ export function ExampleDataTable() {
           className="w-[200px] border-primary p-4"
         />
       </div>
-      {/*// @ts-ignore*/}
       <DataTable
         data={invoices}
         columns={columns}

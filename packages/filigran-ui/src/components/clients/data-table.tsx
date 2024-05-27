@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from './table';
-import { forwardRef, useImperativeHandle, useState } from 'react';
+import { useImperativeHandle, useState } from 'react';
 import {
   closestCenter,
   DndContext,
@@ -43,7 +43,7 @@ import {
 } from './dropdown-menu';
 import { Button } from '../servers';
 import { ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
-import {cn} from '../../lib/utils'
+import {cn, fixedForwardRef} from '../../lib/utils'
 
 interface DataTableProps<TData extends { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -142,7 +142,7 @@ const DragAlongCell = ({ cell }: { cell: Cell<any, unknown> }) => {
   );
 };
 
-export const DataTable = forwardRef(function <
+function GenericDataTable<
   TData extends { id: string },
   TValue,
 >(
@@ -259,4 +259,6 @@ export const DataTable = forwardRef(function <
       </DndContext>
     </>
   );
-});
+};
+
+export const DataTable = fixedForwardRef(GenericDataTable);
