@@ -14,18 +14,22 @@
     "incremental": true,
     "plugins": [
       {
-        "name": "next",
-      },
+        "name": "next"
+      }
     ],
     "paths": {
       "@/*": ["./*"],
       "filigran-ui": ["../../packages/filigran-ui/src/index.ts"],
       "filigran-ui/plugin": ["../../packages/filigran-ui/src/plugin.ts"],
-      "filigran-ui/clients": ["../../packages/filigran-ui/src/components/clients/index.ts"],
-      "filigran-ui/servers": ["../../packages/filigran-ui/src/components/servers/index.ts"],
-      "filigran-icon": ["../../packages/filigran-icon/dist/index.js"],
-    },
+      "filigran-ui/clients": [
+        "../../packages/filigran-ui/src/components/clients/index.ts"
+      ],
+      "filigran-ui/servers": [
+        "../../packages/filigran-ui/src/components/servers/index.ts"
+      ],
+      "filigran-icon": ["../../packages/filigran-icon/dist/index.js"]
+    }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules"]
 }

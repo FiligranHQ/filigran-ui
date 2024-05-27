@@ -1,19 +1,16 @@
-"use client"
-import { ColumnDef } from '@tanstack/react-table';
-import {
-  Checkbox,
-  DataTable
-} from 'filigran-ui/clients'
+'use client'
+import {ColumnDef} from '@tanstack/react-table'
+import {Checkbox, DataTable} from 'filigran-ui/clients'
 import {useState} from 'react'
 import {cn} from '@/utils/utils'
 import {Input} from 'filigran-ui'
 
 interface Invoices {
-  id: string;
-  invoice: string;
-  paymentStatus: string;
-  totalAmount: string;
-  paymentMethod: string;
+  id: string
+  invoice: string
+  paymentStatus: string
+  totalAmount: string
+  paymentMethod: string
 }
 const invoices: Invoices[] = [
   {
@@ -67,38 +64,39 @@ const invoices: Invoices[] = [
   },
 ]
 
-
 export function ExampleDataTable() {
   const rowSelectionState = useState({})
-  const [rowSelection, setRowSelection] = rowSelectionState;
-  const [inputSearch, setInputSearch] = useState('');
-  const HighlightSearchTerm = ({text}: {text:string}) => {
+  const [rowSelection, setRowSelection] = rowSelectionState
+  const [inputSearch, setInputSearch] = useState('')
+  const HighlightSearchTerm = ({text}: {text: string}) => {
     if (!inputSearch) {
-      return <span>{text}</span>;
+      return <span>{text}</span>
     }
 
     // Split the text into parts based on the search term
-    const parts = text.split(new RegExp(`(${inputSearch})`, 'gi'));
+    const parts = text.split(new RegExp(`(${inputSearch})`, 'gi'))
 
     return (
       <span>
-      {parts.map((part, index) =>
-        part.toLowerCase() === inputSearch.toLowerCase() ? (
-          <span key={index} className={'bg-red text-white'}>
-            {part}
-          </span>
-        ) : (
-          part
-        )
-      )}
-    </span>
-    );
+        {parts.map((part, index) =>
+          part.toLowerCase() === inputSearch.toLowerCase() ? (
+            <span
+              key={index}
+              className={'bg-red text-white'}>
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    )
   }
   const columns: ColumnDef<Invoices>[] = [
     {
       id: 'select',
       size: 20,
-      header: ({ table }) => (
+      header: ({table}) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
@@ -108,7 +106,7 @@ export function ExampleDataTable() {
           aria-label="Select all"
         />
       ),
-      cell: ({ row }) => (
+      cell: ({row}) => (
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
@@ -128,7 +126,9 @@ export function ExampleDataTable() {
       accessorKey: 'paymentStatus',
       id: 'paymentStatus',
       header: 'Payment status',
-      cell:({row}) => (<HighlightSearchTerm text={row.original.paymentStatus}/>)
+      cell: ({row}) => (
+        <HighlightSearchTerm text={row.original.paymentStatus} />
+      ),
     },
     {
       accessorKey: 'totalAmount',
@@ -140,18 +140,27 @@ export function ExampleDataTable() {
       id: 'paymentMethod',
       header: 'Payment method',
     },
-  ];
+  ]
   return (
     <>
       <div>
-       <Input placeholder="underline text" onChange={e => setInputSearch(e.target.value)} value={inputSearch} className="p-4 w-[200px] border-primary"/>
+        <Input
+          placeholder="underline text"
+          onChange={(e) => setInputSearch(e.target.value)}
+          value={inputSearch}
+          className="w-[200px] border-primary p-4"
+        />
       </div>
       {/*// @ts-ignore*/}
-    <DataTable data={invoices} columns={columns} rowSelectionState={rowSelectionState}/>
-    <div className="container mx-auto py-10">
-      <div>Selected</div>
-      {JSON.stringify(rowSelection, null, 20)}
-    </div>
+      <DataTable
+        data={invoices}
+        columns={columns}
+        rowSelectionState={rowSelectionState}
+      />
+      <div className="container mx-auto py-10">
+        <div>Selected</div>
+        {JSON.stringify(rowSelection, null, 20)}
+      </div>
     </>
   )
 }

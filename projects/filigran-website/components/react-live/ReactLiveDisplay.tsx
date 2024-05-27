@@ -16,9 +16,9 @@ const ReactLiveDisplay: FunctionComponent<ReactLiveDisplayProps> = ({
   codeExample,
   noInline,
 }) => {
-  const customIcon = { ...FiligranIcon };
+  const customIcon = {...FiligranIcon}
   // @ts-ignore
-  delete customIcon['default'];
+  delete customIcon['default']
   const customComponent = {...FiligranUIComponent, ...customIcon}
   return (
     <div className="py-4">

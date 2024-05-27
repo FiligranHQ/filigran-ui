@@ -10,7 +10,7 @@ import * as FiligranIcon from 'filigran-icon'
 import {DisplayAllIcons} from '@/components/display-all-icons'
 import {ExampleTable} from '@/components/example-table'
 import {ExampleDataTable} from '@/components/example-data-table'
-import {ExampleMultiSelect} from "@/components/example-multi-select";
+import {ExampleMultiSelect} from '@/components/example-multi-select'
 
 const options = {
   mdxOptions: {
@@ -26,7 +26,7 @@ const components = {
   DisplayAllIcons: DisplayAllIcons,
   ExampleTable: ExampleTable,
   ExampleDataTable: ExampleDataTable,
-  ExampleMultiSelect: ExampleMultiSelect
+  ExampleMultiSelect: ExampleMultiSelect,
 }
 
 export async function CustomMDX(props: any) {

@@ -1,5 +1,13 @@
-import {Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow} from 'filigran-ui'
-
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from 'filigran-ui'
 
 const invoices = [
   {
