@@ -3,4 +3,5 @@ export * from './skeleton';
 export * from './breadcrumb';
 export * from './card';
 export * from './input';
-export * from './badge'
+export * from './badge';
+export * from './multi-select';
