@@ -81,7 +81,7 @@ async function getMDXData(dir: string) {
   const mdxFiles = getMDXFiles(dir)
   const data = []
   for (const file of mdxFiles) {
-    const {content, metadata} = await readMDXFile(path.join(dir, file));
+    const {content, metadata} = await readMDXFile(path.join(dir, file))
     data.push({
       slug: file.replace('.mdx', ''),
       content,

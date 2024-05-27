@@ -12,3 +12,4 @@ export * from './popover';
 export * from './table';
 export * from './data-table';
 export * from './form';
+export * from './command';
