@@ -9,7 +9,7 @@ const SvgScience = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 35 35"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgScience = ({
     <g clipPath="url(#science_svg__a)">
       <path
         fill="currentColor"
-        d="m28.875 26.833-8.458-11.272V9.479l1.968-2.464a.726.726 0 0 0-.568-1.182h-8.634c-.612 0-.948.7-.568 1.182l1.968 2.464v6.082L6.125 26.833c-.715.963-.03 2.334 1.167 2.334h20.416c1.196 0 1.882-1.371 1.167-2.334"
+        d="M19.8 18.4 14 10.67V6.5l1.35-1.69c.26-.33.03-.81-.39-.81H9.04c-.42 0-.65.48-.39.81L10 6.5v4.17L4.2 18.4c-.49.66-.02 1.6.8 1.6h14c.82 0 1.29-.94.8-1.6"
       />
     </g>
     <defs>
       <clipPath id="science_svg__a">
-        <path fill="#fff" d="M0 0h35v35H0z" />
+        <path fill="#fff" d="M0 0h24v24H0z" />
       </clipPath>
     </defs>
   </svg>

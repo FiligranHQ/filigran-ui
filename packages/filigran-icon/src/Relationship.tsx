@@ -9,7 +9,7 @@ const SvgRelationship = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 37 37"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -17,7 +17,7 @@ const SvgRelationship = ({
     {title ? <title id={titleId}>{title}</title> : null}
     <path
       fill="currentColor"
-      d="M3.083 6.167h3.084V3.083h9.25v3.084a15.417 15.417 0 0 1 15.416 15.416h3.084v9.25h-3.084v3.084H27.75v-3.084h-3.083v-9.25h3.083A12.333 12.333 0 0 0 15.417 9.25v3.083h-9.25V9.25H3.083zm24.667 18.5v3.083h3.083v-3.083zm-18.5-18.5V9.25h3.083V6.167z"
+      d="M2 4h2V2h6v2a10 10 0 0 1 10 10h2v6h-2v2h-2v-2h-2v-6h2a8 8 0 0 0-8-8v2H4V6H2zm16 12v2h2v-2zM6 4v2h2V4z"
     />
   </svg>
 );

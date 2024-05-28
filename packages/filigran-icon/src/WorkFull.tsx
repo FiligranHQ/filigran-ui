@@ -9,7 +9,7 @@ const SvgWorkFull = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 35 35"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgWorkFull = ({
     <g clipPath="url(#work-full_svg__a)">
       <path
         fill="currentColor"
-        d="M29.167 8.75h-5.834V5.833a2.907 2.907 0 0 0-2.916-2.916h-5.834a2.907 2.907 0 0 0-2.916 2.916V8.75H5.833a2.894 2.894 0 0 0-2.902 2.917l-.014 16.041a2.907 2.907 0 0 0 2.916 2.917h23.334a2.907 2.907 0 0 0 2.916-2.917V11.667a2.907 2.907 0 0 0-2.916-2.917m-8.75 0h-5.834V5.833h5.834z"
+        d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2m-6 0h-4V4h4z"
       />
     </g>
     <defs>
       <clipPath id="work-full_svg__a">
-        <path fill="#fff" d="M0 0h35v35H0z" />
+        <path fill="#fff" d="M0 0h24v24H0z" />
       </clipPath>
     </defs>
   </svg>

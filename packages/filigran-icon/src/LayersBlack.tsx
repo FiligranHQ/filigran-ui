@@ -9,7 +9,7 @@ const SvgLayersBlack = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 35 35"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgLayersBlack = ({
     <g clipPath="url(#layers_black_svg__a)">
       <path
         fill="currentColor"
-        d="M17.485 27.038 6.738 18.68 4.375 20.52 17.5 30.727l13.125-10.208-2.377-1.852zm.015-3.705 10.733-8.356 2.392-1.852L17.5 2.917 4.375 13.125l2.377 1.852z"
+        d="m11.99 18.54-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27z"
       />
     </g>
     <defs>
       <clipPath id="layers_black_svg__a">
-        <path fill="#fff" d="M0 0h35v35H0z" />
+        <path fill="#fff" d="M0 0h24v24H0z" />
       </clipPath>
     </defs>
   </svg>

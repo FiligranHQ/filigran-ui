@@ -9,7 +9,7 @@ const SvgOrganization = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 37 38"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgOrganization = ({
     <g clipPath="url(#organization_svg__a)">
       <path
         fill="currentColor"
-        d="M10.02 15.833H6.939v11.084h3.083zm9.25 0h-3.082v11.084h3.083zm13.105 14.25H3.083v3.167h29.292zm-3.854-14.25h-3.084v11.084h3.084zM17.729 5.162 25.761 9.5H9.697zm0-3.579L3.083 9.5v3.167h29.292V9.5z"
+        d="M6.329 10H4.382v7h1.947zm5.842 0h-1.947v7h1.947zm8.276 9h-18.5v2h18.5zm-2.434-9h-1.947v7h1.947zm-6.816-6.74L16.27 6H6.124zm0-2.26-9.25 5v2h18.5V6z"
       />
     </g>
     <defs>
       <clipPath id="organization_svg__a">
-        <path fill="#fff" d="M0 0h37v38H0z" />
+        <path fill="#fff" d="M0 0h23.368v24H0z" />
       </clipPath>
     </defs>
   </svg>

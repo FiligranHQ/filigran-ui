@@ -9,7 +9,7 @@ const SvgNote = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 38 38"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgNote = ({
     <g clipPath="url(#note_svg__a)">
       <path
         fill="currentColor"
-        d="M22.167 26.917H6.333v3.166h15.834zm9.5-12.667H6.333v3.167h25.334zm-25.334 9.5h25.334v-3.167H6.333zm0-15.833v3.166h25.334V7.917z"
+        d="M14 17H4v2h10zm6-8H4v2h16zM4 15h16v-2H4zM4 5v2h16V5z"
       />
     </g>
     <defs>
       <clipPath id="note_svg__a">
-        <path fill="#fff" d="M0 0h38v38H0z" />
+        <path fill="#fff" d="M0 0h24v24H0z" />
       </clipPath>
     </defs>
   </svg>

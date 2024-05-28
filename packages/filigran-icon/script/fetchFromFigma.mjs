@@ -19,6 +19,7 @@ const createFiles = (illustrations) => {
 
 const getIllustrationName = (components) => {
   const ids = components.map(({id}) => id);
+
   return fetch(
     `https://api.figma.com/v1/images/${FIGMA_FILE_ID}?ids=${ids.join()}&format=svg`,
     { headers: { 'X-Figma-Token': FIGMA_API_TOKEN } }
@@ -44,11 +45,15 @@ const fetchFigmaFile = () => {
 }
 
 const getComponentsFromNode = (node) => {
-  return node.nodes['30:39'].document.children;
+  return node.nodes['30:39'].document.children.filter((doc) => doc.type !== 'TEXT');
 }
 async function run () {
   if(!FIGMA_API_TOKEN){
     console.error('The Figma API token is not defined, you need to set an environment variable `FIGMA_API_TOKEN` to run the script');
+    return;
+  }
+  if(!FIGMA_FILE_ID){
+    console.error('The Figma file ID is not defined, you need to set an environment variable `FIGMA_FILE_ID` to run the script');
     return;
   }
   fetchFigmaFile()

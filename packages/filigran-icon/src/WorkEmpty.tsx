@@ -9,7 +9,7 @@ const SvgWorkEmpty = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 35 35"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -19,13 +19,13 @@ const SvgWorkEmpty = ({
       <path
         fill="currentColor"
         fillRule="evenodd"
-        d="M20.417 8.75V5.833h-5.834V8.75zM5.833 11.667v16.041h23.334V11.667zM29.167 8.75a2.907 2.907 0 0 1 2.916 2.917v16.041a2.907 2.907 0 0 1-2.916 2.917H5.833a2.907 2.907 0 0 1-2.916-2.917l.014-16.041A2.894 2.894 0 0 1 5.833 8.75h5.834V5.833a2.907 2.907 0 0 1 2.916-2.916h5.834a2.907 2.907 0 0 1 2.916 2.916V8.75z"
+        d="M14 6V4h-4v2zM4 8v11h16V8zm16-2c1.11 0 2 .89 2 2v11c0 1.11-.89 2-2 2H4c-1.11 0-2-.89-2-2l.01-11c0-1.11.88-2 1.99-2h4V4c0-1.11.89-2 2-2h4c1.11 0 2 .89 2 2v2z"
         clipRule="evenodd"
       />
     </g>
     <defs>
       <clipPath id="work-empty_svg__a">
-        <path fill="#fff" d="M0 0h35v35H0z" />
+        <path fill="#fff" d="M0 0h24v24H0z" />
       </clipPath>
     </defs>
   </svg>

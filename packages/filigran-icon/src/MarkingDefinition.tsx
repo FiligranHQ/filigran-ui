@@ -9,7 +9,7 @@ const SvgMarkingDefinition = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 37 37"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgMarkingDefinition = ({
     <g clipPath="url(#marking-definition_svg__a)">
       <path
         fill="currentColor"
-        d="M26.208 18.5a7.71 7.71 0 0 0-7.708-7.708 7.71 7.71 0 0 0-7.708 7.708 7.71 7.71 0 0 0 7.708 7.708 7.71 7.71 0 0 0 7.708-7.708M18.5 23.125a4.64 4.64 0 0 1-4.625-4.625 4.64 4.64 0 0 1 4.625-4.625 4.64 4.64 0 0 1 4.625 4.625 4.64 4.64 0 0 1-4.625 4.625m-10.792 0H4.625v6.167a3.09 3.09 0 0 0 3.083 3.083h6.167v-3.083H7.708zm0-15.417h6.167V4.625H7.708a3.09 3.09 0 0 0-3.083 3.083v6.167h3.083zm21.584-3.083h-6.167v3.083h6.167v6.167h3.083V7.708a3.09 3.09 0 0 0-3.083-3.083m0 24.667h-6.167v3.083h6.167a3.09 3.09 0 0 0 3.083-3.083v-6.167h-3.083z"
+        d="M17 12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5 5-2.24 5-5m-5 3c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3m-7 0H3v4c0 1.1.9 2 2 2h4v-2H5zM5 5h4V3H5c-1.1 0-2 .9-2 2v4h2zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2m0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2z"
       />
     </g>
     <defs>
       <clipPath id="marking-definition_svg__a">
-        <path fill="#fff" d="M0 0h37v37H0z" />
+        <path fill="#fff" d="M0 0h24v24H0z" />
       </clipPath>
     </defs>
   </svg>

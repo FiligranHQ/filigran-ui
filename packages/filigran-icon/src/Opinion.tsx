@@ -9,7 +9,7 @@ const SvgOpinion = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 38 38"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgOpinion = ({
     <g clipPath="url(#opinion_svg__a)">
       <path
         fill="currentColor"
-        d="M31.667 3.167H6.333c-1.741 0-3.15 1.425-3.15 3.166l-.016 28.5L9.5 28.5h22.167a3.176 3.176 0 0 0 3.166-3.167v-19a3.176 3.176 0 0 0-3.166-3.166m0 22.166H8.186l-.934.934-.919.919V6.333h25.334zM17.417 19h3.166v3.167h-3.166zm0-9.5h3.166v6.333h-3.166z"
+        d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 14H5.17l-.59.59-.58.58V4h16zm-9-4h2v2h-2zm0-6h2v4h-2z"
       />
     </g>
     <defs>
       <clipPath id="opinion_svg__a">
-        <path fill="#fff" d="M0 0h38v38H0z" />
+        <path fill="#fff" d="M0 0h24v24H0z" />
       </clipPath>
     </defs>
   </svg>

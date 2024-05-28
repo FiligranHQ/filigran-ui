@@ -9,7 +9,7 @@ const SvgReport = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 38 37"
+    viewBox="0 0 25 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgReport = ({
     <g clipPath="url(#report_svg__a)">
       <path
         fill="currentColor"
-        d="M12.667 24.667h12.666v3.083H12.667zm0-6.167h12.666v3.083H12.667zm9.5-15.417H9.5c-1.742 0-3.167 1.388-3.167 3.084v24.666c0 1.696 1.41 3.084 3.151 3.084H28.5c1.742 0 3.167-1.388 3.167-3.084v-18.5zm6.333 27.75h-19V6.167h11.083v7.708H28.5z"
+        d="M8.216 16h8.216v2H8.216zm0-4h8.216v2H8.216zm6.162-10H6.162c-1.13 0-2.054.9-2.054 2v16c0 1.1.914 2 2.044 2h12.334c1.13 0 2.055-.9 2.055-2V8zm4.108 18H6.163V4h7.19v5h5.134z"
       />
     </g>
     <defs>
       <clipPath id="report_svg__a">
-        <path fill="#fff" d="M0 0h38v37H0z" />
+        <path fill="#fff" d="M0 0h24.649v24H0z" />
       </clipPath>
     </defs>
   </svg>

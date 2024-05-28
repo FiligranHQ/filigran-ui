@@ -9,7 +9,7 @@ const SvgDashboard = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 32 29"
+    viewBox="0 0 27 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgDashboard = ({
     <g clipPath="url(#dashboard_svg__a)">
       <path
         fill="currentColor"
-        d="M3.952 15.708H14.49V3.625H3.952zm0 9.667H14.49v-7.25H3.952zm13.173 0h10.539V13.292H17.124zm0-21.75v7.25h10.539v-7.25z"
+        d="M3.27 13h8.722V3H3.271zm0 8h8.722v-6H3.271zm10.902 0h8.722V11h-8.722zm0-18v6h8.722V3z"
       />
     </g>
     <defs>
       <clipPath id="dashboard_svg__a">
-        <path fill="#fff" d="M0 0h31.616v29H0z" />
+        <path fill="#fff" d="M0 0h26.165v24H0z" />
       </clipPath>
     </defs>
   </svg>

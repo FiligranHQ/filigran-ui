@@ -9,7 +9,7 @@ const SvgSector = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 37 37"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgSector = ({
     <g clipPath="url(#sector_svg__a)">
       <path
         fill="currentColor"
-        d="M18.5 10.792V4.625H3.083v27.75h30.834V10.792zm-9.25 18.5H6.167v-3.084H9.25zm0-6.167H6.167v-3.083H9.25zm0-6.167H6.167v-3.083H9.25zm0-6.166H6.167V7.708H9.25zm6.167 18.5h-3.084v-3.084h3.084zm0-6.167h-3.084v-3.083h3.084zm0-6.167h-3.084v-3.083h3.084zm0-6.166h-3.084V7.708h3.084zm15.416 18.5H18.5v-3.084h3.083v-3.083H18.5v-3.083h3.083v-3.084H18.5v-3.083h12.333zM27.75 16.958h-3.083v3.084h3.083zm0 6.167h-3.083v3.083h3.083z"
+        d="M12 7V3H2v18h20V7zM6 19H4v-2h2zm0-4H4v-2h2zm0-4H4V9h2zm0-4H4V5h2zm4 12H8v-2h2zm0-4H8v-2h2zm0-4H8V9h2zm0-4H8V5h2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8zm-2-8h-2v2h2zm0 4h-2v2h2z"
       />
     </g>
     <defs>
       <clipPath id="sector_svg__a">
-        <path fill="#fff" d="M0 0h37v37H0z" />
+        <path fill="#fff" d="M0 0h24v24H0z" />
       </clipPath>
     </defs>
   </svg>

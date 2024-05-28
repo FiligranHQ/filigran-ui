@@ -9,7 +9,7 @@ const SvgDataSource = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 38 37"
+    viewBox="0 0 25 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -18,12 +18,12 @@ const SvgDataSource = ({
     <g clipPath="url(#data-source_svg__a)">
       <path
         fill="currentColor"
-        d="M31.667 9.25H19l-3.167-3.083h-9.5c-1.741 0-3.15 1.387-3.15 3.083l-.016 18.5c0 1.696 1.425 3.083 3.166 3.083h25.334c1.741 0 3.166-1.387 3.166-3.083V12.333c0-1.696-1.425-3.083-3.166-3.083m0 18.5H6.333V9.25h8.186l3.167 3.083h13.98zM28.5 18.5h-19v-3.083h19zm-6.333 6.167H9.5v-3.084h12.667z"
+        d="M20.54 6h-8.216L10.27 4H4.108c-1.13 0-2.044.9-2.044 2l-.01 12c0 1.1.924 2 2.054 2h16.433c1.13 0 2.054-.9 2.054-2V8c0-1.1-.925-2-2.054-2m0 12H4.109V6h5.31l2.054 2h9.069zm-2.053-6H6.162v-2h12.325zm-4.109 4H6.162v-2h8.216z"
       />
     </g>
     <defs>
       <clipPath id="data-source_svg__a">
-        <path fill="#fff" d="M0 0h38v37H0z" />
+        <path fill="#fff" d="M0 0h24.649v24H0z" />
       </clipPath>
     </defs>
   </svg>
