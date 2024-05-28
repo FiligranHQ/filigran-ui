@@ -3,6 +3,50 @@ import plugin from 'tailwindcss/plugin'
 const FiligranUIPlugin = () => {
   return plugin(
     ({ addUtilities, addComponents }) => {
+      addUtilities({
+        '.text-jumbo': {
+          'font-size': '2.5rem',
+          'letter-spacing': '0.01875rem'
+        },
+        '.text-title': {
+          'font-size': '1.5rem',
+          'letter-spacing': '0.01125rem'
+        },
+        '.text-subtitle': {
+          'font-size': '1.125rem',
+          'letter-spacing': '0.00844rem'
+        },
+        '.text-category': {
+          'font-size': '0.875rem',
+          'font-weight': 'bold',
+          'letter-spacing': '0.00656rem'
+        },
+        '.text-tab': {
+          'font-size': '0.875rem',
+          'letter-spacing': '0.00656rem',
+          'text-transform': 'uppercase'
+        },
+        '.text-container-title': {
+          'font-size': '0.75rem',
+          'letter-spacing': '0.00563rem',
+          'text-transform': 'uppercase'
+        },
+        '.text-default': {
+          'font-size': '0.875rem',
+          'line-height': '1.52',
+          'letter-spacing': '0.0035rem'
+        },
+        '.text-sub-content': {
+          'font-size': '0.75rem',
+          'line-height': '1.52',
+          'letter-spacing': '0.003rem'
+        },
+        '.text-mini': {
+          'font-size': '0.5625rem',
+          'line-height': '1.52',
+          'letter-spacing': '0.00225rem'
+        }
+      })
     },
     {
       darkMode: ['class'],
@@ -14,7 +58,6 @@ const FiligranUIPlugin = () => {
             '2xl': '1400px',
           },
         },
-
         extend: {
           colors: {
             border: 'hsl(var(--border))',
