@@ -16,32 +16,14 @@ import {
   CommandList,
 } from "./command";
 
-const frameworks = [
-  {
-    value: "next.js",
-    label: "Next.js",
-  },
-  {
-    value: "sveltekit",
-    label: "SvelteKit",
-  },
-  {
-    value: "nuxt.js",
-    label: "Nuxt.js",
-  },
-  {
-    value: "remix",
-    label: "Remix",
-  },
-  {
-    value: "astro",
-    label: "Astro",
-  },
-];
-
-export function ExampleCombobox() {
+export function Combobox(
+  dataTab: { value: string; label: string }[],
+  order: string,
+  placeholder: string,
+  emptyCommand: string,
+) {
   const [open, setOpen] = React.useState(false);
-  const [value, setValue] = React.useState("");
+  const [value, setValue] = React.useState(dataTab);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -52,22 +34,20 @@ export function ExampleCombobox() {
           aria-expanded={open}
           className="w-[200px] justify-between"
         >
-          {value
-            ? frameworks.find((framework) => framework.value === value)?.label
-            : "Select framework..."}
+          {value ? dataTab.find((data) => data.value === value)?.label : order}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
         <Command>
-          <CommandInput placeholder="Search framework..." />
+          <CommandInput placeholder={placeholder} />
           <CommandList>
-            <CommandEmpty>No framework found.</CommandEmpty>
+            <CommandEmpty>{emptyCommand}</CommandEmpty>
             <CommandGroup>
-              {frameworks.map((framework) => (
+              {dataTab.map((data) => (
                 <CommandItem
-                  key={framework.value}
-                  value={framework.value}
+                  key={data.value}
+                  value={data.value}
                   onSelect={(currentValue) => {
                     setValue(currentValue === value ? "" : currentValue);
                     setOpen(false);
@@ -76,10 +56,10 @@ export function ExampleCombobox() {
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value === framework.value ? "opacity-100" : "opacity-0",
+                      value === data.value ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  {framework.label}
+                  {data.label}
                 </CommandItem>
               ))}
             </CommandGroup>
