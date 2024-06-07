@@ -12,6 +12,7 @@ import {DisplayAllIcons} from '@/components/display-all-icons'
 import {ExampleTable} from '@/components/example-table'
 import {ExampleDataTable} from '@/components/example-data-table'
 import {ExampleMultiSelect} from '@/components/example-multi-select'
+import {ExampleCombobox} from '@/components/example-combobox'
 
 const options = {
   mdxOptions: {
@@ -29,6 +30,7 @@ const components = {
   ExampleTable: ExampleTable,
   ExampleDataTable: ExampleDataTable,
   ExampleMultiSelect: ExampleMultiSelect,
+  ExampleCombobox: ExampleCombobox,
 }
 
 export async function CustomMDX(props: any) {
