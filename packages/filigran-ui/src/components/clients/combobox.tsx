@@ -16,12 +16,19 @@ import {
   CommandList,
 } from "./command";
 
-export function Combobox(
-  dataTab: { value: string; label: string }[],
-  order: string,
-  placeholder: string,
-  emptyCommand: string,
-) {
+interface ComboboxProps {
+  dataTab: { value: string; label: string }[];
+  order: string;
+  placeholder: string;
+  emptyCommand: string;
+}
+
+function Combobox({
+  dataTab,
+  order,
+  placeholder,
+  emptyCommand,
+}: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState("");
 
@@ -69,3 +76,5 @@ export function Combobox(
     </Popover>
   );
 }
+
+export { Combobox };
