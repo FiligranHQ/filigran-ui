@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 
 import { cn } from "../../lib/utils";
 
@@ -52,7 +52,7 @@ function Combobox({
           onClick={() => setOpen(!open)}
         >
           {value ? dataTab.find((data) => data.value === value)?.label : order}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronDown className="h-4 cursor-pointer text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
@@ -73,7 +73,9 @@ function Combobox({
                       value === data.value ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  {data.label}
+                  <span className="text-sm text-muted-foreground mx-3">
+                    {data.label}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>

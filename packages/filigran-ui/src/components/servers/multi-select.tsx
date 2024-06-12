@@ -14,7 +14,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "../clients/command";
+} from "../clients";
 
 const multiSelectVariants = cva("m-1", {
   variants: {
@@ -108,7 +108,7 @@ const MultiSelectFormField = React.forwardRef<
             ref={ref}
             {...props}
             onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-            className="flex w-full p-1 rounded-md border min-h-10 h-auto items-center justify-between bg-inherit hover:bg-card"
+            className="flex w-full p-1 rounded-md border border-gray-150 min-h-10 h-auto items-center justify-between bg-inherit hover:bg-gray-100"
           >
             {selectedValues.length > 0 ? (
               <div className="flex justify-between items-center w-full">
@@ -251,6 +251,6 @@ const MultiSelectFormField = React.forwardRef<
   },
 );
 
-MultiSelectFormField.displayName = 'MultiSelectFormField'
+MultiSelectFormField.displayName = "MultiSelectFormField";
 
-export {MultiSelectFormField}
+export { MultiSelectFormField };
