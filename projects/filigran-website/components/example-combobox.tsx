@@ -6,7 +6,7 @@ import {Combobox} from 'filigran-ui/clients'
 import {Button} from 'filigran-ui'
 
 export function ExampleCombobox() {
-  const [selectedValue, setSelectedValue] = React.useState('')
+  const [selectedValue, setSelectedValue] = React.useState('acef')
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -27,7 +27,7 @@ export function ExampleCombobox() {
         placeholder={'Choose a value'}
         emptyCommand={'Not found'}
         onValueChange={(value) => setSelectedValue(value)}
-        defaultValue={'acde'}
+        value={selectedValue}
       />
       <Button
         className={'ml-2'}

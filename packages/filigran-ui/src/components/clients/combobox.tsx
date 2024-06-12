@@ -22,7 +22,7 @@ interface ComboboxProps {
   placeholder: string;
   emptyCommand: string;
   onValueChange: (value: string) => void;
-  defaultValue?: string;
+  value?: string;
 }
 
 function Combobox({
@@ -31,14 +31,12 @@ function Combobox({
   placeholder,
   emptyCommand,
   onValueChange,
-  defaultValue = "",
+  value = "",
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
-  const [value, setValue] = React.useState(defaultValue);
 
   const handleSelect = (currentValue: string) => {
     const newValue = currentValue === value ? "" : currentValue;
-    setValue(newValue);
     setOpen(false);
     onValueChange(newValue);
   };
@@ -86,4 +84,4 @@ function Combobox({
   );
 }
 
-export {Combobox};
+export { Combobox };
