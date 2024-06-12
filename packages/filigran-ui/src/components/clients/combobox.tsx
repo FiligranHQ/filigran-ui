@@ -21,6 +21,8 @@ interface ComboboxProps {
   order: string;
   placeholder: string;
   emptyCommand: string;
+  onValueChange: (value: string) => void;
+  defaultValue?: string;
 }
 
 function Combobox({
@@ -28,9 +30,18 @@ function Combobox({
   order,
   placeholder,
   emptyCommand,
+  onValueChange,
+  defaultValue = "",
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
-  const [value, setValue] = React.useState("");
+  const [value, setValue] = React.useState(defaultValue);
+
+  const handleSelect = (currentValue: string) => {
+    const newValue = currentValue === value ? "" : currentValue;
+    setValue(newValue);
+    setOpen(false);
+    onValueChange(newValue);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -40,6 +51,7 @@ function Combobox({
           role="combobox"
           aria-expanded={open}
           className="w-[200px] justify-between"
+          onClick={() => setOpen(!open)}
         >
           {value ? dataTab.find((data) => data.value === value)?.label : order}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -55,10 +67,7 @@ function Combobox({
                 <CommandItem
                   key={data.value}
                   value={data.value}
-                  onSelect={(currentValue) => {
-                    setValue(currentValue === value ? "" : currentValue);
-                    setOpen(false);
-                  }}
+                  onSelect={() => handleSelect(data.value)}
                 >
                   <Check
                     className={cn(
