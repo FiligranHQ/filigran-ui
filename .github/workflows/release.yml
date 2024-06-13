@@ -1,0 +1,52 @@
+name: NPM Publish
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://npm.pkg.github.com'
+
+      - name: Extract commit message
+        id: extract_message
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          echo "commit-message=${COMMIT_MESSAGE}" >> $GITHUB_ENV
+
+      - name: Check for version number in commit message
+        id: check_version
+        run: |
+          if [[ "${{ env.commit-message }}" =~ \[filigran-ui\]\s*(v[0-9]+\.[0-9]+\.[0-9]+)?$ ]]; then
+            echo "package=filigran-ui" >> $GITHUB_ENV
+            echo "version=true" >> $GITHUB_ENV
+          elif [[ "${{ env.commit-message }}" =~ \[filigran-icon\]\s*(v[0-9]+\.[0-9]+\.[0-9]+)?$ ]]; then
+            echo "package=filigran-icon" >> $GITHUB_ENV
+            echo "version=true" >> $GITHUB_ENV
+          else
+            echo "version=false" >> $GITHUB_ENV
+          fi
+
+      - name: Install dependencies
+        if: env.version == 'true'
+        run: npm install
+
+      - name: Publish Filigran UI
+        if: env.package == 'filigran-ui'
+        run: npm run publish:filigran-ui
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish Filigran Icon
+        if: env.package == 'filigran-icon'
+        run: npm run publish:filigran-icon
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
