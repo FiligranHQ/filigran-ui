@@ -1,0 +1,67 @@
+name: NPM Publish
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect package manager
+        id: detect-package-manager
+        run: |
+          if [ -f "${{ github.workspace }}/yarn.lock" ]; then
+            echo "manager=yarn" >> $GITHUB_OUTPUT
+            echo "command=install" >> $GITHUB_OUTPUT
+            echo "runner=yarn" >> $GITHUB_OUTPUT
+            exit 0
+          elif [ -f "${{ github.workspace }}/package.json" ]; then
+            echo "manager=npm" >> $GITHUB_OUTPUT
+            echo "command=ci" >> $GITHUB_OUTPUT
+            echo "runner=npx --no-install" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "Unable to determine package manager"
+            exit 1
+          fi
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: https://registry.npmjs.org/
+
+      - name: Extract commit message
+        id: extract_message
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          echo "commit-message=${COMMIT_MESSAGE}" >> $GITHUB_ENV
+
+      - name: Check Filigran-icon
+        if: startsWith(env.commit-message, '[filigran-icon][version]')
+        run: echo "package=filigran-icon" >> $GITHUB_ENV
+
+      - name: Check Filigran-ui
+        if: startsWith(env.commit-message, '[filigran-ui][version]')
+        run: echo "package=filigran-ui" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        if: env.package != ''
+        run: yarn install && npm install rimraf --global
+
+      - name: Publish Filigran UI
+        if: env.package == 'filigran-ui'
+        run: npm run publish:filigran-ui
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish Filigran Icon
+        if: env.package == 'filigran-icon'
+        run: npm run publish:filigran-icon
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
