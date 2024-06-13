@@ -4,6 +4,7 @@ import './globals.css'
 import {ThemeProvider} from '@/components/providers'
 import {SiteHeader} from '@/components/site-header'
 import {geologica, ibmPlexSans} from '@/app/font'
+import {Toaster} from 'filigran-ui'
 
 export const metadata: Metadata = {
   title: 'Filigran docs',
@@ -27,6 +28,7 @@ export default function RootLayout({
           disableTransitionOnChange>
           <SiteHeader />
           {children}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
