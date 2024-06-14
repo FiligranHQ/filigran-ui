@@ -2,7 +2,6 @@
 import {ColumnDef} from '@tanstack/react-table'
 import {Checkbox, DataTable} from 'filigran-ui/clients'
 import {useState} from 'react'
-import {cn} from '@/utils/utils'
 import {Input} from 'filigran-ui'
 
 interface Invoices {
@@ -65,8 +64,7 @@ const invoices: Invoices[] = [
 ]
 
 export function ExampleDataTable() {
-  const rowSelectionState = useState({})
-  const [rowSelection, setRowSelection] = rowSelectionState
+  const [rowSelection, setRowSelection] = useState({})
   const [inputSearch, setInputSearch] = useState('')
   const HighlightSearchTerm = ({text}: {text: string}) => {
     if (!inputSearch) {
@@ -154,7 +152,12 @@ export function ExampleDataTable() {
       <DataTable
         data={invoices}
         columns={columns}
-        rowSelectionState={rowSelectionState}
+        tableOptions={{
+          onRowSelectionChange: setRowSelection,
+        }}
+        tableState={{
+          rowSelection
+      }}
       />
       <div className="container mx-auto py-10">
         <div>Selected</div>

@@ -4,10 +4,11 @@ import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
   type Header,
+  type TableOptions,
+  type TableState,
   useReactTable,
-} from "@tanstack/react-table";
+} from '@tanstack/react-table'
 import {
   Table,
   TableBody,
@@ -16,7 +17,10 @@ import {
   TableHeader,
   TableRow,
 } from './table';
-import { useImperativeHandle, useState } from 'react';
+import {
+  useImperativeHandle,
+  useState,
+} from 'react';
 import {
   closestCenter,
   DndContext,
@@ -26,7 +30,7 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   arrayMove,
   horizontalListSortingStrategy,
@@ -34,21 +38,23 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
-import { type Transform } from "@dnd-kit/utilities";
+import { type Transform } from '@dnd-kit/utilities';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from './dropdown-menu';
-import { Button } from '../servers';
 import { ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
 import {cn, fixedForwardRef} from '../../lib/utils'
+import { Button } from "../servers";
+
 
 interface DataTableProps<TData extends { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  rowSelectionState?: any;
+  tableState?: Partial<TableState>;
+  tableOptions?: Partial<TableOptions<TData>>;
 }
 
 function getTransformString({ x, y }: Transform) {
@@ -142,31 +148,26 @@ const DragAlongCell = ({ cell }: { cell: Cell<any, unknown> }) => {
   );
 };
 
-function GenericDataTable<
-  TData extends { id: string },
-  TValue,
->(
-  { columns, data, rowSelectionState }: DataTableProps<TData, TValue>,
+function GenericDataTable<TData extends { id: string }, TValue>(
+  { columns, data, tableState, tableOptions }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
-  const columnResizeMode = 'onChange';
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
     columns.map((c) => c.id!)
   );
-  const [rowSelection, setRowSelection] = rowSelectionState ?? useState({});
+
   const table = useReactTable({
     data,
     columns,
-    columnResizeMode,
+    columnResizeMode: 'onChange',
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     onColumnOrderChange: setColumnOrder,
-    onRowSelectionChange: setRowSelection,
+    getRowId: (c) => c.id,
     state: {
       columnOrder,
-      rowSelection,
+      ...tableState,
     },
-    getRowId: (c) => c.id,
+    ...tableOptions,
   });
 
   useImperativeHandle(ref, () => table);
@@ -259,6 +260,6 @@ function GenericDataTable<
       </DndContext>
     </>
   );
-};
+}
 
 export const DataTable = fixedForwardRef(GenericDataTable);
