@@ -7,6 +7,7 @@ import {
   type Header,
   type TableOptions,
   type TableState,
+  type Table as TableType,
   useReactTable,
 } from '@tanstack/react-table'
 import {
@@ -17,10 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from './table';
-import {
-  useImperativeHandle,
-  useState,
-} from 'react';
+import { type ReactNode, useImperativeHandle, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -45,9 +43,17 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from './dropdown-menu';
-import { ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
+import {
+  ArrowUpDown,
+  ChevronDown,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUp,
+  GripHorizontal,
+} from 'lucide-react'
 import {cn, fixedForwardRef} from '../../lib/utils'
 import { Button } from "../servers";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from './select'
 
 
 interface DataTableProps<TData extends { id: string }, TValue> {
@@ -61,18 +67,30 @@ function getTransformString({ x, y }: Transform) {
   return `translate(${x}px, ${y}px)`;
 }
 
-const DraggableTableHeader = ({ header }: { header: Header<any, unknown> }) => {
+const DraggableTableHeader = <TData,>({ header }: { header: Header<TData, unknown> }) => {
   const { attributes, isDragging, listeners, setNodeRef, transform } =
     useSortable({
       id: header.column.id,
     });
+
+  const SortingButton = ({header}: { header: Header<TData, unknown> }) => {
+    const sortingIcons: {[key: string]: ReactNode} = {
+      asc: <ChevronUp className="h-4 w-4" />,
+      desc: <ChevronDown className="h-4 w-4" />,
+    };
+    const sortingState = header.column.getIsSorted();
+    if (!sortingState) {
+      return <ArrowUpDown className="h-4 w-4"/>;
+    }
+    return <span className="ml-2">{sortingIcons[sortingState]}</span>;
+  }
 
   return (
     <TableHead
       key={header.id}
       colSpan={header.colSpan}
       className={cn(
-        'transition-width group relative z-0 whitespace-nowrap opacity-100 transition-transform duration-200 ease-in-out',
+        'transition-width group hover:bg-gray-150 relative z-0 whitespace-nowrap opacity-100 transition-transform duration-200 ease-in-out',
         isDragging && 'z-10 opacity-80'
       )}
       ref={setNodeRef}
@@ -80,7 +98,7 @@ const DraggableTableHeader = ({ header }: { header: Header<any, unknown> }) => {
         width: header.getSize(),
         transform: transform ? getTransformString(transform) : undefined,
       }}>
-      <div className=" flex items-center">
+      <div className=" flex items-center justify-between">
         {header.isPlaceholder ? null : (
           <div
             className={cn(
@@ -95,17 +113,14 @@ const DraggableTableHeader = ({ header }: { header: Header<any, unknown> }) => {
                   : header.column.getNextSortingOrder() === 'desc'
                     ? 'Sort descending'
                     : 'Clear sort'
-                : undefined
+                : 'Can be sorted'
             }>
             {flexRender(header.column.columnDef.header, header.getContext())}
-            {{
-              asc: <ChevronUp className="h-4 w-4" />,
-              desc: <ChevronDown className="h-4 w-4" />,
-            }[header.column.getIsSorted() as string] ?? null}
+            {header.column.getCanSort() &&<SortingButton header={header}/>}
           </div>
         )}
         <button
-          className={cn('opacity-0 group-hover:opacity-100')}
+          className={cn('opacity-0 group-hover:opacity-100 cursor-grab', isDragging && 'cursor-grabbing')}
           {...attributes}
           {...listeners}>
           <GripHorizontal className="ml-1 h-6 w-6" />
@@ -147,6 +162,57 @@ const DragAlongCell = ({ cell }: { cell: Cell<any, unknown> }) => {
     </TableCell>
   );
 };
+
+const Pagination = <TData,>({table}: {table: TableType<TData>}) => {
+  return     <div className="flex items-center justify-between px-2">
+    <div className="flex items-center">
+      <div className="flex items-center space-x-2">
+        <p className="text-sm font-medium">Rows per page</p>
+        <Select
+          value={`${table.getState().pagination.pageSize}`}
+          onValueChange={(value) => {
+            table.setPageSize(Number(value))
+          }}
+        >
+          <SelectTrigger className="h-10 w-[70px] border-black">
+            <SelectValue placeholder={table.getState().pagination.pageSize} />
+          </SelectTrigger>
+          <SelectContent side="top">
+            {[10, 20, 30, 50, 100, 200, 300, 500].map((pageSize) => (
+              <SelectItem key={pageSize} value={`${pageSize}`}>
+                {pageSize}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+        Page {table.getState().pagination.pageIndex + 1} of{" "}
+        {table.getPageCount()}
+      </div>
+      <div className="flex items-center space-x-2">
+        <Button
+          variant="outline"
+          className="h-8 w-8 p-0 border-black"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          <span className="sr-only">Go to previous page</span>
+          <ChevronLeftIcon className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          className="h-8 w-8 p-0 border-black"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          <span className="sr-only">Go to next page</span>
+          <ChevronRightIcon className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  </div>
+}
 
 function GenericDataTable<TData extends { id: string }, TValue>(
   { columns, data, tableState, tableOptions }: DataTableProps<TData, TValue>,
@@ -190,7 +256,8 @@ function GenericDataTable<TData extends { id: string }, TValue>(
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex justify-end items-center gap-2">
+        {tableState?.pagination && <Pagination table={table}/> }
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

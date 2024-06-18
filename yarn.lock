@@ -1132,6 +1132,11 @@
   resolved "https://registry.npmjs.org/@eslint/js/-/js-8.57.0.tgz"
   integrity sha512-Ys+3g2TaW7gADOJzPt83SJtCDhMjndcDMFVQ/Tj9iA1BfJzFKD9mAUXT3OenpuPHbI6P/myECxRJrofUsDx/5g==
 
+"@faker-js/faker@^8.4.1":
+  version "8.4.1"
+  resolved "https://registry.npmjs.org/@faker-js/faker/-/faker-8.4.1.tgz"
+  integrity sha512-XQ3cU+Q8Uqmrbf2e0cIC/QN43sTBSC8KF12u29Mb47tWrt2hAgBXSgpZMj4Ao8Uk0iJcU99QsOCaIL8934obCg==
+
 "@floating-ui/core@^1.0.0":
   version "1.6.0"
   resolved "https://registry.npmjs.org/@floating-ui/core/-/core-1.6.0.tgz"
@@ -3481,6 +3486,7 @@ file-entry-cache@^6.0.1:
   version "0.0.0"
   resolved "file:projects/filigran-website"
   dependencies:
+    "@faker-js/faker" "^8.4.1"
     "@jsdevtools/rehype-toc" "3.0.2"
     "@radix-ui/react-accordion" "1.1.2"
     "@radix-ui/react-dropdown-menu" "2.0.6"
@@ -4346,6 +4352,11 @@ lucide-react@0.363.0:
   version "0.363.0"
   resolved "https://registry.npmjs.org/lucide-react/-/lucide-react-0.363.0.tgz"
   integrity sha512-AlsfPCsXQyQx7wwsIgzcKOL9LwC498LIMAo+c0Es5PkHJa33xwmYAkkSoKoJWWWSYQEStqu58/jT4tL2gi32uQ==
+
+lucide-react@0.395.0:
+  version "0.395.0"
+  resolved "https://registry.npmjs.org/lucide-react/-/lucide-react-0.395.0.tgz"
+  integrity sha512-6hzdNH5723A4FLaYZWpK50iyZH8iS2Jq5zuPRRotOFkhu6kxxJiebVdJ72tCR5XkiIeYFOU5NUawFZOac+VeYw==
 
 markdown-extensions@^1.0.0:
   version "1.1.1"
