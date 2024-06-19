@@ -59,6 +59,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from './s
 interface DataTableProps<TData extends { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  columnVisibility?: boolean;
   tableState?: Partial<TableState>;
   tableOptions?: Partial<TableOptions<TData>>;
 }
@@ -119,13 +120,17 @@ const DraggableTableHeader = <TData,>({ header }: { header: Header<TData, unknow
             {header.column.getCanSort() &&<SortingButton header={header}/>}
           </div>
         )}
-        <button
-          className={cn('opacity-0 group-hover:opacity-100 cursor-grab', isDragging && 'cursor-grabbing')}
-          {...attributes}
-          {...listeners}>
-          <GripHorizontal className="ml-1 h-6 w-6" />
-        </button>
+
+          <button
+            className={cn('opacity-0 group-hover:opacity-100 cursor-grab', isDragging && 'cursor-grabbing')}
+            {...attributes}
+            {...listeners}>
+            <GripHorizontal className="mx-2 h-6 w-6" />
+          </button>
+
       </div>
+      {
+        header.column.getCanResize() &&
       <div
         onDoubleClick={() => header.column.resetSize()}
         onMouseDown={header.getResizeHandler()}
@@ -138,6 +143,7 @@ const DraggableTableHeader = <TData,>({ header }: { header: Header<TData, unknow
           !isDragging && 'group-hover:opacity-100'
         )}
       />
+      }
     </TableHead>
   );
 };
@@ -215,7 +221,7 @@ const Pagination = <TData,>({table}: {table: TableType<TData>}) => {
 }
 
 function GenericDataTable<TData extends { id: string }, TValue>(
-  { columns, data, tableState, tableOptions }: DataTableProps<TData, TValue>,
+  { columns, data, tableState, tableOptions, columnVisibility = true }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
@@ -258,7 +264,7 @@ function GenericDataTable<TData extends { id: string }, TValue>(
     <>
       <div className="flex justify-end items-center gap-2">
         {tableState?.pagination && <Pagination table={table}/> }
-        <DropdownMenu>
+        {columnVisibility && <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
@@ -281,6 +287,7 @@ function GenericDataTable<TData extends { id: string }, TValue>(
               ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        }
       </div>
       <DndContext
         collisionDetection={closestCenter}
