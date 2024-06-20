@@ -1,9 +1,11 @@
 'use client'
 import {ColumnDef, getPaginationRowModel, PaginationState} from '@tanstack/react-table'
-import {Checkbox, DataTable} from 'filigran-ui/clients'
-import {useMemo, useState} from 'react'
+import {Checkbox, DataTable, DataTablePagination, DataTableSelectColumnVisibility} from 'filigran-ui/clients'
+import { useMemo, useState} from 'react'
 import {Input} from 'filigran-ui'
 import {makeData, Person} from '@/utils/makeData'
+
+
 
 
 export function ExampleDataTable() {
@@ -13,7 +15,12 @@ export function ExampleDataTable() {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
-  })
+  });
+
+
+
+
+
 
   const columns = useMemo<ColumnDef<Person>[]>(
     () => [
@@ -81,6 +88,8 @@ export function ExampleDataTable() {
     ],
     [inputSearch]
   )
+
+
   const HighlightSearchTerm = ({text}: {text: string}) => {
     if (!inputSearch) {
       return <span>{text}</span>
@@ -107,17 +116,19 @@ export function ExampleDataTable() {
   }
   return (
     <>
-      <div>
-        <Input
-          placeholder="underline text"
-          onChange={(e) => setInputSearch(e.target.value)}
-          value={inputSearch}
-          className="w-[200px] border-primary p-4"
-        />
-      </div>
       <DataTable
         data={data}
         columns={columns}
+        toolbar={<div className="flex justify-end items-center gap-2">
+          <Input
+            placeholder="underline text"
+            onChange={(e) => setInputSearch(e.target.value)}
+            value={inputSearch}
+            className="w-[200px] border-primary p-4"
+          />
+          <DataTableSelectColumnVisibility/>
+          <DataTablePagination/>
+        </div>}
         tableOptions={{
           onRowSelectionChange: setRowSelection,
           getPaginationRowModel: getPaginationRowModel(),

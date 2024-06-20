@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from './table';
-import { type ReactNode, useImperativeHandle, useState } from "react";
+import {createContext, type ReactNode, useContext, useImperativeHandle, useState} from 'react'
 import {
   closestCenter,
   DndContext,
@@ -55,11 +55,10 @@ import {cn, fixedForwardRef} from '../../lib/utils'
 import { Button } from "../servers";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from './select'
 
-
 interface DataTableProps<TData extends { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  columnVisibility?: boolean;
+  toolbar?: ReactNode;
   tableState?: Partial<TableState>;
   tableOptions?: Partial<TableOptions<TData>>;
 }
@@ -68,6 +67,40 @@ function getTransformString({ x, y }: Transform) {
   return `translate(${x}px, ${y}px)`;
 }
 
+const DefaultToolbar = () => {
+
+  return <div className="flex justify-end items-center gap-2">
+  <DataTablePagination/>
+    <DataTableSelectColumnVisibility/>
+  </div>
+}
+
+const DataTableSelectColumnVisibility = <TData,>() => {
+  const table = useContext(TableContext);
+  return   <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        variant="outline"
+        className="rounded border border-black">
+        Columns <ChevronDown className="ml-2 h-4 w-4" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+      {table
+        .getAllColumns()
+        .filter((column) => column.getCanHide())
+        .map((column) => (
+          <DropdownMenuCheckboxItem
+            key={column.id}
+            className="capitalize"
+            checked={column.getIsVisible()}
+            onCheckedChange={(value) => column.toggleVisibility(!!value)}>
+            {column.id}
+          </DropdownMenuCheckboxItem>
+        ))}
+    </DropdownMenuContent>
+  </DropdownMenu>
+}
 const DraggableTableHeader = <TData,>({ header }: { header: Header<TData, unknown> }) => {
   const { attributes, isDragging, listeners, setNodeRef, transform } =
     useSortable({
@@ -148,7 +181,7 @@ const DraggableTableHeader = <TData,>({ header }: { header: Header<TData, unknow
   );
 };
 
-const DragAlongCell = ({ cell }: { cell: Cell<any, unknown> }) => {
+const DragAlongCell = <TData,>({ cell }: { cell: Cell<TData, unknown> }) => {
   const { isDragging, setNodeRef, transform } = useSortable({
     id: cell.column.id,
   });
@@ -169,7 +202,8 @@ const DragAlongCell = ({ cell }: { cell: Cell<any, unknown> }) => {
   );
 };
 
-const Pagination = <TData,>({table}: {table: TableType<TData>}) => {
+const DataTablePagination = () => {
+  const table = useContext(TableContext);
   return     <div className="flex items-center justify-between px-2">
     <div className="flex items-center">
       <div className="flex items-center space-x-2">
@@ -220,8 +254,9 @@ const Pagination = <TData,>({table}: {table: TableType<TData>}) => {
   </div>
 }
 
+const TableContext = createContext<TableType<any>>({} as TableType<any>);
 function GenericDataTable<TData extends { id: string }, TValue>(
-  { columns, data, tableState, tableOptions, columnVisibility = true }: DataTableProps<TData, TValue>,
+  { columns, data, tableState, tableOptions, toolbar }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
@@ -261,34 +296,9 @@ function GenericDataTable<TData extends { id: string }, TValue>(
   );
 
   return (
-    <>
-      <div className="flex justify-end items-center gap-2">
-        {tableState?.pagination && <Pagination table={table}/> }
-        {columnVisibility && <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="rounded border border-black">
-              Columns <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  className="capitalize"
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(!!value)}>
-                  {column.id}
-                </DropdownMenuCheckboxItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        }
-      </div>
+    <TableContext.Provider value={{...table}}>
+        {toolbar ? <>{toolbar}</>
+          : <DefaultToolbar/>}
       <DndContext
         collisionDetection={closestCenter}
         modifiers={[restrictToHorizontalAxis]}
@@ -332,8 +342,10 @@ function GenericDataTable<TData extends { id: string }, TValue>(
           </Table>
         </div>
       </DndContext>
-    </>
+    </TableContext.Provider>
   );
 }
 
-export const DataTable = fixedForwardRef(GenericDataTable);
+const DataTable = fixedForwardRef(GenericDataTable);
+
+export { DataTable, DataTablePagination, DataTableSelectColumnVisibility };
