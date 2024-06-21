@@ -1,5 +1,5 @@
 'use client'
-import {ColumnDef, getPaginationRowModel, PaginationState} from '@tanstack/react-table'
+import {ColumnDef, getPaginationRowModel, getSortedRowModel, PaginationState} from '@tanstack/react-table'
 import {Checkbox, DataTable, DataTablePagination, DataTableSelectColumnVisibility} from 'filigran-ui/clients'
 import { useMemo, useState} from 'react'
 import {Input} from 'filigran-ui'
@@ -16,11 +16,6 @@ export function ExampleDataTable() {
     pageIndex: 0,
     pageSize: 10,
   });
-
-
-
-
-
 
   const columns = useMemo<ColumnDef<Person>[]>(
     () => [
@@ -40,7 +35,8 @@ export function ExampleDataTable() {
         cell: ({row}) => (
           <Checkbox
             checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            onClick={(e) => e.stopPropagation()}
+            onCheckedChange={(value) => {row.toggleSelected(!!value)}}
             aria-label="Select row"
           />
         ),
@@ -131,13 +127,16 @@ export function ExampleDataTable() {
         </div>}
         tableOptions={{
           onRowSelectionChange: setRowSelection,
+          getSortedRowModel: getSortedRowModel(),
           getPaginationRowModel: getPaginationRowModel(),
           onPaginationChange: setPagination,
+          enableRowSelection: row => row.original.age > 18, //only enable row selection for adults
         }}
         tableState={{
           rowSelection,
           pagination
-      }}
+        }}
+        onClickRow={(row) => console.log(row)}
       />
       <div className="container mx-auto py-10">
         <div>Selected</div>

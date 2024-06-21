@@ -9,6 +9,7 @@ import {
   type TableState,
   type Table as TableType,
   useReactTable,
+  type Row,
 } from '@tanstack/react-table'
 import {
   Table,
@@ -61,6 +62,7 @@ interface DataTableProps<TData extends { id: string }, TValue> {
   toolbar?: ReactNode;
   tableState?: Partial<TableState>;
   tableOptions?: Partial<TableOptions<TData>>;
+  onClickRow?: (row: Row<TData>) => void;
 }
 
 function getTransformString({ x, y }: Transform) {
@@ -256,7 +258,7 @@ const DataTablePagination = () => {
 
 const TableContext = createContext<TableType<any>>({} as TableType<any>);
 function GenericDataTable<TData extends { id: string }, TValue>(
-  { columns, data, tableState, tableOptions, toolbar }: DataTableProps<TData, TValue>,
+  { columns, data, tableState, tableOptions, toolbar, onClickRow }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
@@ -308,7 +310,7 @@ function GenericDataTable<TData extends { id: string }, TValue>(
           <Table style={{ width: table.getCenterTotalSize() }}>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
+                <TableRow className={"hover:bg-inherit"} key={headerGroup.id}>
                   <SortableContext
                     items={columnOrder}
                     strategy={horizontalListSortingStrategy}>
@@ -324,7 +326,7 @@ function GenericDataTable<TData extends { id: string }, TValue>(
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className={cn(onClickRow && 'cursor-pointer', !row.getCanSelect() && 'cursor-auto opacity-50 bg-muted/30 ')} onClick={() => onClickRow && row.getCanSelect() ? onClickRow(row) : null}>
                   {row.getVisibleCells().map((cell) => (
                     <SortableContext
                       key={cell.id}
