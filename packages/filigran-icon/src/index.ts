@@ -1,8 +1,13 @@
 import { lazy } from "react";
+export const Svg10KIcon = lazy(() => import("./10K"));
 export const AddIcon = lazy(() => import("./Add"));
 export const AdministrativeAreaIcon = lazy(
   () => import("./AdministrativeArea"),
 );
+export const ArrowFirstIcon = lazy(() => import("./ArrowFirst"));
+export const ArrowLastIcon = lazy(() => import("./ArrowLast"));
+export const ArrowNextIcon = lazy(() => import("./ArrowNext"));
+export const ArrowPreviousIcon = lazy(() => import("./ArrowPrevious"));
 export const ArrowRightAltIcon = lazy(() => import("./ArrowRightAlt"));
 export const AssignmentIcon = lazy(() => import("./Assignment"));
 export const AttackPatternIcon = lazy(() => import("./AttackPattern"));
@@ -78,6 +83,7 @@ export const SectorIcon = lazy(() => import("./Sector"));
 export const SettingsIcon = lazy(() => import("./Settings"));
 export const SpaceDashboardIcon = lazy(() => import("./SpaceDashboard"));
 export const SystemIcon = lazy(() => import("./System"));
+export const TableTuneIcon = lazy(() => import("./TableTune"));
 export const TaskIcon = lazy(() => import("./Task"));
 export const TextSnippetIcon = lazy(() => import("./TextSnippet"));
 export const ThreatActorGroupIcon = lazy(() => import("./ThreatActorGroup"));
@@ -85,6 +91,7 @@ export const ThreatActorIndividualIcon = lazy(
   () => import("./ThreatActorIndividual"),
 );
 export const ToolIcon = lazy(() => import("./Tool"));
+export const UnfoldMoreIcon = lazy(() => import("./UnfoldMore"));
 export const UnknownIcon = lazy(() => import("./Unknown"));
 export const VulnerabilityIcon = lazy(() => import("./Vulnerability"));
 export const WorkEmptyIcon = lazy(() => import("./WorkEmpty"));
