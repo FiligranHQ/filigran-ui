@@ -1,9 +1,13 @@
 'use client'
 import {ColumnDef, getPaginationRowModel, getSortedRowModel, PaginationState} from '@tanstack/react-table'
-import {Checkbox, DataTable, DataTablePagination, DataTableSelectColumnVisibility} from 'filigran-ui/clients'
+import {
+  Checkbox,
+  DataTable, DataTableOptionsHeader, DataTablePagination, DropdownMenuItem,
+} from 'filigran-ui/clients'
 import { useMemo, useState} from 'react'
 import {Input} from 'filigran-ui'
 import {makeData, Person} from '@/utils/makeData'
+import {ArrowDownIcon} from 'lucide-react'
 
 
 
@@ -14,7 +18,7 @@ export function ExampleDataTable() {
   const [data, setData] = useState(() => makeData(500));
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 50,
   });
 
   const columns = useMemo<ColumnDef<Person>[]>(
@@ -47,6 +51,7 @@ export function ExampleDataTable() {
       {
         id: 'firstName',
         accessorKey: 'firstName',
+        enableHiding: false,
         cell: (info) => (
           <HighlightSearchTerm text={info.getValue() as string} />
         ),
@@ -55,10 +60,15 @@ export function ExampleDataTable() {
       {
         accessorFn: row => row.lastName,
         id: 'lastName',
+        enableHiding: false,
         cell: (info) => (
           <HighlightSearchTerm text={info.getValue() as string} />
         ),
-        header: () => <span>Last Name</span>,
+        header: (header) => <DataTableOptionsHeader column={header.column} title={"Last name"}
+                                                    menuItems={<>
+                                                      <DropdownMenuItem onClick={() => console.log(header.column)}>
+                                                        Log column
+                                                      </DropdownMenuItem></>}/>,
 
       },
       {
@@ -112,19 +122,15 @@ export function ExampleDataTable() {
   }
   return (
     <>
+      <Input
+        placeholder="underline text"
+        onChange={(e) => setInputSearch(e.target.value)}
+        value={inputSearch}
+        className="w-[200px] border-primary p-4"
+      />
       <DataTable
         data={data}
         columns={columns}
-        toolbar={<div className="flex justify-end items-center gap-2">
-          <Input
-            placeholder="underline text"
-            onChange={(e) => setInputSearch(e.target.value)}
-            value={inputSearch}
-            className="w-[200px] border-primary p-4"
-          />
-          <DataTableSelectColumnVisibility/>
-          <DataTablePagination/>
-        </div>}
         tableOptions={{
           onRowSelectionChange: setRowSelection,
           getSortedRowModel: getSortedRowModel(),
