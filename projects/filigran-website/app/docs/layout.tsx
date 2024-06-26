@@ -60,7 +60,7 @@ export default async function RootLayout({
           )
         })}
       </aside>
-      <div className="prose ml-[250px] max-w-none flex-1 dark:prose-invert">
+      <div className="prose ml-[250px] max-w-none flex-1 dark:prose-invert overflow-auto">
         {children}
       </div>
     </main>

@@ -11,7 +11,6 @@ const config = {
   prefix: '',
   plugins: [
     require('tailwindcss-animate'),
-    require('@tailwindcss/typography'),
     FiligranUIPlugin(),
   ],
 }

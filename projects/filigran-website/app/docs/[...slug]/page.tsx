@@ -16,8 +16,8 @@ export default async function Blog({params}: {params: {slug: string[]}}) {
     notFound()
   }
   return (
-    <section className="mr-[276px]">
-      <article className="prose mx-auto dark:prose-invert prose-headings:scroll-mt-32">
+    <section>
+      <article>
         <CustomMDX source={content.content} />
       </article>
     </section>

@@ -2,12 +2,11 @@
 import {ColumnDef, getPaginationRowModel, getSortedRowModel, PaginationState} from '@tanstack/react-table'
 import {
   Checkbox,
-  DataTable, DataTableOptionsHeader, DataTablePagination, DropdownMenuItem,
+  DataTable, DataTableOptionsHeader, DropdownMenuItem,
 } from 'filigran-ui/clients'
 import { useMemo, useState} from 'react'
 import {Input} from 'filigran-ui'
 import {makeData, Person} from '@/utils/makeData'
-import {ArrowDownIcon} from 'lucide-react'
 
 
 
@@ -28,6 +27,7 @@ export function ExampleDataTable() {
         size: 20,
         header: ({table}) => (
           <Checkbox
+            className="flex"
             checked={
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && 'indeterminate')
@@ -38,6 +38,7 @@ export function ExampleDataTable() {
         ),
         cell: ({row}) => (
           <Checkbox
+            className="flex"
             checked={row.getIsSelected()}
             onClick={(e) => e.stopPropagation()}
             onCheckedChange={(value) => {row.toggleSelected(!!value)}}
@@ -74,12 +75,12 @@ export function ExampleDataTable() {
       {
         id: 'age',
         accessorKey: 'age',
-        header: () => 'Age',
+        header:  'Age',
       },
       {
         id: 'visits',
         accessorKey: 'visits',
-        header: () => <span>Visits</span>,
+        header: () => <span className="font-title"> Visits</span>,
       },
       {
         id: 'status',
@@ -122,12 +123,15 @@ export function ExampleDataTable() {
   }
   return (
     <>
-      <Input
-        placeholder="underline text"
-        onChange={(e) => setInputSearch(e.target.value)}
-        value={inputSearch}
-        className="w-[200px] border-primary p-4"
-      />
+      <div className="py-4">
+        <Input
+          placeholder="underline text"
+          onChange={(e) => setInputSearch(e.target.value)}
+          value={inputSearch}
+          className="w-[200px] border-primary p-4"
+        />
+      </div>
+
       <DataTable
         data={data}
         columns={columns}

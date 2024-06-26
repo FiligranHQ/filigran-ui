@@ -220,7 +220,12 @@ const FiligranUIPlugin = () => {
             'l': '1rem',
             'xl': '1.5rem',
             'xxl': '2rem'
-          }
+          },
+          fontFamily: {
+            'title': ['var(--font-geologica)', 'system-ui', 'sans-serif'],
+            'body': ['var(--font-ibm-plex-sans)', 'system-ui', 'sans-serif'],
+          },
+
         },
       },
     },

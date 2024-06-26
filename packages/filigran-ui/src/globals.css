@@ -145,11 +145,15 @@
   * {
     @apply border-border;
     font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
+
   }
   h1,h2,h3,h4,h5,h6 {
     font-family: var(--font-geologica), system-ui, sans-serif;
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 0.875rem;
+    line-height: 1.52;
+    letter-spacing: 0.0035rem;
   }
 }

@@ -3,8 +3,6 @@ import React from 'react'
 import remarkGfm from 'remark-gfm'
 import ReactLiveDisplay from '@/components/react-live/ReactLiveDisplay'
 import rehypeSlug from 'rehype-slug'
-import rehypeToc from '@jsdevtools/rehype-toc'
-import {customizeTOCUtil} from '@/utils/customizeTOC.util' // https://unifiedjs.com/explore/package/remark-toc/
 import * as FiligranUIComponent from 'filigran-ui'
 import * as FiligranIcon from 'filigran-icon'
 import * as LucidIcon from 'lucide-react'
@@ -18,7 +16,7 @@ import {ExampleToast} from '@/components/example-toast'
 const options = {
   mdxOptions: {
     remarkPlugins: [remarkGfm],
-    rehypePlugins: [rehypeSlug, [rehypeToc, {customizeTOC: customizeTOCUtil}]],
+    rehypePlugins: [rehypeSlug],
   },
 }
 

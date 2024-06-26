@@ -90,11 +90,11 @@ const DataTableSelectColumnVisibility = <TData,>() => {
   return   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
         aria-label="Manage columns visibility"
-        className="rounded border border-black">
-         <TableTuneIcon className="h-4 w-4" />
+        className="rounded border border-gray-600 h-8 box-content">
+         <TableTuneIcon className="p-1.5 h-6 w-6" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
@@ -116,7 +116,7 @@ const DataTableSelectColumnVisibility = <TData,>() => {
 
 const DataTableOptionsHeader = <TData, TValue>({column, menuItems, title, className}: { column: Column<TData, TValue> , menuItems?: ReactNode, title: string, className?: string}) => {
   if(!column.getCanHide() && !column.getCanSort() ) {
-    return <> {title}</>;
+    return <span className="font-title font-bold"> {title}</span>;
   }
 
   return (
@@ -128,13 +128,13 @@ const DataTableOptionsHeader = <TData, TValue>({column, menuItems, title, classN
             size="sm"
             className="-ml-3 h-8 data-[state=open]:bg-accent"
           >
-            {title}
+            <span className="font-title font-bold"> {title}</span>
             {column.getIsSorted() === "desc" ? (
-              <KeyboardArrowDownIcon className="ml-2 h-4 w-4" />
+              <KeyboardArrowDownIcon className="ml-s p-1.5 h-6 w-6" />
             ) : column.getIsSorted() === "asc" ? (
-              <KeyboardArrowUpIcon className="ml-2 h-4 w-4" />
+              <KeyboardArrowUpIcon className="ml-s p-1.5 h-6 w-6" />
             ) : (
-              <UnfoldMoreIcon className="ml-2 h-4 w-4" />
+              <UnfoldMoreIcon className="ml-s p-1.5 h-6 w-6" />
             )}
           </Button>
         </DropdownMenuTrigger>
@@ -142,11 +142,11 @@ const DataTableOptionsHeader = <TData, TValue>({column, menuItems, title, classN
         {
           column.getCanSort() && <>
             <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
-              <ArrowUpIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+              <ArrowUpIcon className="mr-2 p-1.5 h-6 w-6 text-muted-foreground/70" />
               Asc
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
-              <ArrowDownIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+              <ArrowDownIcon className="mr-2 p-1.5 h-6 w-6 text-muted-foreground/70" />
               Desc
             </DropdownMenuItem>
           </>
@@ -154,7 +154,7 @@ const DataTableOptionsHeader = <TData, TValue>({column, menuItems, title, classN
         { ((menuItems) || column.getCanHide()) && <DropdownMenuSeparator />}
 
           {column.getCanHide() && <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
-            <EyeOff className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+            <EyeOff className="mr-2 p-1.5 h-6 w-6 text-muted-foreground/70" />
             Hide
           </DropdownMenuItem>}
           {menuItems}
@@ -187,7 +187,7 @@ const DraggableTableHeader = <TData, TValue>({ header }: { header: Header<TData,
         {header.isPlaceholder ? null : (
           typeof header.column.columnDef.header === 'string' ?
           <DataTableOptionsHeader column={header.column} title={header.column.columnDef.header}/>:
-          <> {flexRender(header.column.columnDef.header, header.getContext())}</>
+          <span className="font-title font-bold"> {flexRender(header.column.columnDef.header, header.getContext())}</span>
 
         )}
 
@@ -195,7 +195,7 @@ const DraggableTableHeader = <TData, TValue>({ header }: { header: Header<TData,
             className={cn('opacity-0 group-hover:opacity-100 cursor-grab', isDragging && 'cursor-grabbing')}
             {...attributes}
             {...listeners}>
-            <GripHorizontal className="mx-2 h-6 w-6" />
+            <GripHorizontal className="mx-s p-xs h-6 w-6" />
           </button>
 
       </div>
@@ -241,17 +241,19 @@ const DragAlongCell = <TData,>({ cell }: { cell: Cell<TData, unknown> }) => {
 
 const DataTableRowPerPage = ({rowPerPage = [50, 100, 200, 300, 500]}: {rowPerPage?: number[]}) => {
   const table = useContext(TableContext);
-  return <div className="flex items-center space-x-2">
-    <p className="text-sm font-medium">Rows per page</p>
+  return <div className="flex items-center gap-s">
+    <p className="text-sub-content">Rows per page</p>
     <Select
       value={`${table.getState().pagination.pageSize}`}
       onValueChange={(value) => {
         table.setPageSize(Number(value))
       }}
     >
-      <SelectTrigger className="h-10 w-[70px] border-black">
-        <SelectValue placeholder={table.getState().pagination.pageSize} />
-      </SelectTrigger>
+      <div  className="w-[70px] rounded h-8 border border-gray-600 text-sub-content box-content">
+        <SelectTrigger className="border-none">
+          <SelectValue  placeholder={table.getState().pagination.pageSize} />
+        </SelectTrigger>
+      </div>
       <SelectContent side="top">
         {rowPerPage.map((pageSize) => (
           <SelectItem key={pageSize} value={`${pageSize}`}>
@@ -268,45 +270,49 @@ const DataTablePagination = () => {
   const pageSize = table.getState().pagination.pageSize;
   return  <>
 
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center border rounded divide-x divide-gray-600 border-gray-600">
       <Button
-        variant="outline"
-        className=" h-8 w-8 p-0"
+        variant="ghost"
+        size="icon"
+        className="h-8 p-s rounded-none"
+        aria-label="Go to first page"
         onClick={() => table.setPageIndex(0)}
         disabled={!table.getCanPreviousPage()}
       >
-        <span className="sr-only">Go to first page</span>
-        <ArrowFirstIcon className="h-4 w-4" />
+        <ArrowFirstIcon className="p-1.5 h-6 w-6" />
       </Button>
       <Button
-        variant="outline"
-        className="h-8 w-8 p-0"
+        variant="ghost"
+        size="icon"
+        className="h-8 p-s rounded-none"
         onClick={() => table.previousPage()}
         disabled={!table.getCanPreviousPage()}
+        aria-label="Go to previous page"
       >
-        <span className="sr-only">Go to previous page</span>
-        <ArrowPreviousIcon className="h-4 w-4" />
+        <ArrowPreviousIcon className="p-1.5 h-6 w-6" />
       </Button>
-      <div className=" text-sm font-medium">
-        Rows {(pageIndex* pageSize) + 1 } to {Math.min((pageIndex + 1)* pageSize, table.getRowCount())} / {table.getRowCount()}
+      <div className="text-sub-content p-s h-8 text-gray-500">
+        Rows <span className="text-gray-1000">{(pageIndex* pageSize) + 1 } to {Math.min((pageIndex + 1)* pageSize, table.getRowCount())}</span> / {table.getRowCount()}
       </div>
       <Button
-        variant="outline"
-        className="h-8 w-8 p-0"
+        variant="ghost"
+        size="icon"
+        className="h-8 p-s rounded-none"
         onClick={() => table.nextPage()}
         disabled={!table.getCanNextPage()}
+        aria-label="Go to next page"
       >
-        <span className="sr-only">Go to next page</span>
-        <ArrowNextIcon className="h-4 w-4" />
+        <ArrowNextIcon className="p-1.5 h-6 w-6" />
       </Button>
       <Button
-        variant="outline"
-        className=" h-8 w-8 p-0"
+        variant="ghost"
+        size="icon"
+        className="h-8 p-s rounded-none"
         onClick={() => table.setPageIndex(table.getPageCount() - 1)}
         disabled={!table.getCanNextPage()}
+        aria-label="Go to last page"
       >
-        <span className="sr-only">Go to last page</span>
-        <ArrowLastIcon className="h-4 w-4" />
+        <ArrowLastIcon className="p-1.5 h-6 w-6" />
       </Button>
     </div>
   </>
@@ -362,7 +368,7 @@ function GenericDataTable<TData extends { id: string }, TValue>(
         modifiers={[restrictToHorizontalAxis]}
         onDragEnd={handleDragEnd}
         sensors={sensors}>
-        <div className="rounded-md">
+        <div className="pt-xl">
           <Table style={{ width: table.getCenterTotalSize() }}>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (

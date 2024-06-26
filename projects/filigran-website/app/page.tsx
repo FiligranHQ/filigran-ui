@@ -2,7 +2,7 @@ import Link from 'next/link'
 import {Button} from 'filigran-ui/servers'
 export default async function Home() {
   return (
-    <main className="prose mx-auto flex max-w-4xl flex-1 dark:prose-invert">
+    <main className="mx-auto flex max-w-4xl flex-1">
       <div className="flex flex-col justify-center text-center">
         <h1 className="text-8xl font-bold tracking-tight">
           Uncover threats.
