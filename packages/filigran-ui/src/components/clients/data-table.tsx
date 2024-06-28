@@ -90,11 +90,11 @@ const DataTableSelectColumnVisibility = <TData,>() => {
   return   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
         aria-label="Manage columns visibility"
-        className="rounded border border-gray-600 h-8 box-content">
-         <TableTuneIcon className="p-1.5 h-6 w-6" />
+        className="rounded border h-8 w-8 box-content">
+         <TableTuneIcon className="h-4 w-4" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
@@ -130,11 +130,11 @@ const DataTableOptionsHeader = <TData, TValue>({column, menuItems, title, classN
           >
             <span className="font-title font-bold"> {title}</span>
             {column.getIsSorted() === "desc" ? (
-              <KeyboardArrowDownIcon className="ml-s p-1.5 h-6 w-6" />
+              <KeyboardArrowDownIcon className="ml-s p-1.5 h-6 w-6 text-text-secondary" />
             ) : column.getIsSorted() === "asc" ? (
-              <KeyboardArrowUpIcon className="ml-s p-1.5 h-6 w-6" />
+              <KeyboardArrowUpIcon className="ml-s p-1.5 h-6 w-6 text-text-secondary" />
             ) : (
-              <UnfoldMoreIcon className="ml-s p-1.5 h-6 w-6" />
+              <UnfoldMoreIcon className="ml-s p-1.5 h-6 w-6 text-text-secondary" />
             )}
           </Button>
         </DropdownMenuTrigger>
@@ -142,11 +142,11 @@ const DataTableOptionsHeader = <TData, TValue>({column, menuItems, title, classN
         {
           column.getCanSort() && <>
             <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
-              <ArrowUpIcon className="mr-2 p-1.5 h-6 w-6 text-muted-foreground/70" />
+              <ArrowUpIcon className="mr-2 p-1.5 h-6 w-6 text-text-secondary" />
               Asc
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
-              <ArrowDownIcon className="mr-2 p-1.5 h-6 w-6 text-muted-foreground/70" />
+              <ArrowDownIcon className="mr-2 p-1.5 h-6 w-6 text-text-secondary" />
               Desc
             </DropdownMenuItem>
           </>
@@ -154,7 +154,7 @@ const DataTableOptionsHeader = <TData, TValue>({column, menuItems, title, classN
         { ((menuItems) || column.getCanHide()) && <DropdownMenuSeparator />}
 
           {column.getCanHide() && <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
-            <EyeOff className="mr-2 p-1.5 h-6 w-6 text-muted-foreground/70" />
+            <EyeOff className="mr-2 p-1.5 h-6 w-6 text-text-secondary" />
             Hide
           </DropdownMenuItem>}
           {menuItems}
@@ -249,7 +249,7 @@ const DataTableRowPerPage = ({rowPerPage = [50, 100, 200, 300, 500]}: {rowPerPag
         table.setPageSize(Number(value))
       }}
     >
-      <div  className="w-[70px] rounded h-8 border border-gray-600 text-sub-content box-content">
+      <div  className=" rounded h-8 border border-border-medium-strong text-sub-content box-content">
         <SelectTrigger className="border-none">
           <SelectValue  placeholder={table.getState().pagination.pageSize} />
         </SelectTrigger>
@@ -270,49 +270,49 @@ const DataTablePagination = () => {
   const pageSize = table.getState().pagination.pageSize;
   return  <>
 
-    <div className="flex items-center border rounded divide-x divide-gray-600 border-gray-600">
+    <div className="flex items-center border rounded divide-x divide-border-medium-strong border-border-medium-strong">
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 p-s rounded-none"
+        className="h-8 w-8 p-s rounded-none"
         aria-label="Go to first page"
         onClick={() => table.setPageIndex(0)}
         disabled={!table.getCanPreviousPage()}
       >
-        <ArrowFirstIcon className="p-1.5 h-6 w-6" />
+        <ArrowFirstIcon className=" h-3 w-3" />
       </Button>
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 p-s rounded-none"
+        className="h-8 w-8 p-s rounded-none"
         onClick={() => table.previousPage()}
         disabled={!table.getCanPreviousPage()}
         aria-label="Go to previous page"
       >
-        <ArrowPreviousIcon className="p-1.5 h-6 w-6" />
+        <ArrowPreviousIcon className="h-3 w-3" />
       </Button>
-      <div className="text-sub-content p-s h-8 text-gray-500">
-        Rows <span className="text-gray-1000">{(pageIndex* pageSize) + 1 } to {Math.min((pageIndex + 1)* pageSize, table.getRowCount())}</span> / {table.getRowCount()}
+      <div className="text-sub-content p-s h-8 text-text-secondary">
+        Rows <span className="text-foreground">{(pageIndex* pageSize) + 1 } to {Math.min((pageIndex + 1)* pageSize, table.getRowCount())}</span> / {table.getRowCount()}
       </div>
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 p-s rounded-none"
+        className="h-8 w-8 p-s rounded-none"
         onClick={() => table.nextPage()}
         disabled={!table.getCanNextPage()}
         aria-label="Go to next page"
       >
-        <ArrowNextIcon className="p-1.5 h-6 w-6" />
+        <ArrowNextIcon className="h-3 w-3" />
       </Button>
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 p-s rounded-none"
+        className="h-8 w-8 p-s rounded-none"
         onClick={() => table.setPageIndex(table.getPageCount() - 1)}
         disabled={!table.getCanNextPage()}
         aria-label="Go to last page"
       >
-        <ArrowLastIcon className="p-1.5 h-6 w-6" />
+        <ArrowLastIcon className="h-3 w-3" />
       </Button>
     </div>
   </>
@@ -388,7 +388,7 @@ function GenericDataTable<TData extends { id: string }, TValue>(
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className={cn(onClickRow && 'cursor-pointer', !row.getCanSelect() && 'cursor-auto opacity-50 bg-muted/30 ')} onClick={() => onClickRow && row.getCanSelect() ? onClickRow(row) : null}>
+                <TableRow key={row.id} className={cn(onClickRow && 'cursor-pointer', !row.getCanSelect() && 'cursor-auto opacity-50 bg-text-foreground/30 ')} onClick={() => onClickRow && row.getCanSelect() ? onClickRow(row) : null}>
                   {row.getVisibleCells().map((cell) => (
                     <SortableContext
                       key={cell.id}
