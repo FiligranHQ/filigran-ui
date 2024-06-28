@@ -44,7 +44,7 @@
     "@radix-ui/react-toast": "^1.1.5",
     "@tanstack/react-table": "^8.17.3",
     "class-variance-authority": "0.7.0",
-    "clsx": "2.1.0",
+    "clsx": "2.1.1",
     "cmdk": "^1.0.0",
     "lucide-react": "0.395.0",
     "react-hook-form": "^7.51.2",
