@@ -10,7 +10,7 @@
     "build:filigran-ui": "npm run build -w filigran-ui",
     "dev": "npm run dev -w filigran-website",
     "publish:filigran-icon": "yarn build --workspace packages/filigran-icon && npm publish --provenance --access public --workspace packages/filigran-icon",
-    "publish:filigran-ui": "yarn build --workspace packages/filigran-ui && npm publish --provenance --access public --workspace packages/filigran-ui"
+    "publish:filigran-ui": "yarn build --workspace packages/filigran-icon && yarn build --workspace packages/filigran-ui && npm publish --provenance --access public --workspace packages/filigran-ui"
   },
   "private": true,
   "keywords": [],
