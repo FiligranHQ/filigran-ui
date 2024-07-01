@@ -60,7 +60,7 @@ async function addDirectivesToChunkFiles(distPath = 'dist'): Promise<void> {
 
 export default defineConfig(() => {
   return {
-    entry: ["src/index.ts","src/plugin.ts", "src/global.css", "src/components/**/*.{ts,tsx}"],
+    entry: ["src/index.ts","src/plugin.ts", "src/components/**/*.{ts,tsx}"],
     splitting: true,
     treeshake: true,
     sourcemap: true,

@@ -1,0 +1,39 @@
+
+  .dark {
+    --background: var(--gray-1000);
+    --foreground: var(--gray-100);
+    --tw-prose-body: var(--gray-400);
+    --muted: 247 50% 12.9%;
+    --muted-foreground: 247 10% 54.3%;
+    --popover: 247 45% 5.59%;
+    --popover-foreground: 247 10% 97.15%;
+    --card: 247 45% 5.59%;
+    --card-foreground: 247 10% 97.15%;
+    --border: 247 50% 12.9%;
+    --input: 247 50% 12.9%;
+    --secondary: 247 50% 12.9%;
+    --secondary-foreground: 247 10% 97.15%;
+    --accent: 247 50% 12.9%;
+    --accent-foreground: 247 10% 97.15%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 247 10% 97.15%;
+    --ring: 247 100% 43%;
+    --radius: 0.3rem;
+
+    --page-background: var(--dark-100);
+    --box-background: #ffffff;
+    --primary-background: var(--blue-400);
+    --focus-background: var(--blue-900);
+    --focus-foreground: var(--primary-background);
+    --text-foreground: var(--light-100);
+    --secondary-text-foreground: var(--gray-300);
+    --text-inverted-foreground: var(--dark-100);
+
+    --border-strong: var(--gray-150);
+    --border-medium-strong: var(--gray-200);
+    --border-neutral: var(--gray-300);
+    --border-medium-light: var(--gray-700);
+    --border-light: var(--gray-800);
+    --border-focus: var(--blue-600);
+  }
+
