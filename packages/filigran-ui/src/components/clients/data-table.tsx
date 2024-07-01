@@ -176,7 +176,9 @@ const DataTableOptionsHeader = <TData, TValue>({
               </DropdownMenuItem>
             </>
           )}
-          {(menuItems || column.getCanHide()) && <DropdownMenuSeparator />}
+          {(menuItems || (column.getCanHide() && column.getCanSort())) && (
+            <DropdownMenuSeparator />
+          )}
 
           {column.getCanHide() && (
             <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>

@@ -60,7 +60,8 @@ export function ExampleDataTable() {
       {
         id: 'firstName',
         accessorKey: 'firstName',
-        enableHiding: false,
+        enableHiding: true,
+        enableSorting: false,
         cell: (info) => (
           <HighlightSearchTerm text={info.getValue() as string} />
         ),
