@@ -1,12 +1,12 @@
-"use client";
+'use client'
 
-import * as React from "react";
-import { Check, ChevronDown } from "lucide-react";
+import * as React from 'react'
+import {Check, ChevronDown} from 'lucide-react'
 
-import { cn } from "../../lib/utils";
+import {cn} from '../../lib/utils'
 
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { Button } from "../servers";
+import {Popover, PopoverContent, PopoverTrigger} from './popover'
+import {Button} from '../servers'
 import {
   Command,
   CommandEmpty,
@@ -14,15 +14,15 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "./command";
+} from './command'
 
 interface ComboboxProps {
-  dataTab: { value: string; label: string }[];
-  order: string;
-  placeholder: string;
-  emptyCommand: string;
-  onValueChange: (value: string) => void;
-  value?: string;
+  dataTab: {value: string; label: string}[]
+  order: string
+  placeholder: string
+  emptyCommand: string
+  onValueChange: (value: string) => void
+  value?: string
 }
 
 function Combobox({
@@ -31,26 +31,27 @@ function Combobox({
   placeholder,
   emptyCommand,
   onValueChange,
-  value = "",
+  value = '',
 }: ComboboxProps) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(false)
 
   const handleSelect = (currentValue: string) => {
-    const newValue = currentValue === value ? "" : currentValue;
-    setOpen(false);
-    onValueChange(newValue);
-  };
+    const newValue = currentValue === value ? '' : currentValue
+    setOpen(false)
+    onValueChange(newValue)
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
           className="w-[200px] justify-between"
-          onClick={() => setOpen(!open)}
-        >
+          onClick={() => setOpen(!open)}>
           {value ? dataTab.find((data) => data.value === value)?.label : order}
           <ChevronDown className="h-4 cursor-pointer text-muted-foreground" />
         </Button>
@@ -65,15 +66,14 @@ function Combobox({
                 <CommandItem
                   key={data.value}
                   value={data.value}
-                  onSelect={() => handleSelect(data.value)}
-                >
+                  onSelect={() => handleSelect(data.value)}>
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
-                      value === data.value ? "opacity-100" : "opacity-0",
+                      'mr-2 h-4 w-4',
+                      value === data.value ? 'opacity-100' : 'opacity-0'
                     )}
                   />
-                  <span className="text-sm text-muted-foreground mx-3">
+                  <span className="mx-3 text-sm text-muted-foreground">
                     {data.label}
                   </span>
                 </CommandItem>
@@ -83,7 +83,7 @@ function Combobox({
         </Command>
       </PopoverContent>
     </Popover>
-  );
+  )
 }
 
-export { Combobox };
+export {Combobox}

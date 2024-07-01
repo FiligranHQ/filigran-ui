@@ -1,11 +1,11 @@
-import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { CheckIcon, XCircle, ChevronDown, XIcon } from "lucide-react";
+import * as React from 'react'
+import {cva, type VariantProps} from 'class-variance-authority'
+import {CheckIcon, XCircle, ChevronDown, XIcon} from 'lucide-react'
 
-import { cn } from "../../lib/utils";
-import { Popover, PopoverContent, PopoverTrigger, Separator } from "../clients";
-import { Button } from "./button";
-import { Badge } from "./badge";
+import {cn} from '../../lib/utils'
+import {Popover, PopoverContent, PopoverTrigger, Separator} from '../clients'
+import {Button} from './button'
+import {Badge} from './badge'
 import {
   Command,
   CommandEmpty,
@@ -14,38 +14,38 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "../clients";
+} from '../clients'
 
-const multiSelectVariants = cva("m-1", {
+const multiSelectVariants = cva('m-1', {
   variants: {
     variant: {
       default:
-        "border-foreground/10 drop-shadow-md text-foreground bg-card hover:bg-card/80",
+        'border-foreground/10 drop-shadow-md text-foreground bg-card hover:bg-card/80',
       secondary:
-        "border-foreground/10 bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        'border-foreground/10 bg-secondary text-secondary-foreground hover:bg-secondary/80',
       destructive:
-        "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-      inverted: "inverted",
+        'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
+      inverted: 'inverted',
     },
   },
   defaultVariants: {
-    variant: "default",
+    variant: 'default',
   },
-});
+})
 
 interface MultiSelectFormFieldProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof multiSelectVariants> {
-  asChild?: boolean;
+  asChild?: boolean
   options: {
-    label: string;
-    value: string;
-  }[];
-  defaultValue?: string[];
-  disabled?: boolean;
-  placeholder: string;
-  className?: string;
-  onValueChange: (value: string[]) => void;
+    label: string
+    value: string
+  }[]
+  defaultValue?: string[]
+  disabled?: boolean
+  placeholder: string
+  className?: string
+  onValueChange: (value: string[]) => void
 }
 
 const MultiSelectFormField = React.forwardRef<
@@ -64,100 +64,100 @@ const MultiSelectFormField = React.forwardRef<
       placeholder,
       ...props
     },
-    ref,
+    ref
   ) => {
     const [selectedValues, setSelectedValues] = React.useState<string[]>(
-      defaultValue || [],
-    );
-    const selectedValuesSet = React.useRef(new Set(selectedValues));
-    const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
+      defaultValue || []
+    )
+    const selectedValuesSet = React.useRef(new Set(selectedValues))
+    const [isPopoverOpen, setIsPopoverOpen] = React.useState(false)
 
     React.useEffect(() => {
-      setSelectedValues(defaultValue || []);
-      selectedValuesSet.current = new Set(defaultValue);
-    }, [defaultValue]);
+      setSelectedValues(defaultValue || [])
+      selectedValuesSet.current = new Set(defaultValue)
+    }, [defaultValue])
 
     const handleInputKeyDown = (event: any) => {
-      if (event.key === "Enter") {
-        setIsPopoverOpen(true);
-      } else if (event.key === "Backspace" && !event.target.value) {
-        selectedValues.pop();
-        setSelectedValues([...selectedValues]);
+      if (event.key === 'Enter') {
+        setIsPopoverOpen(true)
+      } else if (event.key === 'Backspace' && !event.target.value) {
+        selectedValues.pop()
+        setSelectedValues([...selectedValues])
         selectedValuesSet.current.delete(
-          selectedValues[selectedValues.length - 1],
-        );
-        onValueChange([...selectedValues]);
+          selectedValues[selectedValues.length - 1]
+        )
+        onValueChange([...selectedValues])
       }
-    };
+    }
 
     const toggleOption = (value: string) => {
       if (selectedValuesSet.current.has(value)) {
-        selectedValuesSet.current.delete(value);
-        setSelectedValues(selectedValues.filter((v) => v !== value));
+        selectedValuesSet.current.delete(value)
+        setSelectedValues(selectedValues.filter((v) => v !== value))
       } else {
-        selectedValuesSet.current.add(value);
-        setSelectedValues([...selectedValues, value]);
+        selectedValuesSet.current.add(value)
+        setSelectedValues([...selectedValues, value])
       }
-      onValueChange(Array.from(selectedValuesSet.current));
-    };
+      onValueChange(Array.from(selectedValuesSet.current))
+    }
 
     return (
-      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+      <Popover
+        open={isPopoverOpen}
+        onOpenChange={setIsPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
             ref={ref}
             {...props}
             onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-            className="flex w-full p-1 rounded-md border border-gray-150 min-h-10 h-auto items-center justify-between bg-inherit hover:bg-gray-100"
-          >
+            className="flex h-auto min-h-10 w-full items-center justify-between rounded-md border border-gray-150 bg-inherit p-1 hover:bg-gray-100">
             {selectedValues.length > 0 ? (
-              <div className="flex justify-between items-center w-full">
+              <div className="flex w-full items-center justify-between">
                 <div className="flex flex-wrap items-center">
                   {selectedValues.map((value) => {
-                    const option = options.find((o) => o.value === value);
+                    const option = options.find((o) => o.value === value)
 
                     return (
                       <Badge
                         key={value}
                         className={cn(
-                          multiSelectVariants({ variant, className }),
-                        )}
-                      >
+                          multiSelectVariants({variant, className})
+                        )}>
                         {option?.label}
                         <XCircle
                           className="ml-2 h-4 w-4 cursor-pointer"
                           onClick={(event) => {
-                            event.stopPropagation();
-                            toggleOption(value);
+                            event.stopPropagation()
+                            toggleOption(value)
                           }}
                         />
                       </Badge>
-                    );
+                    )
                   })}
                 </div>
                 <div className="flex items-center justify-between">
                   <XIcon
-                    className="h-4 mx-2 cursor-pointer text-muted-foreground"
+                    className="mx-2 h-4 cursor-pointer text-muted-foreground"
                     onClick={(event) => {
-                      setSelectedValues([]);
-                      selectedValuesSet.current.clear();
-                      onValueChange([]);
-                      event.stopPropagation();
+                      setSelectedValues([])
+                      selectedValuesSet.current.clear()
+                      onValueChange([])
+                      event.stopPropagation()
                     }}
                   />
                   <Separator
                     orientation="vertical"
-                    className="flex min-h-6 h-full"
+                    className="flex h-full min-h-6"
                   />
-                  <ChevronDown className="h-4 mx-2 cursor-pointer text-muted-foreground" />
+                  <ChevronDown className="mx-2 h-4 cursor-pointer text-muted-foreground" />
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between w-full mx-auto">
-                <span className="text-sm text-muted-foreground mx-3">
+              <div className="mx-auto flex w-full items-center justify-between">
+                <span className="mx-3 text-sm text-muted-foreground">
                   {placeholder}
                 </span>
-                <ChevronDown className="h-4 cursor-pointer text-muted-foreground mx-2" />
+                <ChevronDown className="mx-2 h-4 cursor-pointer text-muted-foreground" />
               </div>
             )}
           </Button>
@@ -165,8 +165,7 @@ const MultiSelectFormField = React.forwardRef<
         <PopoverContent
           className="w-[200px] p-0 drop-shadow-sm"
           align="start"
-          onEscapeKeyDown={() => setIsPopoverOpen(false)}
-        >
+          onEscapeKeyDown={() => setIsPopoverOpen(false)}>
           <Command>
             <CommandInput
               placeholder="Search..."
@@ -176,33 +175,29 @@ const MultiSelectFormField = React.forwardRef<
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup>
                 {options.map((option) => {
-                  const isSelected = selectedValuesSet.current.has(
-                    option.value,
-                  );
+                  const isSelected = selectedValuesSet.current.has(option.value)
                   return (
                     <CommandItem
                       key={option.value}
                       onSelect={() => toggleOption(option.value)}
                       style={{
-                        pointerEvents: "auto",
+                        pointerEvents: 'auto',
                         opacity: 1,
                       }}
-                      className="cursor-pointer"
-                    >
+                      className="cursor-pointer">
                       <div
                         className={cn(
-                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                          'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
                           isSelected
-                            ? "bg-primary text-primary-foreground"
-                            : "opacity-50 [&_svg]:invisible",
-                        )}
-                      >
+                            ? 'bg-primary text-primary-foreground'
+                            : 'opacity-50 [&_svg]:invisible'
+                        )}>
                         <CheckIcon className="h-4 w-4" />
                       </div>
 
                       <span>{option.label}</span>
                     </CommandItem>
-                  );
+                  )
                 })}
               </CommandGroup>
               <CommandSeparator />
@@ -212,21 +207,20 @@ const MultiSelectFormField = React.forwardRef<
                     <>
                       <CommandItem
                         onSelect={() => {
-                          setSelectedValues([]);
-                          selectedValuesSet.current.clear();
-                          onValueChange([]);
+                          setSelectedValues([])
+                          selectedValuesSet.current.clear()
+                          onValueChange([])
                         }}
                         style={{
-                          pointerEvents: "auto",
+                          pointerEvents: 'auto',
                           opacity: 1,
                         }}
-                        className="flex-1 justify-center cursor-pointer"
-                      >
+                        className="flex-1 cursor-pointer justify-center">
                         Clear
                       </CommandItem>
                       <Separator
                         orientation="vertical"
-                        className="flex min-h-6 h-full"
+                        className="flex h-full min-h-6"
                       />
                     </>
                   )}
@@ -234,11 +228,10 @@ const MultiSelectFormField = React.forwardRef<
                   <CommandItem
                     onSelect={() => setIsPopoverOpen(false)}
                     style={{
-                      pointerEvents: "auto",
+                      pointerEvents: 'auto',
                       opacity: 1,
                     }}
-                    className="flex-1 justify-center cursor-pointer"
-                  >
+                    className="flex-1 cursor-pointer justify-center">
                     Close
                   </CommandItem>
                 </div>
@@ -247,10 +240,10 @@ const MultiSelectFormField = React.forwardRef<
           </Command>
         </PopoverContent>
       </Popover>
-    );
-  },
-);
+    )
+  }
+)
 
-MultiSelectFormField.displayName = "MultiSelectFormField";
+MultiSelectFormField.displayName = 'MultiSelectFormField'
 
-export { MultiSelectFormField };
+export {MultiSelectFormField}

@@ -44,7 +44,7 @@
     --radius: 0.3rem;
 
     --gray-default: var(--gray-200);
-    --gray-50: 	240 11% 96%;
+    --gray-50: 240 11% 96%;
     --gray-100: 240 4% 95%;
     --gray-150: 220 5.88% 90%;
     --gray-200: 225 3.92% 80%;
@@ -89,7 +89,6 @@
     --green-700: 123 76% 27%;
     --green-800: 122 79% 17%;
     --green-900: 122 75% 13%;
-
 
     --turquoise-default: var(--turquoise-500);
     --turquoise-100: 164 100% 87%;
@@ -141,9 +140,13 @@
   * {
     @apply border-border;
     font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
-
   }
-  h1,h2,h3,h4,h5,h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-geologica), system-ui, sans-serif;
   }
   body {
