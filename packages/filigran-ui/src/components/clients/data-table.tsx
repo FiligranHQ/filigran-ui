@@ -10,7 +10,7 @@ import {
   type Table as TableType,
   useReactTable,
   type Column,
-  RowData,
+  type RowData,
 } from '@tanstack/react-table'
 import {
   Table,
@@ -257,11 +257,11 @@ const DraggableTableHeader = <TData, TValue>({
   )
 }
 
-const DragAlongCell = ({
+const DragAlongCell = <TData,>({
   cell,
   isLoading,
 }: {
-  cell: Cell<RowData, unknown>
+  cell: Cell<TData, unknown>
   isLoading?: boolean
 }) => {
   const {isDragging, setNodeRef, transform} = useSortable({
@@ -376,7 +376,7 @@ const DataTablePagination = () => {
   )
 }
 
-const LoadingRows = ({table}) => {
+const LoadingRows = <TData,>({table}: {table: TableType<TData>}) => {
   return (
     <>
       {Array(30)
@@ -388,7 +388,7 @@ const LoadingRows = ({table}) => {
   )
 }
 
-const LoadingRow = ({table}) => {
+const LoadingRow = <TData,>({table}: {table: TableType<TData>}) => {
   return (
     <>
       {table.getHeaderGroups().map((headerGroup) => (
