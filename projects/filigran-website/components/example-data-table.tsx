@@ -11,19 +11,27 @@ import {
   DataTableOptionsHeader,
   DropdownMenuItem,
 } from 'filigran-ui/clients'
-import {useMemo, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 import {Input} from 'filigran-ui'
 import {makeData, Person} from '@/utils/makeData'
 
 export function ExampleDataTable() {
   const [rowSelection, setRowSelection] = useState({})
   const [inputSearch, setInputSearch] = useState('')
-  const [data, setData] = useState(() => makeData(500))
+  const [data, setData] = useState(() => makeData(500));
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 50,
   })
-
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    },  360);
+    setLoading(true);
+    // Cleanup the timer when the component unmounts
+    return () => clearTimeout(timer);
+  }, [pagination]);
   const columns = useMemo<ColumnDef<Person>[]>(
     () => [
       {
@@ -150,6 +158,7 @@ export function ExampleDataTable() {
       <DataTable
         data={data}
         columns={columns}
+        isLoading={loading}
         tableOptions={{
           onRowSelectionChange: setRowSelection,
           getSortedRowModel: getSortedRowModel(),

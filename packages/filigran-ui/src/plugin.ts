@@ -49,7 +49,6 @@ const FiligranUIPlugin = () => {
       })
     },
     {
-      darkMode: ['class'],
       theme: {
         container: {
           center: true,

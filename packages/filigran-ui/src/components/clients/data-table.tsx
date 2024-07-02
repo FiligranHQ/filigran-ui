@@ -9,8 +9,8 @@ import {
   type TableState,
   type Table as TableType,
   useReactTable,
-  type Row,
   type Column,
+  RowData,
 } from '@tanstack/react-table'
 import {
   Table,
@@ -55,7 +55,7 @@ import {
 } from './dropdown-menu'
 import {ArrowDownIcon, ArrowUpIcon, EyeOff, GripHorizontal} from 'lucide-react'
 import {cn, fixedForwardRef} from '../../lib/utils'
-import {Button} from '../servers'
+import {Button, Skeleton} from '../servers'
 import {
   Select,
   SelectContent,
@@ -73,6 +73,7 @@ import {
   TableTuneIcon,
   UnfoldMoreIcon,
 } from 'filigran-icon'
+import type {Arguments} from '@dnd-kit/sortable/dist/hooks/useSortable'
 
 interface DataTableProps<TData extends {id: string}, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -80,7 +81,8 @@ interface DataTableProps<TData extends {id: string}, TValue> {
   toolbar?: ReactNode
   tableState?: Partial<TableState>
   tableOptions?: Partial<TableOptions<TData>>
-  onClickRow?: (row: Row<TData>) => void
+  onClickRow?: (row: RowData) => void
+  isLoading?: boolean
 }
 
 function getTransformString({x, y}: Transform) {
@@ -155,11 +157,11 @@ const DataTableOptionsHeader = <TData, TValue>({
             className="-ml-3 h-8 data-[state=open]:bg-accent">
             <span className="font-title font-bold"> {title}</span>
             {column.getIsSorted() === 'desc' ? (
-              <KeyboardArrowDownIcon className="ml-s h-6 w-6 p-1.5 text-text-secondary" />
+              <KeyboardArrowDownIcon className="ml-s h-3 w-3 text-text-secondary" />
             ) : column.getIsSorted() === 'asc' ? (
-              <KeyboardArrowUpIcon className="ml-s h-6 w-6 p-1.5 text-text-secondary" />
+              <KeyboardArrowUpIcon className="ml-s h-3 w-3 text-text-secondary" />
             ) : (
-              <UnfoldMoreIcon className="ml-s h-6 w-6 p-1.5 text-text-secondary" />
+              <UnfoldMoreIcon className="ml-s h-4 w-4 text-text-secondary" />
             )}
           </Button>
         </DropdownMenuTrigger>
@@ -167,11 +169,11 @@ const DataTableOptionsHeader = <TData, TValue>({
           {column.getCanSort() && (
             <>
               <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
-                <ArrowUpIcon className="mr-2 h-6 w-6 p-1.5 text-text-secondary" />
+                <ArrowUpIcon className="mr-2 h-4 w-4 text-text-secondary" />
                 Asc
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
-                <ArrowDownIcon className="mr-2 h-6 w-6 p-1.5 text-text-secondary" />
+                <ArrowDownIcon className="mr-2 h-4 w-4 text-text-secondary" />
                 Desc
               </DropdownMenuItem>
             </>
@@ -182,7 +184,7 @@ const DataTableOptionsHeader = <TData, TValue>({
 
           {column.getCanHide() && (
             <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
-              <EyeOff className="mr-2 h-6 w-6 p-1.5 text-text-secondary" />
+              <EyeOff className="mr-2 h-4 w-4 text-text-secondary" />
               Hide
             </DropdownMenuItem>
           )}
@@ -200,7 +202,7 @@ const DraggableTableHeader = <TData, TValue>({
   const {attributes, isDragging, listeners, setNodeRef, transform} =
     useSortable({
       id: header.column.id,
-    })
+    } as Arguments)
 
   return (
     <TableHead
@@ -213,7 +215,7 @@ const DraggableTableHeader = <TData, TValue>({
       ref={setNodeRef}
       style={{
         width: header.getSize(),
-        transform: transform ? getTransformString(transform) : undefined,
+        transform: transform ? getTransformString(transform) : '',
       }}>
       <div className="flex h-full items-center justify-between">
         {header.isPlaceholder ? null : typeof header.column.columnDef.header ===
@@ -236,7 +238,7 @@ const DraggableTableHeader = <TData, TValue>({
           )}
           {...attributes}
           {...listeners}>
-          <GripHorizontal className="mx-s h-6 w-6 p-xs" />
+          <GripHorizontal className="mx-s h-5 w-5" />
         </button>
       </div>
       {header.column.getCanResize() && (
@@ -255,23 +257,33 @@ const DraggableTableHeader = <TData, TValue>({
   )
 }
 
-const DragAlongCell = <TData,>({cell}: {cell: Cell<TData, unknown>}) => {
+const DragAlongCell = ({
+  cell,
+  isLoading,
+}: {
+  cell: Cell<RowData, unknown>
+  isLoading?: boolean
+}) => {
   const {isDragging, setNodeRef, transform} = useSortable({
     id: cell.column.id,
-  })
+  } as Arguments)
   return (
     <TableCell
       key={cell.id}
       ref={setNodeRef}
       style={{
         width: cell.column.getSize(),
-        transform: transform ? getTransformString(transform) : undefined,
+        transform: transform ? getTransformString(transform) : '',
       }}
       className={cn(
         'transition-width group relative z-0 opacity-100 transition-transform duration-200 ease-in-out',
         isDragging && 'z-10 opacity-80'
       )}>
-      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+      {isLoading ? (
+        <Skeleton className="h-l w-full" />
+      ) : (
+        <>{flexRender(cell.column.columnDef.cell, cell.getContext())}</>
+      )}
     </TableCell>
   )
 }
@@ -290,7 +302,7 @@ const DataTableRowPerPage = ({
         onValueChange={(value) => {
           table.setPageSize(Number(value))
         }}>
-        <div className="box-content h-8 rounded border border-border-medium-strong text-sub-content">
+        <div className="box-content flex h-8 rounded border border-border-medium-strong text-sub-content">
           <SelectTrigger className="border-none">
             <SelectValue placeholder={table.getState().pagination.pageSize} />
           </SelectTrigger>
@@ -336,7 +348,7 @@ const DataTablePagination = () => {
         <div className="h-8 p-s text-text-secondary text-sub-content">
           Rows{' '}
           <span className="text-foreground">
-            {pageIndex * pageSize + 1} to{' '}
+            {table.getRowCount() > 0 ? pageIndex * pageSize + 1 : 0} to{' '}
             {Math.min((pageIndex + 1) * pageSize, table.getRowCount())}
           </span>{' '}
           / {table.getRowCount()}
@@ -364,6 +376,35 @@ const DataTablePagination = () => {
   )
 }
 
+const LoadingRows = ({table}) => {
+  return (
+    <>
+      {Array(30)
+        .fill({})
+        .map(() => (
+          <LoadingRow table={table} />
+        ))}
+    </>
+  )
+}
+
+const LoadingRow = ({table}) => {
+  return (
+    <>
+      {table.getHeaderGroups().map((headerGroup) => (
+        <TableRow
+          className={'hover:bg-inherit'}
+          key={headerGroup.id}>
+          {headerGroup.headers.map(() => (
+            <TableCell>
+              <Skeleton className="h-l w-full" />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  )
+}
 const TableContext = createContext<TableType<any>>({} as TableType<any>)
 function GenericDataTable<TData extends {id: string}, TValue>(
   {
@@ -373,6 +414,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     tableOptions,
     toolbar,
     onClickRow,
+    isLoading = false,
   }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
@@ -441,30 +483,33 @@ function GenericDataTable<TData extends {id: string}, TValue>(
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className={cn(
-                    onClickRow && 'cursor-pointer',
-                    !row.getCanSelect() &&
-                      'bg-text-foreground/30 cursor-auto opacity-50'
-                  )}
-                  onClick={() =>
-                    onClickRow && row.getCanSelect() ? onClickRow(row) : null
-                  }>
-                  {row.getVisibleCells().map((cell) => (
-                    <SortableContext
-                      key={cell.id}
-                      items={columnOrder}
-                      strategy={horizontalListSortingStrategy}>
-                      <DragAlongCell
+              <>{isLoading && <LoadingRows table={table} />}</>
+              {!isLoading &&
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className={cn(
+                      onClickRow ? 'cursor-pointer' : '',
+                      !row.getCanSelect() &&
+                        'bg-text-foreground/30 cursor-auto opacity-50'
+                    )}
+                    onClick={() =>
+                      onClickRow && row.getCanSelect() ? onClickRow(row) : null
+                    }>
+                    {row.getVisibleCells().map((cell) => (
+                      <SortableContext
                         key={cell.id}
-                        cell={cell}
-                      />
-                    </SortableContext>
-                  ))}
-                </TableRow>
-              ))}
+                        items={columnOrder}
+                        strategy={horizontalListSortingStrategy}>
+                        <DragAlongCell
+                          key={cell.id}
+                          cell={cell}
+                          isLoading={isLoading}
+                        />
+                      </SortableContext>
+                    ))}
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </div>

@@ -1,9 +1,7 @@
-@tailwind base;
+
 @tailwind components;
 @tailwind utilities;
-
-@layer base {
-  :root {
+:root {
     --dark-100: var(--gray-1000);
     --light-100: var(--gray-50);
     --background: var(--gray-50);
@@ -134,9 +132,7 @@
     --yellow-800: 42 90% 18%;
     --yellow-900: 41 91% 12%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
     font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
@@ -155,4 +151,3 @@
     line-height: 1.52;
     letter-spacing: 0.0035rem;
   }
-}

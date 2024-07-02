@@ -29,7 +29,7 @@ const SelectTrigger = React.forwardRef<
     {...props}>
     {children}
     <SelectPrimitive.Icon asChild>
-      <KeyboardArrowDownIcon className="h-6 w-6 p-s opacity-50" />
+      <KeyboardArrowDownIcon className="h-3 w-3 ml-s opacity-50" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ))
