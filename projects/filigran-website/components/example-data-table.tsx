@@ -107,6 +107,9 @@ export function ExampleDataTable() {
                 <DropdownMenuItem onClick={() => console.log(header.column)}>
                   Log column
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => console.log(header.column)}>
+                  Log column 2
+                </DropdownMenuItem>
               </>
             }
           />

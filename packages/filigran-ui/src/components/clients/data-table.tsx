@@ -193,7 +193,7 @@ const DataTableOptionsHeader = <TData, TValue>({
           <Button
             variant="ghost"
             size="sm"
-            className="ml-3 h-8 data-[state=open]:bg-accent">
+            className="-ml-3 h-8 data-[state=open]:bg-accent">
             <span className="font-title font-bold"> {title}</span>
             {column.getIsSorted() === 'desc' ? (
               <KeyboardArrowDownIcon className="ml-s h-3 w-3 text-text-secondary" />
@@ -249,7 +249,7 @@ const DraggableTableHeader = <TData, TValue>({
       colSpan={header.colSpan}
       className={cn(
         'transition-width group relative z-0 whitespace-nowrap opacity-100 transition-transform duration-200 ease-in-out',
-        isDragging && 'z-10 bg-gray-150 opacity-80'
+        isDragging && 'z-10 bg-text-secondary/50 opacity-80'
       )}
       ref={setNodeRef}
       style={{
@@ -286,7 +286,7 @@ const DraggableTableHeader = <TData, TValue>({
           onMouseDown={header.getResizeHandler()}
           onTouchStart={header.getResizeHandler()}
           className={cn(
-            `absolute right-0 top-0 h-full w-1 cursor-col-resize select-none bg-gray-700 opacity-0`,
+            `absolute right-0 top-0 h-full w-1 cursor-col-resize select-none bg-text-secondary opacity-0`,
             header.column.getIsResizing() && `bg-primary opacity-100`,
             !isDragging && 'group-hover:opacity-100'
           )}
