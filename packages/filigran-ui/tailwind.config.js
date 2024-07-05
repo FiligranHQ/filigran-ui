@@ -8,6 +8,7 @@ const config = {
     './src/**/*.{ts,tsx}',
   ],
   prefix: '',
+  important: '.filigran-ui',
   plugins: [require('tailwindcss-animate'), FiligranUIPlugin()],
 }
 

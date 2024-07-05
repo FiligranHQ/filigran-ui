@@ -83,7 +83,45 @@ interface DataTableProps<TData extends {id: string}, TValue> {
   tableOptions?: Partial<TableOptions<TData>>
   onClickRow?: (row: RowData) => void
   isLoading?: boolean
+  i18nKey?: Partial<DatatableI18nKey>
 }
+
+interface DatatableI18nKey {
+  'Rows per page': string
+  Rows: string
+  'Manage columns visibility': string
+  Asc: string
+  Desc: string
+  Hide: string
+  'Go to first page': string
+  'Go to previous page': string
+  'Go to next page': string
+  'Go to last page': string
+  to: string
+}
+const defaultI18nKey: DatatableI18nKey = {
+  'Rows per page': 'Rows per page',
+  Rows: 'Rows',
+  'Manage columns visibility': 'Manage columns visibility',
+  Asc: 'Asc',
+  Desc: 'Desc',
+  Hide: 'Hide',
+  'Go to first page': 'Go to first page',
+  'Go to previous page': 'Go to previous page',
+  'Go to next page': 'Go to next page',
+  'Go to last page': 'Go to last page',
+  to: 'to',
+}
+
+interface TableContextProps<TData> {
+  table: TableType<TData>
+  t_i18n: (key: string) => string
+}
+
+const TableContext = createContext<TableContextProps<any>>({
+  table: {} as TableType<any>,
+  t_i18n: (key) => key,
+})
 
 function getTransformString({x, y}: Transform) {
   return `translate(${x}px, ${y}px)`
@@ -102,14 +140,14 @@ const DefaultToolbar = () => {
 }
 
 const DataTableSelectColumnVisibility = <TData,>() => {
-  const table = useContext(TableContext)
+  const {table, t_i18n} = useContext(TableContext)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
           size="icon"
-          aria-label="Manage columns visibility"
+          aria-label={t_i18n('Manage columns visibility')}
           className="box-content h-8 w-8 rounded border">
           <TableTuneIcon className="h-4 w-4" />
         </Button>
@@ -143,6 +181,7 @@ const DataTableOptionsHeader = <TData, TValue>({
   title: string
   className?: string
 }) => {
+  const {t_i18n} = useContext(TableContext)
   if (!column.getCanHide() && !column.getCanSort()) {
     return <span className="font-title font-bold"> {title}</span>
   }
@@ -154,7 +193,7 @@ const DataTableOptionsHeader = <TData, TValue>({
           <Button
             variant="ghost"
             size="sm"
-            className="-ml-3 h-8 data-[state=open]:bg-accent">
+            className="ml-3 h-8 data-[state=open]:bg-accent">
             <span className="font-title font-bold"> {title}</span>
             {column.getIsSorted() === 'desc' ? (
               <KeyboardArrowDownIcon className="ml-s h-3 w-3 text-text-secondary" />
@@ -170,11 +209,11 @@ const DataTableOptionsHeader = <TData, TValue>({
             <>
               <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
                 <ArrowUpIcon className="mr-2 h-4 w-4 text-text-secondary" />
-                Asc
+                {t_i18n('Asc')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
                 <ArrowDownIcon className="mr-2 h-4 w-4 text-text-secondary" />
-                Desc
+                {t_i18n('Desc')}
               </DropdownMenuItem>
             </>
           )}
@@ -185,7 +224,7 @@ const DataTableOptionsHeader = <TData, TValue>({
           {column.getCanHide() && (
             <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
               <EyeOff className="mr-2 h-4 w-4 text-text-secondary" />
-              Hide
+              {t_i18n('Hide')}
             </DropdownMenuItem>
           )}
           {menuItems}
@@ -293,10 +332,10 @@ const DataTableRowPerPage = ({
 }: {
   rowPerPage?: number[]
 }) => {
-  const table = useContext(TableContext)
+  const {table, t_i18n} = useContext(TableContext)
   return (
     <div className="flex items-center gap-s">
-      <p className="text-sub-content">Rows per page</p>
+      <p className="text-sub-content">{t_i18n('Rows per page')}</p>
       <Select
         value={`${table.getState().pagination.pageSize}`}
         onValueChange={(value) => {
@@ -321,7 +360,7 @@ const DataTableRowPerPage = ({
   )
 }
 const DataTablePagination = () => {
-  const table = useContext(TableContext)
+  const {table, t_i18n} = useContext(TableContext)
   const pageIndex = table.getState().pagination.pageIndex
   const pageSize = table.getState().pagination.pageSize
   return (
@@ -331,7 +370,7 @@ const DataTablePagination = () => {
           variant="ghost"
           size="icon"
           className="h-8 w-8 rounded-none p-s"
-          aria-label="Go to first page"
+          aria-label={t_i18n('Go to first page')}
           onClick={() => table.setPageIndex(0)}
           disabled={!table.getCanPreviousPage()}>
           <ArrowFirstIcon className="h-3 w-3" />
@@ -342,13 +381,14 @@ const DataTablePagination = () => {
           className="h-8 w-8 rounded-none p-s"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
-          aria-label="Go to previous page">
+          aria-label={t_i18n('Go to previous page')}>
           <ArrowPreviousIcon className="h-3 w-3" />
         </Button>
         <div className="h-8 p-s text-text-secondary text-sub-content">
-          Rows{' '}
+          {t_i18n('Rows')}{' '}
           <span className="text-foreground">
-            {table.getRowCount() > 0 ? pageIndex * pageSize + 1 : 0} to{' '}
+            {table.getRowCount() > 0 ? pageIndex * pageSize + 1 : 0}{' '}
+            {t_i18n('to')}{' '}
             {Math.min((pageIndex + 1) * pageSize, table.getRowCount())}
           </span>{' '}
           / {table.getRowCount()}
@@ -359,7 +399,7 @@ const DataTablePagination = () => {
           className="h-8 w-8 rounded-none p-s"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
-          aria-label="Go to next page">
+          aria-label={t_i18n('Go to next page')}>
           <ArrowNextIcon className="h-3 w-3" />
         </Button>
         <Button
@@ -368,7 +408,7 @@ const DataTablePagination = () => {
           className="h-8 w-8 rounded-none p-s"
           onClick={() => table.setPageIndex(table.getPageCount() - 1)}
           disabled={!table.getCanNextPage()}
-          aria-label="Go to last page">
+          aria-label={t_i18n('Go to last page')}>
           <ArrowLastIcon className="h-3 w-3" />
         </Button>
       </div>
@@ -405,7 +445,7 @@ const LoadingRow = <TData,>({table}: {table: TableType<TData>}) => {
     </>
   )
 }
-const TableContext = createContext<TableType<any>>({} as TableType<any>)
+
 function GenericDataTable<TData extends {id: string}, TValue>(
   {
     columns,
@@ -415,6 +455,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     toolbar,
     onClickRow,
     isLoading = false,
+    i18nKey,
   }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
@@ -422,6 +463,10 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     columns.map((c) => c.id!)
   )
 
+  const t_i18n = (key: string): string => {
+    const mergeI18n: {[index: string]: string} = {...defaultI18nKey, ...i18nKey}
+    return mergeI18n[key] || key
+  }
   const table = useReactTable({
     data,
     columns,
@@ -455,7 +500,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
   )
 
   return (
-    <TableContext.Provider value={{...table}}>
+    <TableContext.Provider value={{table, t_i18n}}>
       {toolbar ? <>{toolbar}</> : <DefaultToolbar />}
       <DndContext
         collisionDetection={closestCenter}
@@ -526,4 +571,5 @@ export {
   DataTableSelectColumnVisibility,
   DataTableRowPerPage,
   DataTableOptionsHeader,
+  type DatatableI18nKey,
 }

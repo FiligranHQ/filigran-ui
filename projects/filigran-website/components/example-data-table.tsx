@@ -8,6 +8,7 @@ import {
 import {
   Checkbox,
   DataTable,
+  DatatableI18nKey,
   DataTableOptionsHeader,
   DropdownMenuItem,
 } from 'filigran-ui/clients'
@@ -18,20 +19,35 @@ import {makeData, Person} from '@/utils/makeData'
 export function ExampleDataTable() {
   const [rowSelection, setRowSelection] = useState({})
   const [inputSearch, setInputSearch] = useState('')
-  const [data, setData] = useState(() => makeData(500));
+  const [data, setData] = useState(() => makeData(500))
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 50,
   })
-  const [loading, setLoading] = useState(true);
+  const [isCheckedI18n, setIsCheckedI18n] = useState(false)
+  const [loading, setLoading] = useState(true)
   useEffect(() => {
     const timer = setTimeout(() => {
-      setLoading(false);
-    },  360);
-    setLoading(true);
+      setLoading(false)
+    }, 360)
+    setLoading(true)
     // Cleanup the timer when the component unmounts
-    return () => clearTimeout(timer);
-  }, [pagination]);
+    return () => clearTimeout(timer)
+  }, [pagination])
+
+  const frenchI18nKey: Partial<DatatableI18nKey> = {
+    'Rows per page': 'Lignes par page',
+    Rows: 'Lignes',
+    'Manage columns visibility': 'Gérer la visibilité des colonnes',
+    Asc: 'Ascendant',
+    Desc: 'Descendant',
+    Hide: 'Cacher',
+    'Go to first page': 'Aller à la première page',
+    'Go to previous page': 'Aller à la page précédente',
+    'Go to next page': 'Aller à la page suivante',
+    'Go to last page': 'Aller à la dernière page',
+    to: 'à',
+  }
   const columns = useMemo<ColumnDef<Person>[]>(
     () => [
       {
@@ -146,6 +162,14 @@ export function ExampleDataTable() {
   }
   return (
     <>
+      <div className="flex items-center gap-xs p-xs">
+        <Checkbox
+          checked={isCheckedI18n}
+          onCheckedChange={() => setIsCheckedI18n(!isCheckedI18n)}
+          aria-label="Translate to French"
+        />
+        Translate in French
+      </div>
       <div className="py-4">
         <Input
           placeholder="underline text"
@@ -159,6 +183,7 @@ export function ExampleDataTable() {
         data={data}
         columns={columns}
         isLoading={loading}
+        i18nKey={isCheckedI18n ? frenchI18nKey : {}}
         tableOptions={{
           onRowSelectionChange: setRowSelection,
           getSortedRowModel: getSortedRowModel(),
