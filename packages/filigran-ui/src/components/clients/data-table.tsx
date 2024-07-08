@@ -507,7 +507,8 @@ function GenericDataTable<TData extends {id: string}, TValue>(
         modifiers={[restrictToHorizontalAxis]}
         onDragEnd={handleDragEnd}
         sensors={sensors}>
-        <div className="pt-xl">
+        {/* do not remove twp, the class is used to isolate preflight style */}
+        <div className="twp pt-xl">
           <Table style={{width: table.getCenterTotalSize()}}>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (

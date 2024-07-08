@@ -58,6 +58,27 @@ async function addDirectivesToChunkFiles(distPath = 'dist'): Promise<void> {
   }
 }
 
+async function copyFile(sourceRelativePath, destinationRelativePath) {
+  // Resolve the absolute paths based on the current working directory
+  const srcFilePath = path.resolve(sourceRelativePath)
+  const distFilePath = path.resolve(destinationRelativePath)
+
+  try {
+    // Read from source file and write to destination file
+    const data = await fsPromises.readFile(srcFilePath)
+    await fsPromises.writeFile(distFilePath, data)
+
+    console.log(
+      `Successfully copied ${sourceRelativePath} to ${destinationRelativePath}`
+    )
+  } catch (err) {
+    console.error(
+      `Error copying ${sourceRelativePath} to ${destinationRelativePath}:`,
+      err
+    )
+  }
+}
+
 export default defineConfig(() => {
   return {
     entry: ['src/index.ts', 'src/plugin.ts', 'src/components/**/*.{ts,tsx}'],
@@ -68,10 +89,11 @@ export default defineConfig(() => {
     dts: true,
     format: ['esm', 'cjs'],
     bundle: true,
-    minify: true,
+    minify: 'terser',
     minifyWhitespace: true,
     onSuccess: async () => {
       await addDirectivesToChunkFiles()
+      await copyFile('src/theme.css', 'dist/theme.css')
     },
   }
 })

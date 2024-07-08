@@ -26,6 +26,8 @@
     "prettier": "3.3.2",
     "prettier-plugin-tailwindcss": "0.6.5",
     "tailwindcss": "3.4.4",
+    "tailwindcss-scoped-preflight": "3.3.0",
+    "terser": "5.31.1",
     "tsup": "8.1.0",
     "typescript": "5.5.2"
   },
@@ -80,7 +82,8 @@
       "import": "./dist/components/servers/index.js",
       "types": "./dist/components/servers/index.d.ts"
     },
-    "./theme.css": "./dist/index.css"
+    "./index.css": "./dist/index.css",
+    "./theme.css": "./dist/theme.css"
   },
   "prettier": {
     "printWidth": 80,

@@ -1,4 +1,8 @@
 import FiligranUIPlugin from './src/plugin'
+import {
+  isolateInsideOfContainer,
+  scopedPreflightStyles,
+} from 'tailwindcss-scoped-preflight'
 
 const config = {
   content: [
@@ -8,8 +12,15 @@ const config = {
     './src/**/*.{ts,tsx}',
   ],
   prefix: '',
-  important: '.filigran-ui',
-  plugins: [require('tailwindcss-animate'), FiligranUIPlugin()],
+  plugins: [
+    require('tailwindcss-animate'),
+    FiligranUIPlugin(),
+    scopedPreflightStyles({
+      isolationStrategy: isolateInsideOfContainer('.twp', {
+        except: '.no-twp', // optional, to exclude some elements under .twp from being preflighted, like external markup
+      }),
+    }),
+  ],
 }
 
 export default config
