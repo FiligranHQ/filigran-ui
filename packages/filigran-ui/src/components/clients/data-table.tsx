@@ -270,15 +270,17 @@ const DraggableTableHeader = <TData, TValue>({
           </span>
         )}
 
-        <button
-          className={cn(
-            'cursor-grab opacity-0 group-hover:opacity-100',
-            isDragging && 'cursor-grabbing'
-          )}
-          {...attributes}
-          {...listeners}>
-          <GripHorizontal className="mx-s h-5 w-5" />
-        </button>
+        {!header.column.getIsPinned() && (
+          <button
+            className={cn(
+              'cursor-grab opacity-0 group-hover:opacity-100',
+              isDragging && 'cursor-grabbing'
+            )}
+            {...attributes}
+            {...listeners}>
+            <GripHorizontal className="mx-s h-5 w-5" />
+          </button>
+        )}
       </div>
       {header.column.getCanResize() && (
         <div

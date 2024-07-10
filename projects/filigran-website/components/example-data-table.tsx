@@ -197,6 +197,9 @@ export function ExampleDataTable() {
         tableState={{
           rowSelection,
           pagination,
+          columnPinning: {
+            left: ['select'],
+          },
         }}
         onClickRow={(row) => console.log(row)}
       />
