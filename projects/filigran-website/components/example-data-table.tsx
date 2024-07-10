@@ -15,6 +15,7 @@ import {
 import {useEffect, useMemo, useState} from 'react'
 import {Input} from 'filigran-ui'
 import {makeData, Person} from '@/utils/makeData'
+import {useLocalStorage} from 'usehooks-ts'
 
 export function ExampleDataTable() {
   const [rowSelection, setRowSelection] = useState({})
@@ -139,6 +140,11 @@ export function ExampleDataTable() {
     [inputSearch]
   )
 
+  const [columnOrder, setColumnOrder, removeColumnOrder] = useLocalStorage(
+    'example-datatable-ordering-columns',
+    columns.map((c) => c.id!)
+  )
+
   const HighlightSearchTerm = ({text}: {text: string}) => {
     if (!inputSearch) {
       return <span>{text}</span>
@@ -193,10 +199,12 @@ export function ExampleDataTable() {
           getPaginationRowModel: getPaginationRowModel(),
           onPaginationChange: setPagination,
           enableRowSelection: (row) => row.original.age > 18, //only enable row selection for adults
+          onColumnOrderChange: setColumnOrder,
         }}
         tableState={{
           rowSelection,
           pagination,
+          columnOrder,
           columnPinning: {
             left: ['select'],
           },

@@ -31,7 +31,8 @@
     "styled-components": "6.1.11",
     "tailwind-merge": "2.3.0",
     "tailwindcss-animate": "1.0.7",
-    "twind": "0.16.19"
+    "twind": "0.16.19",
+    "usehooks-ts": "3.1.0"
   },
   "devDependencies": {
     "@svgr/webpack": "8.1.0",

@@ -487,7 +487,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
   const handleDragEnd = (event: DragEndEvent) => {
     const {active, over} = event
     if (active && over && active.id !== over.id) {
-      setColumnOrder((columnOrder) => {
+      table.setColumnOrder((columnOrder) => {
         const oldIndex = columnOrder.indexOf(active.id as string)
         const newIndex = columnOrder.indexOf(over.id as string)
         return arrayMove(columnOrder, oldIndex, newIndex) //this is just a splice util
@@ -518,7 +518,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
                   className={'hover:bg-inherit'}
                   key={headerGroup.id}>
                   <SortableContext
-                    items={columnOrder}
+                    items={table.getState().columnOrder}
                     strategy={horizontalListSortingStrategy}>
                     {headerGroup.headers.map((header) => (
                       <DraggableTableHeader
@@ -547,7 +547,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
                     {row.getVisibleCells().map((cell) => (
                       <SortableContext
                         key={cell.id}
-                        items={columnOrder}
+                        items={table.getState().columnOrder}
                         strategy={horizontalListSortingStrategy}>
                         <DragAlongCell
                           key={cell.id}
