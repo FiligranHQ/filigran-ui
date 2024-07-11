@@ -300,7 +300,6 @@ const DraggableTableHeader = <TData, TValue>({
 
 const DragAlongCell = <TData,>({
   cell,
-  isLoading,
 }: {
   cell: Cell<TData, unknown>
   isLoading?: boolean
@@ -320,11 +319,7 @@ const DragAlongCell = <TData,>({
         'transition-width group relative z-0 opacity-100 transition-transform duration-200 ease-in-out',
         isDragging && 'z-10 opacity-80'
       )}>
-      {isLoading ? (
-        <Skeleton className="h-l w-full" />
-      ) : (
-        <>{flexRender(cell.column.columnDef.cell, cell.getContext())}</>
-      )}
+      <>{flexRender(cell.column.columnDef.cell, cell.getContext())}</>
     </TableCell>
   )
 }
@@ -424,7 +419,10 @@ const LoadingRows = <TData,>({table}: {table: TableType<TData>}) => {
       {Array(30)
         .fill({})
         .map((_, index) => (
-          <LoadingRow key={index} table={table} />
+          <LoadingRow
+            key={index}
+            table={table}
+          />
         ))}
     </>
   )
@@ -437,8 +435,8 @@ const LoadingRow = <TData,>({table}: {table: TableType<TData>}) => {
         <TableRow
           className={'hover:bg-inherit'}
           key={headerGroup.id}>
-          {headerGroup.headers.map(() => (
-            <TableCell>
+          {headerGroup.headers.map((_, index) => (
+            <TableCell key={index}>
               <Skeleton className="h-l w-full" />
             </TableCell>
           ))}
@@ -552,7 +550,6 @@ function GenericDataTable<TData extends {id: string}, TValue>(
                         <DragAlongCell
                           key={cell.id}
                           cell={cell}
-                          isLoading={isLoading}
                         />
                       </SortableContext>
                     ))}
