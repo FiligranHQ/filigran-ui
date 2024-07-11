@@ -10,7 +10,7 @@ import {
   type Table as TableType,
   useReactTable,
   type Column,
-  type RowData,
+  type Row,
 } from '@tanstack/react-table'
 import {
   Table,
@@ -81,7 +81,7 @@ interface DataTableProps<TData extends {id: string}, TValue> {
   toolbar?: ReactNode
   tableState?: Partial<TableState>
   tableOptions?: Partial<TableOptions<TData>>
-  onClickRow?: (row: RowData) => void
+  onClickRow?: (row: Row<TData>) => void
   isLoading?: boolean
   i18nKey?: Partial<DatatableI18nKey>
 }
@@ -423,8 +423,8 @@ const LoadingRows = <TData,>({table}: {table: TableType<TData>}) => {
     <>
       {Array(30)
         .fill({})
-        .map(() => (
-          <LoadingRow table={table} />
+        .map((_, index) => (
+          <LoadingRow key={index} table={table} />
         ))}
     </>
   )
