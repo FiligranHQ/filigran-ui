@@ -21,6 +21,10 @@ export const CaseRftIcon = lazy(() => import("./CaseRft"));
 export const ChannelIcon = lazy(() => import("./Channel"));
 export const CheckIcon = lazy(() => import("./Check"));
 export const ChecklistRtlIcon = lazy(() => import("./ChecklistRtl"));
+export const CheckBoldIcon = lazy(() => import("./CheckBold"));
+export const CheckIndeterminateSmallBoldIcon = lazy(
+  () => import("./CheckIndeterminateSmallBold"),
+);
 export const ChevronIcon = lazy(() => import("./Chevron"));
 export const CityIcon = lazy(() => import("./City"));
 export const CloseIcon = lazy(() => import("./Close"));
@@ -59,6 +63,7 @@ export const KillChainPhaseIcon = lazy(() => import("./KillChainPhase"));
 export const LabelIcon = lazy(() => import("./Label"));
 export const LanguageIcon = lazy(() => import("./Language"));
 export const LayersBlackIcon = lazy(() => import("./LayersBlack"));
+export const ListViewIcon = lazy(() => import("./ListView"));
 export const LittleArrowIcon = lazy(() => import("./LittleArrow"));
 export const LogoFiligranIcon = lazy(() => import("./LogoFiligran"));
 export const LogoutIcon = lazy(() => import("./Logout"));
@@ -82,6 +87,7 @@ export const ScienceIcon = lazy(() => import("./Science"));
 export const SectorIcon = lazy(() => import("./Sector"));
 export const SettingsIcon = lazy(() => import("./Settings"));
 export const SpaceDashboardIcon = lazy(() => import("./SpaceDashboard"));
+export const SublistViewIcon = lazy(() => import("./SublistView"));
 export const SystemIcon = lazy(() => import("./System"));
 export const TableTuneIcon = lazy(() => import("./TableTune"));
 export const TaskIcon = lazy(() => import("./Task"));
