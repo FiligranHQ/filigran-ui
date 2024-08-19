@@ -273,7 +273,7 @@ const DraggableTableHeader = <TData, TValue>({
         {!header.column.getIsPinned() && (
           <button
             className={cn(
-              'cursor-grab opacity-0 group-hover:opacity-100',
+              'cursor-grab opacity-0 focus:opacity-100 group-hover:opacity-100',
               isDragging && 'cursor-grabbing'
             )}
             {...attributes}
