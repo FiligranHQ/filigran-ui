@@ -22,6 +22,7 @@ interface ComboboxProps {
   placeholder: string
   emptyCommand: string
   onValueChange: (value: string) => void
+  onInputChange: (value: string) => void
   value?: string
 }
 
@@ -31,6 +32,7 @@ function Combobox({
   placeholder,
   emptyCommand,
   onValueChange,
+  onInputChange,
   value = '',
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
@@ -39,6 +41,12 @@ function Combobox({
     const newValue = currentValue === value ? '' : currentValue
     setOpen(false)
     onValueChange(newValue)
+  }
+
+  const handleSearchInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    onInputChange(event.target.value)
   }
 
   return (
@@ -57,7 +65,7 @@ function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
-        <Command>
+        <Command onChange={handleSearchInputChange}>
           <CommandInput placeholder={placeholder} />
           <CommandList>
             <CommandEmpty>{emptyCommand}</CommandEmpty>
