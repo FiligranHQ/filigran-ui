@@ -19,6 +19,8 @@
   --border-light: var(--gray-150);
   --border-focus: var(--darkblue-300);
 
+  --hover-background: var(--gray-150);
+
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
@@ -166,4 +168,6 @@
   --border-medium-light: var(--gray-700);
   --border-light: var(--gray-800);
   --border-focus: var(--blue-600);
+
+  --hover-background: var(--gray-800);
 }

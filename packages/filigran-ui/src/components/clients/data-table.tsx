@@ -535,6 +535,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
                   <TableRow
                     key={row.id}
                     className={cn(
+                      'hover:bg-hover',
                       onClickRow ? 'cursor-pointer' : '',
                       !row.getCanSelect() &&
                         'bg-text-foreground/30 cursor-auto opacity-50'
