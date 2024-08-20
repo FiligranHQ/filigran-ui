@@ -68,9 +68,10 @@ const SheetContent = React.forwardRef<
         {children}
       </div>
       <SheetPrimitive.Close asChild>
-        <div className="absolute left-4 top-0 flex h-16 items-center">
+        <div className="absolute left-3 top-0 flex h-16 items-center">
           <Button
             variant="ghost"
+            size="icon"
             className="text-primary hover:bg-hover/50 focus:bg-hover/50">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
@@ -88,7 +89,7 @@ const SheetHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'z-1 absolute left-0 right-0 top-0 flex h-16 flex-col justify-center border-b border-border-light bg-background pl-[4.5rem] text-foreground',
+      'z-1 absolute left-0 right-0 top-0 flex h-16 flex-col justify-center border-b border-border-light bg-background pl-16 text-foreground',
       className
     )}
     {...props}
@@ -102,7 +103,7 @@ const SheetFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col-reverse pb-xl sm:flex-row sm:justify-end sm:space-x-2',
+      'flex flex-col-reverse gap-s pb-xl sm:flex-row sm:justify-end',
       className
     )}
     {...props}
@@ -128,7 +129,7 @@ const SheetDescription = React.forwardRef<
 >(({className, ...props}, ref) => (
   <SheetPrimitive.Description
     ref={ref}
-    className={cn('font-sub-content text-muted-foreground', className)}
+    className={cn('txt-sub-content text-muted-foreground', className)}
     {...props}
   />
 ))

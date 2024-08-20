@@ -21,20 +21,20 @@
 
   --hover-background: var(--gray-150);
 
+  --primary: var(--darkblue-600);
+  --primary-foreground: var(--light-100);
+  --secondary: var(--green-800);
+  --secondary-foreground: var(--light-100);
+  --destructive: var(--red-default);
+  --destructive-foreground: var(--light-100);
+
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --primary: var(--blue-default);
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
   --muted: var(--gray-default);
   --muted-foreground: var(--gray-1000);
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
+
   --border: var(--gray-400);
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
@@ -136,6 +136,10 @@
   --background: var(--gray-1000);
   --foreground: var(--gray-100);
   --tw-prose-body: var(--gray-400);
+  --primary: var(--blue-default);
+  --primary-foreground: var(--dark-100);
+  --secondary: var(--turquoise-default);
+  --secondary-foreground: var(--dark-100);
   --muted: 247 50% 12.9%;
   --muted-foreground: 247 10% 54.3%;
   --popover: 247 45% 5.59%;
@@ -144,12 +148,6 @@
   --card-foreground: 247 10% 97.15%;
   --border: 247 50% 12.9%;
   --input: 247 50% 12.9%;
-  --secondary: 247 50% 12.9%;
-  --secondary-foreground: 247 10% 97.15%;
-  --accent: 247 50% 12.9%;
-  --accent-foreground: 247 10% 97.15%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 247 10% 97.15%;
   --ring: 247 100% 43%;
   --radius: 0.3rem;
 

@@ -124,7 +124,7 @@ export function ExampleDataTable() {
       {
         id: 'visits',
         accessorKey: 'visits',
-        header: () => <span className="font-title"> Visits</span>,
+        header: () => <span className="txt-title"> Visits</span>,
       },
       {
         id: 'status',

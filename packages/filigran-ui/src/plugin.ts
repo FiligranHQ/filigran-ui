@@ -4,44 +4,44 @@ const FiligranUIPlugin = () => {
   return plugin(
     ({addUtilities, addComponents}) => {
       addUtilities({
-        '.font-jumbo': {
+        '.txt-jumbo': {
           'font-size': '2.5rem',
           'letter-spacing': '0.01875rem',
         },
-        '.font-title': {
+        '.txt-title': {
           'font-size': '1.5rem',
           'letter-spacing': '0.01125rem',
         },
-        '.font-subtitle': {
+        '.txt-subtitle': {
           'font-size': '1.125rem',
           'letter-spacing': '0.00844rem',
         },
-        '.font-category': {
+        '.txt-category': {
           'font-size': '0.875rem',
           'font-weight': 'bold',
           'letter-spacing': '0.00656rem',
         },
-        '.font-tab': {
+        '.txt-tab': {
           'font-size': '0.875rem',
           'letter-spacing': '0.00656rem',
           'text-transform': 'uppercase',
         },
-        '.font-container-title': {
+        '.txt-container-title': {
           'font-size': '0.75rem',
           'letter-spacing': '0.00563rem',
           'text-transform': 'uppercase',
         },
-        '.font-default': {
+        '.txt-default': {
           'font-size': '0.875rem',
           'line-height': '1.52',
           'letter-spacing': '0.0035rem',
         },
-        '.font-sub-content': {
+        '.txt-sub-content': {
           'font-size': '0.75rem',
           'line-height': '1.52',
           'letter-spacing': '0.003rem',
         },
-        '.font-mini': {
+        '.txt-mini': {
           'font-size': '0.5625rem',
           'line-height': '1.52',
           'letter-spacing': '0.00225rem',
@@ -99,10 +99,6 @@ const FiligranUIPlugin = () => {
             muted: {
               DEFAULT: 'hsl(var(--muted))',
               foreground: 'hsl(var(--muted-foreground))',
-            },
-            accent: {
-              DEFAULT: 'hsl(var(--accent))',
-              foreground: 'hsl(var(--accent-foreground))',
             },
             popover: {
               DEFAULT: 'hsl(var(--popover))',

@@ -28,7 +28,7 @@ const ReactLiveDisplay: FunctionComponent<ReactLiveDisplayProps> = ({
         noInline={noInline}>
         <div className="p-4">
           <LiveEditor className="font-mono" />
-          <div className="mt-4 bg-gray-100 p-4 ">
+          <div className="mt-4 bg-background p-4">
             <LivePreview />
           </div>
         </div>
