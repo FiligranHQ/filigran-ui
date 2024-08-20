@@ -32,7 +32,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-  'fixed z-50 gap-4 pb-6 bg-background px-6 pt-16 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+  'fixed z-50 gap-4 bg-background pt-16 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
   {
     variants: {
       side: {
@@ -64,7 +64,9 @@ const SheetContent = React.forwardRef<
       ref={ref}
       className={cn(sheetVariants({side}), className)}
       {...props}>
-      {children}
+      <div className="flex max-h-full min-h-full overflow-auto px-xl pt-xl">
+        {children}
+      </div>
       <SheetPrimitive.Close asChild>
         <div className="absolute left-4 top-0 flex h-16 items-center">
           <Button
@@ -100,7 +102,7 @@ const SheetFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+      'flex flex-col-reverse pb-xl sm:flex-row sm:justify-end sm:space-x-2',
       className
     )}
     {...props}
