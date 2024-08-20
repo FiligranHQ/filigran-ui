@@ -6,6 +6,7 @@ import {cva, type VariantProps} from 'class-variance-authority'
 import {X} from 'lucide-react'
 
 import {cn} from '../../lib/utils'
+import {Button} from '../servers'
 
 const Sheet = SheetPrimitive.Root
 
@@ -31,7 +32,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-  'fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+  'fixed z-50 gap-4 pb-6 bg-background px-6 pt-16 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
   {
     variants: {
       side: {
@@ -64,9 +65,15 @@ const SheetContent = React.forwardRef<
       className={cn(sheetVariants({side}), className)}
       {...props}>
       {children}
-      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
+      <SheetPrimitive.Close asChild>
+        <div className="absolute left-4 top-0 flex h-16 items-center">
+          <Button
+            variant="ghost"
+            className="text-primary hover:bg-hover/50 focus:bg-hover/50">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </Button>
+        </div>
       </SheetPrimitive.Close>
     </SheetPrimitive.Content>
   </SheetPortal>
@@ -79,7 +86,7 @@ const SheetHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col space-y-2 text-center sm:text-left',
+      'z-1 absolute left-0 right-0 top-0 flex h-16 flex-col justify-center border-b border-border-light bg-background pl-[4.5rem] text-foreground',
       className
     )}
     {...props}
@@ -107,7 +114,7 @@ const SheetTitle = React.forwardRef<
 >(({className, ...props}, ref) => (
   <SheetPrimitive.Title
     ref={ref}
-    className={cn('text-lg font-semibold text-foreground', className)}
+    className={cn('text-lg text-foreground', className)}
     {...props}
   />
 ))
@@ -119,7 +126,7 @@ const SheetDescription = React.forwardRef<
 >(({className, ...props}, ref) => (
   <SheetPrimitive.Description
     ref={ref}
-    className={cn('text-sm text-muted-foreground', className)}
+    className={cn('font-sub-content text-muted-foreground', className)}
     {...props}
   />
 ))

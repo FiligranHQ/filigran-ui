@@ -332,13 +332,13 @@ const DataTableRowPerPage = ({
   const {table, t_i18n} = useContext(TableContext)
   return (
     <div className="flex items-center gap-s">
-      <p className="text-sub-content">{t_i18n('Rows per page')}</p>
+      <p className="font-sub-content">{t_i18n('Rows per page')}</p>
       <Select
         value={`${table.getState().pagination.pageSize}`}
         onValueChange={(value) => {
           table.setPageSize(Number(value))
         }}>
-        <div className="box-content flex h-8 rounded border border-border-medium-strong text-sub-content">
+        <div className="font-sub-content box-content flex h-8 rounded border border-border-medium-strong">
           <SelectTrigger className="border-none">
             <SelectValue placeholder={table.getState().pagination.pageSize} />
           </SelectTrigger>
@@ -381,7 +381,7 @@ const DataTablePagination = () => {
           aria-label={t_i18n('Go to previous page')}>
           <ArrowPreviousIcon className="h-3 w-3" />
         </Button>
-        <div className="h-8 p-s text-text-secondary text-sub-content">
+        <div className="font-sub-content h-8 p-s text-text-secondary">
           {t_i18n('Rows')}{' '}
           <span className="text-foreground">
             {table.getRowCount() > 0 ? pageIndex * pageSize + 1 : 0}{' '}
