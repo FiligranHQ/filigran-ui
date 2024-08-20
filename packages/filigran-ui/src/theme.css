@@ -38,7 +38,7 @@
   --border: var(--gray-400);
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
-  --radius: 0.3rem;
+  --radius: 0.25rem;
 
   --gray-default: var(--gray-200);
   --gray-50: 240 11% 96%;
@@ -65,7 +65,7 @@
   --darkblue-800: 232.31 100% 22.94%;
   --darkblue-900: 232.73 100% 12.94%;
 
-  --blue-default: var(--blue-500);
+  --blue-default: var(--blue-400);
   --blue-100: 195 100% 90%;
   --blue-200: 195 100% 85%;
   --blue-300: 199 100% 75%;
@@ -149,7 +149,6 @@
   --border: 247 50% 12.9%;
   --input: 247 50% 12.9%;
   --ring: 247 100% 43%;
-  --radius: 0.3rem;
 
   --page-background: var(--dark-100);
   --box-background: #ffffff;

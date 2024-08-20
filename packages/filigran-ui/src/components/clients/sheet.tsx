@@ -64,7 +64,7 @@ const SheetContent = React.forwardRef<
       ref={ref}
       className={cn(sheetVariants({side}), className)}
       {...props}>
-      <div className="flex max-h-full min-h-full overflow-auto px-xl pt-xl">
+      <div className="max-h-full min-h-full overflow-auto px-xl pt-xl">
         {children}
       </div>
       <SheetPrimitive.Close asChild>
@@ -129,7 +129,7 @@ const SheetDescription = React.forwardRef<
 >(({className, ...props}, ref) => (
   <SheetPrimitive.Description
     ref={ref}
-    className={cn('txt-sub-content text-muted-foreground', className)}
+    className={cn('text-muted-foreground txt-sub-content', className)}
     {...props}
   />
 ))
