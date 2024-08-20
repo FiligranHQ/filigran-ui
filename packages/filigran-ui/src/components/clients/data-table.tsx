@@ -183,7 +183,7 @@ const DataTableOptionsHeader = <TData, TValue>({
 }) => {
   const {t_i18n} = useContext(TableContext)
   if (!column.getCanHide() && !column.getCanSort()) {
-    return <span className="txt-title font-bold"> {title}</span>
+    return <span className="txt-category"> {title}</span>
   }
 
   return (
@@ -193,8 +193,8 @@ const DataTableOptionsHeader = <TData, TValue>({
           <Button
             variant="ghost"
             size="sm"
-            className="-ml-3 h-8 data-[state=open]:bg-accent">
-            <span className="txt-title font-bold"> {title}</span>
+            className="data-[state=open]:bg-accent -ml-3 h-8">
+            <span className="txt-category"> {title}</span>
             {column.getIsSorted() === 'desc' ? (
               <KeyboardArrowDownIcon className="ml-s h-3 w-3 text-text-secondary" />
             ) : column.getIsSorted() === 'asc' ? (
@@ -264,7 +264,7 @@ const DraggableTableHeader = <TData, TValue>({
             title={header.column.columnDef.header}
           />
         ) : (
-          <span className="txt-title font-bold">
+          <span className="txt-category">
             {' '}
             {flexRender(header.column.columnDef.header, header.getContext())}
           </span>
@@ -338,7 +338,7 @@ const DataTableRowPerPage = ({
         onValueChange={(value) => {
           table.setPageSize(Number(value))
         }}>
-        <div className="txt-sub-content box-content flex h-8 rounded border border-border-medium-strong">
+        <div className="box-content flex h-8 rounded border border-border-medium-strong txt-sub-content">
           <SelectTrigger className="border-none">
             <SelectValue placeholder={table.getState().pagination.pageSize} />
           </SelectTrigger>
@@ -381,7 +381,7 @@ const DataTablePagination = () => {
           aria-label={t_i18n('Go to previous page')}>
           <ArrowPreviousIcon className="h-3 w-3" />
         </Button>
-        <div className="txt-sub-content h-8 p-s text-text-secondary">
+        <div className="h-8 p-s text-text-secondary txt-sub-content">
           {t_i18n('Rows')}{' '}
           <span className="text-foreground">
             {table.getRowCount() > 0 ? pageIndex * pageSize + 1 : 0}{' '}

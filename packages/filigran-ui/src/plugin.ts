@@ -7,29 +7,35 @@ const FiligranUIPlugin = () => {
         '.txt-jumbo': {
           'font-size': '2.5rem',
           'letter-spacing': '0.01875rem',
+          'font-family': 'var(--font-geologica)',
         },
         '.txt-title': {
           'font-size': '1.5rem',
           'letter-spacing': '0.01125rem',
+          'font-family': 'var(--font-geologica)',
         },
         '.txt-subtitle': {
           'font-size': '1.125rem',
           'letter-spacing': '0.00844rem',
+          'font-family': 'var(--font-geologica)',
         },
         '.txt-category': {
           'font-size': '0.875rem',
           'font-weight': 'bold',
           'letter-spacing': '0.00656rem',
+          'font-family': 'var(--font-geologica)',
         },
         '.txt-tab': {
           'font-size': '0.875rem',
           'letter-spacing': '0.00656rem',
           'text-transform': 'uppercase',
+          'font-family': 'var(--font-geologica)',
         },
         '.txt-container-title': {
           'font-size': '0.75rem',
           'letter-spacing': '0.00563rem',
           'text-transform': 'uppercase',
+          'font-family': 'var(--font-geologica)',
         },
         '.txt-default': {
           'font-size': '0.875rem',
