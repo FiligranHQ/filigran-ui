@@ -338,7 +338,7 @@ const DataTableRowPerPage = ({
         onValueChange={(value) => {
           table.setPageSize(Number(value))
         }}>
-        <div className="box-content flex h-8 rounded border border-border-medium-strong txt-sub-content">
+        <div className="box-content flex h-8 rounded border-b border-border-medium-strong txt-sub-content">
           <SelectTrigger className="border-none">
             <SelectValue placeholder={table.getState().pagination.pageSize} />
           </SelectTrigger>
@@ -362,7 +362,7 @@ const DataTablePagination = () => {
   const pageSize = table.getState().pagination.pageSize
   return (
     <>
-      <div className="flex items-center divide-x divide-border-medium-strong rounded border border-border-medium-strong">
+      <div className="flex items-center">
         <Button
           variant="ghost"
           size="icon"
