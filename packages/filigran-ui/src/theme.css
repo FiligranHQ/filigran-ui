@@ -33,7 +33,7 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
   --muted: var(--gray-default);
-  --muted-foreground: var(--gray-1000);
+  --muted-foreground: var(--gray-500);;
 
   --border: var(--border-light);
   --input: 214.3 31.8% 91.4%;
@@ -141,7 +141,7 @@
   --secondary: var(--turquoise-default);
   --secondary-foreground: var(--dark-100);
   --muted: 247 50% 12.9%;
-  --muted-foreground: 247 10% 54.3%;
+  --muted-foreground: var(--gray-300);
   --popover: 247 45% 5.59%;
   --popover-foreground: 247 10% 97.15%;
   --card: 247 45% 5.59%;

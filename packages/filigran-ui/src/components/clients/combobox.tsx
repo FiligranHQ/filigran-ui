@@ -24,6 +24,7 @@ interface ComboboxProps {
   onValueChange: (value: string) => void
   onInputChange: (value: string) => void
   value?: string
+  className?: string
 }
 
 function Combobox({
@@ -34,6 +35,7 @@ function Combobox({
   onValueChange,
   onInputChange,
   value = '',
+  className,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -58,13 +60,17 @@ function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[200px] justify-between"
+          className={cn('w-full justify-between', className)}
           onClick={() => setOpen(!open)}>
-          {value ? dataTab.find((data) => data.value === value)?.label : order}
+          {value ? (
+            dataTab.find((data) => data.value === value)?.label
+          ) : (
+            <span className="text-muted-foreground">{order}</span>
+          )}
           <ChevronDown className="h-4 cursor-pointer text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
+      <PopoverContent className="popover-content-width-same-as-its-trigger p-0">
         <Command onChange={handleSearchInputChange}>
           <CommandInput placeholder={placeholder} />
           <CommandList>
@@ -81,7 +87,7 @@ function Combobox({
                       value === data.value ? 'opacity-100' : 'opacity-0'
                     )}
                   />
-                  <span className="mx-3 text-sm text-muted-foreground">
+                  <span className="mx-3 text-sm text-foreground">
                     {data.label}
                   </span>
                 </CommandItem>

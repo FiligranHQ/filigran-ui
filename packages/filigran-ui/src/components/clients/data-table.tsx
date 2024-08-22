@@ -339,7 +339,7 @@ const DataTableRowPerPage = ({
           table.setPageSize(Number(value))
         }}>
         <div className="box-content flex h-8 rounded border-b border-border-medium-strong txt-sub-content">
-          <SelectTrigger className="border-none">
+          <SelectTrigger className="h-8 border-none">
             <SelectValue placeholder={table.getState().pagination.pageSize} />
           </SelectTrigger>
         </div>

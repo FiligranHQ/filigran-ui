@@ -4,6 +4,10 @@ const FiligranUIPlugin = () => {
   return plugin(
     ({addUtilities, addComponents}) => {
       addUtilities({
+        '.popover-content-width-same-as-its-trigger': {
+          width: 'var(--radix-popover-trigger-width)',
+          'max-height': 'var(--radix-popover-content-available-height)',
+        },
         '.txt-jumbo': {
           'font-size': '2.5rem',
           'letter-spacing': '0.01875rem',
