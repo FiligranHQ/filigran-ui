@@ -7,7 +7,6 @@ import * as FiligranUIComponent from 'filigran-ui'
 import * as FiligranIcon from 'filigran-icon'
 import * as LucidIcon from 'lucide-react'
 import {DisplayAllIcons} from '@/components/display-all-icons'
-import {ExampleTable} from '@/components/example/example-table'
 import {ExampleDataTable} from '@/components/example/example-data-table'
 import {ExampleMultiSelect} from '@/components/example/example-multi-select'
 import {ExampleCombobox} from '@/components/example/example-combobox'
@@ -27,7 +26,6 @@ const components = {
   ...FiligranIcon,
   ReactLiveDisplay: ReactLiveDisplay,
   DisplayAllIcons: DisplayAllIcons,
-  ExampleTable: ExampleTable,
   ExampleDataTable: ExampleDataTable,
   ExampleMultiSelect: ExampleMultiSelect,
   ExampleCombobox: ExampleCombobox,
