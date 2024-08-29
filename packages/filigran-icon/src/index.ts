@@ -25,6 +25,9 @@ export const CheckBoldIcon = lazy(() => import("./CheckBold"));
 export const CheckIndeterminateIcon = lazy(
   () => import("./CheckIndeterminate"),
 );
+export const CheckIndeterminateSmallBoldIcon = lazy(
+  () => import("./CheckIndeterminateSmallBold"),
+);
 export const ChevronIcon = lazy(() => import("./Chevron"));
 export const CircleCloseIcon = lazy(() => import("./CircleClose"));
 export const CityIcon = lazy(() => import("./City"));

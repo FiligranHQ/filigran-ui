@@ -9,7 +9,7 @@ const SvgCheckIndeterminateSmallBold = ({
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 14 4"
+    viewBox="0 0 12 2"
     role="img"
     aria-labelledby={titleId}
     {...props}
@@ -17,8 +17,8 @@ const SvgCheckIndeterminateSmallBold = ({
     {title ? <title id={titleId}>{title}</title> : null}
     <mask
       id="check_indeterminate_small_bold_svg__a"
-      width={26}
-      height={25}
+      width={24}
+      height={24}
       x={-6}
       y={-11}
       maskUnits="userSpaceOnUse"
@@ -26,10 +26,10 @@ const SvgCheckIndeterminateSmallBold = ({
         maskType: "alpha",
       }}
     >
-      <path fill="currentColor" d="M-5.263-10.653h24.526v24.526H-5.263z" />
+      <path fill="currentColor" d="M-6-11h24v24H-6z" />
     </mask>
     <g mask="url(#check_indeterminate_small_bold_svg__a)">
-      <path fill="currentColor" d="M0 3.219V0h14v3.219z" />
+      <path fill="currentColor" d="M0 2V0h12v2z" />
     </g>
   </svg>
 );

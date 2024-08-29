@@ -3528,7 +3528,7 @@ file-entry-cache@^6.0.1:
     flat-cache "^3.0.4"
 
 "filigran-icon@file:C:\\Users\\Jean-PhilippeKha\\IdeaProjects\\monorepo\\packages\\filigran-icon":
-  version "0.8.0"
+  version "0.8.1"
   resolved "file:packages/filigran-icon"
 
 "filigran-ui@file:C:\\Users\\Jean-PhilippeKha\\IdeaProjects\\monorepo\\packages\\filigran-ui":
