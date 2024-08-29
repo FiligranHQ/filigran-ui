@@ -19,14 +19,13 @@ const createFiles = (illustrations) => {
 
 const getIllustrationName = (components) => {
   const ids = components.map(({id}) => id);
-
   return fetch(
     `https://api.figma.com/v1/images/${FIGMA_FILE_ID}?ids=${ids.join()}&format=svg`,
     { headers: { 'X-Figma-Token': FIGMA_API_TOKEN } }
   )
     .then(response => response.json())
     .then(({images}) => Promise.all(
-      components.map(({id, name}) => fetch(images[id])
+      components.filter(({id}) => images[id]).map(({id, name}) => fetch(images[id])
         .then(response => response.text())
         .then(svg => ({
           name, // or "name: getIllustrationName,"

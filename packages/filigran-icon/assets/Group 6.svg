@@ -1,9 +1,9 @@
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<circle cx="11.5385" cy="11.5383" r="5.92308" stroke="currentColor" stroke-width="2"/>
-<line x1="1.90735e-06" y1="21.5771" x2="8.30769" y2="21.5771" stroke="currentColor" stroke-width="3"/>
-<line x1="1.5" y1="14.7693" x2="1.5" y2="23.077" stroke="currentColor" stroke-width="3"/>
-<line x1="24" y1="1.50024" x2="15.6923" y2="1.50024" stroke="currentColor" stroke-width="3"/>
-<line x1="22.5" y1="8.30786" x2="22.5" y2="0.000169557" stroke="currentColor" stroke-width="3"/>
+<circle cx="11.5385" cy="11.5384" r="5.92308" stroke="currentColor" stroke-width="2"/>
+<line x1="1.90735e-06" y1="21.5769" x2="8.30769" y2="21.5769" stroke="currentColor" stroke-width="3"/>
+<line x1="1.5" y1="14.7692" x2="1.5" y2="23.0769" stroke="currentColor" stroke-width="3"/>
+<line x1="24" y1="1.5" x2="15.6923" y2="1.5" stroke="currentColor" stroke-width="3"/>
+<line x1="22.5" y1="8.30774" x2="22.5" y2="4.7487e-05" stroke="currentColor" stroke-width="3"/>
 <line x1="1.5" y1="6.55671e-08" x2="1.5" y2="8.30769" stroke="currentColor" stroke-width="3"/>
 <line x1="8.30769" y1="1.5" x2="-1.31134e-07" y2="1.5" stroke="currentColor" stroke-width="3"/>
 <line x1="22.5" y1="23.0769" x2="22.5" y2="14.7692" stroke="currentColor" stroke-width="3"/>

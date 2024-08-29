@@ -22,10 +22,11 @@ export const ChannelIcon = lazy(() => import("./Channel"));
 export const CheckIcon = lazy(() => import("./Check"));
 export const ChecklistRtlIcon = lazy(() => import("./ChecklistRtl"));
 export const CheckBoldIcon = lazy(() => import("./CheckBold"));
-export const CheckIndeterminateSmallBoldIcon = lazy(
-  () => import("./CheckIndeterminateSmallBold"),
+export const CheckIndeterminateIcon = lazy(
+  () => import("./CheckIndeterminate"),
 );
 export const ChevronIcon = lazy(() => import("./Chevron"));
+export const CircleCloseIcon = lazy(() => import("./CircleClose"));
 export const CityIcon = lazy(() => import("./City"));
 export const CloseIcon = lazy(() => import("./Close"));
 export const ConstructionIcon = lazy(() => import("./Construction"));
