@@ -60,7 +60,7 @@ function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn('w-full justify-between', className)}
+          className={cn('w-full justify-between border-input', className)}
           onClick={() => setOpen(!open)}>
           {value ? (
             dataTab.find((data) => data.value === value)?.label
@@ -70,7 +70,7 @@ function Combobox({
           <ChevronDown className="h-4 cursor-pointer text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="popover-content-width-same-as-its-trigger p-0">
+      <PopoverContent className="p-0 popover-content-width-same-as-its-trigger">
         <Command onChange={handleSearchInputChange}>
           <CommandInput placeholder={placeholder} />
           <CommandList>
