@@ -18,3 +18,7 @@ export function fixedForwardRef<T, P = {}>(
 ): (props: P & RefAttributes<T>) => ReactNode {
   return forwardRef(render) as any
 }
+
+export function uuid() {
+  return crypto.getRandomValues(new Uint32Array(1))[0].toString()
+}

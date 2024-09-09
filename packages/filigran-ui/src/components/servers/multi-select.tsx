@@ -20,7 +20,7 @@ const multiSelectVariants = cva('m-1', {
   variants: {
     variant: {
       default:
-        'border-foreground/10 drop-shadow-md text-foreground bg-card hover:bg-card/80',
+        'border-foreground/10 drop-shadow-md text-primary-foreground bg-primary hover:bg-primary/80',
       secondary:
         'border-foreground/10 bg-secondary text-secondary-foreground hover:bg-secondary/80',
       destructive:

@@ -53,6 +53,7 @@
     "clsx": "2.1.1",
     "cmdk": "1.0.0",
     "lucide-react": "0.399.0",
+    "react-easy-sort": "1.6.0",
     "react-hook-form": "7.52.0",
     "tailwind-merge": "2.3.0",
     "tailwindcss-animate": "1.0.7",

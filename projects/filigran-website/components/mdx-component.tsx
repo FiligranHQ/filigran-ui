@@ -12,6 +12,7 @@ import {ExampleMultiSelect} from '@/components/example/example-multi-select'
 import {ExampleCombobox} from '@/components/example/example-combobox'
 import {ExampleToast} from '@/components/example/example-toast'
 import {ExampleSheet} from '@/components/example/example-sheet'
+import {ExampleTagInput} from '@/components/example/example-tag-input'
 
 const options = {
   mdxOptions: {
@@ -31,6 +32,7 @@ const components = {
   ExampleCombobox: ExampleCombobox,
   ExampleToast: ExampleToast,
   ExampleSheet: ExampleSheet,
+  ExampleTagInput: ExampleTagInput,
 }
 
 export async function CustomMDX(props: any) {
