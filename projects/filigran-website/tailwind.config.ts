@@ -9,7 +9,12 @@ const config = {
     '../../packages/filigran-ui/src/components/**/*.{ts,tsx}',
   ],
   prefix: '',
-  plugins: [require('tailwindcss-animate'), FiligranUIPlugin()],
+
+  plugins: [
+    require('tailwindcss-animate'),
+    FiligranUIPlugin(),
+    require('@tailwindcss/typography'),
+  ],
 }
 
 export default config
