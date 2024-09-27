@@ -50,22 +50,19 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from './dropdown-menu'
 import {ArrowDownIcon, ArrowUpIcon, EyeOff, GripHorizontal} from 'lucide-react'
 import {cn, fixedForwardRef} from '../../lib/utils'
 import {Button, Skeleton} from '../servers'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './select'
-import {
-  ArrowFirstIcon,
-  ArrowLastIcon,
   ArrowNextIcon,
   ArrowPreviousIcon,
   KeyboardArrowDownIcon,
@@ -88,7 +85,6 @@ interface DataTableProps<TData extends {id: string}, TValue> {
 
 interface DatatableI18nKey {
   'Rows per page': string
-  Rows: string
   'Manage columns visibility': string
   Asc: string
   Desc: string
@@ -97,11 +93,10 @@ interface DatatableI18nKey {
   'Go to previous page': string
   'Go to next page': string
   'Go to last page': string
-  to: string
+  Columns: string
 }
 const defaultI18nKey: DatatableI18nKey = {
   'Rows per page': 'Rows per page',
-  Rows: 'Rows',
   'Manage columns visibility': 'Manage columns visibility',
   Asc: 'Asc',
   Desc: 'Desc',
@@ -110,7 +105,7 @@ const defaultI18nKey: DatatableI18nKey = {
   'Go to previous page': 'Go to previous page',
   'Go to next page': 'Go to next page',
   'Go to last page': 'Go to last page',
-  to: 'to',
+  Columns: 'Columns',
 }
 
 interface TableContextProps<TData> {
@@ -129,12 +124,8 @@ function getTransformString({x, y}: Transform) {
 
 const DefaultToolbar = () => {
   return (
-    <div className="flex items-center justify-between gap-2">
-      <DataTableRowPerPage />
-      <div className="flex items-center gap-2">
-        <DataTablePagination />
-        <DataTableSelectColumnVisibility />
-      </div>
+    <div className="flex items-center justify-end">
+      <DataTableHeadBarOptions />
     </div>
   )
 }
@@ -145,26 +136,58 @@ const DataTableSelectColumnVisibility = <TData,>() => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
-          aria-label={t_i18n('Manage columns visibility')}
-          className="box-content h-8 w-8 rounded border">
-          <TableTuneIcon className="h-4 w-4" />
+          className="h-9 w-9 rounded-none"
+          aria-label={t_i18n('Manage columns visibility')}>
+          <TableTuneIcon className="h-[1.125rem] w-[1.125rem]" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {table
-          .getAllColumns()
-          .filter((column) => column.getCanHide())
-          .map((column) => (
-            <DropdownMenuCheckboxItem
-              key={column.id}
-              className="capitalize"
-              checked={column.getIsVisible()}
-              onCheckedChange={(value) => column.toggleVisibility(!!value)}>
-              {column.id}
-            </DropdownMenuCheckboxItem>
-          ))}
+        <DropdownMenuItem onClick={() => table.reset()}>
+          Reset table
+        </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>{t_i18n('Columns')}</DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }>
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            {t_i18n('Rows per page')}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup
+                value={String(table.getState().pagination.pageSize)}
+                onValueChange={(pageSize) =>
+                  table.setPageSize(Number(pageSize))
+                }>
+                {[50, 100, 200, 300, 500].map((pageSize) => (
+                  <DropdownMenuRadioItem value={String(pageSize)}>
+                    {pageSize}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -324,68 +347,26 @@ const DragAlongCell = <TData,>({
   )
 }
 
-const DataTableRowPerPage = ({
-  rowPerPage = [50, 100, 200, 300, 500],
-}: {
-  rowPerPage?: number[]
-}) => {
-  const {table, t_i18n} = useContext(TableContext)
-  return (
-    <div className="flex items-center gap-s">
-      <p className="txt-sub-content">{t_i18n('Rows per page')}</p>
-      <Select
-        value={`${table.getState().pagination.pageSize}`}
-        onValueChange={(value) => {
-          table.setPageSize(Number(value))
-        }}>
-        <div className="box-content flex h-8 rounded border-b border-border-medium-strong txt-sub-content">
-          <SelectTrigger className="h-8 border-none">
-            <SelectValue placeholder={table.getState().pagination.pageSize} />
-          </SelectTrigger>
-        </div>
-        <SelectContent side="top">
-          {rowPerPage.map((pageSize) => (
-            <SelectItem
-              key={pageSize}
-              value={`${pageSize}`}>
-              {pageSize}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
-}
-const DataTablePagination = () => {
+const DataTableHeadBarOptions = () => {
   const {table, t_i18n} = useContext(TableContext)
   const pageIndex = table.getState().pagination.pageIndex
   const pageSize = table.getState().pagination.pageSize
   return (
     <>
-      <div className="flex items-center">
+      <div className="box-content flex h-9 items-center rounded border border-border-light">
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 rounded-none p-s"
-          aria-label={t_i18n('Go to first page')}
-          onClick={() => table.setPageIndex(0)}
-          disabled={!table.getCanPreviousPage()}>
-          <ArrowFirstIcon className="h-3 w-3" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-none p-s"
+          className="h-9 w-9 rounded-none"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
           aria-label={t_i18n('Go to previous page')}>
           <ArrowPreviousIcon className="h-3 w-3" />
         </Button>
-        <div className="h-8 p-s text-text-secondary txt-sub-content">
-          {t_i18n('Rows')}{' '}
+        <div className="px-s leading-none text-text-secondary txt-sub-content">
           <span className="text-foreground">
-            {table.getRowCount() > 0 ? pageIndex * pageSize + 1 : 0}{' '}
-            {t_i18n('to')}{' '}
+            {table.getRowCount() > 0 ? pageIndex * pageSize + 1 : 0}
+            {' - '}
             {Math.min((pageIndex + 1) * pageSize, table.getRowCount())}
           </span>{' '}
           / {table.getRowCount()}
@@ -393,21 +374,14 @@ const DataTablePagination = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 rounded-none p-s"
+          className="h-9 w-9 rounded-none"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
           aria-label={t_i18n('Go to next page')}>
           <ArrowNextIcon className="h-3 w-3" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-none p-s"
-          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-          disabled={!table.getCanNextPage()}
-          aria-label={t_i18n('Go to last page')}>
-          <ArrowLastIcon className="h-3 w-3" />
-        </Button>
+
+        <DataTableSelectColumnVisibility />
       </div>
     </>
   )
@@ -568,9 +542,7 @@ const DataTable = fixedForwardRef(GenericDataTable)
 
 export {
   DataTable,
-  DataTablePagination,
-  DataTableSelectColumnVisibility,
-  DataTableRowPerPage,
+  DataTableHeadBarOptions,
   DataTableOptionsHeader,
   type DatatableI18nKey,
 }

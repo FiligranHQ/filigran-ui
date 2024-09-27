@@ -38,7 +38,6 @@ export function ExampleDataTable() {
 
   const frenchI18nKey: Partial<DatatableI18nKey> = {
     'Rows per page': 'Lignes par page',
-    Rows: 'Lignes',
     'Manage columns visibility': 'Gérer la visibilité des colonnes',
     Asc: 'Ascendant',
     Desc: 'Descendant',
@@ -47,7 +46,7 @@ export function ExampleDataTable() {
     'Go to previous page': 'Aller à la page précédente',
     'Go to next page': 'Aller à la page suivante',
     'Go to last page': 'Aller à la dernière page',
-    to: 'à',
+    Columns: 'Colonnes',
   }
   const columns = useMemo<ColumnDef<Person>[]>(
     () => [
