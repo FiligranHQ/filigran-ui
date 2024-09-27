@@ -81,6 +81,7 @@ interface DataTableProps<TData extends {id: string}, TValue> {
   onClickRow?: (row: Row<TData>) => void
   isLoading?: boolean
   i18nKey?: Partial<DatatableI18nKey>
+  onResetTable?: () => void
 }
 
 interface DatatableI18nKey {
@@ -430,6 +431,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     onClickRow,
     isLoading = false,
     i18nKey,
+    onResetTable,
   }: DataTableProps<TData, TValue>,
   ref?: any
 ) {

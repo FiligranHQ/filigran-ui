@@ -169,7 +169,7 @@ export function ExampleDataTable() {
     )
   }
   return (
-    <>
+    <div className="not-prose">
       <div className="flex items-center gap-xs p-xs">
         <Checkbox
           checked={isCheckedI18n}
@@ -214,6 +214,6 @@ export function ExampleDataTable() {
         <div>Selected</div>
         {JSON.stringify(rowSelection, null, 20)}
       </div>
-    </>
+    </div>
   )
 }
