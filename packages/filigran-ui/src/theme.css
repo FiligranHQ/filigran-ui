@@ -37,7 +37,7 @@
 
   --border: var(--border-light);
   --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
+  --ring: var(--primary);
   --radius: 0.25rem;
 
   --gray-default: var(--gray-200);
@@ -146,8 +146,7 @@
   --popover-foreground: 247 10% 97.15%;
   --card: 247 45% 5.59%;
   --card-foreground: 247 10% 97.15%;
-  --input: 247 50% 12.9%;
-  --ring: 247 100% 43%;
+  --input: var(--gray-100);
 
   --page-background: var(--dark-100);
   --box-background: #ffffff;
