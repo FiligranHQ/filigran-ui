@@ -14,7 +14,7 @@
   --text-inverted-foreground-focus: var(--primary-background);
   --border-strong: var(--gray-800);
   --border-medium-strong: var(--gray-600);
-  --border-neutral: var(--gray-500);
+  --border-medium: var(--gray-500);
   --border-medium-light: var(--gray-200);
   --border-light: var(--gray-150);
   --border-focus: var(--darkblue-300);
@@ -146,7 +146,7 @@
   --popover-foreground: 247 10% 97.15%;
   --card: 247 45% 5.59%;
   --card-foreground: 247 10% 97.15%;
-  --input: var(--gray-100);
+  --input: var(--gray-800);
 
   --page-background: var(--dark-100);
   --box-background: #ffffff;
@@ -159,7 +159,7 @@
 
   --border-strong: var(--gray-150);
   --border-medium-strong: var(--gray-200);
-  --border-neutral: var(--gray-300);
+  --border-medium: var(--gray-500);
   --border-medium-light: var(--gray-700);
   --border-light: var(--gray-800);
   --border-focus: var(--blue-600);

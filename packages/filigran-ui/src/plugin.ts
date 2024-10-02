@@ -73,7 +73,7 @@ const FiligranUIPlugin = () => {
               DEFAULT: 'hsl(var(--border))',
               strong: 'hsl(var(--border-strong))',
               'medium-strong': 'hsl(var(--border-medium-strong))',
-              neutral: 'hsl(var(--border-neutral))',
+              medium: 'hsl(var(--border-medium))',
               'medium-light': 'hsl(var(--border-medium-light))',
               light: 'hsl(var(--border-light))',
               focus: 'hsl(var(--border-focus))',

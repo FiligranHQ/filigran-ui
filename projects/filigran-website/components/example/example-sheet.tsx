@@ -99,7 +99,7 @@ export const ExampleSheet = () => {
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-col space-y-8">
-            <div>
+            <div className="space-y-6">
               <FormField
                 control={form.control}
                 name="username"
