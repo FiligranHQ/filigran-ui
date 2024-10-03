@@ -75,6 +75,7 @@ export const MalwareAnalysisIcon = lazy(() => import("./MalwareAnalysis"));
 export const MalwareIcon = lazy(() => import("./Malware"));
 export const MapIcon = lazy(() => import("./Map"));
 export const MarkingDefinitionIcon = lazy(() => import("./MarkingDefinition"));
+export const MoreVertIcon = lazy(() => import("./MoreVert"));
 export const NarrativeIcon = lazy(() => import("./Narrative"));
 export const NoteIcon = lazy(() => import("./Note"));
 export const ObservedDataIcon = lazy(() => import("./ObservedData"));
