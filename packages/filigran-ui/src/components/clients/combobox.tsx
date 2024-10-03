@@ -1,11 +1,10 @@
 'use client'
 
-import * as React from 'react'
 import {Check, ChevronDown} from 'lucide-react'
+import * as React from 'react'
 
 import {cn} from '../../lib/utils'
 
-import {Popover, PopoverContent, PopoverTrigger} from './popover'
 import {Button} from '../servers'
 import {
   Command,
@@ -15,6 +14,7 @@ import {
   CommandItem,
   CommandList,
 } from './command'
+import {Popover, PopoverContent, PopoverTrigger} from './popover'
 
 interface ComboboxProps {
   dataTab: {value: string; label: string}[]

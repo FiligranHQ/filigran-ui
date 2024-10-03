@@ -6,9 +6,9 @@ import {
 } from './tag-input'
 
 import {cva} from 'class-variance-authority'
+import {XCircle} from 'lucide-react'
 import {cn} from '../../../lib/utils'
 import {Badge} from '../../servers'
-import {XCircle} from 'lucide-react'
 
 export const tagVariants = cva('font-medium', {
   variants: {

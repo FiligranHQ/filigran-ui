@@ -1,8 +1,8 @@
-import FiligranUIPlugin from './src/plugin'
 import {
   isolateInsideOfContainer,
   scopedPreflightStyles,
 } from 'tailwindcss-scoped-preflight'
+import FiligranUIPlugin from './src/plugin'
 
 const config = {
   content: [

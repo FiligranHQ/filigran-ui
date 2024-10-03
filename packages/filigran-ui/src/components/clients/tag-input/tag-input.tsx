@@ -1,13 +1,13 @@
 'use client'
 
-import React, {useMemo} from 'react'
 import {type VariantProps} from 'class-variance-authority'
-import {TagPopover} from './tag-popover'
-import {TagList} from './tag-list'
-import {tagVariants} from './tag'
-import {Autocomplete} from './autocomplete'
+import React, {useMemo} from 'react'
 import {cn, uuid} from '../../../lib/utils'
 import {Button, Input} from '../../servers'
+import {Autocomplete} from './autocomplete'
+import {tagVariants} from './tag'
+import {TagList} from './tag-list'
+import {TagPopover} from './tag-popover'
 
 export enum Delimiter {
   Comma = ',',

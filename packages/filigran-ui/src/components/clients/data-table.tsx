@@ -1,33 +1,5 @@
 'use client'
 import {
-  type Cell,
-  type ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  type Header,
-  type TableOptions,
-  type TableState,
-  type Table as TableType,
-  useReactTable,
-  type Column,
-  type Row,
-} from '@tanstack/react-table'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './table'
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useImperativeHandle,
-  useState,
-} from 'react'
-import {
   closestCenter,
   DndContext,
   type DragEndEvent,
@@ -37,14 +9,46 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import {restrictToHorizontalAxis} from '@dnd-kit/modifiers'
 import {
   arrayMove,
   horizontalListSortingStrategy,
   SortableContext,
   useSortable,
 } from '@dnd-kit/sortable'
-import {restrictToHorizontalAxis} from '@dnd-kit/modifiers'
+import type {Arguments} from '@dnd-kit/sortable/dist/hooks/useSortable'
 import {type Transform} from '@dnd-kit/utilities'
+import {
+  type Cell,
+  type Column,
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  type Header,
+  type Row,
+  type TableOptions,
+  type TableState,
+  type Table as TableType,
+  useReactTable,
+} from '@tanstack/react-table'
+import {
+  ArrowNextIcon,
+  ArrowPreviousIcon,
+  KeyboardArrowDownIcon,
+  KeyboardArrowUpIcon,
+  TableTuneIcon,
+  UnfoldMoreIcon,
+} from 'filigran-icon'
+import {ArrowDownIcon, ArrowUpIcon, EyeOff, GripHorizontal} from 'lucide-react'
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useImperativeHandle,
+  useState,
+} from 'react'
+import {cn, fixedForwardRef} from '../../lib/utils'
+import {Button, Skeleton} from '../servers'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -59,18 +63,14 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from './dropdown-menu'
-import {ArrowDownIcon, ArrowUpIcon, EyeOff, GripHorizontal} from 'lucide-react'
-import {cn, fixedForwardRef} from '../../lib/utils'
-import {Button, Skeleton} from '../servers'
 import {
-  ArrowNextIcon,
-  ArrowPreviousIcon,
-  KeyboardArrowDownIcon,
-  KeyboardArrowUpIcon,
-  TableTuneIcon,
-  UnfoldMoreIcon,
-} from 'filigran-icon'
-import type {Arguments} from '@dnd-kit/sortable/dist/hooks/useSortable'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './table'
 
 interface DataTableProps<TData extends {id: string}, TValue> {
   columns: ColumnDef<TData, TValue>[]

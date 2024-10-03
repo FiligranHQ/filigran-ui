@@ -1,8 +1,8 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
-import {type TagInputStyleClassesProps, type Tag as TagType} from './tag-input'
-import {Popover, PopoverContent, PopoverTrigger} from '../popover'
 import {cn} from '../../../lib/utils'
 import {Button} from '../../servers/button'
+import {Popover, PopoverContent, PopoverTrigger} from '../popover'
+import {type TagInputStyleClassesProps, type Tag as TagType} from './tag-input'
 
 type AutocompleteProps = {
   tags: TagType[]

@@ -33,7 +33,7 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
   --muted: var(--gray-default);
-  --muted-foreground: var(--gray-500);;
+  --muted-foreground: var(--gray-500);
 
   --border: var(--border-light);
   --input: 214.3 31.8% 91.4%;
@@ -165,4 +165,26 @@
   --border-focus: var(--blue-600);
 
   --hover-background: var(--gray-800);
+}
+
+::-webkit-scrollbar {
+  width: 1rem;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border-radius: 100vh;
+  border: 0.25rem solid hsl(240 11% 96%);
+  background: #7a7c85b3;
+}
+.dark {
+  ::-webkit-scrollbar-thumb {
+    border-radius: 100vh;
+    border: 0.25rem solid hsl(230 100% 2.35%);
+    background: #7a7c85b3;
+  }
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7a7c85;
 }

@@ -24,6 +24,7 @@
     "autoprefixer": "10.4.19",
     "postcss": "8.4.39",
     "prettier": "3.3.2",
+    "prettier-plugin-organize-imports": "4.1.0",
     "prettier-plugin-tailwindcss": "0.6.5",
     "tailwindcss": "3.4.4",
     "tailwindcss-scoped-preflight": "3.3.0",
@@ -98,7 +99,8 @@
     "arrowParens": "always",
     "singleAttributePerLine": true,
     "plugins": [
-      "prettier-plugin-tailwindcss"
+      "prettier-plugin-tailwindcss",
+      "prettier-plugin-organize-imports"
     ]
   }
 }

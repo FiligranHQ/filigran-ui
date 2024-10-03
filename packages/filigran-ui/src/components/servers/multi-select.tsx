@@ -1,11 +1,8 @@
-import * as React from 'react'
 import {cva, type VariantProps} from 'class-variance-authority'
-import {CheckIcon, XCircle, ChevronDown, XIcon} from 'lucide-react'
+import {CheckIcon, ChevronDown, XCircle, XIcon} from 'lucide-react'
+import * as React from 'react'
 
 import {cn} from '../../lib/utils'
-import {Popover, PopoverContent, PopoverTrigger, Separator} from '../clients'
-import {Button} from './button'
-import {Badge} from './badge'
 import {
   Command,
   CommandEmpty,
@@ -14,7 +11,13 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Separator,
 } from '../clients'
+import {Badge} from './badge'
+import {Button} from './button'
 
 const multiSelectVariants = cva('m-1', {
   variants: {
@@ -110,7 +113,7 @@ const MultiSelectFormField = React.forwardRef<
             ref={ref}
             {...props}
             onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-            className="flex h-auto min-h-10 w-full items-center justify-between rounded-md border border-gray-150 bg-inherit p-1 hover:bg-hover">
+            className="flex h-auto min-h-10 w-full items-center justify-between rounded-md border border-input bg-inherit p-1 hover:bg-hover">
             {selectedValues.length > 0 ? (
               <div className="flex w-full items-center justify-between">
                 <div className="flex flex-wrap items-center">

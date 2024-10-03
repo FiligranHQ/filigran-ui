@@ -1,6 +1,6 @@
 'use client'
 
-import {useToast} from './use-toast'
+import {CheckIndeterminateIcon, TaskIcon} from 'filigran-icon'
 import {
   Toast,
   ToastClose,
@@ -9,7 +9,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from './toast'
-import {CheckIndeterminateIcon, TaskIcon} from 'filigran-icon'
+import {useToast} from './use-toast'
 
 export function Toaster() {
   const {toasts} = useToast()

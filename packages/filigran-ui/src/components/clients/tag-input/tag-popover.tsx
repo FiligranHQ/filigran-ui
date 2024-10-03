@@ -1,9 +1,9 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
+import {cn} from '../../../lib/utils'
+import {Button} from '../../servers'
+import {Popover, PopoverContent, PopoverTrigger} from '../popover'
 import {type TagInputStyleClassesProps, type Tag as TagType} from './tag-input'
 import {TagList, type TagListProps} from './tag-list'
-import {Popover, PopoverContent, PopoverTrigger} from '../popover'
-import {Button} from '../../servers'
-import {cn} from '../../../lib/utils'
 
 type TagPopoverProps = {
   children: React.ReactNode
