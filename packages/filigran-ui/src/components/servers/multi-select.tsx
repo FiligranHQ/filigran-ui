@@ -113,7 +113,7 @@ const MultiSelectFormField = React.forwardRef<
             ref={ref}
             {...props}
             onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-            className="flex h-auto min-h-10 w-full items-center justify-between rounded-md border border-input bg-inherit p-1 hover:bg-hover">
+            className="flex h-auto min-h-9 w-full items-center justify-between rounded-md border border-input bg-inherit p-1 hover:bg-hover">
             {selectedValues.length > 0 ? (
               <div className="flex w-full items-center justify-between">
                 <div className="flex flex-wrap items-center">

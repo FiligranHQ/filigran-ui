@@ -43,6 +43,7 @@ import {ArrowDownIcon, ArrowUpIcon, EyeOff, GripHorizontal} from 'lucide-react'
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useImperativeHandle,
   useState,
@@ -112,11 +113,13 @@ const defaultI18nKey: DatatableI18nKey = {
 interface TableContextProps<TData> {
   table: TableType<TData>
   t_i18n: (key: string) => string
+  onResetTable?: () => void
 }
 
 const TableContext = createContext<TableContextProps<any>>({
   table: {} as TableType<any>,
   t_i18n: (key) => key,
+  onResetTable: () => {},
 })
 
 function getTransformString({x, y}: Transform) {
@@ -132,7 +135,15 @@ const DefaultToolbar = () => {
 }
 
 const DataTableSelectColumnVisibility = <TData,>() => {
-  const {table, t_i18n} = useContext(TableContext)
+  const {table, t_i18n, onResetTable} = useContext(TableContext)
+
+  const onClickResetTable = useCallback(() => {
+    table.reset()
+    if (onResetTable) {
+      onResetTable()
+    }
+  }, [])
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -145,7 +156,7 @@ const DataTableSelectColumnVisibility = <TData,>() => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => table.reset()}>
+        <DropdownMenuItem onClick={() => onClickResetTable()}>
           Reset table
         </DropdownMenuItem>
         <DropdownMenuSub>
@@ -354,7 +365,7 @@ const DataTableHeadBarOptions = () => {
   const pageSize = table.getState().pagination.pageSize
   return (
     <>
-      <div className="box-content flex h-9 items-center rounded border border-border-light">
+      <div className="box-border flex h-9 items-center rounded border border-border-light">
         <Button
           variant="ghost"
           size="icon"
@@ -476,7 +487,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
   )
 
   return (
-    <TableContext.Provider value={{table, t_i18n}}>
+    <TableContext.Provider value={{table, t_i18n, onResetTable}}>
       {toolbar ? <>{toolbar}</> : <DefaultToolbar />}
       <DndContext
         collisionDetection={closestCenter}

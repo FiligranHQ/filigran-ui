@@ -143,7 +143,10 @@ export function ExampleDataTable() {
     'example-datatable-ordering-columns',
     columns.map((c) => c.id!)
   )
-
+  const onResetTable = () => {
+    console.log('Reset table')
+    removeColumnOrder()
+  }
   const HighlightSearchTerm = ({text}: {text: string}) => {
     if (!inputSearch) {
       return <span>{text}</span>
@@ -200,6 +203,7 @@ export function ExampleDataTable() {
           enableRowSelection: (row) => row.original.age > 18, //only enable row selection for adults
           onColumnOrderChange: setColumnOrder,
         }}
+        onResetTable={onResetTable}
         tableState={{
           rowSelection,
           pagination,
