@@ -1,7 +1,8 @@
 import {cva, type VariantProps} from 'class-variance-authority'
-import {CheckIcon, ChevronDown, XCircle, XIcon} from 'lucide-react'
+import {CheckIcon, ChevronDown} from 'lucide-react'
 import * as React from 'react'
 
+import {CloseIcon} from 'filigran-icon'
 import {cn} from '../../lib/utils'
 import {
   Command,
@@ -19,7 +20,7 @@ import {
 import {Badge} from './badge'
 import {Button} from './button'
 
-const multiSelectVariants = cva('m-1', {
+const multiSelectVariants = cva('', {
   variants: {
     variant: {
       default:
@@ -116,7 +117,7 @@ const MultiSelectFormField = React.forwardRef<
             className="flex h-auto min-h-9 w-full items-center justify-between rounded-md border border-input bg-inherit p-1 hover:bg-hover">
             {selectedValues.length > 0 ? (
               <div className="flex w-full items-center justify-between">
-                <div className="flex flex-wrap items-center">
+                <div className="flex flex-wrap items-center gap-s">
                   {selectedValues.map((value) => {
                     const option = options.find((o) => o.value === value)
 
@@ -127,8 +128,8 @@ const MultiSelectFormField = React.forwardRef<
                           multiSelectVariants({variant, className})
                         )}>
                         {option?.label}
-                        <XCircle
-                          className="ml-2 h-4 w-4 cursor-pointer"
+                        <CloseIcon
+                          className="ml-s h-3 w-3 cursor-pointer"
                           onClick={(event) => {
                             event.stopPropagation()
                             toggleOption(value)
@@ -139,8 +140,8 @@ const MultiSelectFormField = React.forwardRef<
                   })}
                 </div>
                 <div className="flex items-center justify-between">
-                  <XIcon
-                    className="mx-2 h-4 cursor-pointer text-muted-foreground"
+                  <CloseIcon
+                    className="mx-s h-3 cursor-pointer text-muted-foreground"
                     onClick={(event) => {
                       setSelectedValues([])
                       selectedValuesSet.current.clear()
