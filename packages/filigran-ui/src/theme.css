@@ -37,7 +37,7 @@
 
   --border: var(--border-light);
   --input: 214.3 31.8% 91.4%;
-  --ring: var(--primary);
+  --ring: var(--gray-500);
   --radius: 0.25rem;
 
   --gray-default: var(--gray-200);
