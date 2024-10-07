@@ -13,6 +13,7 @@ import {ExampleCombobox} from '@/components/example/example-combobox'
 import {ExampleToast} from '@/components/example/example-toast'
 import {ExampleSheet} from '@/components/example/example-sheet'
 import {ExampleTagInput} from '@/components/example/example-tag-input'
+import {Colors} from '@/components/example/color'
 import {
   Quizz,
   QuizzExplanation,
@@ -38,6 +39,7 @@ const components = {
   ExampleToast: ExampleToast,
   ExampleSheet: ExampleSheet,
   ExampleTagInput: ExampleTagInput,
+  Colors: Colors,
   Quizz: Quizz,
   QuizzQuestionChoice: QuizzQuestionChoice,
   QuizzExplanation: QuizzExplanation,
