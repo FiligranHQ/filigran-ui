@@ -64,7 +64,7 @@ const SheetContent = React.forwardRef<
       ref={ref}
       className={cn(sheetVariants({side}), className)}
       {...props}>
-      <div className="max-h-full min-h-full overflow-auto px-xl pt-xl">
+      <div className="max-h-full h-full min-h-full overflow-auto px-xl pt-xl">
         {children}
       </div>
       <SheetPrimitive.Close asChild>

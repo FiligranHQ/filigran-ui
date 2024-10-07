@@ -365,7 +365,7 @@ const DataTableHeadBarOptions = () => {
   const pageSize = table.getState().pagination.pageSize
   return (
     <>
-      <div className="box-border flex h-9 items-center rounded border border-border-light">
+      <div className="flex-0 flex-shrink-0 box-border flex h-9 items-center rounded border border-border-light">
         <Button
           variant="ghost"
           size="icon"
@@ -495,7 +495,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
         onDragEnd={handleDragEnd}
         sensors={sensors}>
         {/* do not remove twp, the class is used to isolate preflight style */}
-        <div className="twp pt-xl">
+        <div className="twp pt-l sm:pt-xl">
           <Table style={{width: table.getCenterTotalSize()}}>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
