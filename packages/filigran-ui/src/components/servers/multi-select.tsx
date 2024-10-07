@@ -81,10 +81,13 @@ const MultiSelectFormField = React.forwardRef<
       selectedValuesSet.current = new Set(defaultValue)
     }, [defaultValue])
 
-    const handleInputKeyDown = (event: any) => {
+    const handleInputKeyDown = (
+      event: React.KeyboardEvent<HTMLInputElement>
+    ) => {
+      const target = event.target as HTMLInputElement
       if (event.key === 'Enter') {
         setIsPopoverOpen(true)
-      } else if (event.key === 'Backspace' && !event.target.value) {
+      } else if (event.key === 'Backspace' && !target) {
         selectedValues.pop()
         setSelectedValues([...selectedValues])
         selectedValuesSet.current.delete(
@@ -130,7 +133,9 @@ const MultiSelectFormField = React.forwardRef<
                         {option?.label}
                         <CloseIcon
                           className="ml-s h-3 w-3 cursor-pointer"
-                          onClick={(event) => {
+                          onClick={(
+                            event: React.MouseEvent<SVGSVGElement, MouseEvent>
+                          ) => {
                             event.stopPropagation()
                             toggleOption(value)
                           }}
@@ -142,7 +147,9 @@ const MultiSelectFormField = React.forwardRef<
                 <div className="flex items-center justify-between">
                   <CloseIcon
                     className="mx-s h-3 cursor-pointer text-muted-foreground"
-                    onClick={(event) => {
+                    onClick={(
+                      event: React.MouseEvent<SVGSVGElement, MouseEvent>
+                    ) => {
                       setSelectedValues([])
                       selectedValuesSet.current.clear()
                       onValueChange([])
