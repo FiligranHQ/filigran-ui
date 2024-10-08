@@ -4,21 +4,19 @@ import Link from 'next/link'
 import Logo from '../public/logo.svg'
 export function SiteHeader() {
   return (
-    <header className="supports-backdrop-blur:bg-white/95 sticky top-0 z-40 z-50 w-full flex-none border-b border-slate-900/10 bg-white backdrop-blur transition-colors duration-500 dark:border-slate-50/[0.06] dark:bg-slate-900/75">
-      <div className="mx-auto flex h-16 max-w-4xl items-center justify-between py-2">
-        <div className="h-full pr-2">
-          <Logo className="h-full w-full" />
-        </div>
-        <nav>
-          <Button
-            asChild
-            variant="link"
-            className="dark:text-white">
-            <Link href="/docs">Docs</Link>
-          </Button>
-        </nav>
-        <ModeToggle />
+    <header className="sticky top-0 z-10 flex h-16 w-full flex-shrink-0 items-center justify-between border-b bg-page-background px-xl shadow-md">
+      <div className="h-full p-l">
+        <Logo className="h-full w-full" />
       </div>
+      <nav>
+        <Button
+          asChild
+          variant="link"
+          className="dark:text-white">
+          <Link href="/docs">Docs</Link>
+        </Button>
+      </nav>
+      <ModeToggle />
     </header>
   )
 }

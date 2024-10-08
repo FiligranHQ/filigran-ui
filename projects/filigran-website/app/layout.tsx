@@ -20,7 +20,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geologica.variable} ${ibmPlexSans.variable}`}>
-      <body className=" flex min-h-screen flex-col dark:bg-gradient-to-br dark:from-[#00020C] dark:from-80% dark:to-[#071578]">
+      <body className="flex min-h-screen flex-col">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
