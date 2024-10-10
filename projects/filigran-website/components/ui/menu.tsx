@@ -18,7 +18,6 @@ interface MenuProps {
 
 export const Menu: FunctionComponent<MenuProps> = ({contentMenu}) => {
   const currentPath = usePathname().replace('/docs/', '')
-  console.log(currentPath)
   return (
     <aside
       className={cn(
