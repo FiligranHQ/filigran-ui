@@ -1,10 +1,11 @@
 :root {
   --dark-100: var(--gray-1000);
+  --light-0: 0 0% 100%;
   --light-100: var(--gray-50);
   --background: var(--gray-50);
   --foreground: var(--gray-1000);
 
-  --page-background: var(--light-100);
+  --page-background: var(--light-0);
   --box-background: var(--light-100);
   --primary-background: var(--darkblue-400);
   --focus-background: var(--darkblue-100);

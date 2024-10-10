@@ -16,7 +16,7 @@ export default async function Blog({params}: {params: {slug: string[]}}) {
     notFound()
   }
   return (
-    <section className="p-s">
+    <section className="p-l">
       <article>
         <CustomMDX source={content.content} />
       </article>
