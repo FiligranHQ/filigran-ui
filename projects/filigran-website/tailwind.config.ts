@@ -1,5 +1,5 @@
 const FiligranUIPlugin = require('filigran-ui/plugin')
-
+import type {Config} from 'tailwindcss'
 const config = {
   darkMode: ['class'],
   content: [
@@ -8,13 +8,12 @@ const config = {
     './content/**/*.{ts,tsx,mdx}',
     '../../packages/filigran-ui/src/components/**/*.{ts,tsx}',
   ],
-  prefix: '',
-
   plugins: [
     require('tailwindcss-animate'),
     FiligranUIPlugin(),
     require('@tailwindcss/typography'),
   ],
-}
+  prefix: '',
+} satisfies Config
 
 export default config
