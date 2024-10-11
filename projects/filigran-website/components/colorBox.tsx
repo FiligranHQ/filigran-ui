@@ -7,7 +7,13 @@ interface ColorBoxProps {
   colorValue: string
   colorBackground: string
   primary: boolean
-  selectedColor: ({colorBackground: string, colorValue: string}) => void
+  selectedColor: ({
+    colorBackground,
+    colorValue,
+  }: {
+    colorBackground: string
+    colorValue: string
+  }) => void
 }
 const ColorBox: React.FunctionComponent<ColorBoxProps> = ({
   colorName,
@@ -17,7 +23,7 @@ const ColorBox: React.FunctionComponent<ColorBoxProps> = ({
   selectedColor,
 }) => {
   const {toast} = useToast()
-  const onClick = (value) => {
+  const onClick = (value: string) => {
     navigator.clipboard.writeText('#' + value)
     toast({
       title: 'Copied !',

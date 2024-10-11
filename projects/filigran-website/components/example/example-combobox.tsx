@@ -106,37 +106,31 @@ export function ExampleCombobox() {
               <strong>onValueChange</strong>
             </td>
             <td>
-              <em>() => void</em>
+              <em>{`() => void`}</em>
             </td>
             <td>-</td>
-            <td>
-              The triggered function when a value is choosen.
-            </td>
+            <td>The triggered function when a value is choosen.</td>
           </tr>
           <tr>
-              <td>
-                  <strong>onInputChange</strong>
-              </td>
-              <td>
-                  <em>() => void</em>
-              </td>
-              <td>-</td>
-              <td>
-                  The triggered function when the input changes.
-              </td>
+            <td>
+              <strong>onInputChange</strong>
+            </td>
+            <td>
+              <em>{`() => void`}</em>
+            </td>
+            <td>-</td>
+            <td>The triggered function when the input changes.</td>
           </tr>
 
           <tr>
-              <td>
-                  <strong>value</strong>
-              </td>
-              <td>
-                  <em>string</em>
-              </td>
-              <td>-</td>
-              <td>
-                  The selectedValue.
-              </td>
+            <td>
+              <strong>value</strong>
+            </td>
+            <td>
+              <em>string</em>
+            </td>
+            <td>-</td>
+            <td>The selectedValue.</td>
           </tr>
         </tbody>
       </table>

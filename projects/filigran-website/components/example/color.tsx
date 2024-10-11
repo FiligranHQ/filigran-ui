@@ -610,10 +610,11 @@ export function Colors() {
       <h1>Colors</h1>
 
       <h2>Gray palette</h2>
-      <div className="flex gap-s">
+      <div className="gap-s flex">
         {grayPalette.map((color) => {
           return (
             <ColorBox
+              key={color.colorName}
               selectedColor={(color) => handleClick(color)}
               colorName={color.colorName}
               colorValue={color.colorValue}
@@ -627,10 +628,11 @@ export function Colors() {
       <h2>Palettes</h2>
       <div className="flex flex-row">
         <div>
-          <div className="flex gap-s">
+          <div className="gap-s flex">
             {darkbluePalette.map((color) => {
               return (
                 <ColorBox
+                  key={color.colorName}
                   selectedColor={(color) => handleClick(color)}
                   colorName={color.colorName}
                   colorValue={color.colorValue}
@@ -641,10 +643,11 @@ export function Colors() {
             })}
           </div>
 
-          <div className="flex gap-s">
+          <div className="gap-s flex">
             {bluePalette.map((color) => {
               return (
                 <ColorBox
+                  key={color.colorName}
                   selectedColor={(color) => handleClick(color)}
                   colorName={color.colorName}
                   colorValue={color.colorValue}
@@ -655,10 +658,11 @@ export function Colors() {
             })}
           </div>
 
-          <div className="flex gap-s">
+          <div className="gap-s flex">
             {turquoisePalette.map((color) => {
               return (
                 <ColorBox
+                  key={color.colorName}
                   selectedColor={(color) => handleClick(color)}
                   colorName={color.colorName}
                   colorValue={color.colorValue}
@@ -669,10 +673,11 @@ export function Colors() {
             })}
           </div>
 
-          <div className="flex gap-s">
+          <div className="gap-s flex">
             {greenPalette.map((color) => {
               return (
                 <ColorBox
+                  key={color.colorName}
                   selectedColor={(color) => handleClick(color)}
                   colorName={color.colorName}
                   colorValue={color.colorValue}
@@ -683,10 +688,11 @@ export function Colors() {
             })}
           </div>
 
-          <div className="flex gap-s">
+          <div className="gap-s flex">
             {redPalette.map((color) => {
               return (
                 <ColorBox
+                  key={color.colorName}
                   selectedColor={(color) => handleClick(color)}
                   colorName={color.colorName}
                   colorValue={color.colorValue}
@@ -697,10 +703,11 @@ export function Colors() {
             })}
           </div>
 
-          <div className="flex gap-s">
+          <div className="gap-s flex">
             {orangePalette.map((color) => {
               return (
                 <ColorBox
+                  key={color.colorName}
                   selectedColor={(color) => handleClick(color)}
                   colorName={color.colorName}
                   colorValue={color.colorValue}
@@ -711,10 +718,11 @@ export function Colors() {
             })}
           </div>
 
-          <div className="flex gap-s">
+          <div className="gap-s flex">
             {yellowPalette.map((color) => {
               return (
                 <ColorBox
+                  key={color.colorName}
                   selectedColor={(color) => handleClick(color)}
                   colorName={color.colorName}
                   colorValue={color.colorValue}
@@ -726,18 +734,18 @@ export function Colors() {
           </div>
 
           <h2>Some gradients</h2>
-          <div className="mb-10 flex gap-xl">
-            <div className="h-20 w-60 rounded bg-gradient-to-r from-darkblue-900 to-darkblue-600"></div>
-            <div className="h-20 w-60 rounded bg-gradient-to-r from-darkblue to-turquoise"></div>
+          <div className="gap-xl mb-10 flex">
+            <div className="from-darkblue-900 to-darkblue-600 h-20 w-60 rounded bg-gradient-to-r"></div>
+            <div className="from-darkblue to-turquoise h-20 w-60 rounded bg-gradient-to-r"></div>
           </div>
-          <div className="mb-20 flex gap-xl">
-            <div className="h-20 w-60 rounded bg-gradient-to-r from-darkblue-900 via-darkblue-600 to-turquoise"></div>
-            <div className="h-20 w-60 rounded bg-gradient-to-r from-blue to-turquoise-300"></div>
+          <div className="gap-xl mb-20 flex">
+            <div className="from-darkblue-900 via-darkblue-600 to-turquoise h-20 w-60 rounded bg-gradient-to-r"></div>
+            <div className="from-blue to-turquoise-300 h-20 w-60 rounded bg-gradient-to-r"></div>
           </div>
         </div>
 
-        <div className="ml-xl flex flex-col gap-m">
-          <div className="flex flex-row items-center gap-m">
+        <div className="ml-xl gap-m flex flex-col">
+          <div className="gap-m flex flex-row items-center">
             <div>
               <Button
                 className=""
@@ -764,7 +772,7 @@ export function Colors() {
             contrastRatio && (
               <div className="ml-0 flex flex-col">
                 <div
-                  className={`flex w-80 flex-col rounded border p-xl ${selectedColor1?.colorBackground}`}
+                  className={`p-xl flex w-80 flex-col rounded border ${selectedColor1?.colorBackground}`}
                   style={{color: '#' + selectedColor2?.colorValue}}>
                   <div>Example text</div>
                   <div className="text-lg">Example text</div>
