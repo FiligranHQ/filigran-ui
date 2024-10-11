@@ -72,18 +72,20 @@ const Quizz: FunctionComponent<{children: ReactNode; response: string[]}> = ({
   return (
     <QuizzContext.Provider
       value={{onClickAnswer, selectedAnswers, answerState}}>
-      <div className={'not-prose'}>{children}</div>
-      <Button
-        // @ts-ignore
-        variant={variantButton[answerState]}
-        className={cn(
-          'mt-s',
-          answerState === ResponseEnum.INCORRECT && 'bg-red',
-          answerState === ResponseEnum.CORRECT && 'bg-green'
-        )}
-        onClick={onSubmit}>
-        {buttonName[answerState]}
-      </Button>
+      <div className={'not-prose'}>
+        {children}
+        <Button
+          // @ts-ignore
+          variant={variantButton[answerState]}
+          className={cn(
+            'mt-s',
+            answerState === ResponseEnum.INCORRECT && 'bg-red',
+            answerState === ResponseEnum.CORRECT && 'bg-green'
+          )}
+          onClick={onSubmit}>
+          {buttonName[answerState]}
+        </Button>
+      </div>
     </QuizzContext.Provider>
   )
 }
