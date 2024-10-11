@@ -7,9 +7,9 @@ import {
   useState,
 } from 'react'
 import {cn} from '@/utils/utils'
-import {Button, buttonVariants} from 'filigran-ui/servers'
+import {Button} from 'filigran-ui/servers'
 import {Checkbox} from 'filigran-ui'
-import type {VariantProps} from 'class-variance-authority'
+import {confettiBasic, confettiSideCannons} from '@/components/ui/confetti'
 
 enum ResponseEnum {
   INIT,
@@ -46,12 +46,16 @@ const Quizz: FunctionComponent<{children: ReactNode; response: string[]}> = ({
   }
 
   const onSubmit = () => {
-    setAnswerState(
+    const isCorrectAnswer =
       selectedAnswers.length === response.length &&
-        selectedAnswers.every((a) => response.includes(a))
-        ? ResponseEnum.CORRECT
-        : ResponseEnum.INCORRECT
+      selectedAnswers.every((a) => response.includes(a))
+    setAnswerState(
+      isCorrectAnswer ? ResponseEnum.CORRECT : ResponseEnum.INCORRECT
     )
+    if (isCorrectAnswer) {
+      confettiBasic()
+      confettiSideCannons()
+    }
   }
 
   const variantButton = {
@@ -93,7 +97,7 @@ const QuizzQuestionChoice = ({
 }) => {
   const {onClickAnswer, selectedAnswers} = useContext(QuizzContext)
   return (
-    <div className="flex items-center space-x-s">
+    <div className="space-x-s flex items-center">
       <Checkbox
         checked={selectedAnswers.some((a) => a === id)}
         onClick={() => onClickAnswer(id)}
@@ -108,7 +112,7 @@ const QuizzExplanation = ({children}: {children: ReactNode}) => {
   return (
     <div
       className={cn(
-        'my-s w-fit rounded border border-primary bg-primary/10 p-s',
+        'my-s border-primary bg-primary/10 p-s w-fit rounded border',
         answerState !== ResponseEnum.CORRECT && 'hidden'
       )}>
       <div className="txt-category">Explanation :</div>
