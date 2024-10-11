@@ -2,7 +2,7 @@
 title: Tabs
 ---
 
-## Example
+# Tabs Example
 
 <Tabs defaultValue="account" className="w-[400px]">
   <TabsList>
@@ -12,3 +12,32 @@ title: Tabs
   <TabsContent value="account">Make changes to your account here.</TabsContent>
   <TabsContent value="password">Change your password here.</TabsContent>
 </Tabs>
+
+## How to use this card
+
+### Props
+
+| Name                | Type                                            | Default  | Description                                                                                                                                      |
+| -------------       | --------                                        | ---------| ----------------------------------------------------------------------------------------------------------------------------                     |
+| **asChild**         | *boolean*                                       | false    | Change the default rendered element for the one passed as a child, merging their props and behavior.                                             |
+| **defaultValue**    | *string*                                        | -        | The default value on where the current tab is selected.                                                                                          |
+| **value**           | *string*                                        | -        | The current value of the selected tab.                                                                                                           |
+
+
+### Playground
+
+*Import from filigran-ui :*
+
+Import \{Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter\} from 'filigran-ui'
+
+<ReactLiveDisplay
+    codeExample={`
+          <Tabs defaultValue="account" className="w-[400px]">
+  <TabsList>
+    <TabsTrigger value="account">Account</TabsTrigger>
+    <TabsTrigger value="password">Password</TabsTrigger>
+  </TabsList>
+  <TabsContent value="account">Make changes to your account here.</TabsContent>
+  <TabsContent value="password">Change your password here.</TabsContent>
+</Tabs>`}
+/>

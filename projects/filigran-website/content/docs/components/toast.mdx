@@ -2,6 +2,38 @@
 title: Toast
 ---
 
-## Example
+# Toast Example
 
 <ExampleToast />
+
+## How to use this separator
+
+### Props
+No props in it ! It's a hook !
+
+### Playground
+
+*Import from filigran-ui :*
+
+Import \{useToast\} from 'filigran-ui'
+
+*Use the hook in the component :*
+
+const \{toast\} = useToast()
+
+*You can use it in your component :*
+
+<ReactLiveDisplay
+displayError={false}
+    codeExample={`<Button
+        onClick={() => {
+          toast({
+            title: 'A title',
+            description: 'My description',
+            variant: 'destructive',
+            action: <Button variant="outline">Click me</Button>
+          })
+        }}>
+        Show Toast
+      </Button>`}
+/>

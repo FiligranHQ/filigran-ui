@@ -2,34 +2,52 @@
 title: Accordion
 ---
 
-## Accordion example
+# Accordion example
+
+Displays an accordion that can be folded.
 
 <Accordion
-  type="single"
-  collapsible
-  className="w-full">
-  <AccordionItem value="item-1">
-    <AccordionTrigger>Is it accessible?</AccordionTrigger>
-    <AccordionContent>
-      Yes. It adheres to the WAI-ARIA design pattern.
-    </AccordionContent>
-  </AccordionItem>
-  <AccordionItem value="item-2">
-    <AccordionTrigger>Is it styled?</AccordionTrigger>
-    <AccordionContent>
-      Yes. It comes with default styles that matches the other components&apos;
-      aesthetic.
-    </AccordionContent>
-  </AccordionItem>
-  <AccordionItem value="item-3">
-    <AccordionTrigger>Is it animated?</AccordionTrigger>
-    <AccordionContent>
-      Yes. It&apos;s animated by default, but you can disable it if you prefer.
-    </AccordionContent>
-  </AccordionItem>
+    type="single"
+    collapsible
+    className="w-full">
+    <AccordionItem value="item-1">
+        <AccordionTrigger>Is it accessible?</AccordionTrigger>
+        <AccordionContent>
+            Yes. It adheres to the WAI-ARIA design pattern.
+        </AccordionContent>
+    </AccordionItem>
+    <AccordionItem value="item-2">
+        <AccordionTrigger>Is it styled?</AccordionTrigger>
+        <AccordionContent>
+            Yes. It comes with default styles that matches the other components&apos;
+            aesthetic.
+        </AccordionContent>
+    </AccordionItem>
 </Accordion>
 
-## Playground
+## How to use this accordion
+
+### Props :
+| Name               | Type                                | Default     | Description                                                                                                                                      |
+| -------------      | --------                            | ----------- | ----------------------------------------------------------------------------------------------------------------------------                     |
+| **asChild**        | *boolean*                           | false       | Change the default rendered element for the one passed as a child, merging their props and behavior.                                             |
+| **type**           | *enum ("single" \| "multiple")*     | -           | Determines whether one or multiple items can be opened at the same time.                                                                         |
+| **value**          | *string*                            | -           | The controlled value of the item to expand when type is "single". Must be used in conjunction with onValueChange.                                |
+| **value**          | *string[]*                          | -           | The controlled value of the item to expand when type is "multiple". Must be used in conjunction with onValueChange.                              |
+| **defaultValue**   | *string*                            | -           | The value of the item to expand when initially rendered and type is "single". Use when you do not need to control the state of the items.        |
+| **defaultValue**   | *string[]*                          | -           | The value of the item to expand when initially rendered when type is "multiple". Use when you do not need to control the state of the items.     |
+| **onValueChange**  | *(value: string) => void*           | -           |  Event handler called when the expanded state of an item changes and type is "single".                                                           |
+| **onValueChange**  | *(value: string[]) => void*         | -           |  Event handler called when the expanded state of an item changes and type is "multiple".                                                         |
+| **collapsible**    | *boolean*                           | false       |  When type is "single", allows closing content when clicking trigger for an open item.                                                           |
+| **disabled**       | *boolean*                           | false       |  When true, prevents the user from interacting with the accordion and all its items.                                                             |
+| **dir**            | *enum ("ltr" \| "rtl")*             | ltr         |   The reading direction of the accordion when applicable. If omitted, assumes LTR (left-to-right) reading mode.                                  |
+| **orientation**    | *enum ("vertical" \| "horizontal")* | vertical    |  The orientation of the accordion.                                                                                                               |
+
+### Playground
+
+*Import from filigran-ui :*
+
+Import \{Accordion, AccordionItem, AccordionTrigger, AccordionContent\} from 'filigran-ui'
 
 <ReactLiveDisplay
   codeExample={`

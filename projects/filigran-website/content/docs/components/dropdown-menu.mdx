@@ -2,10 +2,10 @@
 title: Dropdown menu
 ---
 
-## Example
+# Dropdown Example
 
 <DropdownMenu>
-  <DropdownMenuTrigger>Open</DropdownMenuTrigger>
+  <DropdownMenuTrigger>Open dropdown</DropdownMenuTrigger>
   <DropdownMenuContent>
     <DropdownMenuLabel>My Account</DropdownMenuLabel>
     <DropdownMenuSeparator />
@@ -16,11 +16,20 @@ title: Dropdown menu
   </DropdownMenuContent>
 </DropdownMenu>
 
-## Playground
+## How to use this command
+### Props
+
+No props in it!
+
+### Playground
+
+*Import from filigran-ui :*
+
+Import \{DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem\} from 'filigran-ui'
+
 
 <ReactLiveDisplay
   codeExample={`
-          <div className={tw(\`flex gap-2\`)}>
 <DropdownMenu>
   <DropdownMenuTrigger>Open</DropdownMenuTrigger>
   <DropdownMenuContent>
@@ -32,5 +41,5 @@ title: Dropdown menu
     <DropdownMenuItem>Subscription</DropdownMenuItem>
   </DropdownMenuContent>
 </DropdownMenu>
-          </div>`}
+          `}
 />

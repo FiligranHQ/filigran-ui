@@ -9,11 +9,13 @@ interface ReactLiveDisplayProps {
   scope?: any
   codeExample: string
   noInline?: boolean
+  displayError?: boolean
 }
 const ReactLiveDisplay: FunctionComponent<ReactLiveDisplayProps> = ({
   scope,
   codeExample,
   noInline,
+  displayError = true,
 }) => {
   const customIcon = {...FiligranIcon}
   // @ts-ignore
@@ -31,7 +33,7 @@ const ReactLiveDisplay: FunctionComponent<ReactLiveDisplayProps> = ({
             <LivePreview />
           </div>
         </div>
-        <LiveError className="mt-2 bg-red-100 text-red-800" />
+        {displayError && <LiveError className="mt-2 bg-red-100 text-red-800" />}
       </LiveProvider>
     </div>
   )

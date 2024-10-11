@@ -2,45 +2,51 @@
 title: Separator
 ---
 
-## Example
+# Separator Example
 
 <div>
-  <div className="space-y-1">
-    <h4 className="text-sm font-medium leading-none">Radix Primitives</h4>
-    <p className="text-sm text-muted-foreground">
-      An open-source UI component library.
-    </p>
+  <div>
+    Before the horizontal separator
   </div>
   <Separator className="my-4" />
-  <div className="flex h-5 items-center space-x-4 text-sm">
-    <div>Blog</div>
+    <div>
+        After the vertical separator
+    </div>
+    <div className="flex h-5 items-center space-x-4 text-sm">
+    <div>Before the vertical separator</div>
     <Separator orientation="vertical" />
-    <div>Docs</div>
-    <Separator orientation="vertical" />
-    <div>Source</div>
+    <div>After the vertical separator</div>
   </div>
 </div>
 
-## Playground
+## How to use this separator
+
+### Props
+| Name               | Type                                   | Default      | Description                                                                                                                                                                          |
+| -------------      | --------                               | -----------  | ----------------------------------------------------------------------------------------------------                                                                                 |
+| **orientation**    | *enum ("horizontal" \| "vertical")*    | "horizontal" | Change the default rendered element for the one passed as a child, merging their props and behavior.                                                                                 |
+| **decorative**     | *boolean*                              | true         | Whether or not the component is purely decorative. When true, accessibility-related attributes are updated so that that the rendered element is removed from the accessibility tree. |
+
+### Playground
+
+*Import from filigran-ui :*
+
+Import \{Separator\} from 'filigran-ui'
+
 
 <ReactLiveDisplay
-  codeExample={`
-          <div className={tw(\`flex gap-2 bg-white p-4\`)}>
-            <div>
-              <div className={tw(\`space-y-1\`)}>
-                <h4 className={tw(\`text-sm font-medium leading-none\`)}>Radix Primitives</h4>
-                <p className={tw(\`text-sm text-muted-foreground\`)}>
-                  An open-source UI component library.
-                </p>
-              </div>
-              <Separator className={tw(\`my-4\`)} />
-              <div className={tw(\`flex h-5 items-center space-x-4 text-sm\`)}>
-                <div>Blog</div>
-                <Separator orientation="vertical" />
-                <div>Docs</div>
-                <Separator orientation="vertical" />
-                <div>Source</div>
-              </div>
-            </div>
-          </div>`}
+  codeExample={`<div>
+  <div>
+    Before the horizontal separator
+  </div>
+  <Separator className="my-4" />
+    <div>
+        After the vertical separator
+    </div>
+    <div className={tw(\`flex h-5 items-center space-x-4 text-sm\`)}>
+    <div>Before the vertical separator</div>
+    <Separator orientation="vertical" />
+    <div>After the vertical separator</div>
+  </div>
+</div>`}
 />

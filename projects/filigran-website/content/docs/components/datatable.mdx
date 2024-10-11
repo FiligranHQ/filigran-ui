@@ -2,6 +2,125 @@
 title: Datatable
 ---
 
-# Datatable
+# Datatable Example
 
 <ExampleDataTable />
+
+## How to use this separator
+
+### Props
+| Name               | Type                                   | Default      | Description                                                                                                                                                                          |
+| -------------      | --------                               | -----------  | ----------------------------------------------------------------------------------------------------                                                                                 |
+| **data**           | *MyCustomType[]*                       | -            | The data displayed in the tab.                                                                                                                                                       |
+| **columns**        | *\<ColumnDef\<MyCustomType\>[]\>*      | -            | The name of the colomns, how to get it, actions on column...                                                                                                                         |
+| **isLoading**      | *boolean*                              | -            | Displays a skeleton on rows while loading.                                                                                                                                           |
+| **tableOptions**   | *\{onRowSelectionChange, getSortedRowModel, getPaginationRowModel, onPaginationChange, enableRowSelection, onColumnOrderChange   \}*    | - | Change the default rendered element for the one passed as a child, merging their props and behavior.                                                                                 |
+| **tableState**     | *\{columnVisibility, columnOrder: string[], columnPinning:\{left: string[], right: string[] \}, rowPinning\{bottom: string[], top: string[] \}, columnFilters: \{id: string, value: unknown \}[], globalFilter: any, sorting: \{desc: boolean, id: string \}[], expanded:?, grouping: string[], columnSizing:?, columnSizingInfo: \{   columnSizingStart: [string, number][], deltaOffset: null \| number,deltaPercentage: null \| number,isResizingColumn: false \| string, startOffset: null \| number, startSize: null \| number  \} \}*    | - | Change the default rendered element for the one passed as a child, merging their props and behavior.                                                                                 |
+| **onClickRow**     | *(row: Row\<TData\>) => void*          | -            | Action function triggered when the user clicks on a row.                                                                                                                             |
+| **onResetTable**   | *() => void*                           | -            | Reset localStorage used for preferences (order table, number of rows...).                                                                                                            |
+| **toolbar**        | *ReactNode*                            | -            | Put anything in this toolbar : button, text, select...                                                                                                                               |
+
+### Playground
+
+*Import from filigran-ui :*
+
+Import \{Separator\} from 'filigran-ui'
+
+Everything possible for declaring columns :
+<ReactLiveDisplay displayError={false} codeExample={`const columns = useMemo<ColumnDef<Person>[]>(
+    () => [
+      {
+        id: 'select',
+        size: 20,
+        header: ({table}) => (
+          <Checkbox
+            className="flex"
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && 'indeterminate')
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({row}) => (
+          <Checkbox
+            className="flex"
+            checked={row.getIsSelected()}
+            onClick={(e) => e.stopPropagation()}
+            onCheckedChange={(value) => {
+              row.toggleSelected(!!value)
+            }}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false
+      },
+      {
+        id: 'firstName',
+        accessorKey: 'firstName',
+        enableHiding: true,
+        enableSorting: false,
+        cell: (info) => (
+          <HighlightSearchTerm text={info.getValue() as string} />
+        ),
+        header: 'First name'
+      },
+      {
+        accessorFn: (row) => row.lastName,
+        id: 'lastName',
+        enableHiding: false,
+        cell: (info) => (
+          <HighlightSearchTerm text={info.getValue() as string} />
+        ),
+        header: (header) => (
+          <DataTableOptionsHeader
+            column={header.column}
+            title={'Last name'}
+            menuItems={
+              <>
+                <DropdownMenuItem onClick={() => console.log(header.column)}>
+                  Log column
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => console.log(header.column)}>
+                  Log column 2
+                </DropdownMenuItem>
+              </>
+            }
+          />
+        )
+      },
+      {
+        id: 'age',
+        accessorKey: 'age',
+        header: 'Age'
+      }], [])`}/>
+
+<ReactLiveDisplay displayError={false} codeExample={`
+<DataTable
+        data={data}
+        columns={columns}
+        isLoading={loading}
+        i18nKey={isCheckedI18n ? frenchI18nKey : {}}
+        tableOptions={{
+          onRowSelectionChange: setRowSelection,
+          getSortedRowModel: getSortedRowModel(),
+          getPaginationRowModel: getPaginationRowModel(),
+          onPaginationChange: setPagination,
+          enableRowSelection: (row) => row.original.age > 18, //only enable row selection for adults
+          onColumnOrderChange: setColumnOrder
+        }}
+        tableState={{
+          rowSelection,
+          pagination,
+          columnOrder,
+          columnPinning: {
+            left: ['select']
+          } //Force left column on the left, can not be pinned.
+        }}
+        onClickRow={(row) => console.log(row)} // Action on click
+      />`} />

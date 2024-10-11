@@ -2,18 +2,36 @@
 title: Checkbox
 ---
 
-## Example
+# Checkbox Example
+
+Displays a checkbox. Useful in a form.
 
 <div className="flex items-center space-x-2">
-  <Checkbox id="terms" />
+  <Checkbox id="terms-example" />
   <label
-    htmlFor="terms"
+    htmlFor="terms-example"
     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
     Accept terms and conditions
   </label>
 </div>
 
-## Playground
+## How to use this checkbox
+### Props
+| Name                | Type                                            | Default     | Description                                                                                                                     |
+| -------------       | --------                                        | ----------- | ------------------------------------------------------------------------------------------------------------------              |
+| **asChild**         | *boolean*                                       | false       | Change the default rendered element for the one passed as a child, merging their props and behavior.                            |
+| **defaultChecked**  | *boolean \| "indeterminate"*                    | -           | The checked state of the checkbox when it is initially rendered. Use when you do not need to control its checked state.         |
+| **checked**         | *boolean \| "indeterminate"*                    | -           | The controlled checked state of the checkbox. Must be used in conjunction with onCheckedChange.                                 |
+| **onCheckedChange** | *(checked: boolean \| 'indeterminate') => void* | -           | Event handler called when the checked state of the checkbox changes.                                                            |
+| **disabled**        | *boolean*                                       | -           | When true, prevents the user from interacting with the checkbox.                                                                |
+| **required**        | *boolean*                                       | -           | When true, indicates that the user must check the checkbox before the owning form can be submitted.                             |
+| **name**            | *string*                                        | -           | The name of the checkbox. Submitted with its owning form as part of a name/value pair.                                          |
+| **value**           | *string*                                        | -           | The value given as data when submitted with a name.                                                                             |
+
+### Playground
+*Import from filigran-ui :*
+
+Import \{Checkbox\} from 'filigran-ui'
 
 <ReactLiveDisplay
   codeExample={`<div className={tw('flex items-center space-x-2')}>
