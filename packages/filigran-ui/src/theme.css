@@ -134,7 +134,7 @@
 }
 
 .dark {
-  --background: var(--gray-1000);
+  --background: 220 54% 8%;
   --foreground: var(--gray-100);
   --tw-prose-body: var(--gray-400);
   --primary: var(--blue-default);
@@ -149,7 +149,7 @@
   --card-foreground: 247 10% 97.15%;
   --input: var(--gray-800);
 
-  --page-background: var(--dark-100);
+  --page-background: 220 56% 6%;
   --box-background: #ffffff;
   --primary-background: var(--blue-400);
   --focus-background: var(--blue-900);
