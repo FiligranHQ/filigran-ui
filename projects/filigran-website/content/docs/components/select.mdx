@@ -2,7 +2,7 @@
 title: Select
 ---
 
-## Exemple
+# Select Example
 
 <Select>
   <SelectTrigger className="w-[180px]">
@@ -15,11 +15,25 @@ title: Select
   </SelectContent>
 </Select>
 
-## Playground
+## How to use this select
+### Props
+
+| Name               | Type                                | Default     | Description                                                                                                                                      |
+| -------------      | --------                            | ----------- | ---------------------------------------------------------------------------------------------------  |
+| **asChild**        | *boolean*                           | false       | Change the default rendered element for the one passed as a child, merging their props and behavior. |
+| **placeholder**    | *string* (for SelectValue)          | -           | Text that appears in the form control when it has no value set.                                      |
+| **value**          | *string* (for SelectItem)           | -           | The value of the field if it is selected.                                                            |
+
+
+### Playground
+
+*Import from filigran-ui :*
+
+Import \{Select, SelectTrigger, SelectValue, SelectContent, SelectItem\} from 'filigran-ui'
+
 
 <ReactLiveDisplay
   codeExample={`
-          <div className={tw(\`flex gap-2\`)}>
              <Select>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Theme" />
@@ -31,4 +45,4 @@ title: Select
               </SelectContent>
             </Select>
 
-            </div>`} />
+         `} />

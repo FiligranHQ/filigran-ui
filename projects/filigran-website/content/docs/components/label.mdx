@@ -2,16 +2,28 @@
 title: Label
 ---
 
-## Label
+# Label example
 
 <div>
   <Label htmlFor="terms">Accept terms and conditions</Label>
 </div>
-## Playground
+
+*This component is based on the native label element, it will automatically apply the correct labelling when wrapping controls or using the htmlFor attribute. For your own custom controls to work correctly, ensure they use native elements such as button or input as a base.*
+
+## How to use this label
+### Props
+| Name               | Type                                | Default     | Description                                                                                          |
+| -------------      | --------                            | ----------- | ----------------------------------------------------                                                 |
+| **asChild**        | *boolean*                           | false       | Change the default rendered element for the one passed as a child, merging their props and behavior. |
+| **htmlFor**        | *string*                            | -           | The id of the element the label is associated with.                                                  |
+
+### Playground
+*Import from filigran-ui :*
+
+Import \{Label\} from 'filigran-ui'
 
 <ReactLiveDisplay
   codeExample={`
-          <div className={tw(\`flex gap-2\`)}>
              <Label>Accept terms and conditions</Label>
-          </div>`}
+        `}
 />

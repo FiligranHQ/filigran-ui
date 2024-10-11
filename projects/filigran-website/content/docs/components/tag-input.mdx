@@ -1,10 +1,44 @@
 ---
-title: Tabs
+title: Tag input
 ---
 
-## Example
+# Tag input Example
 
 <ExampleTagInput/>
+
+## How to use this tag input
+
+### Props
+| Name                     | Type                                   | Default      | Description                                                                                |
+| -------------            | --------                               | -----------  | -----------------------------------------------------------------------------------------  |
+| **placeholder**          | *string*                               | -            | Text that appears in the form control when it has no value set.                            |
+| **tags**                 | *\{id: string text: string\}[]*        | -            | The precompleted tags.                                                                     |
+| **activeTagIndex**       | *number*                               | -            | The index of the current tag.                                                              |
+| **setActiveTagIndex**    | *() => void*                           | -            | Change the index of the current tag.                                                       |
+| **setTags**              | *() => void*                           | -            | Change the tags.                                                                           |
+
+### Playground
+
+*Import from filigran-ui :*
+
+Import \{Separator\} from 'filigran-ui'
+
+<ReactLiveDisplay
+displayError={false}
+    codeExample={`
+           <TagInput
+                            {...field}
+                            placeholder="Enter a topic"
+                            tags={tags}
+                            className="sm:min-w-[450px]"
+                            activeTagIndex={activeTagIndex}
+                            setActiveTagIndex={setActiveTagIndex}
+                            setTags={(newTags) => {
+                              setTags(newTags)
+                              setValue('topics', newTags as [Tag, ...Tag[]])
+                            }}
+                          />`}
+/>
 
 ## Docs
 https://emblor.jaleelbennett.com/introduction

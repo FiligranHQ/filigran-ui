@@ -2,6 +2,36 @@
 title: Multiselect
 ---
 
-## Example
+# Multiselect Example
 
 <ExampleMultiSelect />
+
+## How to use this multiselect
+### Props
+
+| Name               | Type                                | Default     | Description                                                                                                                      |
+| -------------      | --------                            | ----------- | ----------------------------------------------------------------------------------------------------------------------------     |
+| **asChild**        | *boolean*                           | false       | Change the default rendered element for the one passed as a child, merging their props and behavior.                             |
+| **options** *      | *\{label: string value: string\}[]* | -           | The options the user can choose in the multiselect.                                                                              |
+| **defaultValue**   | *string[]*                          | -           | The values already choosen in the multiselect.                                                                                   |
+| **disabled**       | *boolean*                           | false       | Wheter the user can interract with the field or not.                                                                             |
+| **placeholder** *  | *string*                            | -           | Text that appears in the form control when it has no value set.                                                                  |
+| **variant** *      | *enum (default \| inverted)*        | default     | Badges appareance in the multiselect, for the selected items.                                                                    |
+| **onValueChange** *| *(value: string[]) => void*         | -           | Function triggered when a new value is selected, with all the selected values in param.                                          |
+
+### Playground
+
+*Should be used as a form field, inside a form.*
+
+*Import from filigran-ui :*
+
+Import \{MultiSelectFormField\} from 'filigran-ui'
+
+<ReactLiveDisplay displayError={false} codeExample={`
+                <MultiSelectFormField
+                  options={frameworksList}
+                  defaultValue={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Select options"
+                  variant="inverted"
+                />`} />

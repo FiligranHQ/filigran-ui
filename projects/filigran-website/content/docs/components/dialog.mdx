@@ -2,45 +2,59 @@
 title: Dialog
 ---
 
+# Command Example
+
+Display a dialog.
+
 <Dialog>
   <DialogTrigger asChild>
-    <Button variant="outline">Edit Profile</Button>
+    <Button>Show dialog</Button>
   </DialogTrigger>
-  <DialogContent className="sm:max-w-[425px]">
+  <DialogContent>
     <DialogHeader>
-      <DialogTitle>Edit profile</DialogTitle>
+      <DialogTitle>Dialog title</DialogTitle>
       <DialogDescription>
-        Make changes to your profile here. Click save when you're done.
+            Dialog description
       </DialogDescription>
     </DialogHeader>
-    <div className="grid gap-4 py-4">
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label
-          htmlFor="name"
-          className="text-right">
-          Name
-        </Label>
-        <Input
-          id="name"
-          defaultValue="Pedro Duarte"
-          className="col-span-3"
-        />
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label
-          htmlFor="username"
-          className="text-right">
-          Username
-        </Label>
-        <Input
-          id="username"
-          defaultValue="@peduarte"
-          className="col-span-3"
-        />
-      </div>
+    <div>
+        This is the content.
     </div>
     <DialogFooter>
-      <Button type="submit">Save changes</Button>
+      This is in the footer. Put anything here!
     </DialogFooter>
   </DialogContent>
 </Dialog>
+
+## How to use this command
+### Props
+
+No props in it!
+
+### Playground
+
+*Import from filigran-ui :*
+
+Import \{Dialog, DialogContent, DialogFooter, DialogTitle, DialogDescription\} from 'filigran-ui'
+
+<ReactLiveDisplay
+    displayError={false}
+    codeExample={`<Dialog>
+  <DialogTrigger asChild>
+    <Button>Show dialog</Button>
+  </DialogTrigger>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Dialog title</DialogTitle>
+      <DialogDescription>
+            Dialog description
+      </DialogDescription>
+    </DialogHeader>
+    <div>
+        This is the content.
+    </div>
+    <DialogFooter>
+      This is in the footer. Put anything here!
+    </DialogFooter>
+  </DialogContent>
+</Dialog>`} />

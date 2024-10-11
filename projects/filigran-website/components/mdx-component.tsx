@@ -19,6 +19,7 @@ import {
   QuizzExplanation,
   QuizzQuestionChoice,
 } from '@/components/ui/quizz'
+import {ExampleLoader} from '@/components/example/example-loader'
 
 const options = {
   mdxOptions: {
@@ -39,6 +40,7 @@ const components = {
   ExampleToast: ExampleToast,
   ExampleSheet: ExampleSheet,
   ExampleTagInput: ExampleTagInput,
+  ExampleLoader: ExampleLoader,
   Colors: Colors,
   Quizz: Quizz,
   QuizzQuestionChoice: QuizzQuestionChoice,
