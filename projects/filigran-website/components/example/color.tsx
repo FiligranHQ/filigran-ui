@@ -529,7 +529,7 @@ export function Colors() {
     colorValue: string | null
     colorBackground: string | null
   } | null>({colorBackground: 'bg-gray-1000', colorValue: '00020c'})
-  const [contrastRatio, setContrastRatio] = useState<number>(5.41)
+  const [contrastRatio, setContrastRatio] = useState<number>(18.85)
 
   const hexToRgb = (hex: string) => {
     let bigint = parseInt(hex, 16)

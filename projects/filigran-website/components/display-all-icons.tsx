@@ -65,7 +65,9 @@ export const DisplayAllIcons = () => {
               </div>
               <div className="flex flex-row items-center align-middle">
                 <div className="rounded bg-gray-1000 p-s text-gray-50">
+                  {'<'}
                   {icon}
+                  {' className="h-4 w-4"/>'}
                 </div>{' '}
                 <Button
                   variant={'ghost'}

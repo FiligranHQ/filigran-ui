@@ -1,0 +1,66 @@
+name: Add svg Icons
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: ${{ steps.detect-package-manager.outputs.manager }}
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            projects/filigran-website/.next/cache
+          # Generate a new cache whenever packages or source files change.
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          # If source files changed but packages didn't, rebuild from a prior cache.
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
+      - name: Install dependencies
+        run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+      - name: Install svgr/cli
+        run: yarn global add @svgr/cli
+      - name: Install rimraf and tsup
+        run: yarn global add rimraf tsup typescript
+      - name: Install TypeScript
+        run: cd packages/filigran-icon && yarn add typescript --dev
+      - name: Run extract-icons
+        run: cd packages/filigran-icon && yarn extract-icons
+        env:
+          FIGMA_FILE_ID: ${{ secrets.FIGMA_FILE_ID_ICONS }}
+          FIGMA_API_TOKEN: ${{ secrets.FIGMA_API_TOKEN }}
+
+      - name: Run svgr
+        run: cd packages/filigran-icon && yarn svgr
+
+      - name: Run build
+        run: cd packages/filigran-icon && yarn build
+      - name: Commit changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b update-icons-branch
+          git add .
+          git commit -m "Update icons and build artifacts"
+          git push origin update-icons-branch
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.TOKEN_GITHUB }}
+          branch: update-icons-branch
+          title: "Update icons and build artifacts"
+          body: "This PR was automatically created by GitHub Actions after building the icons."
+          base: main
