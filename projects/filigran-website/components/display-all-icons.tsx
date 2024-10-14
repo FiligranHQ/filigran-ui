@@ -11,7 +11,6 @@ import {
   Button,
   useToast,
 } from 'filigran-ui'
-import {ArrowPreviousIcon} from 'filigran-icon'
 
 export const DisplayAllIcons = () => {
   const {toast} = useToast()
