@@ -1,6 +1,12 @@
 import { lazy } from "react";
 export const Svg10KIcon = lazy(() => import("./10K"));
+export const Group5Icon = lazy(() => import("./Group5"));
+export const Group6Icon = lazy(() => import("./Group6"));
+export const LogoFiligranIcon = lazy(() => import("./LogoFiligran"));
+export const PolarAreaIcon = lazy(() => import("./PolarArea"));
+export const Polygon5Icon = lazy(() => import("./Polygon5"));
 export const AddIcon = lazy(() => import("./Add"));
+export const AddNotesIcon = lazy(() => import("./AddNotes"));
 export const AdministrativeAreaIcon = lazy(
   () => import("./AdministrativeArea"),
 );
@@ -20,7 +26,6 @@ export const CaseRfiIcon = lazy(() => import("./CaseRfi"));
 export const CaseRftIcon = lazy(() => import("./CaseRft"));
 export const ChannelIcon = lazy(() => import("./Channel"));
 export const CheckIcon = lazy(() => import("./Check"));
-export const ChecklistRtlIcon = lazy(() => import("./ChecklistRtl"));
 export const CheckBoldIcon = lazy(() => import("./CheckBold"));
 export const CheckIndeterminateIcon = lazy(
   () => import("./CheckIndeterminate"),
@@ -28,6 +33,7 @@ export const CheckIndeterminateIcon = lazy(
 export const CheckIndeterminateSmallBoldIcon = lazy(
   () => import("./CheckIndeterminateSmallBold"),
 );
+export const ChecklistRtlIcon = lazy(() => import("./ChecklistRtl"));
 export const ChevronIcon = lazy(() => import("./Chevron"));
 export const CircleCloseIcon = lazy(() => import("./CircleClose"));
 export const CityIcon = lazy(() => import("./City"));
@@ -47,8 +53,6 @@ export const ExternalReferenceIcon = lazy(() => import("./ExternalReference"));
 export const ForumIcon = lazy(() => import("./Forum"));
 export const GlobeLine1Icon = lazy(() => import("./GlobeLine1"));
 export const GradeIcon = lazy(() => import("./Grade"));
-export const Group5Icon = lazy(() => import("./Group5"));
-export const Group6Icon = lazy(() => import("./Group6"));
 export const GroupIcon = lazy(() => import("./Group"));
 export const GroupingIcon = lazy(() => import("./Grouping"));
 export const HomeIcon = lazy(() => import("./Home"));
@@ -69,7 +73,6 @@ export const LanguageIcon = lazy(() => import("./Language"));
 export const LayersBlackIcon = lazy(() => import("./LayersBlack"));
 export const ListViewIcon = lazy(() => import("./ListView"));
 export const LittleArrowIcon = lazy(() => import("./LittleArrow"));
-export const LogoFiligranIcon = lazy(() => import("./LogoFiligran"));
 export const LogoutIcon = lazy(() => import("./Logout"));
 export const MalwareAnalysisIcon = lazy(() => import("./MalwareAnalysis"));
 export const MalwareIcon = lazy(() => import("./Malware"));
@@ -81,8 +84,6 @@ export const NoteIcon = lazy(() => import("./Note"));
 export const ObservedDataIcon = lazy(() => import("./ObservedData"));
 export const OpinionIcon = lazy(() => import("./Opinion"));
 export const OrganizationIcon = lazy(() => import("./Organization"));
-export const PolarAreaIcon = lazy(() => import("./PolarArea"));
-export const Polygon5Icon = lazy(() => import("./Polygon5"));
 export const PositionIcon = lazy(() => import("./Position"));
 export const ReadMoreIcon = lazy(() => import("./ReadMore"));
 export const RelationshipIcon = lazy(() => import("./Relationship"));
