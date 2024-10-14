@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Logo from '../public/logo.svg'
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-10 flex h-16 w-full flex-shrink-0 items-center justify-between border-b bg-page-background px-xl shadow-md">
+    <header className="sticky top-0 z-10 flex h-16 w-full flex-shrink-0 items-center justify-between border-b bg-page-background px-xl dark:bg-background">
       <div className="h-full p-l">
         <Logo className="h-full w-full" />
       </div>
