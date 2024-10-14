@@ -55,6 +55,7 @@ async function run () {
     console.error('The Figma file ID is not defined, you need to set an environment variable `FIGMA_FILE_ID` to run the script');
     return;
   }
+
   fetchFigmaFile()
     .then(data => getComponentsFromNode(data))
     .then(components => getIllustrationName(components))
