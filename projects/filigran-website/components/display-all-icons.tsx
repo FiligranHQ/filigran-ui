@@ -24,7 +24,7 @@ export const DisplayAllIcons = () => {
   const onClickCopy = (icon: string, fullImport: boolean = false) => {
     const stringValueToCopy = fullImport
       ? `import { ${icon} } from 'filigran-icon'`
-      : icon
+      : `\<${icon} className="h-4 w-4"\/>`
     navigator.clipboard.writeText(stringValueToCopy)
     toast({
       title: 'Copied !',
