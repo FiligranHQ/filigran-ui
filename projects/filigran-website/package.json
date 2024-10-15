@@ -10,6 +10,8 @@
     "prettier": "prettier . --write"
   },
   "dependencies": {
+    "@codesandbox/sandpack-react": "2.19.9",
+    "@codesandbox/sandpack-themes": "2.0.21",
     "@faker-js/faker": "9.0.3",
     "@floating-ui/react-dom": "2.1.2",
     "@jsdevtools/rehype-toc": "3.0.2",

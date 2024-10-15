@@ -12,10 +12,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const contentMenu = await getContentMenu()
+  const contentMenu = await getContentMenu('learning')
   return (
     <main className="flex max-w-full">
-      <Menu contentMenu={contentMenu} />
+      <Menu
+        contentMenu={contentMenu}
+        basePath={'learning'}
+      />
       <div className="prose max-w-none flex-1 dark:prose-invert">
         {children}
       </div>

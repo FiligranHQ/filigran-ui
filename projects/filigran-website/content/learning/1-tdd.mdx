@@ -1,0 +1,192 @@
+---
+title: TDD
+---
+<ContentWithLeftColumnFixed left={<PlaygroundTest/>}>
+  # TDD for FizzBuzz: Step-by-Step Guide
+
+  In this guide, we will solve the **FizzBuzz** problem using **Test-Driven Development (TDD)**, which emphasizes writing tests before implementing functionality.
+
+  ## What is FizzBuzz?
+
+  The **FizzBuzz** problem requires printing numbers from 1 to 100, with the following rules:
+
+  1. For multiples of 3, print "Fizz" instead of the number.
+  2. For multiples of 5, print "Buzz" instead of the number.
+  3. For multiples of both 3 and 5, print "FizzBuzz" instead of the number.
+
+  ## TDD Process Overview
+
+  The TDD process follows a simple cycle, often referred to as **Red-Green-Refactor**:
+
+  1. **Red**: Write a failing test.
+  2. **Green**: Write just enough code to pass the test.
+  3. **Refactor**: Clean up the code while ensuring all tests still pass.
+
+  ---
+
+  ## Step 1: Write the First Test (Print Numbers)
+
+  ### Red: Write the Failing Test
+
+  In this step, we will create a test to verify that the `fizzBuzz` function correctly prints numbers from 1 to 100.
+
+  1. **Create a test file** named `fizzbuzz.test.js` if you haven't already.
+
+  2. **Add the following code** to the test file:
+
+  ```js
+
+  test('prints numbers from 1 to 100', () => {
+    const result = fizzbuzz();
+    expect(result[0]).toBe(1);  // The first element should be 1
+    expect(result[99]).toBe(100); // The last element should be 100
+  });
+  ```
+  ### Green: Write the Minimum Code
+  Implement the `fizzBuzz` function to make the test pass.
+
+  ```js
+  export const fizzbuzz = () => {
+      const result = [];
+      for (let i = 1; i <= 100; i++) {
+      result.push(i);
+    }
+      return result;
+    }
+```
+</ContentWithLeftColumnFixed>
+---
+ ## Quizz Time
+Time to see if you've been paying attention—don't worry, it's just between you and the quiz... no pressure, no judgment, no one will know (unless you tell them)!
+<div className="space-y-xl">
+  <Quizz response={['2']}>
+    ## What is the first step in the TDD process?
+    <QuizzQuestionChoice id="1">
+      Write the code
+    </QuizzQuestionChoice>
+    <QuizzQuestionChoice id="2">
+      Write the failing test
+    </QuizzQuestionChoice>
+    <QuizzQuestionChoice id="3">
+      Refactor the code
+    </QuizzQuestionChoice>
+    <QuizzQuestionChoice id="4">
+      Run the tests
+    </QuizzQuestionChoice>
+    <QuizzExplanation>
+      In TDD, the first step is to write a failing test before writing any code. This ensures that you're writing only the necessary code to make the test pass.
+    </QuizzExplanation>
+  </Quizz>
+
+  <Quizz response={['1']}>
+    ## Why do we write tests first in TDD?
+    <QuizzQuestionChoice id="1">
+      To ensure code correctness before implementation
+    </QuizzQuestionChoice>
+    <QuizzQuestionChoice id="2">
+      To save time later
+    </QuizzQuestionChoice>
+    <QuizzQuestionChoice id="3">
+      To write less code
+    </QuizzQuestionChoice>
+    <QuizzQuestionChoice id="4">
+      To avoid bugs
+    </QuizzQuestionChoice>
+    <QuizzExplanation>
+      Writing tests first helps ensure that the code meets requirements and works correctly before implementation, which leads to fewer errors and more maintainable code.
+    </QuizzExplanation>
+  </Quizz>
+
+  <Quizz response={['2']}>
+    ## What do you do after writing a failing test?
+    <QuizzQuestionChoice id="1">
+      Write all the code
+    </QuizzQuestionChoice>
+    <QuizzQuestionChoice id="2">
+      Make the test pass by writing minimal code
+    </QuizzQuestionChoice>
+    <QuizzQuestionChoice id="3">
+      Refactor the code immediately
+    </QuizzQuestionChoice>
+    <QuizzExplanation>
+      After writing a failing test, you should implement just enough code to make that test pass.
+    </QuizzExplanation>
+  </Quizz>
+</div>
+---
+## Another exercise ?
+<ContentWithLeftColumnFixed left={<PlaygroundTest/>}>
+  # Exercise: Roman Numerals Converter
+
+  ## Problem Statement:
+
+  Write a function that converts an integer (between 1 and 3999) into its corresponding Roman numeral representation.
+
+  ## Roman Numeral Rules:
+
+  - Roman numerals are represented by seven symbols:
+  - `I` - 1
+  - `V` - 5
+  - `X` - 10
+  - `L` - 50
+  - `C` - 100
+  - `D` - 500
+  - `M` - 1000
+
+  - The following combinations are used to form numbers:
+  - `II` - 2
+  - `III` - 3
+  - `IV` - 4 (5 - 1)
+  - `VI` - 6 (5 + 1)
+  - `IX` - 9 (10 - 1)
+  - `XII` - 12 (10 + 2)
+  - `XX` - 20
+  - `XL` - 40 (50 - 10)
+  - `LX` - 60 (50 + 10)
+  - `XC` - 90 (100 - 10)
+  - `CXX` - 120
+  - `CD` - 400 (500 - 100)
+  - `DC` - 600 (500 + 100)
+  - `CM` - 900 (1000 - 100)
+  - `MCMXC` - 1990 (1000 + 1000 - 100 + 1000 - 10)
+
+  ## Input:
+
+  - An integer `num` (1 ≤ `num` ≤ 3999).
+
+  ## Output:
+
+  - A string representing the Roman numeral equivalent of the input integer.
+
+  ## Examples:
+
+  1. **Input:** `3`
+  **Output:** `"III"`
+
+  2. **Input:** `4`
+  **Output:** `"IV"`
+
+  3. **Input:** `9`
+  **Output:** `"IX"`
+
+  4. **Input:** `58`
+  **Output:** `"LVIII"`
+  **Explanation:** L = 50, V = 5, III = 3.
+
+  5. **Input:** `1994`
+  **Output:** `"MCMXCIV"`
+  **Explanation:** M = 1000, CM = 900, XC = 90, IV = 4.
+
+  ## Task:
+
+  1. **Write Failing Tests First (Red Phase):**
+  - Start by writing unit tests for each conversion case.
+
+  2. **Implement the Conversion Logic (Green Phase):**
+  - Write the code that converts the integer to a Roman numeral to pass the tests.
+
+  3. **Refactor the Code (Refactor Phase):**
+  - Optimize the implementation without breaking the functionality as validated by the tests.
+
+</ContentWithLeftColumnFixed>
+

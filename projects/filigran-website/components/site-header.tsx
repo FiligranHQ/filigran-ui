@@ -11,9 +11,13 @@ export function SiteHeader() {
       <nav>
         <Button
           asChild
-          variant="link"
-          className="dark:text-white">
+          variant="link">
           <Link href="/docs">Docs</Link>
+        </Button>
+        <Button
+          asChild
+          variant="link">
+          <Link href="/learning">Learning</Link>
         </Button>
       </nav>
       <ModeToggle />
