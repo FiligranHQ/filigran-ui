@@ -22,6 +22,8 @@ import {
 import {ExampleLoader} from '@/components/example/example-loader'
 import {CodePlayground} from '@/components/code-playground/code-playground'
 import {CodePlaygroundTest} from '@/components/code-playground/code-playground-test'
+import {PlaygroundTest} from '@/components/code-playground/playground-test'
+import {ContentWithLeftColumnFixed} from '@/components/ui/content-with-left-column-fixed'
 
 const options = {
   mdxOptions: {
@@ -36,6 +38,8 @@ const components = {
   ...FiligranIcon,
   CodePlayground: CodePlayground,
   CodePlaygroundTest: CodePlaygroundTest,
+  PlaygroundTest: PlaygroundTest,
+  ContentWithLeftColumnFixed: ContentWithLeftColumnFixed,
   ReactLiveDisplay: ReactLiveDisplay,
   DisplayAllIcons: DisplayAllIcons,
   ExampleDataTable: ExampleDataTable,
