@@ -13,11 +13,15 @@ import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 
 interface MenuProps {
+  basePath?: string
   contentMenu: ContentMenu
 }
 
-export const Menu: FunctionComponent<MenuProps> = ({contentMenu}) => {
-  const currentPath = usePathname().replace('/docs/', '')
+export const Menu: FunctionComponent<MenuProps> = ({
+  contentMenu,
+  basePath = 'docs',
+}) => {
+  const currentPath = usePathname().replace(`/${basePath}/`, '')
   return (
     <aside
       className={cn(
@@ -54,7 +58,7 @@ export const Menu: FunctionComponent<MenuProps> = ({contentMenu}) => {
                             'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
                         )}
                         asChild>
-                        <Link href={`/docs/${m.slug}`}>{m.title}</Link>
+                        <Link href={`/${basePath}/${m.slug}`}>{m.title}</Link>
                       </Button>
                     )
                   })}
@@ -73,7 +77,7 @@ export const Menu: FunctionComponent<MenuProps> = ({contentMenu}) => {
                 'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
             )}
             asChild>
-            <Link href={`/docs/${menu.slug}`}>{menu.title}</Link>
+            <Link href={`/${basePath}/${menu.slug}`}>{menu.title}</Link>
           </Button>
         )
       })}

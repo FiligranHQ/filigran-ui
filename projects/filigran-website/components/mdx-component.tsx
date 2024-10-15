@@ -20,7 +20,8 @@ import {
   QuizzQuestionChoice,
 } from '@/components/ui/quizz'
 import {ExampleLoader} from '@/components/example/example-loader'
-import {CodePlayground} from '@/components/code-playground'
+import {CodePlayground} from '@/components/code-playground/code-playground'
+import {CodePlaygroundTest} from '@/components/code-playground/code-playground-test'
 
 const options = {
   mdxOptions: {
@@ -34,6 +35,7 @@ const components = {
   ...FiligranUIComponent,
   ...FiligranIcon,
   CodePlayground: CodePlayground,
+  CodePlaygroundTest: CodePlaygroundTest,
   ReactLiveDisplay: ReactLiveDisplay,
   DisplayAllIcons: DisplayAllIcons,
   ExampleDataTable: ExampleDataTable,
