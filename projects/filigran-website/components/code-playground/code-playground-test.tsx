@@ -1,26 +1,34 @@
+'use client'
 import {
-  Sandpack,
   SandpackCodeEditor,
   SandpackLayout,
-  SandpackPreview,
   SandpackProvider,
-  SandpackTests,
 } from '@codesandbox/sandpack-react'
-import {nightOwl} from '@codesandbox/sandpack-themes'
-import {FunctionComponent} from 'react'
+import {FunctionComponent, useState} from 'react'
 import {
   defaultApp,
   defaultUtils,
   indexCode,
+  sandPackTheme,
   testsCode,
 } from '@/components/code-playground/constants/sandpack'
+import {TitleBar} from '@/components/code-playground/ui/title-bar'
+import {Actions} from '@/components/code-playground/ui/actions'
+import {Preview} from '@/components/code-playground/ui/preview'
 interface CodePlaygroundProps {
   files?: {[key: string]: string}
 }
 
+export type CodePlaygroundMode = 'result' | 'tests' | 'console'
 export const CodePlaygroundTest: FunctionComponent<CodePlaygroundProps> = ({
   files,
 }) => {
+  const [mode, setMode] = useState<CodePlaygroundMode>('result')
+
+  const previewProps = {
+    mode,
+    setMode,
+  }
   return (
     <SandpackProvider
       template="react-ts"
@@ -45,7 +53,7 @@ export const CodePlaygroundTest: FunctionComponent<CodePlaygroundProps> = ({
           'https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&family=IBM+Plex+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet',
         ],
       }}
-      theme={nightOwl}
+      theme={sandPackTheme}
       files={{
         '/App.tsx': {
           code: defaultApp,
@@ -63,14 +71,20 @@ export const CodePlaygroundTest: FunctionComponent<CodePlaygroundProps> = ({
         },
         ...files,
       }}>
-      <SandpackLayout>
-        <SandpackCodeEditor
-          showLineNumbers
-          showInlineErrors
-          showTabs
-        />
-        <SandpackPreview />
-        <SandpackTests />
+      <SandpackLayout className="!mx-s !block !rounded">
+        <TitleBar />
+        <div className="flex flex-col lg:flex-row">
+          <SandpackCodeEditor
+            className="flex-1"
+            showLineNumbers
+            showInlineErrors
+            showTabs
+          />
+          <div className="flex flex-1 flex-col">
+            <Actions {...previewProps} />
+            <Preview {...previewProps} />
+          </div>
+        </div>
       </SandpackLayout>
     </SandpackProvider>
   )

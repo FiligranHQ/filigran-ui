@@ -1,9 +1,9 @@
 import {Sandpack} from '@codesandbox/sandpack-react'
-import {nightOwl} from '@codesandbox/sandpack-themes'
 import {FunctionComponent} from 'react'
 import {
   defaultApp,
   indexCode,
+  sandPackTheme,
 } from '@/components/code-playground/constants/sandpack'
 interface CodePlaygroundProps {
   files?: {[key: string]: string}
@@ -34,7 +34,7 @@ export const CodePlayground: FunctionComponent<CodePlaygroundProps> = ({
           'https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&family=IBM+Plex+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet',
         ],
       }}
-      theme={nightOwl}
+      theme={sandPackTheme}
       files={{
         '/App.tsx': {
           code: defaultApp,

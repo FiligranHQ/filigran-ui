@@ -1,3 +1,6 @@
+import {nightOwl} from '@codesandbox/sandpack-themes'
+import {SandpackTheme} from '@codesandbox/sandpack-react'
+
 export const indexCode = `
 import React from "react";
 import ReactDOM from "react-dom/client";
@@ -74,8 +77,13 @@ export const testsCode = `
 
 export const defaultUtils = `
   export const fizzbuzz = (num: number) => {
- 
     return num;
   }
-
 `
+
+export const sandPackTheme: SandpackTheme = {
+  ...nightOwl,
+  colors: {
+    ...nightOwl.colors,
+  },
+}
