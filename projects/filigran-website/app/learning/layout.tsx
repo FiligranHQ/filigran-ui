@@ -19,7 +19,7 @@ export default async function RootLayout({
         contentMenu={contentMenu}
         basePath={'learning'}
       />
-      <div className="prose max-w-none flex-1 dark:prose-invert">
+      <div className="prose prose-sm max-w-none flex-1 dark:prose-invert">
         {children}
       </div>
     </main>

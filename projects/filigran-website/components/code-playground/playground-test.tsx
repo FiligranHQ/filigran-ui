@@ -20,7 +20,7 @@ export const PlaygroundTest: FunctionComponent<PlaygroundTestProps> = ({
 }) => {
   return (
     <SandpackProvider
-      template="test-ts"
+      template="react-ts"
       theme={sandPackTheme}
       files={{
         '/utils.ts': {

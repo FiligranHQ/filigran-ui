@@ -16,7 +16,7 @@ export default async function RootLayout({
   return (
     <main className="flex max-w-full">
       <Menu contentMenu={contentMenu} />
-      <div className="prose max-w-none flex-1 dark:prose-invert">
+      <div className="prose prose-sm max-w-none flex-1 dark:prose-invert">
         {children}
       </div>
     </main>

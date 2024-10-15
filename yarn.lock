@@ -1153,7 +1153,7 @@
     outvariant "1.4.0"
     static-browser-server "1.0.3"
 
-"@codesandbox/sandpack-react@^2.19.9":
+"@codesandbox/sandpack-react@2.19.9":
   version "2.19.9"
   resolved "https://registry.yarnpkg.com/@codesandbox/sandpack-react/-/sandpack-react-2.19.9.tgz#2a0afaea963a9ef89b9149c995cef04d6f55ed6b"
   integrity sha512-a5uXWYdg5Wtz6VHwXIegdS7C63foCofFa/eHO9crtPp1Yf5/npKimds0S3kKJL7jpOmMAascEvAOqOy5S9e6qQ==
@@ -1178,7 +1178,7 @@
     react-devtools-inline "4.4.0"
     react-is "^17.0.2"
 
-"@codesandbox/sandpack-themes@^2.0.21":
+"@codesandbox/sandpack-themes@2.0.21":
   version "2.0.21"
   resolved "https://registry.yarnpkg.com/@codesandbox/sandpack-themes/-/sandpack-themes-2.0.21.tgz#f1970f03537434fff008e9c9c3f6581b0e5940c2"
   integrity sha512-CMH/MO/dh6foPYb/3eSn2Cu/J3+1+/81Fsaj7VggICkCrmRk0qG5dmgjGAearPTnRkOGORIPHuRqwNXgw0E6YQ==
@@ -6715,6 +6715,7 @@ strict-event-emitter@^0.4.3:
   integrity sha512-12KWeb+wixJohmnwNFerbyiBrAlq5qJLwIt38etRtKtmmHyDSoGlIqFE9wx+4IwG0aDjI7GV8tc8ZccjWZZtTg==
 
 "string-width-cjs@npm:string-width@^4.2.0", string-width@^4.1.0:
+  name string-width-cjs
   version "4.2.3"
   resolved "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz"
   integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
