@@ -1,0 +1,56 @@
+# Filigran-UI: Design System, Component library and Icon library
+
+Welcome to **Filigran-UI**, an evolving design system and component library built to standardize and unify the design and user experience across products developed by **Filigran**, a startup focused on cybersecurity solutions.
+
+This project draws inspiration from popular libraries such as **Shadcn**, **RadixUI**, and **Tailwind CSS**, with the aim of offering a versatile set of UI components that can be used both with and without Tailwind CSS. Filigran-UI is designed primarily for React-based applications, but it also functions as a standalone component library for any web project.
+
+## 🚀 Project Overview
+
+- **Repository:** [Filigran-UI GitHub Repository](https://github.com/FiligranHQ/filigran-ui)
+- **Website:** A dedicated website that hosts both libraries
+- **Filigran-UI:** Component library
+- **Filigran-Icon:** Icon library
+
+> **Note:** The work is currently in progress, and the project is not yet officially released.
+
+---
+
+## 🎯 Purpose of the Filigran Design System
+
+The primary goal of the **Filigran Design System** is to ensure consistency, efficiency, and scalability across all user interfaces within Filigran's suite of cybersecurity tools. Here's why having a well-defined design system matters:
+
+- **Consistency:** A design system ensures that every UI element—whether it’s a button, form, or modal—behaves and looks consistent across different products and platforms.
+- **Efficiency:** By providing reusable components, developers and designers can save time, avoid reinventing the wheel, and focus on higher-level problems.
+- **Scalability:** As Filigran's products grow, a unified design system ensures that new features and services can be added without sacrificing the coherence of the user experience.
+- **Customization:** While it leverages Tailwind CSS for rapid development, Filigran-UI is flexible enough to be used as a standalone component library, enabling seamless integration into various projects, with or without Tailwind.
+
+## 📦 Features
+
+- **React Components:** The core components of Filigran-UI are built on React, providing an intuitive API and easy integration with React projects.
+- **Tailwind-First, but Optional:** Although components are styled using **Tailwind CSS**, they are designed to work independently. This makes it possible to import components into projects that are not using Tailwind.
+- **Inspired by Shadcn and RadixUI:** Components follow best practices from modern UI libraries, ensuring accessibility, responsiveness, and flexibility.
+- **Filigran-Icon Library:** A growing collection of high-quality icons, designed to seamlessly integrate with Filigran's design system.
+
+---
+
+## 🔧 Installation
+
+For installation please see this [link](./components/0-installation)
+
+## 📚 Documentation
+
+The full documentation for Filigran-UI and Filigran-Icon will soon be available on our website. Stay tuned for updates!
+
+---
+
+## 🚧 Work in Progress
+
+Filigran-UI is still under active development. New components and features are being added regularly, and we're working toward an official release. If you're interested in contributing, feel free to check out the GitHub repository for more information on how to get involved!
+
+Thank you for your interest in Filigran-UI. Together, we can build a cohesive, modern, and secure UI experience across Filigran's product ecosystem.
+
+---
+
+## 💻 Some playground
+### Vite starter with Tailwind CSS, React and Filigran UI
+https://codesandbox.io/p/devbox/filigran-ui-with-vite-starter-js63h4
