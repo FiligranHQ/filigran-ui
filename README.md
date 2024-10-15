@@ -1,4 +1,4 @@
-# Filigran-UI: Design System, Component library and Icon library
+# **(🚧 WIP)**Filigran-UI: Design System, Component and Icon library
 
 Welcome to **Filigran-UI**, an evolving design system and component library built to standardize and unify the design and user experience across products developed by **Filigran**, a startup focused on cybersecurity solutions.
 
