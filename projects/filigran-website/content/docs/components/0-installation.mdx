@@ -1,3 +1,91 @@
 ---
 title: Installation
 ---
+
+# Filigran-UI Installation and Usage Guide
+This tutorial will guide you through the process of installing Filigran-UI and setting it up in a way that lets you use the components with generated CSS classes—even without Tailwind CSS or the Tailwind plugin.
+
+## 1. Install Filigran-UI
+First, add the Filigran-UI package to your project using npm or yarn:
+
+```bash
+npm install filigran-ui
+```
+or if you're using yarn:
+
+```bash
+yarn add filigran-ui
+```
+## 2. Global CSS Configuration
+Since you won't be using the full Tailwind plugin, you'll need to add some basic styling to your global.css to ensure the components look and behave as expected. Here's how to set up your fonts:
+
+Update global.css
+Add the following CSS to your global.css to set the font variables for the project:
+
+```css
+:root {
+--font-geologica: 'Geologica';
+--font-ibm-plex-sans: 'IBM Plex Sans';
+}
+
+* {
+font-family: var(--font-ibm-plex-sans), system-ui, sans-serif !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+font-family: var(--font-geologica), system-ui, sans-serif !important;
+}
+```
+This will ensure that the correct font families are applied across your application, including headers and body text, even without using Tailwind's font utilities.
+
+## 3. Import Filigran-UI CSS
+To use Filigran-UI's components, you need to import its CSS file. Add the following import statement to your index.tsx or index.js file:
+
+Update index.tsx or index.js
+
+```js
+import "filigran-ui/index.css";
+```
+This step ensures that all necessary styles for the components are loaded into your project.
+
+##  4. Using Filigran-UI Components
+Now you can start using the Filigran-UI components in your React project. For example, to use a button component, simply import it and add it to your JSX:
+
+```js
+import { Button } from "filigran-ui";
+
+function App() {
+return (
+<div>
+<Button>Primary/Default</Button>
+</div>
+);
+}
+
+export default App;
+```
+The components come pre-styled, and even though you aren't using the full Tailwind CSS theme, they will render with the necessary styles via the filigran-ui/index.css file.
+
+## 5. Special Imports for Next.js or Server-Side Rendering (SSR)
+If you're working in a Next.js or SSR environment, Filigran-UI provides specific imports for components that are intended to be rendered on the server or client.
+
+Server-Side Rendering Components
+For components rendered on the server, import from "filigran-ui/servers":
+
+```js
+import { Button } from "filigran-ui/servers";
+```
+Client-Side Components
+For client-side interactive components (e.g., dropdowns or modals), import from "filigran-ui/clients":
+
+```js
+import { Combobox } from "filigran-ui/clients";
+```
+This approach ensures proper handling of server and client rendering contexts in Next.js and other SSR frameworks.
+
+##  6. Conclusion
+With these steps, you're ready to use Filigran-UI in your project without needing the full Tailwind CSS plugin. You can now access a powerful component library with pre-generated styles while keeping your project lightweight and flexible.
+
+Feel free to explore additional components in the Filigran-UI library to speed up your development and maintain a consistent design system across your application.
+
+Happy coding! If you have any questions or run into issues, feel free to check out the Filigran-UI GitHub repository for further assistance.

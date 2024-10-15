@@ -1,0 +1,96 @@
+---
+title: Install with Tw
+---
+# Filigran-UI Installation and Setup for Tailwind CSS Projects
+This tutorial will show you how to install Filigran-UI and integrate it with an existing Tailwind CSS setup, allowing you to use the full power of both libraries.
+
+## 1. Install Filigran-UI
+First, you need to install the Filigran-UI library. Run the following command to add it to your project:
+
+```bash
+npm install filigran-ui
+```
+or if you're using yarn:
+
+```bash
+yarn add filigran-ui
+```
+
+## 2. Configure Tailwind CSS
+To integrate Filigran-UI with Tailwind CSS, you'll need to configure your tailwind.config.js file. Filigran-UI provides a plugin that extends Tailwind’s functionality with additional components, styles, and utilities.
+
+Update tailwind.config.js
+Add the Filigran-UI plugin to your Tailwind configuration.
+Include the Filigran-UI components in the content array, so Tailwind can purge unused styles correctly.
+Here’s an example of what your tailwind.config.js should look like:
+
+```js
+const FiligranUIPlugin = require('filigran-ui/plugin');
+
+module.exports = {
+darkMode: ['class'], // Supports dark mode using class-based approach
+content: [
+'./pages/**/*.{ts,tsx}',
+'./components/**/*.{ts,tsx}',
+'./app/**/*.{ts,tsx}',
+'./src/**/*.{ts,tsx}',
+'./node_modules/filigran-ui/dist/**/*.{js,ts,jsx,tsx}', // Include Filigran-UI components
+],
+plugins: [
+require('tailwindcss-animate'), // Optional: Additional Tailwind plugins you might use
+FiligranUIPlugin(), // Add Filigran-UI plugin
+],
+};
+```
+This configuration allows your project to pick up all the styles and classes provided by Filigran-UI, while maintaining compatibility with Tailwind.
+
+## 3. Import Filigran-UI Theme Styles
+To ensure that your project applies the Filigran-UI theme correctly, you need to import the Filigran-UI theme CSS in your index.tsx or index.js file.
+
+Update index.tsx or index.js
+Add the following import statement to your entry file:
+
+```tsx
+import "filigran-ui/theme.css";
+```
+This will load the necessary theme-related styles for your components to render properly with Tailwind’s theme.
+
+##4. Using Filigran-UI Components
+Now that Filigran-UI is set up, you can start using the components in your React project alongside Tailwind CSS utilities. Here’s how to use a button component:
+
+```tsx
+import { Button } from "filigran-ui";
+
+function App() {
+return (
+<div>
+<Button>Primary/Default</Button>
+</div>
+);
+}
+
+export default App;
+```
+Since you’re using Tailwind, you can apply Tailwind’s utility classes alongside the Filigran-UI components to further customize the design.
+
+## 5. Special Setup for Next.js or SSR
+If your project is built using Next.js or requires Server-Side Rendering (SSR), you can take advantage of Filigran-UI’s optimized server and client components.
+
+Server-Side Rendering Components
+To use components on the server, import from "filigran-ui/servers":
+
+```tsx
+import { Button } from "filigran-ui/servers";
+```
+Client-Side Components
+For interactive components that need to run on the client, import from "filigran-ui/clients":
+
+```tsx
+import { Combobox } from "filigran-ui/clients";
+```
+This ensures that your components are properly handled in Next.js or other SSR frameworks.
+
+## 6. Conclusion
+By following these steps, you’ve successfully installed and configured Filigran-UI in your Tailwind CSS project. You now have access to Filigran-UI’s powerful and flexible components while keeping the full capabilities of the Tailwind CSS system. You can further customize the components with Tailwind utilities as needed.
+
+Feel free to explore more components and make use of the design system in your project to improve consistency and efficiency.
