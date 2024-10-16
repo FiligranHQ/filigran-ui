@@ -1,0 +1,45 @@
+---
+title: File input
+---
+
+# File input Example
+
+<ExampleFileInput
+/>
+
+## How to use this input
+### Props
+| Name                      | Type                                                                                         | Default     | Description                                                                                                                                                         |
+| -------------             | --------                                                                                     | ----------- | ----------------------------------------------------------------------------------------------------------------------------                                        |
+| **texts**                 | \{txtDragActive?: string,txtDragUnactive?: string,txtFileOk: string\} *(if txtFileOk is not null, considered the file choosen) *                                                                              | \{txtDragActive: 'Drop the file here', txtDragUnactive: 'Select a file'\}  | Displayed string, if set in parent, can use translation. |
+| **handleFileChange**      | (files) => void)                                                                             | -           | Triggered function when the choosen file changes.                                                                                                                   |
+| **ref**                   | MutableRefObject                                                                       | -           | File reference.                                                                                                                                                     |
+| **accept**                | On type *file*                                                                               | -           | Hint for expected file type in file upload controls.                                                                                                                |
+| **autocapitalize**        | On type *all except url, email and password*                                                 | -           | Controls automatic capitalization in inputted text.                                                                                                                 |
+| **autocomplete**          | On type *all except checkbox, radio and buttons*                                             | -           | Hint for form autofill feature.                                                                                                                                     |
+| **capture**               | On type *file*                                                                               | -           | Media capture input method in file upload controls.                                                                                                                 |
+| **disabled**              | On type *all*                                                                                | -           | Whether the user can interract with the input or not.                                                                                                               |
+| **form**                  | On type *all*                                                                                | -           | 	Associates the control with a form element.                                                                                                                        |
+| **list**                  | On type *all except hidden, password, checkbox, radio and buttons*                           | -           | 	Value of the id attribute of the datalist of autocomplete options.                                                                                                 |
+| **multiple**              | Boolean, On type *email, file*                                                               | -           | Whether to allow multiple values.                                                                                                                                   |
+| **name**                  | On type *all*                                                                                | -           | 	Name of the form control. Submitted with the form as part of a name/value pair.                                                                                    |
+| **readonly**              | Boolean, On type *all except hidden, range, color, checkbox, radio, and buttons*             | -           | The value is not editable.                                                                                                                                          |
+| **required**              | Boolean, On type *all except hidden, range, color, and buttons*                              | -           | A value is required or must be checked for the form to be submittable.                                                                                              |
+| **value**                 | On type *all except image*                                                                   | -           | The value of the control. When specified in the HTML, corresponds to the initial value.                                                                             |
+
+### Playground
+*Import from filigran-ui :*
+
+Import \{FileInput\} from 'filigran-ui'
+
+<ReactLiveDisplay
+  codeExample={`
+            <FileInput
+texts={{
+          txtDragActive: 'Drop the file HERE!',
+          txtDragUnactive: 'Select a FILE',
+          txtFileOk: null,
+        }}
+/>
+          `}
+/>
