@@ -2,6 +2,7 @@
 
 import {LiveProvider, LiveEditor, LiveError, LivePreview} from 'react-live'
 import {FunctionComponent} from 'react'
+import {tw} from 'twind'
 import * as FiligranUIComponent from 'filigran-ui'
 import * as FiligranIcon from 'filigran-icon'
 
@@ -25,7 +26,7 @@ const ReactLiveDisplay: FunctionComponent<ReactLiveDisplayProps> = ({
     <div className="py-4">
       <LiveProvider
         code={codeExample}
-        scope={{...scope, ...customComponent}}
+        scope={{...scope, ...customComponent, tw}}
         noInline={noInline}>
         <div className="p-4">
           <LiveEditor className="font-mono" />
