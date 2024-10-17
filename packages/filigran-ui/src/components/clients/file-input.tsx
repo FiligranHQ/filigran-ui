@@ -21,13 +21,13 @@ const FileStatusDisplay = ({
 interface FileInputProps {
   texts?: Partial<InputText>
   className?: string | undefined
-  handleFileChange: (file) => void
+  handleFileChange: (file: FileList | null) => void
 }
 
 interface InputText {
-  dragActive?: string
-  dragUnactive?: string
-  fileOk?: string | null
+  dragActive: string
+  dragUnactive: string
+  fileOk: string
 }
 
 const defaultTexts: InputText = {
@@ -45,12 +45,12 @@ function GenericFileInput(
 
   const textForComp: InputText = {...defaultTexts, ...texts}
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setIsDragActive(true)
   }
 
-  const handleDragEnter = (e) => {
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragActive(true)
@@ -58,14 +58,14 @@ function GenericFileInput(
 
   const handleDragLeave = () => setIsDragActive(false)
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setIsDragActive(false)
     setIsFileSelected(true)
     handleFileChange(e.dataTransfer.files)
   }
 
-  const fileClicked = (e) => {
+  const fileClicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsFileSelected(true)
     handleFileChange(e.target.files)
   }
@@ -77,7 +77,7 @@ function GenericFileInput(
     return isDragActive ? ReadMoreIcon : AddNotesIcon
   }
 
-  const renderText = () => {
+  const renderText = (): string => {
     if (isFileSelected) {
       return textForComp.fileOk
     }

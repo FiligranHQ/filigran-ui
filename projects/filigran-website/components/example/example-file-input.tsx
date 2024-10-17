@@ -5,8 +5,8 @@ const ExampleFileInput = () => {
   const fileInputRef = useRef(null)
   const [fileName, setFileName] = useState<string | null>(null)
 
-  const handleFileChange = (files) => {
-    if (files.length > 0) {
+  const handleFileChange = (files: FileList | null) => {
+    if (files && files.length > 0) {
       console.log('Fichier sélectionné :', files[0])
       setFileName(files[0].name)
     }
@@ -19,7 +19,7 @@ const ExampleFileInput = () => {
         ref={fileInputRef}
         texts={{
           dragUnactive: 'Select a fileX',
-          fileOk: fileName,
+          fileOk: fileName ?? '',
         }}
       />
     </div>
