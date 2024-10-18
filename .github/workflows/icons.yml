@@ -15,33 +15,17 @@ jobs:
         with:
           node-version: "20"
           cache: ${{ steps.detect-package-manager.outputs.manager }}
-      - name: Restore cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            projects/filigran-website/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
-      - name: Install svgr/cli
-        run: yarn global add @svgr/cli
       - name: Install rimraf and tsup
-        run: yarn global add rimraf tsup typescript
-      - name: Install TypeScript
-        run: cd packages/filigran-icon && yarn add typescript --dev
+        run: yarn global add rimraf
+      - name: Install packages
+        run: cd packages/filigran-icon && yarn install
       - name: Run extract-icons
-        run: cd packages/filigran-icon && yarn extract-icons
+        run: cd packages/filigran-icon && yarn build:all
         env:
           FIGMA_FILE_ID: ${{ secrets.FIGMA_FILE_ID_ICONS }}
           FIGMA_API_TOKEN: ${{ secrets.FIGMA_API_TOKEN }}
-
-      - name: Run svgr
-        run: cd packages/filigran-icon && yarn svgr
-
-      - name: Run build
-        run: cd packages/filigran-icon && yarn build
       - name: Commit changes
         run: |
           git config --global user.name 'github-actions[bot]'
@@ -52,7 +36,6 @@ jobs:
           git push --set-upstream origin update-icons-branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Create Pull Request
         run: gh pr create --title "Update icons and build artifacts" --body "This PR updates the icons and build artifacts." --base main --head update-icons-branch
         env:
