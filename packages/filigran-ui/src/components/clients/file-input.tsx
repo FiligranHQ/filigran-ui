@@ -23,7 +23,7 @@ function GenericFileInput(
   {texts, allowedTypes, className, handleFileChange, ...props}: FileInputProps,
   ref?: any
 ) {
-  const [fileSelected, setFileSelected] = useState<File>(null)
+  const [fileSelected, setFileSelected] = useState<File | null>(null)
   const textForComp: InputText = {...defaultTexts, ...texts}
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -50,7 +50,7 @@ function GenericFileInput(
   }
 
   const fileClicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFileSelected(e.target.files[0])
+    setFileSelected(e.target?.files?.[0] ?? null)
     handleFileChange(e.target.files)
   }
 
@@ -68,7 +68,7 @@ function GenericFileInput(
         {...props}
       />
       <Button onClick={() => ref.current && ref.current.click()}>
-        {textForComp?.selectFile}
+        <>{textForComp?.selectFile}</>
       </Button>{' '}
       {fileSelected?.name ?? textForComp.noFile}
     </div>
