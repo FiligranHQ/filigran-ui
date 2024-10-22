@@ -67,7 +67,9 @@ function GenericFileInput(
         ref={ref}
         {...props}
       />
-      <Button onClick={() => ref.current && ref.current.click()}>
+      <Button
+        type="button"
+        onClick={() => ref.current && ref.current.click()}>
         <>{textForComp?.selectFile}</>
       </Button>{' '}
       {fileSelected?.name ?? textForComp.noFile}
