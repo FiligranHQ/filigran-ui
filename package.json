@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "build:filigran-website": "npm run build -w filigran-website",
-    "build:filigran-icon": "npm run build:all -w filigran-icon",
-    "build:filigran-ui": "npm run build -w filigran-ui",
-    "dev": "npm run dev -w filigran-website",
+    "build": "yarn build --workspaces --if-present",
+    "build:filigran-website": "yarn build -w filigran-website",
+    "build:filigran-icon": "yarn build:all -w filigran-icon",
+    "build:filigran-ui": "yarn build -w filigran-ui",
+    "dev": "yarn dev -w filigran-website",
     "publish:filigran-icon": "yarn build --workspace packages/filigran-icon && npm publish --provenance --access public --workspace packages/filigran-icon",
     "publish:filigran-ui": "yarn build --workspace packages/filigran-icon && yarn build --workspace packages/filigran-ui && npm publish --provenance --access public --workspace packages/filigran-ui"
   },
