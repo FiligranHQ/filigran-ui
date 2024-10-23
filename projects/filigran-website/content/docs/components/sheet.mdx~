@@ -1,0 +1,22 @@
+---
+title: Sheet
+---
+
+# Sheet Example
+
+<ExampleSheet/>
+
+## How to use this sheet
+### Props
+
+| Name               | Type                                            | Default     | Description                                                                                                                        |
+| -------------      | --------                                        | ----------- | ----------------------------------------------------------------------------------------------------------------------------       |
+| **asChild**        | *boolean*                                       | false       | Change the default rendered element for the one passed as a child, merging their props and behavior.                               |
+| **defaultChecked** | *boolean \| "indeterminate"*                    | -           | The checked state of the checkbox when it is initially rendered. Use when you do not need to control its checked state.            |
+| **checked**        | *boolean \| "indeterminate"*                    | -           | The controlled checked state of the checkbox. Must be used in conjunction with onCheckedChange.                                    |
+| **onCheckedChange**| *(checked: boolean \| 'indeterminate') => void* | -           | Event handler called when the checked state of the checkbox changes.                                                               |
+| **disabled**       | *boolean*                                       | -           | When true, prevents the user from interacting with the checkbox.                                                                   |
+| **required**       | *boolean*                                       | -           | When true, indicates that the user must check the checkbox before the owning form can be submitted.                                |
+| **name**           | *string*                                        | -           | The name of the checkbox. Submitted with its owning form as part of a name/value pair.                                             |
+| **value**          | *string*                                        | -           | The value given as data when submitted with a name.                                                                                |
+

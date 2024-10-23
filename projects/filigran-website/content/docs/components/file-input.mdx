@@ -26,20 +26,3 @@ title: File input
 | **readonly**              | Boolean, On type *all except hidden, range, color, checkbox, radio, and buttons*             | -           | The value is not editable.                                                                                                                                          |
 | **required**              | Boolean, On type *all except hidden, range, color, and buttons*                              | -           | A value is required or must be checked for the form to be submittable.                                                                                              |
 | **value**                 | On type *all except image*                                                                   | -           | The value of the control. When specified in the HTML, corresponds to the initial value.                                                                             |
-
-### Playground
-*Import from filigran-ui :*
-
-Import \{FileInput\} from 'filigran-ui'
-
-<ReactLiveDisplay
-  codeExample={`
-            <FileInput
-texts={{
-          txtDragActive: 'Drop the file HERE!',
-          txtDragUnactive: 'Select a FILE',
-          txtFileOk: null,
-        }}
-/>
-          `}
-/>
