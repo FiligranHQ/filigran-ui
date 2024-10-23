@@ -20,6 +20,7 @@ import {
   Select,
   toast,
   SheetFooter,
+  SheetClose,
 } from 'filigran-ui/clients'
 import {Button, Input} from 'filigran-ui'
 import Link from 'next/link'
@@ -212,7 +213,9 @@ export const ExampleSheet = () => {
             </div>
 
             <SheetFooter>
-              <Button variant={'outline'}>Cancel</Button>
+              <SheetClose>
+                <Button variant={'outline'}>Cancel</Button>
+              </SheetClose>
               <Button type="submit">Update profile</Button>
             </SheetFooter>
           </form>

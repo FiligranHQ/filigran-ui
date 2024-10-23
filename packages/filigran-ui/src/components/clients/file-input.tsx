@@ -1,81 +1,158 @@
 'use client'
-import {useState} from 'react'
-import {fixedForwardRef} from '../../lib/utils'
+import {ReadMoreIcon} from 'filigran-icon'
+import {
+  createContext,
+  useContext,
+  useRef,
+  useState,
+  type FunctionComponent,
+  type ReactNode,
+} from 'react'
+import {useFormContext} from 'react-hook-form'
+import {cn, fixedForwardRef} from '../../lib/utils'
 import {Button} from '../servers'
 
-interface FileInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface FileInputProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value'> {
   texts?: Partial<InputText>
-  allowedTypes: string
-  handleFileChange: (file: FileList | null) => void
+  allowedTypes?: string
+  value?: unknown
+  name: string
+  onChangeFileInput?: (files: FileList) => void
 }
 
 interface InputText {
   selectFile: string
   noFile: string
+  dropFiles: string
 }
 
 const defaultTexts: InputText = {
   selectFile: 'Select a file',
   noFile: 'No file selected',
+  dropFiles: 'Drop files here',
 }
 
-function GenericFileInput(
-  {texts, allowedTypes, className, handleFileChange, ...props}: FileInputProps,
-  ref?: any
-) {
-  const [fileSelected, setFileSelected] = useState<File | null>(null)
-  const textForComp: InputText = {...defaultTexts, ...texts}
+interface FileInputContextProps {
+  isDragActive: boolean
+  setIsDragActive: React.Dispatch<React.SetStateAction<boolean>>
+}
+const FileInputContext = createContext<FileInputContextProps>({
+  isDragActive: false,
+  setIsDragActive: () => {},
+})
+
+const FileInputDropZone: FunctionComponent<{
+  children: ReactNode
+  className?: string
+}> = ({children, className}) => {
+  const [isDragActive, setIsDragActive] = useState<boolean>(false)
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    setIsDragActive(true)
     e.preventDefault()
   }
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    setIsDragActive(true)
     e.preventDefault()
-    e.stopPropagation()
-  }
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    const hasExtension = e.dataTransfer.files[0].name.includes('.')
-
-    if (
-      !allowedTypes?.includes(e.dataTransfer.files[0].type) ||
-      !hasExtension
-    ) {
-      return
-    }
-
-    setFileSelected(e.dataTransfer.files[0])
-    handleFileChange(e.dataTransfer.files)
-  }
-
-  const fileClicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFileSelected(e.target?.files?.[0] ?? null)
-    handleFileChange(e.target.files)
   }
 
   return (
-    <div
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}>
+    <FileInputContext.Provider value={{isDragActive, setIsDragActive}}>
+      <div
+        className={cn('relative', className)}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}>
+        {children}
+      </div>
+    </FileInputContext.Provider>
+  )
+}
+
+function GenericFileInput(
+  {texts, allowedTypes, className, onChangeFileInput, ...props}: FileInputProps,
+  ref?: any
+) {
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const {isDragActive, setIsDragActive} = useContext(FileInputContext)
+  const t: InputText = {...defaultTexts, ...texts}
+  const form = useFormContext()
+  const filesSelected = form.getValues(props.name) as FileList
+
+  const setValueFileInput = (files: FileList) => {
+    if (props.name) {
+      form.setValue(props.name, files)
+    }
+    if (onChangeFileInput) {
+      onChangeFileInput(files)
+    }
+    form.clearErrors(props.name)
+  }
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    setIsDragActive(false)
+    e.preventDefault()
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    // TODO Manage allow type, manage multiple or not
+    e.preventDefault()
+    setIsDragActive(false)
+    const files = e.dataTransfer.files
+    // const hasExtension = e.dataTransfer.files[0].name.includes('.')
+    if (!props.multiple && files.length > 1) {
+      form.setError(props.name, {
+        message: 'You can only select one file',
+      })
+      return
+    }
+    setValueFileInput(files)
+  }
+
+  const handleOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files) {
+      setValueFileInput(files)
+    }
+  }
+
+  // Need to get error input but the value on fileInput is only taking string;
+  const {value, ...propsWithoutValue} = props
+  const arraySelectedFile: File[] | null = filesSelected
+    ? Array.from(filesSelected)
+    : null
+  return (
+    <div ref={ref}>
       <input
-        accept={allowedTypes}
         type={'file'}
         className="hidden"
-        onChange={fileClicked}
-        ref={ref}
-        {...props}
+        accept={allowedTypes}
+        ref={inputRef}
+        {...propsWithoutValue}
+        onChange={handleOnChange}
       />
       <Button
         type="button"
-        onClick={() => ref.current && ref.current.click()}>
-        <>{textForComp?.selectFile}</>
-      </Button>{' '}
-      {fileSelected?.name ?? textForComp.noFile}
+        onClick={() => inputRef.current && inputRef.current.click()}>
+        {t.selectFile}
+      </Button>
+      <span className="p-s">
+        {arraySelectedFile
+          ? arraySelectedFile.map((file: File) => file.name).join(', ')
+          : t.noFile}
+      </span>
+      <div
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={cn(
+          'z-0 absolute inset-0 bg-primary/30 text-primary-foreground flex gap-s flex-col items-center justify-center',
+          isDragActive ? 'flex' : 'hidden'
+        )}>
+        <ReadMoreIcon className="w-10 h-10" />
+        {t.dropFiles}
+      </div>
     </div>
   )
 }
 
 const FileInput = fixedForwardRef(GenericFileInput)
-export {FileInput}
+export {FileInput, FileInputDropZone}
