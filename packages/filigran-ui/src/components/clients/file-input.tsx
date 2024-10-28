@@ -18,7 +18,6 @@ interface FileInputProps
   allowedTypes?: string
   value?: unknown
   name: string
-  onChangeFileInput?: (files: FileList) => void
 }
 
 interface InputText {
@@ -70,7 +69,7 @@ const FileInputDropZone: FunctionComponent<{
 }
 
 function GenericFileInput(
-  {texts, allowedTypes, className, onChangeFileInput, ...props}: FileInputProps,
+  {texts, allowedTypes, className, ...props}: FileInputProps,
   ref?: any
 ) {
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -83,9 +82,6 @@ function GenericFileInput(
     if (props.name) {
       form.setValue(props.name, files)
     }
-    if (onChangeFileInput) {
-      onChangeFileInput(files)
-    }
     form.clearErrors(props.name)
   }
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
@@ -94,11 +90,17 @@ function GenericFileInput(
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    // TODO Manage allow type, manage multiple or not
     e.preventDefault()
     setIsDragActive(false)
     const files = e.dataTransfer.files
-    // const hasExtension = e.dataTransfer.files[0].name.includes('.')
+    const extension = e.dataTransfer.files[0].name.split('.')[1]
+
+    if (allowedTypes && !allowedTypes.includes(extension)) {
+      form.setError(props.name, {
+        message: 'Format not accepted',
+      })
+      return
+    }
     if (!props.multiple && files.length > 1) {
       form.setError(props.name, {
         message: 'You can only select one file',

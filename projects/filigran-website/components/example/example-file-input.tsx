@@ -55,7 +55,10 @@ const ExampleFileInput = () => {
                   <FormItem>
                     <FormLabel>File</FormLabel>
                     <FormControl>
-                      <FileInput {...field} />
+                      <FileInput
+                        {...field}
+                        allowedTypes={'image/png, applicatiion/pdf'}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -81,7 +84,10 @@ const ExampleFileInput = () => {
                     <FormItem>
                       <FormLabel>File</FormLabel>
                       <FormControl>
-                        <FileInput {...field} />
+                        <FileInput
+                          {...field}
+                          allowedTypes={'image/png, applicatiion/pdf'}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -109,6 +115,7 @@ const ExampleFileInput = () => {
                       <FormLabel>File</FormLabel>
                       <FormControl>
                         <FileInput
+                          allowedTypes={'image/png, applicatiion/pdf'}
                           multiple
                           {...field}
                         />
@@ -151,6 +158,7 @@ const ExampleFileInput = () => {
                           <FormLabel>File</FormLabel>
                           <FormControl>
                             <FileInput
+                              allowedTypes={'image/png, applicatiion/pdf'}
                               multiple
                               {...field}
                             />
