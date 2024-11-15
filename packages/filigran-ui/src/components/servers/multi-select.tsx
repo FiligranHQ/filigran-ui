@@ -226,7 +226,7 @@ const MultiSelectFormField = React.forwardRef<
                           pointerEvents: 'auto',
                           opacity: 1,
                         }}
-                        className="flex-1 cursor-pointer justify-center">
+                        className="flex-1 cursor-pointer justify-center uppercase">
                         Clear
                       </CommandItem>
                       <Separator
@@ -242,7 +242,7 @@ const MultiSelectFormField = React.forwardRef<
                       pointerEvents: 'auto',
                       opacity: 1,
                     }}
-                    className="flex-1 cursor-pointer justify-center">
+                    className="flex-1 cursor-pointer justify-center uppercase">
                     Close
                   </CommandItem>
                 </div>

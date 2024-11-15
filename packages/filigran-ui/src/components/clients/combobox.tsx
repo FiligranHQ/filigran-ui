@@ -60,7 +60,10 @@ function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn('w-full justify-between border-input', className)}
+          className={cn(
+            'normal-case w-full justify-between border-input',
+            className
+          )}
           onClick={() => setOpen(!open)}>
           {value ? (
             dataTab.find((data) => data.value === value)?.label

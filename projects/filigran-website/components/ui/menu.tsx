@@ -53,7 +53,7 @@ export const Menu: FunctionComponent<MenuProps> = ({
                         key={m.slug}
                         variant="ghost"
                         className={cn(
-                          'h-9 w-full justify-start rounded-none',
+                          'h-9 w-full justify-start rounded-none normal-case',
                           currentPath === m.slug &&
                             'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
                         )}
@@ -72,7 +72,7 @@ export const Menu: FunctionComponent<MenuProps> = ({
             key={menu.slug}
             variant="ghost"
             className={cn(
-              'h-9 w-full justify-start rounded-none',
+              'h-9 w-full justify-start rounded-none normal-case',
               currentPath === menu.slug &&
                 'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
             )}
