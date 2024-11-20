@@ -35,7 +35,7 @@ The primary goal of the **Filigran Design System** is to ensure consistency, eff
 
 ## 🔧 Installation
 
-For installation please see this [link](./components/0-installation)
+For installation please see this [link](./projects/filigran-website/content/docs/components/0-installation.mdx)
 
 ## 📚 Documentation
 
