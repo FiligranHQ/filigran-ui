@@ -1,0 +1,49 @@
+---
+---
+
+<x-main>
+  <div class="bg-[#F1F5F9] sm:px-4 font-sans">
+    <table align="center">
+      <tr>
+        <td class="w-[552px] max-w-full">
+          <x-header/>
+
+          <table class="w-full">
+            <tr>
+              <td class="p-12 sm:px-6 text-base text-[#00020c] bg-white rounded shadow-sm">
+                <h1 class="m-0 mb-6 text-2xl sm:leading-8 text-black font-semibold">
+                  Dear @{{ name }},
+                </h1>
+
+                <p class="m-0 leading-6">
+                  Welcome to the @{{ partnerVault }}! We're thrilled to have you onboard and look forward to collaborating closely with you.
+                  <br>
+                  <br>
+                  Your Partner Vault is designed to provide all the resources, tools, and updates you need to make our partnership a success.
+                  <br>
+                  <br>
+                </p>
+                <x-button align="center" href="@{{ partnerVaultLink }}">
+                  Access @{{ partnerVault }}
+                </x-button>
+
+                <p>
+                  If you have any questions or need support, don't hesitate to reach out to us at @{{ contactEmail }}.
+                </p>
+                <p class="m-0">
+                  Best regards, <br />Filigran
+                </p>
+              </td>
+            </tr>
+            <tr role="separator">
+              <td class="leading-12">&zwj;</td>
+            </tr>
+            <tr>
+              <x-footer />
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+</x-main>
