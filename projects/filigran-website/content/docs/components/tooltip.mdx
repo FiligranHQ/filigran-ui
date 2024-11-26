@@ -1,0 +1,54 @@
+---
+title: Tooltip
+---
+
+# Tooltip Example
+
+<TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger>Hover me!</TooltipTrigger>
+    <TooltipContent>
+      This is a tooltip
+    </TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+
+
+## How to use this tooltip
+
+### Props
+| Name                          | Type                        | Default      | Description                                                                                                                                          |
+| -------------                 | --------                    | -----------  | -----------------------------------------------------------------------------------------                                                            |
+| **delayDuration**             | *number*                    | 700          | The duration from when the mouse enters a tooltip trigger until the tooltip opens.                                                                   |
+| **skipDelayDuration**         | *number*                    | 300          | How much time a user has to enter another trigger without incurring a delay again.                                                                   |
+| **disableHoverableContent**   | *boolean*                   | -            | Prevents Tooltip.Content from remaining open when hovering. Disabling this has accessibility consequences.                                           |
+| **defaultOpen**               | *boolean*                   | -            | The open state of the tooltip when it is initially rendered. Use when you do not need to control its open state.                                     |
+| **open**                      | *boolean*                   | -            |The controlled open state of the tooltip. Must be used in conjunction with onOpenChange.                                                              |
+| **onOpenChange**              | *(open: boolean) => void*   | -            |Event handler called when the open state of the tooltip changes.                                                                                      |
+| **delayDuration**             | *number*                    | -            |Override the duration given to the `Provider` to customise the open delay for a specific tooltip.                                                     |
+| **disableHoverableContent**   | *boolean*                   | -            |Prevents Tooltip.Content from remaining open when hovering. Disabling this has accessibility consequences. Inherits from Tooltip.Provider.            |
+
+
+### Playground
+
+
+*Import from filigran-ui :*
+
+Import \{Tooltip,
+TooltipContent,
+TooltipProvider,
+TooltipTrigger,\} from 'filigran-ui'
+
+<ReactLiveDisplay
+  displayError={false}
+  codeExample={`
+          <TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger>Hover</TooltipTrigger>
+    <TooltipContent>
+      <p>Add to library</p>
+    </TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+`}
+/>
