@@ -25,7 +25,7 @@ export const Menu: FunctionComponent<MenuProps> = ({
   return (
     <aside
       className={cn(
-        'mobile:hidden z-9 sticky top-[4rem] flex h-[calc(100vh-4rem)] w-48 flex-col overflow-y-auto overflow-x-hidden border-r bg-page-background py-s duration-300 ease-in-out'
+        'mobile:hidden z-9 sticky top-[4rem] flex h-[calc(100vh-4rem)] w-48 flex-shrink-0 flex-col overflow-y-auto overflow-x-hidden border-r bg-page-background py-s duration-300 ease-in-out'
       )}>
       <h2 className="px-s text-xl font-medium leading-9">
         {contentMenu.title}

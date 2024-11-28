@@ -45,6 +45,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useId,
   useImperativeHandle,
   useState,
 } from 'react'
@@ -192,7 +193,9 @@ const DataTableSelectColumnVisibility = <TData,>() => {
                   table.setPageSize(Number(pageSize))
                 }>
                 {[50, 100, 200, 300, 500].map((pageSize) => (
-                  <DropdownMenuRadioItem value={String(pageSize)}>
+                  <DropdownMenuRadioItem
+                    value={String(pageSize)}
+                    key={pageSize}>
                     {pageSize}
                   </DropdownMenuRadioItem>
                 ))}
@@ -283,11 +286,12 @@ const DraggableTableHeader = <TData, TValue>({
       key={header.id}
       colSpan={header.colSpan}
       className={cn(
-        'transition-width group relative z-0 whitespace-nowrap opacity-100 transition-transform duration-200 ease-in-out',
+        'transition-width truncate group z-10 whitespace-nowrap opacity-100 transition-transform duration-200 ease-in-out uppercase sticky top-0 bg-background',
         isDragging && 'z-10 bg-text-secondary/50 opacity-80'
       )}
       ref={setNodeRef}
       style={{
+        minWidth: header.getSize(),
         width: header.getSize(),
         transform: transform ? getTransformString(transform) : '',
       }}>
@@ -300,7 +304,6 @@ const DraggableTableHeader = <TData, TValue>({
           />
         ) : (
           <span className="txt-category">
-            {' '}
             {flexRender(header.column.columnDef.header, header.getContext())}
           </span>
         )}
@@ -347,11 +350,12 @@ const DragAlongCell = <TData,>({
       key={cell.id}
       ref={setNodeRef}
       style={{
+        maxWidth: cell.column.getSize(),
         width: cell.column.getSize(),
         transform: transform ? getTransformString(transform) : '',
       }}
       className={cn(
-        'transition-width group relative z-0 opacity-100 transition-transform duration-200 ease-in-out',
+        'transition-width truncate group relative z-0 opacity-100 transition-transform duration-200 ease-in-out',
         isDragging && 'z-10 opacity-80'
       )}>
       <>{flexRender(cell.column.columnDef.cell, cell.getContext())}</>
@@ -485,67 +489,66 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
   )
-
+  const id = useId()
   return (
     <TableContext.Provider value={{table, t_i18n, onResetTable}}>
       {toolbar ? <>{toolbar}</> : <DefaultToolbar />}
       <DndContext
+        id={id}
         collisionDetection={closestCenter}
         modifiers={[restrictToHorizontalAxis]}
         onDragEnd={handleDragEnd}
         sensors={sensors}>
         {/* do not remove twp, the class is used to isolate preflight style */}
-        <div className="twp pt-l sm:pt-xl">
-          <Table style={{width: table.getCenterTotalSize()}}>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
+        <Table style={{width: table.getCenterTotalSize()}}>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow
+                className={'hover:bg-inherit'}
+                key={headerGroup.id}>
+                <SortableContext
+                  items={table.getState().columnOrder}
+                  strategy={horizontalListSortingStrategy}>
+                  {headerGroup.headers.map((header) => (
+                    <DraggableTableHeader
+                      key={header.id}
+                      header={header}
+                    />
+                  ))}
+                </SortableContext>
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            <>{isLoading && <LoadingRows table={table} />}</>
+            {!isLoading &&
+              table.getRowModel().rows.map((row) => (
                 <TableRow
-                  className={'hover:bg-inherit'}
-                  key={headerGroup.id}>
-                  <SortableContext
-                    items={table.getState().columnOrder}
-                    strategy={horizontalListSortingStrategy}>
-                    {headerGroup.headers.map((header) => (
-                      <DraggableTableHeader
-                        key={header.id}
-                        header={header}
+                  key={row.id}
+                  className={cn(
+                    'hover:bg-hover',
+                    onClickRow ? 'cursor-pointer' : '',
+                    !row.getCanSelect() &&
+                      'bg-text-foreground/30 cursor-auto opacity-50'
+                  )}
+                  onClick={() =>
+                    onClickRow && row.getCanSelect() ? onClickRow(row) : null
+                  }>
+                  {row.getVisibleCells().map((cell) => (
+                    <SortableContext
+                      key={cell.id}
+                      items={table.getState().columnOrder}
+                      strategy={horizontalListSortingStrategy}>
+                      <DragAlongCell
+                        key={cell.id}
+                        cell={cell}
                       />
-                    ))}
-                  </SortableContext>
+                    </SortableContext>
+                  ))}
                 </TableRow>
               ))}
-            </TableHeader>
-            <TableBody>
-              <>{isLoading && <LoadingRows table={table} />}</>
-              {!isLoading &&
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className={cn(
-                      'hover:bg-hover',
-                      onClickRow ? 'cursor-pointer' : '',
-                      !row.getCanSelect() &&
-                        'bg-text-foreground/30 cursor-auto opacity-50'
-                    )}
-                    onClick={() =>
-                      onClickRow && row.getCanSelect() ? onClickRow(row) : null
-                    }>
-                    {row.getVisibleCells().map((cell) => (
-                      <SortableContext
-                        key={cell.id}
-                        items={table.getState().columnOrder}
-                        strategy={horizontalListSortingStrategy}>
-                        <DragAlongCell
-                          key={cell.id}
-                          cell={cell}
-                        />
-                      </SortableContext>
-                    ))}
-                  </TableRow>
-                ))}
-            </TableBody>
-          </Table>
-        </div>
+          </TableBody>
+        </Table>
       </DndContext>
     </TableContext.Provider>
   )

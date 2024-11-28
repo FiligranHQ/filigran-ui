@@ -10,12 +10,20 @@ import {
   DataTable,
   DatatableI18nKey,
   DataTableOptionsHeader,
+  DropdownMenu,
+  DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from 'filigran-ui/clients'
 import {useEffect, useMemo, useState} from 'react'
-import {Input} from 'filigran-ui'
+import {Button, Input} from 'filigran-ui'
 import {makeData, Person} from '@/utils/makeData'
 import {useLocalStorage} from 'usehooks-ts'
+import {MoreVertIcon} from 'filigran-icon'
 
 export function ExampleDataTable() {
   const [rowSelection, setRowSelection] = useState({})
@@ -52,7 +60,7 @@ export function ExampleDataTable() {
     () => [
       {
         id: 'select',
-        size: 20,
+        size: 40,
         header: ({table}) => (
           <Checkbox
             className="flex"
@@ -131,9 +139,53 @@ export function ExampleDataTable() {
         header: 'Status',
       },
       {
+        id: 'description',
+        accessorKey: 'description',
+        header: 'Description',
+        size: 300,
+        cell: ({row}) => (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger className={'w-full truncate text-left'}>
+                {row.original.description}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{row.original.description}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ),
+      },
+      {
         id: 'progress',
         accessorKey: 'progress',
         header: 'Profile Progress',
+      },
+      {
+        id: 'actions',
+        enableHiding: false,
+        enableResizing: false,
+        size: 40,
+        cell: () => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center justify-end">
+                <Button
+                  variant="ghost"
+                  size="icon">
+                  <MoreVertIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-[160px]">
+              <DropdownMenuItem>Item 1</DropdownMenuItem>
+              <DropdownMenuItem>Item 2</DropdownMenuItem>
+              <DropdownMenuItem>Item 3</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
       },
     ],
     [inputSearch]
@@ -210,10 +262,12 @@ export function ExampleDataTable() {
           columnOrder,
           columnPinning: {
             left: ['select'],
+            right: ['actions'],
           },
         }}
         onClickRow={(row) => console.log(row)}
       />
+
       <div className="container mx-auto py-10">
         <div>Selected</div>
         {JSON.stringify(rowSelection, null, 20)}

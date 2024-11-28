@@ -189,3 +189,4 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #7a7c85;
 }
+::-webkit-scrollbar-corner { background: transparent; }
