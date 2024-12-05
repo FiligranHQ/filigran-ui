@@ -26,6 +26,7 @@ import {
   getCoreRowModel,
   type Header,
   type Row,
+  type SortDirection,
   type TableOptions,
   type TableState,
   type Table as TableType,
@@ -97,6 +98,7 @@ interface DatatableI18nKey {
   'Go to next page': string
   'Go to last page': string
   Columns: string
+  'Reset table': string
 }
 const defaultI18nKey: DatatableI18nKey = {
   'Rows per page': 'Rows per page',
@@ -109,6 +111,7 @@ const defaultI18nKey: DatatableI18nKey = {
   'Go to next page': 'Go to next page',
   'Go to last page': 'Go to last page',
   Columns: 'Columns',
+  'Reset table': 'Reset table',
 }
 
 interface TableContextProps<TData> {
@@ -158,7 +161,7 @@ const DataTableSelectColumnVisibility = <TData,>() => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onClickResetTable()}>
-          Reset table
+          {t_i18n('Reset table')}
         </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>{t_i18n('Columns')}</DropdownMenuSubTrigger>
@@ -208,6 +211,22 @@ const DataTableSelectColumnVisibility = <TData,>() => {
   )
 }
 
+const SortIcon = ({sortState}: {sortState: SortDirection | false}) => {
+  const iconMapping = {
+    desc: (
+      <KeyboardArrowDownIcon className="ml-s h-3 w-3 text-text-secondary" />
+    ),
+    asc: <KeyboardArrowUpIcon className="ml-s h-3 w-3 text-text-secondary" />,
+    default: <UnfoldMoreIcon className="ml-s h-4 w-4 text-text-secondary" />,
+  }
+
+  if (sortState === false) {
+    return iconMapping.default
+  }
+
+  return iconMapping[sortState] || iconMapping.default
+}
+
 const DataTableOptionsHeader = <TData, TValue>({
   column,
   menuItems,
@@ -233,12 +252,8 @@ const DataTableOptionsHeader = <TData, TValue>({
             size="sm"
             className="data-[state=open]:bg-accent -ml-3 h-8">
             <span className="txt-category"> {title}</span>
-            {column.getIsSorted() === 'desc' ? (
-              <KeyboardArrowDownIcon className="ml-s h-3 w-3 text-text-secondary" />
-            ) : column.getIsSorted() === 'asc' ? (
-              <KeyboardArrowUpIcon className="ml-s h-3 w-3 text-text-secondary" />
-            ) : (
-              <UnfoldMoreIcon className="ml-s h-4 w-4 text-text-secondary" />
+            {column.getCanSort() && (
+              <SortIcon sortState={column.getIsSorted()} />
             )}
           </Button>
         </DropdownMenuTrigger>

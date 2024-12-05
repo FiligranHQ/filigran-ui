@@ -55,6 +55,7 @@ export function ExampleDataTable() {
     'Go to next page': 'Aller à la page suivante',
     'Go to last page': 'Aller à la dernière page',
     Columns: 'Colonnes',
+    'Reset table': 'Reinitialiser',
   }
   const columns = useMemo<ColumnDef<Person>[]>(
     () => [
