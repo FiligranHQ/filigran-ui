@@ -54,11 +54,11 @@
             <table style="width: 100%;" cellpadding="0" cellspacing="0" role="none">
               <tr>
                 <td class="sm-px-6" style="border-radius: 4px; background-color: #fffffe; padding: 48px; font-size: 16px; color: #00020c; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05)">
-                  <h1 class="sm-leading-8" style="margin: 0 0 24px; font-size: 24px; font-weight: 600; color: #000001">
-                    Dear {{ name }},
+                  <h1 class="sm-leading-8" style="margin: 0 0 24px; font-size: 24px; font-weight: 400">
+                    Welcome to the {{ partnerVault }}!
                   </h1>
                   <p style="margin: 0; line-height: 24px">
-                    Welcome to the {{ partnerVault }}! We're thrilled to have you onboard and look forward to collaborating closely with you.
+                    We're thrilled to have you onboard and look forward to collaborating closely with you.
                     <br>
                     <br>
                     Your Partner Vault is designed to provide all the resources, tools, and updates you need to make our partnership a success.
@@ -78,11 +78,12 @@
     <![endif]-->
                     </a>
                   </div>
-                  <p>
-                    If you have any questions or need support, don't hesitate to reach out to us at {{ contactEmail }}.
+                  <p style="margin: 0; padding-top: 16px">
+                    Best regards, <br>Filigran Team
                   </p>
-                  <p style="margin: 0;">
-                    Best regards, <br>Filigran
+                  <div role="separator" style="height: 1px; line-height: 1px; margin: 24px 0; background-color: #cbd5e1">&zwj;</div>
+                  <p style="margin: 0; font-size: 14px">
+                    If you have any questions or need support, don’t hesitate to reach out to us at <a href="mailto:{{ contactEmail }}">{{ contactEmail }}</a>.
                   </p>
                 </td>
               </tr>
