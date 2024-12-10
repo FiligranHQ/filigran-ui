@@ -89,54 +89,57 @@ export function ExampleDataTable() {
         enableHiding: false,
         enableResizing: false,
       },
-      {
-        id: 'firstName',
-        accessorKey: 'firstName',
-        enableHiding: true,
-        enableSorting: false,
-        cell: (info) => (
-          <HighlightSearchTerm text={info.getValue() as string} />
-        ),
-        header: 'First name',
-      },
-      {
-        accessorFn: (row) => row.lastName,
-        id: 'lastName',
-        enableHiding: false,
-        cell: (info) => (
-          <HighlightSearchTerm text={info.getValue() as string} />
-        ),
-        header: (header) => (
-          <DataTableOptionsHeader
-            column={header.column}
-            title={'Last name'}
-            menuItems={
-              <>
-                <DropdownMenuItem onClick={() => console.log(header.column)}>
-                  Log column
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => console.log(header.column)}>
-                  Log column 2
-                </DropdownMenuItem>
-              </>
-            }
-          />
-        ),
-      },
-      {
-        id: 'age',
-        accessorKey: 'age',
-        header: 'Age',
-      },
-      {
-        id: 'visits',
-        accessorKey: 'visits',
-        header: () => <span className="font-title txt-category"> Visits</span>,
-      },
+      // {
+      //   id: 'firstName',
+      //   accessorKey: 'firstName',
+      //   enableHiding: true,
+      //   enableSorting: false,
+      //   cell: (info) => (
+      //     <HighlightSearchTerm text={info.getValue() as string} />
+      //   ),
+      //   header: 'First name',
+      // },
+      // {
+      //   accessorFn: (row) => row.lastName,
+      //   id: 'lastName',
+      //   enableHiding: false,
+      //   cell: (info) => (
+      //     <HighlightSearchTerm text={info.getValue() as string} />
+      //   ),
+      //   header: (header) => (
+      //     <DataTableOptionsHeader
+      //       column={header.column}
+      //       title={'Last name'}
+      //       menuItems={
+      //         <>
+      //           <DropdownMenuItem onClick={() => console.log(header.column)}>
+      //             Log column
+      //           </DropdownMenuItem>
+      //           <DropdownMenuItem onClick={() => console.log(header.column)}>
+      //             Log column 2
+      //           </DropdownMenuItem>
+      //         </>
+      //       }
+      //     />
+      //   ),
+      // },
+      // {
+      //   id: 'age',
+      //   accessorKey: 'age',
+      //   header: 'Age',
+      //   size: 200,
+      // },
+      // {
+      //   id: 'visits',
+      //   accessorKey: 'visits',
+      //   size: 200,
+      //   header: () => <span className="font-title txt-category"> Visits</span>,
+      // },
       {
         id: 'status',
         accessorKey: 'status',
         header: 'Status',
+        size: 200,
       },
       {
         id: 'description',
