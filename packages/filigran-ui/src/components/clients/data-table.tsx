@@ -47,6 +47,7 @@ import {
   useContext,
   useId,
   useImperativeHandle,
+  useMemo,
   useState,
 } from 'react'
 import {cn, fixedForwardRef} from '../../lib/utils'
@@ -281,6 +282,19 @@ const DraggableTableHeader = <TData, TValue>({
       id: header.column.id,
     } as Arguments)
 
+  const thStyles = useMemo(() => {
+    const styles: Record<string, string | number> = {
+      transform: transform ? getTransformString(transform) : '',
+    }
+    const size = header.getSize();
+    // if size is -1, it means the column has no size and will expand to fit the available space
+    if (size !== -1) {
+      styles.minWidth = size
+      styles.width = size
+    }
+    return styles;
+  }, [header, transform]);
+
   return (
     <TableHead
       key={header.id}
@@ -290,11 +304,7 @@ const DraggableTableHeader = <TData, TValue>({
         isDragging && 'z-10 bg-text-secondary/50 opacity-80'
       )}
       ref={setNodeRef}
-      style={{
-        minWidth: header.getSize(),
-        width: header.getSize(),
-        transform: transform ? getTransformString(transform) : '',
-      }}>
+      style={thStyles}>
       <div className="flex h-full items-center justify-between">
         {header.isPlaceholder ? null : typeof header.column.columnDef.header ===
           'string' ? (
@@ -468,6 +478,9 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     state: {
       columnOrder,
       ...tableState,
+    },
+    defaultColumn: {
+      minSize: -1,
     },
     ...tableOptions,
   })

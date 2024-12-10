@@ -139,13 +139,13 @@ export function ExampleDataTable() {
         id: 'status',
         accessorKey: 'status',
         header: 'Status',
-        size: 200,
+        size: 150,
       },
       {
         id: 'description',
         accessorKey: 'description',
         header: 'Description',
-        size: 300,
+
         cell: ({row}) => (
           <TooltipProvider>
             <Tooltip>
@@ -168,7 +168,7 @@ export function ExampleDataTable() {
         id: 'actions',
         enableHiding: false,
         enableResizing: false,
-        size: 40,
+        size: -1,
         cell: () => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
