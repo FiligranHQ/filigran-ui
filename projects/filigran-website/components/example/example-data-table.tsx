@@ -145,7 +145,7 @@ export function ExampleDataTable() {
         id: 'description',
         accessorKey: 'description',
         header: 'Description',
-
+        size: 300,
         cell: ({row}) => (
           <TooltipProvider>
             <Tooltip>
