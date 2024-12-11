@@ -61,7 +61,7 @@ export const Tag: React.FC<TagProps> = ({
       {tagObj.text}
       <CloseIcon
         className="ml-s h-3 w-3 cursor-pointer"
-        onClick={(e) => {
+        onClick={(e: React.MouseEvent) => {
           e.stopPropagation() // Prevent event from bubbling up to the tag span
           onRemoveTag(tagObj.id)
         }}
