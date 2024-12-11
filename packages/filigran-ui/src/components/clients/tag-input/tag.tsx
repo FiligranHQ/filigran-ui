@@ -1,3 +1,4 @@
+import {CloseIcon} from 'filigran-icon'
 import React from 'react'
 import {
   type TagInputProps,
@@ -6,7 +7,6 @@ import {
 } from './tag-input'
 
 import {cva} from 'class-variance-authority'
-import {XCircle} from 'lucide-react'
 import {cn} from '../../../lib/utils'
 import {Badge} from '../../servers'
 
@@ -30,7 +30,6 @@ export type TagProps = {
   onRemoveTag: (id: string) => void
   isActiveTag?: boolean
   tagClasses?: TagInputStyleClassesProps['tag']
-  disabled?: boolean
 } & Pick<TagInputProps, 'direction' | 'onTagClick' | 'draggable'>
 
 export const Tag: React.FC<TagProps> = ({
@@ -42,12 +41,10 @@ export const Tag: React.FC<TagProps> = ({
   variant,
   isActiveTag,
   tagClasses,
-  disabled,
 }) => {
   return (
     <Badge
       key={tagObj.id}
-      draggable={draggable}
       className={cn(
         tagVariants({
           variant,
@@ -56,13 +53,12 @@ export const Tag: React.FC<TagProps> = ({
           'w-full justify-between': direction === 'column',
           'cursor-pointer': draggable,
           'ring-2 ring-ring ring-offset-2 ring-offset-background': isActiveTag,
-        },
-        tagClasses?.body
+        }
       )}
       onClick={() => onTagClick?.(tagObj)}>
       {tagObj.text}
-      <XCircle
-        className="ml-2 h-4 w-4 cursor-pointer"
+      <CloseIcon
+        className="ml-s h-3 w-3 cursor-pointer"
         onClick={(e) => {
           e.stopPropagation() // Prevent event from bubbling up to the tag span
           onRemoveTag(tagObj.id)
