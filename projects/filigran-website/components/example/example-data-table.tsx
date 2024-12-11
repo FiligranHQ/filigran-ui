@@ -128,16 +128,19 @@ export function ExampleDataTable() {
         id: 'age',
         accessorKey: 'age',
         header: 'Age',
+        size: 200,
       },
       {
         id: 'visits',
         accessorKey: 'visits',
+        size: 200,
         header: () => <span className="font-title txt-category"> Visits</span>,
       },
       {
         id: 'status',
         accessorKey: 'status',
         header: 'Status',
+        size: 150,
       },
       {
         id: 'description',
@@ -166,7 +169,7 @@ export function ExampleDataTable() {
         id: 'actions',
         enableHiding: false,
         enableResizing: false,
-        size: 40,
+        size: -1,
         cell: () => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
