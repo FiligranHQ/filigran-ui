@@ -30,6 +30,7 @@ export type TagProps = {
   onRemoveTag: (id: string) => void
   isActiveTag?: boolean
   tagClasses?: TagInputStyleClassesProps['tag']
+  disabled?: boolean
 } & Pick<TagInputProps, 'direction' | 'onTagClick' | 'draggable'>
 
 export const Tag: React.FC<TagProps> = ({
@@ -41,6 +42,7 @@ export const Tag: React.FC<TagProps> = ({
   variant,
   isActiveTag,
   tagClasses,
+  disabled,
 }) => {
   return (
     <Badge
