@@ -1,3 +1,4 @@
+import {CheckIcon} from 'lucide-react'
 import React, {useCallback, useEffect, useRef, useState} from 'react'
 import {cn} from '../../../lib/utils'
 import {Button} from '../../servers/button'
@@ -250,7 +251,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
           className={cn(`relative p-0`, classStyleProps?.popoverContent)}
           style={{
             top: `${popooverContentTop}px`,
-            marginLeft: `calc(-${popoverWidth}px + 36px)`,
+            marginLeft: `calc(-${popoverWidth}px + 45px)`,
             width: `${popoverWidth}px`,
             minWidth: `${popoverWidth}px`,
             zIndex: 9999,
@@ -275,9 +276,6 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
                 style={{
                   minHeight: '68px',
                 }}>
-                <span className="px-2 py-1.5 pb-2 text-sm font-medium text-muted-foreground">
-                  Suggestions
-                </span>
                 <div
                   role="separator"
                   className="py-0.5"
@@ -290,29 +288,23 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
                       role="option"
                       aria-selected={isSelected}
                       className={cn(
-                        'aria-selected:bg-accent aria-selected:text-accent-foreground hover:bg-accent relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+                        'aria-selected:bg-accent aria-selected:text-accent-foreground hover:bg-accent relative flex cursor-pointer select-none items-center rounded-sm text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
                         isSelected && 'bg-accent text-accent-foreground',
                         classStyleProps?.commandItem
                       )}
                       data-value={option.text}
                       onClick={() => toggleTag(option)}>
-                      <div className="flex w-full items-center gap-2">
+                      <div className="flex w-full items-center gap-2 hover:bg-gray-200 dark:hover:bg-blue-900 p-xs">
+                        <div
+                          className={cn(
+                            'mr-1/2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
+                            tags.some((tag) => tag.text === option.text)
+                              ? 'bg-primary text-primary-foreground'
+                              : 'opacity-50 [&_svg]:invisible'
+                          )}>
+                          <CheckIcon className="h-4 w-4" />
+                        </div>
                         {option.text}
-                        {tags.some((tag) => tag.text === option.text) && (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="lucide lucide-check">
-                            <path d="M20 6 9 17l-5-5"></path>
-                          </svg>
-                        )}
                       </div>
                     </div>
                   )
