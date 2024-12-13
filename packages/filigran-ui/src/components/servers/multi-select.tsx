@@ -48,6 +48,7 @@ interface MultiSelectFormFieldProps
   defaultValue?: string[]
   disabled?: boolean
   placeholder: string
+  noResultString: string
   className?: string
   onValueChange: (value: string[]) => void
 }
@@ -66,6 +67,7 @@ const MultiSelectFormField = React.forwardRef<
       onValueChange,
       disabled,
       placeholder,
+      noResultString = 'No results found',
       ...props
     },
     ref
@@ -165,7 +167,7 @@ const MultiSelectFormField = React.forwardRef<
               </div>
             ) : (
               <div className="mx-auto flex w-full items-center justify-between">
-                <span className="mx-3 text-sm text-muted-foreground">
+                <span className="mx-3 text-sm text-muted-foreground normal-case">
                   {placeholder}
                 </span>
                 <ChevronDown className="mx-2 h-4 cursor-pointer text-muted-foreground" />
@@ -183,7 +185,7 @@ const MultiSelectFormField = React.forwardRef<
               onKeyDown={handleInputKeyDown}
             />
             <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandEmpty>{noResultString}</CommandEmpty>
               <CommandGroup>
                 {options.map((option) => {
                   const isSelected = selectedValuesSet.current.has(option.value)
