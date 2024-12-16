@@ -6,8 +6,8 @@
   "module": "./dist/index.mjs",
   "devDependencies": {
     "@svgr/cli": "8.1.0",
-    "tsup": "8.1.0",
-    "typescript": "^5.6.3"
+    "tsup": "8.3.5",
+    "typescript": "^5.7.2"
   },
   "scripts": {
     "build": "rimraf dist && yarn svgr && tsup",

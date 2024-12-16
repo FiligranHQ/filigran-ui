@@ -17,8 +17,7 @@ import {
   PopoverTrigger,
   Separator,
 } from '../clients'
-import {Badge} from './badge'
-import {Button} from './button'
+import {Badge, Button} from '../servers'
 
 const multiSelectVariants = cva('', {
   variants: {
