@@ -14,6 +14,9 @@ export const AssignmentIcon = lazy(() => import("./Assignment"));
 export const AttackPatternIcon = lazy(() => import("./AttackPattern"));
 export const AttributeIcon = lazy(() => import("./Attribute"));
 export const Binoculars1Icon = lazy(() => import("./Binoculars1"));
+export const BooksMoviesAndMusicIcon = lazy(
+  () => import("./BooksMoviesAndMusic"),
+);
 export const CalendarViewMonthIcon = lazy(() => import("./CalendarViewMonth"));
 export const CampaignIcon = lazy(() => import("./Campaign"));
 export const CaseIncidentIcon = lazy(() => import("./CaseIncident"));
