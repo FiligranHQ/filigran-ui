@@ -61,6 +61,7 @@ export function ExampleMultiSelect() {
                   defaultValue={field.value}
                   onValueChange={field.onChange}
                   placeholder="Select options"
+                  noResultString={'You can change me!'}
                   variant="inverted"
                 />
               </FormControl>
