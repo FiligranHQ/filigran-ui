@@ -1,55 +1,56 @@
 'use client'
 import {
-  closestCenter,
   DndContext,
-  type DragEndEvent,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
+  closestCenter,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from '@dnd-kit/core'
 import {restrictToHorizontalAxis} from '@dnd-kit/modifiers'
 import {
+  SortableContext,
   arrayMove,
   horizontalListSortingStrategy,
-  SortableContext,
   useSortable,
 } from '@dnd-kit/sortable'
 import type {Arguments} from '@dnd-kit/sortable/dist/hooks/useSortable'
 import {type Transform} from '@dnd-kit/utilities'
 import {
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
   type Cell,
   type Column,
   type ColumnDef,
-  flexRender,
-  getCoreRowModel,
   type Header,
   type Row,
   type SortDirection,
   type TableOptions,
   type TableState,
   type Table as TableType,
-  useReactTable,
 } from '@tanstack/react-table'
 import {
   ArrowNextIcon,
   ArrowPreviousIcon,
+  DragIndicatorIcon,
   KeyboardArrowDownIcon,
   KeyboardArrowUpIcon,
   TableTuneIcon,
   UnfoldMoreIcon,
+  VisibilityOffIcon,
 } from 'filigran-icon'
-import {ArrowDownIcon, ArrowUpIcon, EyeOff, GripHorizontal} from 'lucide-react'
 import {
   createContext,
-  type ReactNode,
   useCallback,
   useContext,
   useId,
   useImperativeHandle,
   useMemo,
   useState,
+  type ReactNode,
 } from 'react'
 import {cn, fixedForwardRef} from '../../lib/utils'
 import {Button, Skeleton} from '../servers'
@@ -262,11 +263,11 @@ const DataTableOptionsHeader = <TData, TValue>({
           {column.getCanSort() && (
             <>
               <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
-                <ArrowUpIcon className="mr-2 h-4 w-4 text-text-secondary" />
+                <KeyboardArrowUpIcon className="mr-2 h-4 w-4 text-text-secondary" />
                 {t_i18n('Asc')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
-                <ArrowDownIcon className="mr-2 h-4 w-4 text-text-secondary" />
+                <KeyboardArrowDownIcon className="mr-2 h-4 w-4 text-text-secondary" />
                 {t_i18n('Desc')}
               </DropdownMenuItem>
             </>
@@ -277,7 +278,7 @@ const DataTableOptionsHeader = <TData, TValue>({
 
           {column.getCanHide() && (
             <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
-              <EyeOff className="mr-2 h-4 w-4 text-text-secondary" />
+              <VisibilityOffIcon className="mr-2 h-4 w-4 text-text-secondary" />
               {t_i18n('Hide')}
             </DropdownMenuItem>
           )}
@@ -301,14 +302,14 @@ const DraggableTableHeader = <TData, TValue>({
     const styles: Record<string, string | number> = {
       transform: transform ? getTransformString(transform) : '',
     }
-    const size = header.getSize();
+    const size = header.getSize()
     // if size is -1, it means the column has no size and will expand to fit the available space
     if (size !== -1) {
       styles.minWidth = size
       styles.width = size
     }
-    return styles;
-  }, [header, transform]);
+    return styles
+  }, [header, transform])
 
   return (
     <TableHead
@@ -341,7 +342,7 @@ const DraggableTableHeader = <TData, TValue>({
             )}
             {...attributes}
             {...listeners}>
-            <GripHorizontal className="mx-s h-5 w-5" />
+            <DragIndicatorIcon className="mx-s h-5 w-5 rotate-90" />
           </button>
         )}
       </div>

@@ -1,10 +1,8 @@
 'use client'
 
-import {Check, ChevronDown} from 'lucide-react'
+import {CheckIcon, KeyboardArrowDownIcon} from 'filigran-icon'
 import * as React from 'react'
-
 import {cn} from '../../lib/utils'
-
 import {Button} from '../servers'
 import {
   Command,
@@ -70,7 +68,7 @@ function Combobox({
           ) : (
             <span className="text-muted-foreground">{order}</span>
           )}
-          <ChevronDown className="h-4 cursor-pointer text-muted-foreground" />
+          <KeyboardArrowDownIcon className="h-4 cursor-pointer text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="p-0 popover-content-width-same-as-its-trigger">
@@ -84,7 +82,7 @@ function Combobox({
                   key={data.value}
                   value={data.value}
                   onSelect={() => handleSelect(data.value)}>
-                  <Check
+                  <CheckIcon
                     className={cn(
                       'mr-2 h-4 w-4',
                       value === data.value ? 'opacity-100' : 'opacity-0'

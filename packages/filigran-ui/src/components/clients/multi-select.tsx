@@ -1,8 +1,6 @@
 import {cva, type VariantProps} from 'class-variance-authority'
-import {CheckIcon, ChevronDown} from 'lucide-react'
+import {CheckIcon, CloseIcon, KeyboardArrowDownIcon} from 'filigran-icon'
 import * as React from 'react'
-
-import {CloseIcon} from 'filigran-icon'
 import {cn} from '../../lib/utils'
 import {
   Command,
@@ -161,7 +159,7 @@ const MultiSelectFormField = React.forwardRef<
                     orientation="vertical"
                     className="flex h-full min-h-6"
                   />
-                  <ChevronDown className="mx-2 h-4 cursor-pointer text-muted-foreground" />
+                  <KeyboardArrowDownIcon className="mx-2 h-4 cursor-pointer text-muted-foreground" />
                 </div>
               </div>
             ) : (
@@ -169,7 +167,7 @@ const MultiSelectFormField = React.forwardRef<
                 <span className="mx-3 text-sm text-muted-foreground normal-case">
                   {placeholder}
                 </span>
-                <ChevronDown className="mx-2 h-4 cursor-pointer text-muted-foreground" />
+                <KeyboardArrowDownIcon className="mx-2 h-4 cursor-pointer text-muted-foreground" />
               </div>
             )}
           </Button>

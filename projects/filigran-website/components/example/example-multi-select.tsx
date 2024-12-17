@@ -11,7 +11,7 @@ import {
   FormLabel,
   FormMessage,
 } from 'filigran-ui'
-import {MultiSelectFormField} from 'filigran-ui/servers'
+import {MultiSelectFormField} from 'filigran-ui/clients'
 
 const frameworksList = [
   {
