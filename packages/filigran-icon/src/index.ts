@@ -33,6 +33,7 @@ export const CheckIndeterminateSmallBoldIcon = lazy(
   () => import("./CheckIndeterminateSmallBold"),
 );
 export const ChevronIcon = lazy(() => import("./Chevron"));
+export const CircleIcon = lazy(() => import("./Circle"));
 export const CircleCloseIcon = lazy(() => import("./CircleClose"));
 export const CityIcon = lazy(() => import("./City"));
 export const CloseIcon = lazy(() => import("./Close"));
@@ -79,6 +80,7 @@ export const MalwareAnalysisIcon = lazy(() => import("./MalwareAnalysis"));
 export const MalwareIcon = lazy(() => import("./Malware"));
 export const MapIcon = lazy(() => import("./Map"));
 export const MarkingDefinitionIcon = lazy(() => import("./MarkingDefinition"));
+export const MoreHorizIcon = lazy(() => import("./MoreHoriz"));
 export const MoreVertIcon = lazy(() => import("./MoreVert"));
 export const NarrativeIcon = lazy(() => import("./Narrative"));
 export const NoteIcon = lazy(() => import("./Note"));
@@ -93,6 +95,7 @@ export const RelationshipIcon = lazy(() => import("./Relationship"));
 export const ReportIcon = lazy(() => import("./Report"));
 export const ScheduleIcon = lazy(() => import("./Schedule"));
 export const ScienceIcon = lazy(() => import("./Science"));
+export const SearchIcon = lazy(() => import("./Search"));
 export const SectorIcon = lazy(() => import("./Sector"));
 export const SettingsIcon = lazy(() => import("./Settings"));
 export const SpaceDashboardIcon = lazy(() => import("./SpaceDashboard"));
@@ -108,6 +111,7 @@ export const ThreatActorIndividualIcon = lazy(
 export const ToolIcon = lazy(() => import("./Tool"));
 export const UnfoldMoreIcon = lazy(() => import("./UnfoldMore"));
 export const UnknownIcon = lazy(() => import("./Unknown"));
+export const VisibilityOffIcon = lazy(() => import("./VisibilityOff"));
 export const VulnerabilityIcon = lazy(() => import("./Vulnerability"));
 export const WorkEmptyIcon = lazy(() => import("./WorkEmpty"));
 export const WorkFullIcon = lazy(() => import("./WorkFull"));
