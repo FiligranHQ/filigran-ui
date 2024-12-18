@@ -81,7 +81,12 @@ async function copyFile(sourceRelativePath, destinationRelativePath) {
 
 export default defineConfig(() => {
   return {
-    entry: ['src/index.ts', 'src/plugin.ts', 'src/components/**/*.{ts,tsx}'],
+    entry: [
+      'src/index.ts',
+      'src/plugin.ts',
+      'src/components/clients/index.ts',
+      'src/components/servers/index.ts',
+    ],
     splitting: true,
     treeshake: true,
     sourcemap: true,
@@ -91,6 +96,7 @@ export default defineConfig(() => {
     bundle: true,
     minify: 'terser',
     minifyWhitespace: true,
+    target: 'es2022',
     onSuccess: async () => {
       await addDirectivesToChunkFiles()
       await copyFile('src/theme.css', 'dist/theme.css')

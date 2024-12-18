@@ -19,13 +19,15 @@
     "prettier": "prettier . --write"
   },
   "devDependencies": {
-    "@types/react": "18.3.3",
-    "@types/react-dom": "18.3.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.1",
     "autoprefixer": "10.4.19",
     "postcss": "8.4.39",
     "prettier": "3.3.2",
     "prettier-plugin-organize-imports": "4.1.0",
     "prettier-plugin-tailwindcss": "0.6.5",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
     "tailwindcss": "3.4.4",
     "tailwindcss-scoped-preflight": "3.3.0",
     "terser": "5.31.1",
@@ -54,6 +56,7 @@
     "class-variance-authority": "0.7.0",
     "clsx": "2.1.1",
     "cmdk": "1.0.0",
+    "filigran-icon":"^0.10.0",
     "react-easy-sort": "1.6.0",
     "react-hook-form": "7.52.0",
     "tailwind-merge": "2.3.0",
@@ -61,8 +64,8 @@
     "zod": "3.23.8"
   },
   "peerDependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react": "^16.8 || ^17.0 || ^18.0 || ^19.0",
+    "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0"
   },
   "exports": {
     ".": {
