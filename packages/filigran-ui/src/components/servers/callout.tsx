@@ -9,7 +9,7 @@ const calloutVariants = cva(
       variant: {
         primary: 'bg-primary text-primary-foreground',
         secondary: 'bg-secondary text-secondary-foreground',
-        warning: 'bg-orange text-primary-foreground',
+        warning: 'bg-orange text-black',
         destructive: 'bg-destructive text-primary-foreground',
         outline: 'bg-transparent border-primary text-primary',
       },
@@ -20,9 +20,7 @@ const calloutVariants = cva(
   }
 )
 
-interface CalloutProps
-  extends HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof calloutVariants> {}
+interface CalloutProps extends HTMLAttributes<HTMLDivElement>, VariantProps<typeof calloutVariants> {}
 
 function Callout({className, variant, ...props}: CalloutProps) {
   return (
