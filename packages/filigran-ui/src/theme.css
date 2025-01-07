@@ -111,15 +111,15 @@
   --red-900: 4 92% 12%;
 
   --orange-default: var(--orange-500);
-  --orange-100: 29 88% 87%;
-  --orange-200: 29 88% 76%;
-  --orange-300: 29 88% 68%;
-  --orange-400: 29 88% 59%;
-  --orange-500: 27 88% 48%;
-  --orange-600: 26 90% 38%;
-  --orange-700: 27 91% 28%;
-  --orange-800: 27 90% 18%;
-  --orange-900: 26 93% 12%;
+  --orange-100: 46 48% 76%;
+  --orange-200: 47 56% 72%;
+  --orange-300: 46 64% 68%;
+  --orange-400: 47 72% 64%;
+  --orange-500: 47 80% 60%;
+  --orange-600: 46 80% 54%;
+  --orange-700: 46 80% 48%;
+  --orange-800: 46 80% 42%;
+  --orange-900: 46 80% 36%;
 
   --yellow-default: var(--yellow-400);
   --yellow-100: 43 88% 88%;
@@ -189,4 +189,6 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #7a7c85;
 }
-::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
