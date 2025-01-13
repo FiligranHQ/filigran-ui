@@ -87,6 +87,7 @@ interface DataTableProps<TData extends {id: string}, TValue> {
   isLoading?: boolean
   i18nKey?: Partial<DatatableI18nKey>
   onResetTable?: () => void
+  sticky?: boolean
 }
 
 interface DatatableI18nKey {
@@ -263,11 +264,11 @@ const DataTableOptionsHeader = <TData, TValue>({
           {column.getCanSort() && (
             <>
               <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
-                <KeyboardArrowUpIcon className="mr-2 h-4 w-4 text-text-secondary" />
+                <KeyboardArrowUpIcon className="mr-2 h-3 w-3 text-text-secondary" />
                 {t_i18n('Asc')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
-                <KeyboardArrowDownIcon className="mr-2 h-4 w-4 text-text-secondary" />
+                <KeyboardArrowDownIcon className="mr-2 h-3 w-3 text-text-secondary" />
                 {t_i18n('Desc')}
               </DropdownMenuItem>
             </>
@@ -290,8 +291,10 @@ const DataTableOptionsHeader = <TData, TValue>({
 }
 const DraggableTableHeader = <TData, TValue>({
   header,
+  sticky,
 }: {
   header: Header<TData, TValue>
+  sticky: boolean
 }) => {
   const {attributes, isDragging, listeners, setNodeRef, transform} =
     useSortable({
@@ -316,12 +319,14 @@ const DraggableTableHeader = <TData, TValue>({
       key={header.id}
       colSpan={header.colSpan}
       className={cn(
-        'transition-width truncate group z-10 whitespace-nowrap opacity-100 transition-transform duration-200 ease-in-out uppercase sticky top-0 bg-background',
-        isDragging && 'z-10 bg-text-secondary/50 opacity-80'
+        'transition-width truncate group z-10 whitespace-nowrap opacity-100 transition-transform duration-200 ease-in-out uppercase top-0 bg-background',
+        isDragging && 'z-10 bg-text-secondary/50 opacity-80',
+        sticky && 'sticky'
       )}
       ref={setNodeRef}
       style={thStyles}>
-      <div className="flex h-full items-center justify-between">
+      <div
+        className={cn('flex items-center justify-between', sticky && 'h-full')}>
         {header.isPlaceholder ? null : typeof header.column.columnDef.header ===
           'string' ? (
           <DataTableOptionsHeader
@@ -342,7 +347,7 @@ const DraggableTableHeader = <TData, TValue>({
             )}
             {...attributes}
             {...listeners}>
-            <DragIndicatorIcon className="mx-s h-5 w-5 rotate-90" />
+            <DragIndicatorIcon className="mx-s h-3.5 w-3.5 rotate-90" />
           </button>
         )}
       </div>
@@ -473,6 +478,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     isLoading = false,
     i18nKey,
     onResetTable,
+    sticky = false,
   }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
@@ -542,6 +548,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
                     <DraggableTableHeader
                       key={header.id}
                       header={header}
+                      sticky={sticky}
                     />
                   ))}
                 </SortableContext>

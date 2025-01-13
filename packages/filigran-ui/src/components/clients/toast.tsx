@@ -78,7 +78,7 @@ const ToastClose = React.forwardRef<
     className={cn('absolute right-4 top-4', className)}
     toast-close=""
     {...props}>
-    <CloseIcon className="h-4 w-4" />
+    <CloseIcon className="h-3 w-3" />
   </ToastPrimitives.Close>
 ))
 ToastClose.displayName = ToastPrimitives.Close.displayName

@@ -68,7 +68,7 @@ function Combobox({
           ) : (
             <span className="text-muted-foreground">{order}</span>
           )}
-          <KeyboardArrowDownIcon className="h-2.5 w-2.5 cursor-pointer text-muted-foreground" />
+          <KeyboardArrowDownIcon className="h-3 w-3 cursor-pointer text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="p-0 popover-content-width-same-as-its-trigger">

@@ -72,7 +72,7 @@ const SheetContent = React.forwardRef<
             variant="ghost"
             size="icon"
             className="text-primary hover:bg-hover/50 focus:bg-hover/50">
-            <CloseIcon className="h-4 w-4" />
+            <CloseIcon className="h-3 w-3" />
             <span className="sr-only">Close</span>
           </Button>
         </div>

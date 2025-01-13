@@ -32,7 +32,7 @@ const AccordionTrigger = React.forwardRef<
       )}
       {...props}>
       {children}
-      <KeyboardArrowDownIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
+      <KeyboardArrowDownIcon className="h-3 w-3 shrink-0 transition-transform duration-200" />
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))

@@ -159,7 +159,7 @@ const MultiSelectFormField = React.forwardRef<
                     orientation="vertical"
                     className="flex h-full min-h-6"
                   />
-                  <KeyboardArrowDownIcon className="mx-2 h-4 cursor-pointer text-muted-foreground" />
+                  <KeyboardArrowDownIcon className="mx-2 w-2.5 h-2.5 cursor-pointer text-muted-foreground" />
                 </div>
               </div>
             ) : (
@@ -167,7 +167,7 @@ const MultiSelectFormField = React.forwardRef<
                 <span className="mx-3 text-sm text-muted-foreground normal-case">
                   {placeholder}
                 </span>
-                <KeyboardArrowDownIcon className="mx-2 h-4 cursor-pointer text-muted-foreground" />
+                <KeyboardArrowDownIcon className="mx-2 w-2.5 h-2.5 cursor-pointer text-muted-foreground" />
               </div>
             )}
           </Button>
