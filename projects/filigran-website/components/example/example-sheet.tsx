@@ -89,7 +89,7 @@ export const ExampleSheet = () => {
       <SheetTrigger asChild>
         <Button>Profile</Button>
       </SheetTrigger>
-      <SheetContent>
+      <SheetContent closeOnClickOutside={false}>
         <SheetHeader>
           <SheetTitle>Profile</SheetTitle>
           <SheetDescription>
