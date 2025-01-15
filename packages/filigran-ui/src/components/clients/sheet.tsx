@@ -17,8 +17,10 @@ const SheetPortal = SheetPrimitive.Portal
 
 const SheetOverlay = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay>
->(({className, ...props}, ref) => (
+  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay> & {
+    closeOnClickOutside?: boolean
+  }
+>(({className, closeOnClickOutside = true, ...props}, ref) => (
   <SheetPrimitive.Overlay
     className={cn(
       'fixed inset-0 z-50 bg-gray-900/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -26,6 +28,11 @@ const SheetOverlay = React.forwardRef<
     )}
     {...props}
     ref={ref}
+    onPointerDown={(event) => {
+      if (!closeOnClickOutside) {
+        event.stopPropagation()
+      }
+    }}
   />
 ))
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
@@ -56,30 +63,37 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({side = 'right', className, children, ...props}, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(sheetVariants({side}), className)}
-      {...props}>
-      <div className="max-h-full h-full min-h-full overflow-auto px-xl pt-xl">
-        {children}
-      </div>
-      <SheetPrimitive.Close asChild>
-        <div className="absolute left-3 top-0 flex h-16 items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-primary hover:bg-hover/50 focus:bg-hover/50">
-            <CloseIcon className="h-3 w-3" />
-            <span className="sr-only">Close</span>
-          </Button>
+>(
+  (
+    {side = 'right', className, children, closeOnClickOutside = true, ...props},
+    ref
+  ) => (
+    <SheetPortal>
+      <SheetOverlay closeOnClickOutside={closeOnClickOutside} />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(sheetVariants({side}), className)}
+        {...props}>
+        <div className="max-h-full h-full min-h-full overflow-auto px-xl pt-xl">
+          {children}
         </div>
-      </SheetPrimitive.Close>
-    </SheetPrimitive.Content>
-  </SheetPortal>
-))
+        {closeOnClickOutside && (
+          <SheetPrimitive.Close asChild>
+            <div className="absolute left-3 top-0 flex h-16 items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-primary hover:bg-hover/50 focus:bg-hover/50">
+                <CloseIcon className="h-3 w-3" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+          </SheetPrimitive.Close>
+        )}
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  )
+)
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
 const SheetHeader = ({
