@@ -535,7 +535,9 @@ function GenericDataTable<TData extends {id: string}, TValue>(
         onDragEnd={handleDragEnd}
         sensors={sensors}>
         {/* do not remove twp, the class is used to isolate preflight style */}
-        <Table style={{width: table.getCenterTotalSize()}}>
+        <Table
+          style={{width: table.getCenterTotalSize()}}
+          sticky={sticky}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
