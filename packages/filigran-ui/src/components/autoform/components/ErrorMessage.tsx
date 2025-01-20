@@ -1,7 +1,6 @@
-import type {FunctionComponent} from 'react'
+import { Label } from '../../clients';
+import type { FunctionComponent } from 'react';
 
-export const ErrorMessage: FunctionComponent<{error: string}> = ({error}) => (
-  <Alert variant="destructive">
-    <AlertTitle>{error}</AlertTitle>
-  </Alert>
-)
+export const ErrorMessage: FunctionComponent<{ error: string }> = ({ error }) => (
+  <Label className="text-destructive">{error}</Label>
+);
