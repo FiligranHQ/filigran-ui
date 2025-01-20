@@ -1,4 +1,5 @@
 import './globals.css'
 import './theme.css'
+export * from './components/autoform'
 export * from './components/clients'
 export * from './components/servers'
