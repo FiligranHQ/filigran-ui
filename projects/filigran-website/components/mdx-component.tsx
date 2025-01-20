@@ -22,6 +22,7 @@ import {
   QuizzQuestionChoice,
 } from '@/components/ui/quizz'
 import {ExampleLoader} from '@/components/example/example-loader'
+import { AutoFormTest } from './autoform/autoform-test';
 import {CodePlayground} from '@/components/code-playground/code-playground'
 import {CodePlaygroundTest} from '@/components/code-playground/code-playground-test'
 import {PlaygroundTest} from '@/components/code-playground/playground-test'
@@ -40,6 +41,7 @@ const components = {
   ...LucidIcon,
   ...FiligranUIComponent,
   ...FiligranIcon,
+  AutoFormTest: AutoFormTest,
   CodePlayground: CodePlayground,
   CodePlaygroundTest: CodePlaygroundTest,
   PlaygroundTest: PlaygroundTest,
