@@ -128,4 +128,4 @@ function AutoForm<SchemaType extends ZodObjectOrWrapped>({
   )
 }
 
-export default AutoForm
+export {AutoForm}
