@@ -1,8 +1,7 @@
-import { Checkbox } from "@/components/ui/checkbox";
-import { FormControl, FormItem } from "@/components/ui/form";
-import AutoFormTooltip from "../common/tooltip";
-import { AutoFormInputComponentProps } from "../types";
-import AutoFormLabel from "../common/label";
+import {Checkbox, FormControl, FormItem} from '../../clients'
+import AutoFormLabel from '../common/label'
+import AutoFormTooltip from '../common/tooltip'
+import type {AutoFormInputComponentProps} from '../types'
 
 export default function AutoFormCheckbox({
   label,
@@ -30,5 +29,5 @@ export default function AutoFormCheckbox({
       </FormItem>
       <AutoFormTooltip fieldConfigItem={fieldConfigItem} />
     </div>
-  );
+  )
 }

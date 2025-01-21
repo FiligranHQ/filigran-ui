@@ -1,8 +1,8 @@
-import { DatePicker } from "@/components/ui/date-picker";
-import { FormControl, FormItem, FormMessage } from "@/components/ui/form";
-import AutoFormLabel from "../common/label";
-import AutoFormTooltip from "../common/tooltip";
-import { AutoFormInputComponentProps } from "../types";
+import {FormControl, FormItem, FormMessage} from '../../clients'
+import {DatePicker} from '../../clients/date-picker'
+import AutoFormLabel from '../common/label'
+import AutoFormTooltip from '../common/tooltip'
+import type {AutoFormInputComponentProps} from '../types'
 
 export default function AutoFormDate({
   label,
@@ -28,5 +28,5 @@ export default function AutoFormDate({
 
       <FormMessage />
     </FormItem>
-  );
+  )
 }

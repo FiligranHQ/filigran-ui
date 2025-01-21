@@ -9,6 +9,7 @@ import {z} from 'zod'
 
 import {zodResolver} from '@hookform/resolvers/zod'
 
+import {useEffect} from 'react'
 import {cn} from '../../lib/utils'
 import {Form} from '../clients'
 import {Button} from '../servers'
@@ -20,7 +21,7 @@ import {
   type ZodObjectOrWrapped,
 } from './utils'
 
-export const AutoFormSubmit = ({
+const AutoFormSubmit = ({
   children,
   className,
   disabled,
@@ -127,3 +128,4 @@ const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
   )
 }
 
+export {AutoForm, AutoFormSubmit}
