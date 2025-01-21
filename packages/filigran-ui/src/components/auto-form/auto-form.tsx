@@ -40,7 +40,7 @@ export function AutoFormSubmit({
   )
 }
 
-function AutoForm<SchemaType extends ZodObjectOrWrapped>({
+const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
   formSchema,
   values: valuesProp,
   onValuesChange: onValuesChangeProp,
@@ -71,7 +71,7 @@ function AutoForm<SchemaType extends ZodObjectOrWrapped>({
     | ((formState: FormState<z.infer<SchemaType>>) => React.ReactNode)
   className?: string
   dependencies?: Dependency<z.infer<SchemaType>>[]
-}) {
+}) => {
   const objectFormSchema = getObjectFormSchema(formSchema)
   const defaultValues: DefaultValues<z.infer<typeof objectFormSchema>> | null =
     getDefaultValues(objectFormSchema, fieldConfig)
@@ -128,4 +128,3 @@ function AutoForm<SchemaType extends ZodObjectOrWrapped>({
   )
 }
 
-export {AutoForm}
