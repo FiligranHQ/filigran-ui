@@ -1,5 +1,4 @@
 'use client'
-import React from 'react'
 import {
   type DefaultValues,
   type FormState,
@@ -21,7 +20,7 @@ import {
   type ZodObjectOrWrapped,
 } from './utils'
 
-export function AutoFormSubmit({
+export const AutoFormSubmit = ({
   children,
   className,
   disabled,
@@ -29,7 +28,7 @@ export function AutoFormSubmit({
   children?: React.ReactNode
   className?: string
   disabled?: boolean
-}) {
+}) => {
   return (
     <Button
       type="submit"
@@ -89,7 +88,7 @@ const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
     }
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     const subscription = form.watch((values) => {
       onValuesChangeProp?.(values, form)
       const parsedValues = formSchema.safeParse(values)
