@@ -5097,7 +5097,7 @@ filigran-icon@^0.10.0:
   integrity sha512-8f1UF30h9hpofVAAGXR6FT4HhPkhTJGuXvSVXHYgm8qITtgrGwcDyGOUfEMNlmj6Xj/2zndtsSwFK2NfHTVoYg==
 
 "filigran-icon@file:/Users/jbanety/Sites/filigran/ui-library/packages/filigran-icon":
-  version "0.11.3"
+  version "0.11.4"
   resolved "file:packages/filigran-icon"
 
 "filigran-ui@file:/Users/jbanety/Sites/filigran/ui-library/packages/filigran-ui":
