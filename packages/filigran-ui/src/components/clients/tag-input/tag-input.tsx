@@ -447,7 +447,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
               <div className="w-full">
                 <div
                   className={cn(
-                    `flex w-full flex-row flex-wrap items-center gap-2 rounded border border-input bg-background p-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`,
+                    `flex w-full flex-row flex-wrap items-center gap-2 rounded border border-input bg-background p-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50`,
                     styleClasses?.inlineTagsContainer
                   )}>
                   <TagList
@@ -557,7 +557,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
                 ) : (
                   <div
                     className={cn(
-                      `flex h-fit w-full flex-row flex-wrap items-center gap-2 bg-background p-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`,
+                      `flex h-fit w-full flex-row flex-wrap items-center gap-2 bg-background p-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50`,
                       styleClasses?.inlineTagsContainer
                     )}>
                     <TagList
