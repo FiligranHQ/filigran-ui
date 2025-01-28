@@ -119,7 +119,7 @@ const FiligranUIPlugin = () => {
               foreground: 'hsl(var(--card-foreground))',
             },
             hover: {
-              DEFAULT: 'hsl(var(--hover-background))',
+              DEFAULT: 'var(--hover-background)',
             },
             gray: {
               DEFAULT: 'hsl(var(--gray-default))',

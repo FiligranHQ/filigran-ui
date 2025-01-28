@@ -165,7 +165,7 @@
   --border-light: var(--gray-800);
   --border-focus: var(--blue-600);
 
-  --hover-background: rgba(255, 255, 255, 0.1);
+  --hover-background: hsla(0, 0%, 100%, 0.1);
 }
 
 ::-webkit-scrollbar {
