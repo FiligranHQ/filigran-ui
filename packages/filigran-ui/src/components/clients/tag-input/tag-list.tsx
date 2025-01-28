@@ -21,7 +21,7 @@ export type TagListProps = {
 } & Omit<TagProps, 'tagObj'>
 
 const DropTarget: React.FC = () => {
-  return <div className={cn('h-full rounded-md bg-secondary/50')} />
+  return <div className={cn('h-full rounded bg-secondary/50')} />
 }
 
 export const TagList: React.FC<TagListProps> = ({
@@ -53,7 +53,7 @@ export const TagList: React.FC<TagListProps> = ({
       {!inlineTags ? (
         <div
           className={cn(
-            'w-full rounded-md',
+            'w-full rounded',
             // className,
             {
               'flex flex-wrap gap-2': direction === 'row',
@@ -74,7 +74,7 @@ export const TagList: React.FC<TagListProps> = ({
                     onMouseLeave={handleMouseUp}
                     className={cn(
                       {
-                        'rounded-md border border-solid border-primary':
+                        'rounded border border-solid border-primary':
                           draggedTagId === tagObj.id,
                       },
                       'transition-all duration-200 ease-in-out'
@@ -129,7 +129,7 @@ export const TagList: React.FC<TagListProps> = ({
                     onMouseLeave={handleMouseUp}
                     className={cn(
                       {
-                        'rounded-md border border-solid border-primary':
+                        'rounded border border-solid border-primary':
                           draggedTagId === tagObj.id,
                       },
                       'transition-all duration-200 ease-in-out'

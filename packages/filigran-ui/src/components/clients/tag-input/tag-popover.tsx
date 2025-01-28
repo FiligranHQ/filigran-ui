@@ -132,7 +132,7 @@ export const TagPopover: React.FC<TagPopoverProps> = ({
       onOpenChange={handleOpenChange}
       modal={usePortal}>
       <div
-        className="relative flex items-center rounded-md border border-input bg-transparent pr-3"
+        className="relative flex items-center rounded border border-input bg-transparent pr-3"
         ref={triggerContainerRef}>
         {React.cloneElement(children as React.ReactElement<any>, {
           onFocus: handleInputFocus,
