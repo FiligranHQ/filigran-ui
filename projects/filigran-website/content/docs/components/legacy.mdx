@@ -1,0 +1,16 @@
+---
+title: Legacy
+---
+
+<ReactLiveDisplay
+  codeExample={`() => {
+    const [ref, setRef] = React.useState();
+    return (
+      <div className="h-[80rem]" ref={(e) => setRef(e)}>
+          <DataTableExample
+            ref={ref}
+          />
+      </div>
+    );
+  }`}
+/>

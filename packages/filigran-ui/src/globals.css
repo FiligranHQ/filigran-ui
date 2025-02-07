@@ -21,3 +21,12 @@ body {
   line-height: 1.52;
   letter-spacing: 0.0035rem;
 }
+
+ol{
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.test_line:hover {
+  background: var(--hover-background);
+}
