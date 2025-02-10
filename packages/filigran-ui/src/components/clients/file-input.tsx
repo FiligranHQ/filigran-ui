@@ -134,7 +134,9 @@ function GenericFileInput(
       />
       <Button
         type="button"
-        onClick={() => inputRef.current && inputRef.current.click()}>
+        onClick={() => inputRef.current && inputRef.current.click()}
+        disabled={props.disabled}
+      >
         {t.selectFile}
       </Button>
       <span className="p-s">

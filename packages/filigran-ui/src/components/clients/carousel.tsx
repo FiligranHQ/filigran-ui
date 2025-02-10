@@ -50,7 +50,7 @@ export function Carousel({ placeholder, slides = [] }: { placeholder: ReactNode,
             </div>
           ))}
         </div>
-        <div className="absolute top-[50%] w-full">
+        <div className="absolute top-[50%] w-full" style={{ transform: 'translate(0,-1.125rem)'}}>
           <div className="flex flex-1 justify-between">
             <Button
               onClick={onPrevButtonClick}
