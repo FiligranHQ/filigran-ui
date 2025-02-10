@@ -5,7 +5,7 @@ import { type EmblaCarouselType } from 'embla-carousel'
 import { Button } from '../servers';
 import { KeyboardArrowLeftIcon, KeyboardArrowRightIcon } from 'filigran-icon';
 import { Dialog } from '@radix-ui/react-dialog';
-import { DialogContent } from './dialog';
+import { DialogContent, DialogTitle } from './dialog';
 
 export function Carousel({ slides = [] }) {
   const [emblaRef, emblaApi] = useEmblaCarousel();
@@ -42,7 +42,7 @@ export function Carousel({ slides = [] }) {
         <div className="flex">
           {slides.map((base64, index) => (
             <div className="flex-0 flex-shrink-0 basis-[100%]" key={index} onClick={() => setSelected(base64)}>
-              <img style={{ aspectRatio: "16/9" }} className="h-[15rem] my-0 mx-auto" src={base64} />
+              <img className="h-[15rem] my-0 mx-auto" src={base64} />
             </div>
           ))}
         </div>
@@ -75,6 +75,7 @@ export function Carousel({ slides = [] }) {
         open={!!selected}
         onOpenChange={() => setSelected(undefined)}
       >
+        <DialogTitle />
         <DialogContent className="h-2/3 max-w-[80rem] w-[80rem]">
           <img src={selected} />
         </DialogContent>
