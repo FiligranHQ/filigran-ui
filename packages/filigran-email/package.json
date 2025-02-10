@@ -5,8 +5,8 @@
     "build": "maizzle build production"
   },
   "dependencies": {
-    "@maizzle/framework": "latest",
-    "tailwindcss-preset-email": "^1.1.0"
+    "@maizzle/framework": "4.8.9",
+    "tailwindcss-preset-email": "1.1.0"
   },
   "name": "filigran-email",
   "version": "1.0.0",

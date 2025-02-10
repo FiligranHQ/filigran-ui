@@ -1,5 +1,6 @@
 export * from './accordion'
 export * from './alert-dialog'
+export * from './carousel'
 export * from './checkbox'
 export * from './combobox'
 export * from './command'
