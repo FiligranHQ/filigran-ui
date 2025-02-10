@@ -42,7 +42,7 @@ export function Carousel({ slides = [] }) {
         <div className="flex">
           {slides.map((base64, index) => (
             <div className="flex-0 flex-shrink-0 basis-[100%]" key={index} onClick={() => setSelected(base64)}>
-              <img className="h-[15rem]" src={base64} />
+              <img style={{ aspectRatio: "16/9" }} className="h-[15rem] my-0 mx-auto" src={base64} />
             </div>
           ))}
         </div>
