@@ -1685,9 +1685,9 @@
     ora "^5.1.0"
     resolve-cwd "^3.0.0"
 
-"@maizzle/framework@latest":
+"@maizzle/framework@4.8.9":
   version "4.8.9"
-  resolved "https://registry.npmjs.org/@maizzle/framework/-/framework-4.8.9.tgz"
+  resolved "https://registry.yarnpkg.com/@maizzle/framework/-/framework-4.8.9.tgz#e516aeb1800aee1ca3cfa8c2b28702b5c9e49fca"
   integrity sha512-giZnOXYIzqdxDj1/mH18Qq8v0yrx5CUrEBNBVK81H1FxuRcqgL89Mzev+EAMEhHJ7equRdInhisNzNizeW08hg==
   dependencies:
     "@maizzle/cli" "^1.5.1"
@@ -4621,7 +4621,7 @@ email-comb@^5.3.1:
   resolved "https://registry.npmjs.org/email-comb/-/email-comb-5.3.1.tgz"
   integrity sha512-0rFhgyrRRw6BGWc5Iakf6HI1LGQbmzqFzoMTwq1SGby6PehTTAxqns1y5lBf9HSTY02kC1sqqq8cq+fI4Wx+Sg==
 
-embla-carousel-react@^8.5.2:
+embla-carousel-react@8.5.2:
   version "8.5.2"
   resolved "https://registry.yarnpkg.com/embla-carousel-react/-/embla-carousel-react-8.5.2.tgz#f79f6c36690596fe2aceec994372ab84bfbfd9cc"
   integrity sha512-Tmx+uY3MqseIGdwp0ScyUuxpBgx5jX1f7od4Cm5mDwg/dptEiTKf9xp6tw0lZN2VA9JbnVMl/aikmbc53c6QFA==
@@ -9852,7 +9852,7 @@ string-trim-spaces-only@^3.1.0:
   dependencies:
     "@babel/runtime" "^7.14.0"
 
-"string-width-cjs@npm:string-width@^4.2.0", string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
+"string-width-cjs@npm:string-width@^4.2.0":
   version "4.2.3"
   resolved "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz"
   integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
@@ -9877,6 +9877,15 @@ string-width@^2.1.0, string-width@^2.1.1:
   dependencies:
     is-fullwidth-code-point "^2.0.0"
     strip-ansi "^4.0.0"
+
+string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
+  version "4.2.3"
+  resolved "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz"
+  integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
+  dependencies:
+    emoji-regex "^8.0.0"
+    is-fullwidth-code-point "^3.0.0"
+    strip-ansi "^6.0.1"
 
 string-width@^5.0.1, string-width@^5.1.2:
   version "5.1.2"
@@ -9957,7 +9966,7 @@ stringify-entities@^4.0.0:
     character-entities-html4 "^2.0.0"
     character-entities-legacy "^3.0.0"
 
-"strip-ansi-cjs@npm:strip-ansi@^6.0.1", strip-ansi@^6.0.0, strip-ansi@^6.0.1:
+"strip-ansi-cjs@npm:strip-ansi@^6.0.1":
   version "6.0.1"
   resolved "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.1.tgz"
   integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
@@ -9984,6 +9993,13 @@ strip-ansi@^5.1.0:
   integrity sha512-DuRs1gKbBqsMKIZlrffwlug8MHkcnpjs5VPmL1PAh+mA30U0DTotfDZ0d2UUsXpPmPmMMJ6W773MaA3J+lbiWA==
   dependencies:
     ansi-regex "^4.1.0"
+
+strip-ansi@^6.0.0, strip-ansi@^6.0.1:
+  version "6.0.1"
+  resolved "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.1.tgz"
+  integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
+  dependencies:
+    ansi-regex "^5.0.1"
 
 strip-ansi@^7.0.1, strip-ansi@^7.1.0:
   version "7.1.0"
@@ -10179,23 +10195,29 @@ tailwindcss-animate@1.0.7:
   resolved "https://registry.npmjs.org/tailwindcss-animate/-/tailwindcss-animate-1.0.7.tgz"
   integrity sha512-bl6mpH3T7I3UFxuvDEXLxy/VuFxBk5bbzplh7tXI68mwMokNYd1t9qPBHlnyTwfa4JGC4zP516I1hYYtQ/vspA==
 
-tailwindcss-email-variants@^3.0.2:
-  version "3.0.2"
-  resolved "https://registry.npmjs.org/tailwindcss-email-variants/-/tailwindcss-email-variants-3.0.2.tgz"
-  integrity sha512-vdtodN0xLCnS/KMqn5D+raqaIWN6Uu2WfmlC2IS4OhE+YGaYE/PU32YLQAbZ4jZhjzcap4KTgfcITumNnEYEnQ==
+tailwindcss-box-shadow@^2.0.1:
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/tailwindcss-box-shadow/-/tailwindcss-box-shadow-2.0.3.tgz#bdd40b0fa119af587ce215db66dae79ca87e30c2"
+  integrity sha512-6K+PK7BQSP+qzH7NhLL++YvbKXY7mjgjOhc8fYu/Ajoi9hppj4s/77cvh6HjXv6wxH4vvpfR4/YnahzIyyTATQ==
 
-tailwindcss-mso@^1.4.4:
+tailwindcss-email-variants@^3.0.0:
+  version "3.0.4"
+  resolved "https://registry.yarnpkg.com/tailwindcss-email-variants/-/tailwindcss-email-variants-3.0.4.tgz#562de8bc2375e6500ba2303da08ae4e0129dbfc9"
+  integrity sha512-ohtLSifyWQDAtddJnfbcxkIDCIyXp6Yb83hXRprrS+/2dSyme4OlUZAP+TDwQc0K8D0LAw80eKI6psgejxys8A==
+
+tailwindcss-mso@^1.4.2:
   version "1.4.4"
-  resolved "https://registry.npmjs.org/tailwindcss-mso/-/tailwindcss-mso-1.4.4.tgz"
+  resolved "https://registry.yarnpkg.com/tailwindcss-mso/-/tailwindcss-mso-1.4.4.tgz#7fd8ea35279efd830c2a7de7b466d3f368d37413"
   integrity sha512-bSA7vLRhkaHjFhKkKNgr1RyOn2YhaEJ2hQQOCV7MgRtQOvYkqfAYMTSoZ2Z1YgCvOD02W4Tazsz+ym6FiPFIjQ==
 
-tailwindcss-preset-email@^1.1.0:
-  version "1.3.3"
-  resolved "https://registry.npmjs.org/tailwindcss-preset-email/-/tailwindcss-preset-email-1.3.3.tgz"
-  integrity sha512-eB/qZrW9YPIDsGU2Spszbu+iBC3MdlZNqzkp85lBg1P/Dgxn7XWrfMt/46L6bTlmznr0zeMpgrMMOkuucJL7qQ==
+tailwindcss-preset-email@1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/tailwindcss-preset-email/-/tailwindcss-preset-email-1.1.0.tgz#f4bb2f7b6a72c7f7b02458b3fc6930ca31fc0fdf"
+  integrity sha512-b42Smoro3+DwpDaMbVqrV6qx+NVZ+rBMSslEXEVao+nH/VzynEZt6ehVrKIDe3ORdkxBqP3ZSnhdnu6ttP1YgQ==
   dependencies:
-    tailwindcss-email-variants "^3.0.2"
-    tailwindcss-mso "^1.4.4"
+    tailwindcss-box-shadow "^2.0.1"
+    tailwindcss-email-variants "^3.0.0"
+    tailwindcss-mso "^1.4.2"
 
 tailwindcss-scoped-preflight@3.3.0:
   version "3.3.0"
@@ -11004,7 +11026,7 @@ widest-line@^5.0.0:
   dependencies:
     string-width "^7.0.0"
 
-"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
+"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0":
   version "7.0.0"
   resolved "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
   integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
@@ -11025,6 +11047,15 @@ wrap-ansi@^6.0.1, wrap-ansi@^6.2.0:
   version "6.2.0"
   resolved "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-6.2.0.tgz"
   integrity sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==
+  dependencies:
+    ansi-styles "^4.0.0"
+    string-width "^4.1.0"
+    strip-ansi "^6.0.0"
+
+wrap-ansi@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
+  integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
   dependencies:
     ansi-styles "^4.0.0"
     string-width "^4.1.0"
