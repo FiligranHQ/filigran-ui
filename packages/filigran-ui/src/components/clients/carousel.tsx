@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { type ReactNode, useCallback, useEffect, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { type EmblaCarouselType } from 'embla-carousel'
 import { Button } from '../servers';
@@ -7,13 +7,12 @@ import { KeyboardArrowLeftIcon, KeyboardArrowRightIcon } from 'filigran-icon';
 import { Dialog } from '@radix-ui/react-dialog';
 import { DialogContent, DialogTitle } from './dialog';
 
-export function Carousel({ slides = [] }) {
+export function Carousel({ placeholder, slides = [] }: { placeholder: ReactNode, slides?: string[] }) {
   const [emblaRef, emblaApi] = useEmblaCarousel();
 
   const [prevBtnDisabled, setPrevBtnDisabled] = useState(false);
   const [nextBtnDisabled, setNextBtnDisabled] = useState(false);
   const [selected, setSelected] = useState<string | undefined>();
-
 
   const onPrevButtonClick = useCallback(() => {
     if (!emblaApi) return;
@@ -40,6 +39,11 @@ export function Carousel({ slides = [] }) {
     <>
       <div className="overflow-hidden relative" ref={emblaRef}>
         <div className="flex">
+          {placeholder && (
+            <div className="flex-0 flex-shrink-0 basis-[100%]">
+              {placeholder}
+            </div>
+          )}
           {slides.map((base64, index) => (
             <div className="flex-0 flex-shrink-0 basis-[100%]" key={index} onClick={() => setSelected(base64)}>
               <img className="h-[15rem] my-0 mx-auto" src={base64} />
