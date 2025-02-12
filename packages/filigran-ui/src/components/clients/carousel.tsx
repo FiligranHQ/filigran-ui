@@ -79,8 +79,8 @@ export function Carousel({ placeholder, slides = [] }: { placeholder: ReactNode,
         open={!!selected}
         onOpenChange={() => setSelected(undefined)}
       >
-        <DialogTitle />
         <DialogContent className="h-2/3 max-w-[80rem] w-[80rem]">
+          <DialogTitle />
           <img src={selected} />
         </DialogContent>
       </Dialog>

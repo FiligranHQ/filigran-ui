@@ -1,5 +1,5 @@
-import {Slot} from '@radix-ui/react-slot'
-import {cva, type VariantProps} from 'class-variance-authority'
+import { Slot } from '@radix-ui/react-slot'
+import { cva, type VariantProps } from 'class-variance-authority'
 import * as React from 'react'
 
 const buttonVariants = cva(
@@ -8,13 +8,20 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: 'bg-primary text-primary-foreground hover:bg-primary/75',
-        destructive:
-          'bg-destructive text-destructive-foreground hover:bg-destructive/75',
+        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/75',
         outline: 'border border-border-medium bg-transparent hover:bg-hover',
-        secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/75',
+        'outline-primary': 'border border-primary bg-transparent hover:bg-hover text-primary',
+        'outline-destructive': 'border border-destructive/75 bg-transparent hover:bg-hover text-destructive',
+        'outline-secondary': 'border border-secondary bg-transparent hover:bg-hover text-secondary',
+        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/75',
         ghost: 'hover:bg-hover',
+        'ghost-primary': 'hover:bg-hover text-primary',
+        'ghost-destructive': 'hover:bg-hover text-destructive',
+        'ghost-secondary': 'hover:bg-hover text-secondary',
         link: 'text-primary underline-offset-4 hover:underline normal-case',
+        'link-primary': 'text-primary underline-offset-4 hover:underline normal-case',
+        'link-destructive': 'text-destructive underline-offset-4 hover:underline normal-case',
+        'link-secondary': 'text-secondary underline-offset-4 hover:underline normal-case',
       },
       size: {
         default: 'h-9 px-4 py-2',
@@ -30,7 +37,7 @@ const buttonVariants = cva(
   }
 )
 
-import {cn} from '../../lib/utils'
+import { cn } from '../../lib/utils'
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -39,11 +46,11 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({className, variant, size, asChild = false, ...props}, ref) => {
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button'
     return (
       <Comp
-        className={cn(buttonVariants({variant, size, className}))}
+        className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
       />
@@ -52,4 +59,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = 'Button'
 
-export {Button, buttonVariants}
+export { Button, buttonVariants }

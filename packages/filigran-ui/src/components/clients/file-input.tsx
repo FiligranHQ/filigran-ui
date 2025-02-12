@@ -15,6 +15,7 @@ import {Button} from '../servers'
 interface FileInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value'> {
   texts?: Partial<InputText>
+  hidden?: boolean
   allowedTypes?: string
   value?: unknown
   name: string
@@ -69,7 +70,7 @@ const FileInputDropZone: FunctionComponent<{
 }
 
 function GenericFileInput(
-  {texts, allowedTypes, className, ...props}: FileInputProps,
+  {texts, hidden = false, allowedTypes, className, ...props}: FileInputProps,
   ref?: any
 ) {
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -123,18 +124,21 @@ function GenericFileInput(
     ? Array.from(filesSelected)
     : null
   return (
-    <div ref={ref}>
+    <div className={hidden ? "hidden" : undefined}>
       <input
         type={'file'}
         className="hidden"
         accept={allowedTypes}
-        ref={inputRef}
+        ref={(e) => {
+          ref(e);
+          inputRef.current = e;
+        }}
         {...propsWithoutValue}
         onChange={handleOnChange}
       />
       <Button
         type="button"
-        onClick={() => inputRef.current && inputRef.current.click()}
+        onClick={() => inputRef.current?.click?.()}
         disabled={props.disabled}
       >
         {t.selectFile}

@@ -34,12 +34,28 @@ Import \{Button\} from 'filigran-ui'
 
 <ReactLiveDisplay
   codeExample={`
-          <div className={tw(\`flex gap-2\`)}>
-            <Button> Primary/Default </Button>
-            <Button variant="secondary"> Secondary </Button>
-            <Button variant="destructive"> Destructive </Button>
-            <Button variant="outline"> Outline </Button>
-            <Button variant="ghost"> Ghost </Button>
-            <Button variant="link"> Link </Button>
-          </div>`}
+    <div className={'flex gap-2'}>
+        <div className="flex flex-col gap-s">
+          <Button> Primary/Default </Button>
+          <Button variant="outline-primary"> Outline </Button>
+          <Button variant="ghost-primary"> Ghost </Button>
+          <Button variant="link-primary"> Link </Button>
+        </div>
+        <div className="flex flex-col gap-s">
+          <Button variant="secondary"> Secondary </Button>
+          <Button variant="outline-secondary"> Outline </Button>
+          <Button variant="ghost-secondary"> Ghost </Button>
+          <Button variant="link-secondary"> Link </Button>
+        </div>
+        <div className="flex flex-col gap-s">
+          <Button variant="destructive"> Destructive </Button>
+          <Button variant="outline-destructive"> Outline </Button>
+          <Button variant="ghost-destructive"> Ghost </Button>
+          <Button variant="link-destructive"> Link </Button>
+        </div>
+        <div className="flex flex-col gap-s">
+          <Button variant="outline"> Outline </Button>
+          <Button variant="ghost"> Ghost </Button>
+        </div>
+      </div>`}
 />
