@@ -3,8 +3,9 @@
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 import { cn } from '../../lib/utils';
+import { IndividualIcon } from 'filigran-icon';
 
-const Avatar = React.forwardRef<
+const AvatarContainer = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
   >(({ className, ...props }, ref) => (
@@ -17,7 +18,7 @@ const Avatar = React.forwardRef<
     {...props}
   />
 ))
-Avatar.displayName = AvatarPrimitive.Root.displayName
+AvatarContainer.displayName = AvatarPrimitive.Root.displayName
 
 const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
@@ -46,4 +47,17 @@ const AvatarFallback = React.forwardRef<
 ))
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
-export { Avatar, AvatarImage, AvatarFallback }
+const Avatar = ({ src }: { src?: string }) => (
+  <AvatarContainer className="h-7 w-7">
+    <AvatarImage src={src} />
+    <AvatarFallback>
+      <IndividualIcon
+        aria-hidden={true}
+        focusable={false}
+        className="h-6 w-6"
+      />
+    </AvatarFallback>
+  </AvatarContainer>
+);
+
+export { AvatarContainer, AvatarImage, AvatarFallback, Avatar }
