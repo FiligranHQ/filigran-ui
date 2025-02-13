@@ -22,6 +22,11 @@
 
   --hover-background: var(--gray-150);
 
+  --linear-background-primary: linear-gradient(99.95deg, #001BDA 0%, #0FBCFF 100%);
+  --box-shadow-primary: 1px 0px 4px -1px #001BDA, -1px 0px 4px -1px #0FBCFF;
+  --linear-background-ai: linear-gradient(99.95deg, #7b1fa2 0%, #9c27b0 100%);
+  --box-shadow-ai: 1px 0px 4px -1px #7b1fa2, -1px 0px 4px -1px #9c27b0;
+
   --primary: var(--darkblue-600);
   --primary-foreground: var(--light-100);
   --secondary: var(--green-800);
@@ -148,6 +153,11 @@
   --card: 247 45% 5.59%;
   --card-foreground: 247 10% 97.15%;
   --input: var(--gray-800);
+
+  --linear-background-primary: linear-gradient(99.95deg, #0FBCFF 0%, #00F1BD 100%);
+  --box-shadow-primary: 1px 0px 4px -1px #0FBCFF, -1px 0px 4px -1px #00F1BD;
+  --linear-background-ai: linear-gradient(99.95deg, #673ab7 0%, #9575cd 100%);
+  --box-shadow-ai: 1px 0px 4px -1px #673ab7, -1px 0px 4px -1px #9575cd;
 
   --page-background: 220 54% 8%;
   --box-background: #ffffff;

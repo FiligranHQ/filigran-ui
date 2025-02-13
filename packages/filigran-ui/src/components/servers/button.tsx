@@ -22,6 +22,7 @@ const buttonVariants = cva(
         'link-primary': 'text-primary underline-offset-4 hover:underline normal-case',
         'link-destructive': 'text-destructive underline-offset-4 hover:underline normal-case',
         'link-secondary': 'text-secondary underline-offset-4 hover:underline normal-case',
+        'gradient-primary': 'bg-background',
       },
       size: {
         default: 'h-9 px-4 py-2',
@@ -46,6 +47,38 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+const GradientButton = ({ variant, withShadow = true, ...props }) => {
+  let style = {};
+  switch (variant) {
+    case 'ai':
+      style = {
+        background: 'var(--linear-background-ai)',
+        boxShadow: withShadow && 'var(--box-shadow-ai)',
+        transition: withShadow && 'box-shadow .15s,transform .15s',
+      };
+      break;
+    default:
+      style = {
+        background: 'var(--linear-background-primary)',
+        boxShadow: withShadow && 'var(--box-shadow-primary)',
+        transition: withShadow && 'box-shadow .15s,transform .15s',
+      };
+      break;
+  }
+  return (
+    <div
+      style={style}
+      className="rounded p-[1px] h-9"
+    >
+      <button
+        className={cn(buttonVariants({ variant: 'gradient-primary' }), 'w-full h-full', 'rounded-[2px]')}
+        {...props}
+      />
+    </div>
+  );
+};
+GradientButton.displayName = 'GradientButton'
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button'
@@ -60,4 +93,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = 'Button'
 
-export { Button, buttonVariants }
+export { Button, GradientButton, buttonVariants }
