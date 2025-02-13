@@ -11,10 +11,10 @@ Displays a button.
 
 ### Props
 
-| Name        | Type                                                                                 | Default | Description                                                                                                      |
-| -------     | --------------------------------------------                                         | ------- | ---------------------------------------------------------------------------------------------------------------- |
-| **variant** | *enum* ("default" \| "secondary" \| "destructive" \| "outline" \| "ghost" \| "link") | default | This attribute defines the visual style of the button. Here are the different variants and their characteristics |
-| **size**    | *enum* ("default" \| "sm" \| "lg" \| "icon")                                         | default | This attribute defines the visual style of the button. Here are the different variants and their characteristics |
+| Name        | Type                                                                                                                                                      | Default | Description                                                                                                      |
+| -------     | --------------------------------------------                                                                                                              | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| **variant** | *enum* ("default" \| "secondary" \| "destructive" \| "outline" \| "ghost" \| "link" \| "outline-primary" \| "outline-destructive" \| "outline-secondary") | default | This attribute defines the visual style of the button. Here are the different variants and their characteristics |
+| **size**    | *enum* ("default" \| "sm" \| "lg" \| "icon" \| "icon-rounded")                                                                                            | default | This attribute defines the visual style of the button. Here are the different variants and their characteristics |
 
 **Variant attribute**: This attribute defines the visual style of the button. Here are the different variants and their characteristics:
 
@@ -24,6 +24,7 @@ Displays a button.
 - **outline**: This button has a border around the text instead of a filled background, providing a lighter and less visually dominant element.
 - **ghost**: This button has minimal styling, often with only text and a subtle hover effect, making it appear transparent on the page.
 - **link**: This button resembles a text link, typically underlined and changing color on hover. It's suitable for actions that navigate to another page or trigger an external link.
+- **\{main_variant\}_\{alternate_color\}**: Is just a mix of two variants, for example being outline with secondary color will be outline-secondary
 
 ### Playground
 
@@ -35,23 +36,29 @@ Import \{Button\} from 'filigran-ui'
 <ReactLiveDisplay
   codeExample={`
     <div className={'flex gap-2'}>
-        <div className="flex flex-col gap-s">
+        <div className="flex flex-col gap-s items-center">
           <Button> Primary/Default </Button>
           <Button variant="outline-primary"> Outline </Button>
           <Button variant="ghost-primary"> Ghost </Button>
           <Button variant="link-primary"> Link </Button>
+          <Button size="icon"><AddIcon className="size-4" /></Button>
+          <Button size="icon-rounded"><AddIcon className="size-4" /></Button>
         </div>
-        <div className="flex flex-col gap-s">
+        <div className="flex flex-col gap-s items-center">
           <Button variant="secondary"> Secondary </Button>
           <Button variant="outline-secondary"> Outline </Button>
           <Button variant="ghost-secondary"> Ghost </Button>
           <Button variant="link-secondary"> Link </Button>
+          <Button variant="secondary" size="icon"><AddIcon className="size-4" /></Button>
+          <Button variant="secondary" size="icon-rounded"><AddIcon className="size-4" /></Button>
         </div>
-        <div className="flex flex-col gap-s">
+        <div className="flex flex-col gap-s items-center">
           <Button variant="destructive"> Destructive </Button>
           <Button variant="outline-destructive"> Outline </Button>
           <Button variant="ghost-destructive"> Ghost </Button>
           <Button variant="link-destructive"> Link </Button>
+          <Button variant="destructive" size="icon"><AddIcon className="size-4" /></Button>
+          <Button variant="destructive" size="icon-rounded"><AddIcon className="size-4" /></Button>
         </div>
         <div className="flex flex-col gap-s">
           <Button variant="outline"> Outline </Button>
