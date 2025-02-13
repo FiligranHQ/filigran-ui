@@ -22,6 +22,8 @@
 
   --hover-background: var(--gray-150);
 
+  --linear-background-primary: linear-gradient(99.95deg, #001BDA 0%, #0FBCFF 100%);
+
   --primary: var(--darkblue-600);
   --primary-foreground: var(--light-100);
   --secondary: var(--green-800);
@@ -148,6 +150,8 @@
   --card: 247 45% 5.59%;
   --card-foreground: 247 10% 97.15%;
   --input: var(--gray-800);
+
+  --linear-background-primary: linear-gradient(99.95deg, #0FBCFF 0%, #00F1BD 100%);
 
   --page-background: 220 54% 8%;
   --box-background: #ffffff;
