@@ -1,30 +1,14 @@
----
-title: Carousel
----
+'use client'
 
-# Carousel Example
+import * as React from 'react'
 
-<ExampleCarousel/>
+import {Carousel, Combobox} from 'filigran-ui/clients'
+import {Button} from 'filigran-ui'
+import ReactLiveDisplay from '@/components/react-live/ReactLiveDisplay'
 
-## How to use this multiselect
-### Props
-
-| Name               | Type                                | Default     | Description                                                                               |
-| -------------      | --------                            | ----------- | ----------------------------------------------------------------------------              |
-| **placeholder**    | *ReactNode*                         | <></>       | React component to display anything (preview, text, bento...)                             |
-| **slides** *       | *string[]*                          | []          | A tab of images in B64 to be displayed                                                    |
-| **onSlideChange**  | *(value: number) => void*           | -           | Function triggered when the displayed image changes                                       |
-
-
-### Playground
-
-
-*Import from filigran-ui :*
-
-Import \{Carousel\} from 'filigran-ui'
-
-<ReactLiveDisplay displayError={false} codeExample={`
-               <Carousel
+export function ExampleCarousel() {
+  return (
+    <Carousel
       onSlideChange={(slideIndex) => {
         console.log('slideIndex', slideIndex)
       }}
@@ -34,4 +18,6 @@ Import \{Carousel\} from 'filigran-ui'
         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII',
       ]}
-    />`} />
+    />
+  )
+}

@@ -4,9 +4,31 @@ title: Avatar
 
 # Avatar example
 
-Displays an avatar.
-
+<div className="h-24 w-24">
 <Avatar>
-  <AvatarImage src="https://github.com/shadcn.png" />
+  <AvatarImage  src="https://github.com/shadcn.png" />
   <AvatarFallback>CN</AvatarFallback>
 </Avatar>
+</div>
+
+
+## How to use this multiselect
+### Props
+
+| Name               | Type                                | Default     | Description                                                                                |
+| -------------      | --------                            | ----------- | --------------------------------------------------------------------------------------     |
+| **src**            | *String*                            | ''          | On the AvatarImage, set the image that should be displayed :)                              |
+
+### Playground
+
+*Import from filigran-ui :*
+
+Import \{Avatar\} from 'filigran-ui'
+
+<ReactLiveDisplay displayError={false} codeExample={`
+        <div className="h-12 w-12">
+        <Avatar>
+          <AvatarImage  src="https://github.com/shadcn.png" />
+          <AvatarFallback>CN</AvatarFallback>
+        </Avatar>
+        </div>`} />

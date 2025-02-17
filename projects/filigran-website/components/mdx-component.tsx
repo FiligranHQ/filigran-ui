@@ -25,6 +25,7 @@ import {CodePlaygroundTest} from '@/components/code-playground/code-playground-t
 import {PlaygroundTest} from '@/components/code-playground/playground-test'
 import {ContentWithLeftColumnFixed} from '@/components/ui/content-with-left-column-fixed'
 import ExampleFileInput from '@/components/example/example-file-input'
+import {ExampleCarousel} from '@/components/example/example-carousel'
 
 const options = {
   mdxOptions: {
@@ -46,6 +47,7 @@ const components = {
   ExampleDataTable: ExampleDataTable,
   ExampleMultiSelect: ExampleMultiSelect,
   ExampleCombobox: ExampleCombobox,
+  ExampleCarousel: ExampleCarousel,
   ExampleToast: ExampleToast,
   ExampleSheet: ExampleSheet,
   ExampleFileInput: ExampleFileInput,
