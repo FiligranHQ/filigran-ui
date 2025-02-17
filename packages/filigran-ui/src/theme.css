@@ -99,7 +99,7 @@
   --turquoise-800: 167 100% 17%;
   --turquoise-900: 167 100% 7%;
 
-  --red-default: var(--red-600);
+  --red-default: var(--red-400);
   --red-100: 6 88% 88%;
   --red-200: 5 88% 76%;
   --red-300: 5 88% 68%;
