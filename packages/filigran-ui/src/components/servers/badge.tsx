@@ -29,12 +29,13 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {}
 
-function Badge({className, variant, size, ...props}: BadgeProps) {
+function Badge({className, variant, size, color, ...props}: BadgeProps) {
   return (
     <div
       className={cn(badgeVariants({variant, size}), className)}
+      style={color ? { borderColor: color } : {}}
       {...props}>
-      <div className="inline-flex items-center text-foreground">
+      <div className="inline-flex items-center text-foreground" style={color ? { color } : {}}>
         {props.children}
       </div>
     </div>
