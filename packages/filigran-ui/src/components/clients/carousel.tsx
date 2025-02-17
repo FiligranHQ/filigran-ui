@@ -12,7 +12,7 @@ export function Carousel({
   slides = [],
   onSlideChange,
 }: {
-  placeholder: ReactNode
+  placeholder: ReactNode | undefined
   slides?: string[]
   onSlideChange?: (index: number) => void
 }) {
