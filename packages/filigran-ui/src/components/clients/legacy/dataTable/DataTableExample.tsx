@@ -32,7 +32,7 @@ export const DataTableExample = React.forwardRef<HTMLDivElement>((props, ref) =>
           isSortable: true,
           render: ({ type }) => (
             <Badge
-              style={{ color: colors[(['Incident', 'Report', 'Vulnerability'].indexOf(type) + 3)] }}
+              color={colors[(['Incident', 'Report', 'Vulnerability'].indexOf(type) + 3)]}
             >
               {type.toUpperCase()}
             </Badge>
@@ -66,7 +66,7 @@ export const DataTableExample = React.forwardRef<HTMLDivElement>((props, ref) =>
           isSortable: true,
           render: ({ status }) => (
             <Badge
-              style={{ color: colors[(['in progress', 'not started', 'done'].indexOf(status))] }}
+              color={colors[(['in progress', 'not started', 'done'].indexOf(status))]}
             >
               {status.toUpperCase()}
             </Badge>
