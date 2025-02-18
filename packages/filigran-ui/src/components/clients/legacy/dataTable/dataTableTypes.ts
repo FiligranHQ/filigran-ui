@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Dispatch, MutableRefObject, ReactNode, SetStateAction } from 'react';
 import React from 'react';
-import { type PopoverProps } from '@mui/material/Popover/Popover';
 
 //TODO
 type LocalStorage = any;
@@ -195,9 +194,6 @@ export interface DataTableHeadersProps {
 
 export interface DataTableHeaderProps {
   column: DataTableColumn
-  setAnchorEl: Dispatch<SetStateAction<PopoverProps['anchorEl']>>
-  setActiveColumn: Dispatch<SetStateAction<DataTableColumn | undefined>>
-  containerRef?: MutableRefObject<HTMLDivElement | null>
   sortBy: boolean
   orderAsc: boolean
   isActive?: boolean

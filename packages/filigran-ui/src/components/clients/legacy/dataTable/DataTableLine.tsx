@@ -1,6 +1,4 @@
 import React, { CSSProperties, useMemo } from 'react';
-import { Skeleton, IconButton, Box } from '@mui/material';
-import { KeyboardArrowRightOutlined } from '@mui/icons-material';
 import { redirect } from 'react-router-dom';
 import type { DataTableCellProps, DataTableLineProps } from './dataTableTypes';
 import { DataTableVariant } from './dataTableTypes';
@@ -8,6 +6,8 @@ import { SELECT_COLUMN_SIZE } from './DataTableHeader';
 import { useDataTableContext } from './DataTableContext';
 import { useTheme } from '@mui/styles';
 import { Checkbox } from '../../checkbox';
+import { ChevronIcon } from 'filigran-icon';
+import { Button, Skeleton } from '../../../servers';
 
 const cellContainerStyle = {
   display: 'flex',
@@ -23,21 +23,25 @@ const DataTableLineDummy = () => {
   const { columns, tableWidthState: [tableWidth] } = useDataTableContext();
   return (
     <div style={{ display: 'flex' }}>
-      {columns.map((column) => (
-        <div
-          key={column.id}
-          style={{
-            paddingLeft: '0.5rem',
-            paddingRight: '1rem',
-            flex: '0 0 auto',
-            width: column.percentWidth
-              ? Math.round(tableWidth * (column.percentWidth / 100))
-              : SELECT_COLUMN_SIZE,
-          }}
-        >
-          <Skeleton variant="text" height={35} />
-        </div>
-      ))}
+      {columns.map((column) => {
+        const width = column.percentWidth
+          ? Math.round((tableWidth || window.innerWidth * 0.7) * (column.percentWidth / 100))
+          : SELECT_COLUMN_SIZE;
+        return (
+          <div
+            key={column.id}
+            className="p-s"
+            style={{
+              paddingLeft: '0.5rem',
+              paddingRight: '1rem',
+              flex: '0 0 auto',
+              width,
+            }}
+          >
+            <Skeleton className="h-6" />
+          </div>
+        )
+      })}
     </div>
   );
 };
@@ -212,9 +216,12 @@ const DataTableLine = ({
           >
             {actions && actions(data)}
             {endsWithNavigate && (
-              <IconButton sx={{ color: (theme && theme.palette?.mode === "dark") ? 'hsl(var(--text-inverted-foreground))' : 'hsl(var(--text-foreground))' }} onClick={() => redirect(link)}>
-                <KeyboardArrowRightOutlined />
-              </IconButton>
+              <Button
+                variant="ghost"
+                size="icon"
+              >
+                <ChevronIcon className="size-4" />
+              </Button>
             )}
           </div>
         )}

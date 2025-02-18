@@ -16,6 +16,7 @@ export const useDataTablePaginationLocalStorage = (...p: any[]) => ({
   helpers: {
     handleAddFilterWithEmptyValue: (e: any) => {},
     handleSort: () => {},
+    handleAddProperty: () => {},
   },
 });
 export const useDataTableToggle = useEntityToggle;

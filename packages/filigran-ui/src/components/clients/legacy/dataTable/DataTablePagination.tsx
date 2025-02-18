@@ -1,10 +1,12 @@
-"use client"
-import Tooltip from '@mui/material/Tooltip';
-import React, { type Dispatch, type SetStateAction, useCallback, useEffect } from 'react';
-import { ArrowLeft, ArrowRight } from '@mui/icons-material';
+'use client'
+import React, { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from 'react';
 import { type NumberOfElements } from './dataTableTypes';
 import { useDataTableContext } from './DataTableContext';
 import { Button } from '../../../servers';
+import { TableTuneIcon, ArrowPreviousIcon, ArrowNextIcon } from 'filigran-icon';
+import { DropdownMenu, DropdownMenuPortal, DropdownMenuSub, DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
+import { DropdownMenuContent, DropdownMenuSubContent, DropdownMenuSubTrigger } from '../../dropdown-menu';
+import { SimpleTooltip as Tooltip } from '../../tooltip';
 
 const DataTablePagination = ({
   page,
@@ -54,45 +56,7 @@ const DataTablePagination = ({
     resetColumns();
     helpers.handleAddProperty('pageSize', '25');
   };
-  const nestedMenuOptions = [
-    {
-      value: 'menu-reset',
-      label: t_i18n('Reset table'),
-      onClick: () => resetTable(),
-      menuLevel: 0,
-    },
-    {
-      value: 'menu-rows-per-page',
-      label: t_i18n('Rows per page'),
-      menuLevel: 0,
-      nestedOptions: [
-        {
-          value: '10',
-          onClick: () => helpers.handleAddProperty('pageSize', '10'),
-          selected: pageSize === '10',
-          menuLevel: 1,
-        },
-        {
-          value: '25',
-          onClick: () => helpers.handleAddProperty('pageSize', '25'),
-          selected: !pageSize || pageSize === '25',
-          menuLevel: 1,
-        },
-        {
-          value: '50',
-          onClick: () => helpers.handleAddProperty('pageSize', '50'),
-          selected: pageSize === '50',
-          menuLevel: 1,
-        },
-        {
-          value: '100',
-          onClick: () => helpers.handleAddProperty('pageSize', '100'),
-          selected: pageSize === '100',
-          menuLevel: 1,
-        },
-      ],
-    },
-  ];
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div
@@ -113,7 +77,7 @@ const DataTablePagination = ({
         <Button
           variant="ghost"
           onClick={() => fetchMore('previous')}
-          size="icon"
+          size="icon-rounded"
           disabled={firstItem === 1}
           style={{
             padding: 0,
@@ -122,7 +86,7 @@ const DataTablePagination = ({
             height: 24,
           }}
         >
-          <ArrowLeft />
+          <ArrowPreviousIcon className="size-2" />
         </Button>
         <Tooltip
           title={
@@ -142,7 +106,7 @@ const DataTablePagination = ({
         <Button
           onClick={() => fetchMore('forward')}
           variant="ghost"
-          size="icon"
+          size="icon-rounded"
           disabled={lastItem === numberOfElements.original}
           style={{
             padding: 0,
@@ -151,24 +115,52 @@ const DataTablePagination = ({
             height: 24,
           }}
         >
-          <ArrowRight />
+          <ArrowNextIcon className="size-2" />
         </Button>
+        <DropdownMenu
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+        >
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="flex h-6 w-6 p-0 data-[state=open]:bg-muted">
+              {<TableTuneIcon className="size-4 text-foreground" />}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-[160px]">
+            <>
+              <Button
+                variant="ghost"
+                className="w-full justify-start normal-case"
+                onClick={resetTable}
+              >
+                {t_i18n('Reset table')}
+              </Button>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="pl-l">
+                  {t_i18n('Rows per page')}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    {['10', '25', '50', '100'].map((nb) => (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start normal-case"
+                        onClick={() => helpers.handleAddProperty('pageSize', nb)}
+                      >
+                        {nb}
+                      </Button>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+            </>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      {/*<NestedMenuButton*/}
-      {/*  menuButtonProps={{*/}
-      {/*    variant: 'outlined',*/}
-      {/*    size: 'small',*/}
-      {/*    color: 'pagination',*/}
-      {/*    style: {*/}
-      {/*      padding: 6,*/}
-      {/*      minWidth: 36,*/}
-      {/*      border: 'none',*/}
-      {/*    },*/}
-      {/*  }}*/}
-      {/*  menuButtonChildren={<TableTuneIcon />}*/}
-      {/*  options={nestedMenuOptions}*/}
-      {/*  menuLevels={2}*/}
-      {/*/>*/}
     </div>
   );
 };
