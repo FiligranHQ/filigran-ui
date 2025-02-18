@@ -8,7 +8,9 @@ import * as FiligranIcon from 'filigran-icon'
 import * as LucidIcon from 'lucide-react'
 import {DisplayAllIcons} from '@/components/display-all-icons'
 import {ExampleDataTable} from '@/components/example/example-data-table'
+import {ExampleSimpleDataTable} from '@/components/example/example-simple-data-table'
 import {ExampleMultiSelect} from '@/components/example/example-multi-select'
+import {ExamplePage} from '@/components/example/example-page'
 import {ExampleCombobox} from '@/components/example/example-combobox'
 import {ExampleToast} from '@/components/example/example-toast'
 import {ExampleSheet} from '@/components/example/example-sheet'
@@ -45,10 +47,12 @@ const components = {
   ReactLiveDisplay: ReactLiveDisplay,
   DisplayAllIcons: DisplayAllIcons,
   ExampleDataTable: ExampleDataTable,
+  ExampleSimpleDataTable: ExampleSimpleDataTable,
   ExampleMultiSelect: ExampleMultiSelect,
   ExampleCombobox: ExampleCombobox,
   ExampleCarousel: ExampleCarousel,
   ExampleToast: ExampleToast,
+  ExamplePage: ExamplePage,
   ExampleSheet: ExampleSheet,
   ExampleFileInput: ExampleFileInput,
   ExampleTagInput: ExampleTagInput,

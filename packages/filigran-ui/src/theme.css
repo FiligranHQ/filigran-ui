@@ -13,9 +13,8 @@
   --secondary-text-foreground: var(--gray-600);
   --text-inverted-foreground: var(--light-100);
   --text-inverted-foreground-focus: var(--primary-background);
-  --border-strong: var(--gray-800);
+  --border-medium: var(--gray-800);
   --border-medium-strong: var(--gray-600);
-  --border-medium: var(--gray-500);
   --border-medium-light: var(--gray-200);
   --border-light: var(--gray-150);
   --border-focus: var(--darkblue-300);

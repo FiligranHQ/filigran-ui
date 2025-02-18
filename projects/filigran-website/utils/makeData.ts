@@ -1,4 +1,4 @@
-import {faker} from '@faker-js/faker'
+import { faker } from '@faker-js/faker'
 
 export type Person = {
   id: string
@@ -12,6 +12,16 @@ export type Person = {
   subRows?: Person[]
 }
 
+export interface Report {
+  id: string
+  name: string
+  type: string
+  author: string
+  creator: string
+  date: Date
+  status: 'in progress' | 'not started' | 'done'
+}
+
 const range = (len: number) => {
   const arr: number[] = []
   for (let i = 0; i < len; i++) {
@@ -19,6 +29,25 @@ const range = (len: number) => {
   }
   return arr
 }
+
+const newReport = (): Report => ({
+  id: faker.string.uuid(),
+  name: faker.company.name(),
+  type: faker.helpers.shuffle<Report['type']>([
+    'Incident',
+    'Report',
+    'Vulnerability',
+  ])[0]!,
+  author: faker.person.fullName(),
+  creator: faker.person.firstName(),
+  date: faker.date.anytime(),
+  description: faker.lorem.sentence(),
+  status: faker.helpers.shuffle<Report['status']>([
+    'in progress',
+    'not started',
+    'done',
+  ])[0]!,
+});
 
 const newPerson = (): Person => {
   return {
@@ -37,14 +66,10 @@ const newPerson = (): Person => {
   }
 }
 
-export function makeData(...lens: number[]) {
-  const makeDataLevel = (depth = 0): Person[] => {
-    const len = lens[depth]!
-    return range(len).map((d): Person => {
-      return {
-        ...newPerson(),
-        subRows: lens[depth + 1] ? makeDataLevel(depth + 1) : undefined,
-      }
+export function makeData(nbItems: number, type = "person") {
+  const makeDataLevel = (): (Person | Report)[] => {
+    return range(nbItems).map((d): Report | Person => {
+      return type === "person" ? newPerson() : newReport();
     })
   }
 
