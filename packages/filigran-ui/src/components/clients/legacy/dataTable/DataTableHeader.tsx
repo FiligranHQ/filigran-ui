@@ -76,11 +76,11 @@ const DataTableHeader: FunctionComponent<DataTableHeaderProps> = ({
         onOpenChange={setMenuOpen}
       >
         <DropdownMenuTrigger>
-          {((hasColumnMenu && active) || menuOpen) && (
+          {(hasColumnMenu) && (
             <Button
               variant="ghost"
               size="icon-rounded"
-              className="w-4 mr-1 hover:bg-transparent"
+              className={cn('w-4 mr-1 hover:bg-transparent', (active || menuOpen) ? 'visible' : 'hidden')}
             >
               <MoreVertIcon className="size-4" />
             </Button>

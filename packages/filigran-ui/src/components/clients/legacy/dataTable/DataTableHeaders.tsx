@@ -1,5 +1,5 @@
-import React, { CSSProperties, FunctionComponent, useMemo, useRef, useState } from 'react';
-import { DataTableColumn, DataTableHeadersProps } from './dataTableTypes';
+import React, { CSSProperties, FunctionComponent, useRef } from 'react';
+import { DataTableHeadersProps } from './dataTableTypes';
 import DataTableHeader, { SELECT_COLUMN_SIZE } from './DataTableHeader';
 import { useDataTableContext } from './DataTableContext';
 import { Checkbox } from '../../checkbox';
@@ -24,8 +24,6 @@ const DataTableHeaders: FunctionComponent<DataTableHeadersProps> = ({
     },
   } = useDataTableContext();
   const containerRef = useRef<HTMLDivElement | null>(null);
-
-  const [activeColumn, setActiveColumn] = useState<DataTableColumn | undefined>();
 
   // const handleToggleVisibility = (columnId: string) => {
   //   const newColumns = [...columns];
@@ -170,8 +168,6 @@ const DataTableHeaders: FunctionComponent<DataTableHeadersProps> = ({
           <DataTableHeader
             key={column.id}
             column={column}
-            isActive={activeColumn?.id === column.id}
-            setActiveColumn={setActiveColumn}
             containerRef={containerRef}
             sortBy={sortBy === column.id}
             orderAsc={!!orderAsc}
