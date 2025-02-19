@@ -74,6 +74,7 @@ export interface DataTableContextProps {
   startsWithAction: boolean
   endsWithAction: boolean
   endsWithNavigate: boolean
+  dataQueryArgs: DataTableProps['dataQueryArgs']
 }
 
 type UseDataTableToggle = (key: string) => {

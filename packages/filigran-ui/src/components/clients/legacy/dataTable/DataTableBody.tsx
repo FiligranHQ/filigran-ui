@@ -24,12 +24,8 @@ const DataTableBody = ({
     endsWithAction,
     actions,
     columns,
-    useDataTable: {
-      data: queryData,
-      isLoading,
-      loadMore,
-      hasMore,
-    },
+    dataQueryArgs,
+    useDataTable,
     useDataTableToggle: {
       selectedElements,
       onToggleEntity,
@@ -39,6 +35,13 @@ const DataTableBody = ({
       helpers: { handleAddProperty }
     },
   } = useDataTableContext();
+
+  const {
+    data: queryData,
+    isLoading,
+    loadMore,
+    hasMore,
+  } = useDataTable(dataQueryArgs);
 
   const resolvedData = useMemo(() => {
     if (!queryData) {

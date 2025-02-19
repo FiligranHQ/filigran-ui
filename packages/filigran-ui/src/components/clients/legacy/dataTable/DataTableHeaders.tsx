@@ -20,7 +20,7 @@ const DataTableHeaders: FunctionComponent<DataTableHeadersProps> = ({
     startsWithAction,
     endsWithAction,
     useDataTablePaginationLocalStorage: {
-      viewStorage: { sortBy, orderAsc },
+      viewStorage: { orderBy, sortBy, orderAsc },
     },
   } = useDataTableContext();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -169,7 +169,7 @@ const DataTableHeaders: FunctionComponent<DataTableHeadersProps> = ({
             key={column.id}
             column={column}
             containerRef={containerRef}
-            sortBy={sortBy === column.id}
+            sortBy={(orderBy || sortBy) === column.id}
             orderAsc={!!orderAsc}
           />
         ))}
