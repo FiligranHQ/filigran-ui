@@ -17,7 +17,6 @@ interface ColorBoxProps {
 }
 const ColorBox: React.FunctionComponent<ColorBoxProps> = ({
   colorName,
-  colorValue,
   colorBackground,
   primary = false,
   selectedColor,
@@ -29,17 +28,16 @@ const ColorBox: React.FunctionComponent<ColorBoxProps> = ({
       title: 'Copied !',
       description: 'Value copied to clipboard',
     })
-    selectedColor({colorBackground: colorBackground, colorValue: colorValue})
+    selectedColor({colorBackground: colorBackground })
   }
   return (
     <div
       className={`w-20 flex-col hover:cursor-pointer`}
-      onClick={() => onClick(colorValue)}>
+      onClick={() => onClick(colorBackground)}>
       <div
-        className={`mr-xs h-10 w-10 rounded border-black ${colorBackground || ''} ${primary ? 'border-4' : 'border'} `}
+        className={`mr-xs h-10 w-10 rounded border-black ${colorBackground ? `bg${colorBackground.slice(1)}` : ''} ${primary ? 'border-4' : 'border'} `}
       />
       <div className="font-bold">{colorName}</div>
-      <div className="text-xs text-slate-400">#{colorValue}</div>
     </div>
   )
 }

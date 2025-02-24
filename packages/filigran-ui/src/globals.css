@@ -26,7 +26,3 @@ ol{
   padding: 0 !important;
   margin: 0 !important;
 }
-
-.test_line:hover {
-  background: var(--hover-background);
-}

@@ -162,13 +162,10 @@ const DataTableLine = ({
     borderColor: 'hsl(var(--border-medium-light))',
     cursor: clickable ? 'pointer' : 'unset',
     textDecoration: 'none',
-    '&:hover': {
-      background: 'red',
-    }
   };
 
   return (
-    <div className="test_line">
+    <div className="hover:bg-hover">
       <a
         className={theme?.palette?.mode}
         style={linkStyle}
