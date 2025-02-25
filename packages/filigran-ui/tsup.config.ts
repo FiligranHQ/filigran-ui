@@ -86,6 +86,7 @@ export default defineConfig(() => {
       'src/plugin.ts',
       'src/components/clients/index.ts',
       'src/components/servers/index.ts',
+      'src/components/auto-form/index.ts',
     ],
     splitting: true,
     treeshake: true,

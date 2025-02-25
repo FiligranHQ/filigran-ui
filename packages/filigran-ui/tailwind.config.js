@@ -5,7 +5,8 @@ import {
 import FiligranUIPlugin from './src/plugin'
 
 const config = {
-  content: [
+    darkMode: ['class'],
+    content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
