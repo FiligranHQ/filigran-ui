@@ -15,6 +15,7 @@ export const ArrowDownwardAltIcon = lazy(() => import("./ArrowDownwardAlt"));
 export const ArrowFirstIcon = lazy(() => import("./ArrowFirst"));
 export const ArrowLastIcon = lazy(() => import("./ArrowLast"));
 export const ArrowNextIcon = lazy(() => import("./ArrowNext"));
+export const ArrowOutwardIcon = lazy(() => import("./ArrowOutward"));
 export const ArrowPreviousIcon = lazy(() => import("./ArrowPrevious"));
 export const ArrowRightAltIcon = lazy(() => import("./ArrowRightAlt"));
 export const ArrowUpwardIcon = lazy(() => import("./ArrowUpward"));
