@@ -1,10 +1,20 @@
-import React, { CSSProperties, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import DataTableHeaders from './DataTableHeaders';
-import { DataTableBodyProps, DataTableLineProps, DataTableVariant } from './dataTableTypes';
-import DataTableLine, { DataTableLinesDummy } from './DataTableLine';
-import { useDataTableContext } from './DataTableContext';
-import { SELECT_COLUMN_SIZE } from './DataTableHeader';
-import callbackResizeObserver from '../../utils/resizeObserver';
+import {
+  CSSProperties,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react'
+import callbackResizeObserver from '../../utils/resizeObserver'
+import {useDataTableContext} from './DataTableContext'
+import {SELECT_COLUMN_SIZE} from './DataTableHeader'
+import DataTableHeaders from './DataTableHeaders'
+import DataTableLine, {DataTableLinesDummy} from './DataTableLine'
+import {
+  DataTableBodyProps,
+  DataTableLineProps,
+  DataTableVariant,
+} from './dataTableTypes'
 
 const DataTableBody = ({
   settingsMessagesBannerHeight = 0,
@@ -26,165 +36,196 @@ const DataTableBody = ({
     columns,
     dataQueryArgs,
     useDataTable,
-    useDataTableToggle: {
-      selectedElements,
-      onToggleEntity,
-    },
+    useDataTableToggle: {selectedElements, onToggleEntity},
     useDataTablePaginationLocalStorage: {
-      viewStorage: { filters },
-      helpers: { handleAddProperty }
+      viewStorage: {filters},
+      helpers: {handleAddProperty},
     },
-  } = useDataTableContext();
+  } = useDataTableContext()
 
   const {
     data: queryData,
     isLoading,
     loadMore,
     hasMore,
-  } = useDataTable(dataQueryArgs);
+  } = useDataTable(dataQueryArgs)
 
   const resolvedData = useMemo(() => {
     if (!queryData) {
-      return [];
+      return []
     }
-    return resolvePath(queryData).slice(pageStart, pageStart + pageSize);
-  }, [queryData, pageStart, pageSize]);
+    return resolvePath(queryData).slice(pageStart, pageStart + pageSize)
+  }, [queryData, pageStart, pageSize])
 
   useEffect(() => {
     if (resolvePath(queryData).length < pageStart + pageSize && hasMore?.()) {
-      loadMore?.(pageSize);
+      loadMore?.(pageSize)
     }
-  }, [resolvedData]);
+  }, [resolvedData])
 
   useEffect(() => {
-    let connectionId;
+    let connectionId
     Object.entries(queryData).forEach(([_, value]) => {
-      if(Object.keys(value).includes('edges') && Object.keys(value).includes('__id')){
-        connectionId = value.__id;
+      if (
+        Object.keys(value).includes('edges') &&
+        Object.keys(value).includes('__id')
+      ) {
+        connectionId = value.__id
       }
-    });
-    handleAddProperty("connectionId", connectionId);
-  }, [handleAddProperty, queryData]);
+    })
+    handleAddProperty('connectionId', connectionId)
+  }, [handleAddProperty, queryData])
 
   // Keep table width up to date.
   useLayoutEffect(() => {
-    let observer: ResizeObserver;
+    let observer: ResizeObserver
     if (tableRef.current) {
       const resize = (el: Element) => {
-        let offset = 10;
-        if (startsWithAction) offset += SELECT_COLUMN_SIZE;
-        if (endsWithAction) offset += SELECT_COLUMN_SIZE;
-        if ((el.clientWidth - offset) !== tableWidth) {
-          setTableWidth(el.clientWidth - offset);
+        let offset = 10
+        if (startsWithAction) offset += SELECT_COLUMN_SIZE
+        if (endsWithAction) offset += SELECT_COLUMN_SIZE
+        if (el.clientWidth - offset !== tableWidth) {
+          setTableWidth(el.clientWidth - offset)
         }
-      };
-      resize(tableRef.current);
-      observer = callbackResizeObserver(tableRef.current, resize);
+      }
+      resize(tableRef.current)
+      observer = callbackResizeObserver(tableRef.current, resize)
     }
-    return () => { observer?.disconnect(); };
-  }, [tableRef.current, tableWidth, startsWithAction, endsWithAction]);
+    return () => {
+      observer?.disconnect()
+    }
+  }, [tableRef.current, tableWidth, startsWithAction, endsWithAction])
 
-  const onToggleShiftEntity: DataTableLineProps['onToggleShiftEntity'] = (currentIndex, currentEntity, event) => {
+  const onToggleShiftEntity: DataTableLineProps['onToggleShiftEntity'] = (
+    currentIndex,
+    currentEntity,
+    event
+  ) => {
     if (selectedElements && Object.values(selectedElements).length > 0) {
       // Find the indexes of the first and last selected entities
       let firstIndex = resolvedData.findIndex(
-        (n: { id: string }) => n.id === Object.values(selectedElements).at(0)?.id,
-      );
+        (n: {id: string}) => n.id === Object.values(selectedElements).at(0)?.id
+      )
       if (currentIndex > firstIndex) {
-        let entities: { id: string }[] = [];
+        let entities: {id: string}[] = []
         while (firstIndex <= currentIndex) {
-          entities = [...entities, resolvedData[firstIndex]];
-          firstIndex += 1;
+          entities = [...entities, resolvedData[firstIndex]]
+          firstIndex += 1
         }
         const forcedRemove = Object.values(selectedElements).filter(
-          (n) => !entities.map((o) => o.id).includes(n.id),
-        );
-        return onToggleEntity(entities, event, forcedRemove);
+          (n) => !entities.map((o) => o.id).includes(n.id)
+        )
+        return onToggleEntity(entities, event, forcedRemove)
       }
-      let entities: { id: string }[] = [];
+      let entities: {id: string}[] = []
       while (firstIndex >= currentIndex) {
-        entities = [...entities, resolvedData[firstIndex]];
-        firstIndex -= 1;
+        entities = [...entities, resolvedData[firstIndex]]
+        firstIndex -= 1
       }
       const forcedRemove = Object.values(selectedElements).filter(
-        (n) => !entities.map((o) => o.id).includes(n.id),
-      );
-      return onToggleEntity(entities, event, forcedRemove);
+        (n) => !entities.map((o) => o.id).includes(n.id)
+      )
+      return onToggleEntity(entities, event, forcedRemove)
     }
-    return onToggleEntity(currentEntity, event);
-  };
+    return onToggleEntity(currentEntity, event)
+  }
 
-  const [tableHeight, setTableHeight] = useState(0);
+  const [tableHeight, setTableHeight] = useState(0)
   useLayoutEffect(() => {
     if (variant === DataTableVariant.widget && !rootRef) {
-      throw Error('Invalid configuration for widget list');
+      throw Error('Invalid configuration for widget list')
     }
 
-    const hasFilters = (filters?.filters ?? []).length > 0;
-    let filtersHeight = hasFilterComponent ? 54 : 0;
-    if (hasFilterComponent && hasFilters) filtersHeight += 48;
+    const hasFilters = (filters?.filters ?? []).length > 0
+    let filtersHeight = hasFilterComponent ? 54 : 0
+    if (hasFilterComponent && hasFilters) filtersHeight += 48
 
     // TODO: this computation should be avoided because too many risk of changes.
     // Instead use the rootRef props. Example in:
     // - StixCoreRelationshipCreationFromEntity.tsx
     // - IndicatorObservables.jsx
     const defaultComputation = () => {
-      const rootHeight = (document.getElementById('root')?.offsetHeight ?? 0) - settingsMessagesBannerHeight;
-      const headerHeight = 64;
-      const breadcrumbHeight = document.getElementById('page-breadcrumb') ? 38 : 0;
-      const mainPadding = 40;
-      const tabsHeight = document.getElementById('tabs-container')?.children.length ? 72 : 0;
-      setTableHeight(rootHeight - headerHeight - breadcrumbHeight - mainPadding - filtersHeight - tabsHeight);
-    };
-
-    // Take the height of the given parent.
-    let observer: ResizeObserver;
-    const rootComputation = () => {
-      if (rootRef) {
-        setTableHeight(rootRef.offsetHeight - filtersHeight);
-      }
-    };
-
-    if (rootRef) {
-      rootComputation();
-      observer = callbackResizeObserver(rootRef, rootComputation);
-    } else {
-      defaultComputation();
+      const rootHeight =
+        (document.getElementById('root')?.offsetHeight ?? 0) -
+        settingsMessagesBannerHeight
+      const headerHeight = 64
+      const breadcrumbHeight = document.getElementById('page-breadcrumb')
+        ? 38
+        : 0
+      const mainPadding = 40
+      const tabsHeight = document.getElementById('tabs-container')?.children
+        .length
+        ? 72
+        : 0
+      setTableHeight(
+        rootHeight -
+          headerHeight -
+          breadcrumbHeight -
+          mainPadding -
+          filtersHeight -
+          tabsHeight
+      )
     }
 
-    return () => { observer?.disconnect(); };
-  }, [settingsMessagesBannerHeight, rootRef, filters]);
+    // Take the height of the given parent.
+    let observer: ResizeObserver
+    const rootComputation = () => {
+      if (rootRef) {
+        setTableHeight(rootRef.offsetHeight - filtersHeight)
+      }
+    }
 
-  const rowWidth = useMemo(() => (
-    Math.floor(columns.reduce((acc, col) => {
-      const width = col.percentWidth
-        ? tableWidth * (col.percentWidth / 100)
-        : SELECT_COLUMN_SIZE;
-      return acc + width;
-    }, actions ? SELECT_COLUMN_SIZE + 9 : 9)) // 9 is for scrollbar.
-  ), [columns, tableWidth]);
+    if (rootRef) {
+      rootComputation()
+      observer = callbackResizeObserver(rootRef, rootComputation)
+    } else {
+      defaultComputation()
+    }
+
+    return () => {
+      observer?.disconnect()
+    }
+  }, [settingsMessagesBannerHeight, rootRef, filters])
+
+  const rowWidth = useMemo(
+    () =>
+      Math.floor(
+        columns.reduce(
+          (acc, col) => {
+            const width = col.percentWidth
+              ? tableWidth * (col.percentWidth / 100)
+              : SELECT_COLUMN_SIZE
+            return acc + width
+          },
+          actions ? SELECT_COLUMN_SIZE + 9 : 9
+        )
+      ), // 9 is for scrollbar.
+    [columns, tableWidth]
+  )
 
   const containerLinesStyle: CSSProperties = {
     overflow: 'hidden auto',
     maxHeight: `calc(${tableHeight}px - ${hideHeaders ? 0 : SELECT_COLUMN_SIZE}px)`,
     width: rowWidth,
-  };
+  }
 
   if (!tableWidth) {
-    return null;
+    return null
   }
 
   return (
     <>
-      <div style={{ width: rowWidth }}>
+      <div style={{width: rowWidth}}>
         {!hideHeaders && (
-          <DataTableHeaders dataTableToolBarComponent={dataTableToolBarComponent} />
+          <DataTableHeaders
+            dataTableToolBarComponent={dataTableToolBarComponent}
+          />
         )}
       </div>
 
       <div style={containerLinesStyle}>
         {/* If we have perf issues we should find a way to memoize this */}
-        {resolvedData.map((row: { id: string }, index: number) => {
+        {resolvedData.map((row: {id: string}, index: number) => {
           return (
             <DataTableLine
               key={row.id}
@@ -192,12 +233,12 @@ const DataTableBody = ({
               index={index}
               onToggleShiftEntity={onToggleShiftEntity}
             />
-          );
+          )
         })}
         {isLoading && <DataTableLinesDummy number={Math.max(pageSize, 10)} />}
       </div>
     </>
-  );
-};
+  )
+}
 
-export default DataTableBody;
+export default DataTableBody

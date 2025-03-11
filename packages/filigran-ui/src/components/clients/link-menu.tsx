@@ -1,7 +1,7 @@
-import { cn } from '../../lib/utils';
-import { buttonVariants } from '../servers';
-import { KeyboardArrowDownIcon, KeyboardArrowUpIcon } from 'filigran-icon';
-import { type ReactNode } from 'react';
+import {KeyboardArrowDownIcon, KeyboardArrowUpIcon} from 'filigran-icon'
+import {type ReactNode} from 'react'
+import {cn} from '../../lib/utils'
+import {buttonVariants} from '../servers'
 
 export const LinkMenu = ({
   currentPath,
@@ -9,7 +9,7 @@ export const LinkMenu = ({
   children,
   open = false,
   collapse = true,
-  asChild = false
+  asChild = false,
 }: {
   currentPath: boolean
   text: string
@@ -21,15 +21,14 @@ export const LinkMenu = ({
   return (
     <a
       href={'#'}
-      style={{ textDecoration: 'none' }}
+      style={{textDecoration: 'none'}}
       className={cn(
         buttonVariants({
           variant: 'ghost',
           className: 'h-9 w-full justify-start rounded-none normal-case px-m',
         }),
         asChild && 'txt-sub-content',
-        currentPath &&
-        'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
+        currentPath && 'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
       )}>
       <span className="flex w-8 flex-shrink-0 justify-center size-4">
         {children}
@@ -37,9 +36,13 @@ export const LinkMenu = ({
       <span className={cn(open ? 'ml-2' : 'sr-only')}>{text}</span>
       {!asChild && (
         <>
-          {collapse ? <KeyboardArrowDownIcon className={'size-3 ml-auto'} /> : <KeyboardArrowUpIcon className={'size-3 ml-auto'} />}
+          {collapse ? (
+            <KeyboardArrowDownIcon className={'size-3 ml-auto'} />
+          ) : (
+            <KeyboardArrowUpIcon className={'size-3 ml-auto'} />
+          )}
         </>
       )}
     </a>
-  );
+  )
 }

@@ -4,34 +4,38 @@ title: Carousel
 
 # Carousel Example
 
-<ExampleCarousel/>
+<ExampleCarousel />
 
 ## How to use this multiselect
-### Props
 
-| Name               | Type                                | Default     | Description                                                                               |
-| -------------      | --------                            | ----------- | ----------------------------------------------------------------------------              |
-| **placeholder**    | *ReactNode*                         | <></>       | React component to display anything (preview, text, bento...)                             |
-| **slides** *       | *string[]*                          | []          | A tab of images in B64 to be displayed                                                    |
-| **onSlideChange**  | *(value: number) => void*           | -           | Function triggered when the displayed image changes                                       |
+### Props
 
 
 ### Playground
 
+_Import from filigran-ui :_
 
-*Import from filigran-ui :*
+Import \{Carousel\} from 'filigran-ui/client'
 
-Import \{Carousel\} from 'filigran-ui'
-
-<ReactLiveDisplay displayError={false} codeExample={`
-               <Carousel
-      onSlideChange={(slideIndex) => {
-        console.log('slideIndex', slideIndex)
-      }}
-      placeholder={<div>This is a placeholder</div>}
-      slides={[
-        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAADMElEQVR4nOzVwQnAIBQFQYXff81RUkQCOyDj1YOPnbXWPmeTRef+/3O/OyBjzh3CD95BfqICMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMK0CMO0TAAD//2Anhf4QtqobAAAAAElFTkSuQmCC',
-        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII',
-      ]}
-    />`} />
+<ReactLiveDisplay
+  displayError={false}
+  codeExample={`
+                     <Carousel>
+        {[
+          '/francesco-ungaro.jpg',
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+        ].map((img) => {
+          return (
+            <CarouselItem
+              key={img}
+              className="h-[500px]">
+              <img
+                src={img}
+                alt={img}
+              />
+            </CarouselItem>
+          )
+        })}
+      </Carousel>`}
+/>

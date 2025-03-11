@@ -1,17 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Dispatch, MutableRefObject, ReactNode, SetStateAction } from 'react';
-import React from 'react';
+import type {Dispatch, MutableRefObject, ReactNode, SetStateAction} from 'react'
+import React from 'react'
 
 //TODO
-type LocalStorage = any;
-type FilterGroup = any;
-type GraphQLTaggedNode = any;
-type UseLocalStorageHelpers = any;
-export type NumberOfElements = any;
-type PaginationLocalStorage<T> = any;
+type LocalStorage = any
+type FilterGroup = any
+type GraphQLTaggedNode = any
+type UseLocalStorageHelpers = any
+export type NumberOfElements = any
+type PaginationLocalStorage<T> = any
 
-export type LocalStorageColumn = { percentWidth: number, visible?: boolean, index?: number };
-export type LocalStorageColumns = Record<string, LocalStorageColumn>;
+export type LocalStorageColumn = {
+  percentWidth: number
+  visible?: boolean
+  index?: number
+}
+export type LocalStorageColumns = Record<string, LocalStorageColumn>
 
 export enum DataTableVariant {
   default = 'default',
@@ -38,12 +42,12 @@ export interface DataTableColumn {
   lastX?: number
 }
 
-export type DataTableColumns = DataTableColumn[];
+export type DataTableColumns = DataTableColumn[]
 
 export interface DataTableContextProps {
   storageKey: string
   columns: DataTableColumns
-  availableFilterKeys?: string[] | undefined;
+  availableFilterKeys?: string[] | undefined
   initialValues: DataTableProps['initialValues']
   setColumns: Dispatch<SetStateAction<DataTableColumns>>
   resolvePath: (data: any) => any
@@ -53,8 +57,12 @@ export interface DataTableContextProps {
   useDataCellHelpers: DataTableProps['useDataCellHelpers']
   useDataTableToggle: ReturnType<DataTableProps['useDataTableToggle']>
   useComputeLink: (entity: any) => string
-  useDataTableColumnsLocalStorage: ReturnType<DataTableProps['useDataTableColumnsLocalStorage']>
-  useDataTablePaginationLocalStorage: ReturnType<DataTableProps['useDataTablePaginationLocalStorage']>
+  useDataTableColumnsLocalStorage: ReturnType<
+    DataTableProps['useDataTableColumnsLocalStorage']
+  >
+  useDataTablePaginationLocalStorage: ReturnType<
+    DataTableProps['useDataTablePaginationLocalStorage']
+  >
   onAddFilter: DataTableProps['onAddFilter']
   onSort: (sortBy: string, orderAsc: boolean) => void
   formatter: DataTableProps['formatter']
@@ -69,7 +77,7 @@ export interface DataTableContextProps {
   selectOnLineClick: DataTableProps['selectOnLineClick']
   onLineClick: DataTableProps['onLineClick']
   page: number
-  setPage:Dispatch<SetStateAction<number>>
+  setPage: Dispatch<SetStateAction<number>>
   tableWidthState: [number, Dispatch<SetStateAction<number>>]
   startsWithAction: boolean
   endsWithAction: boolean
@@ -82,7 +90,11 @@ type UseDataTableToggle = (key: string) => {
   deSelectedElements: Record<string, any>
   selectAll: boolean
   numberOfSelectedElements: number
-  onToggleEntity: (entity: any, _?: React.MouseEvent, forceRemove?: any[]) => void
+  onToggleEntity: (
+    entity: any,
+    _?: React.MouseEvent,
+    forceRemove?: any[]
+  ) => void
   handleClearSelectedElements: () => void
   handleToggleSelectAll: () => void
   setSelectedElements: (selectedElements: Record<string, any>) => void
@@ -97,7 +109,7 @@ export interface DataTableProps {
   handleCopy?: () => void
   lineFragment?: GraphQLTaggedNode
   dataQueryArgs: any
-  availableFilterKeys?: string[] | undefined;
+  availableFilterKeys?: string[] | undefined
   redirectionModeEnabled?: boolean
   additionalFilterKeys?: string[]
   entityTypes?: string[]
@@ -114,12 +126,12 @@ export interface DataTableProps {
     key: string,
     initialValues?: LocalStorageColumns,
     ignoreUri?: boolean,
-    ignoreDispatch?: boolean,
+    ignoreDispatch?: boolean
   ) => [LocalStorageColumns, Dispatch<SetStateAction<LocalStorageColumns>>]
   useDataTablePaginationLocalStorage: <T>(
     key: string,
     initialValue: LocalStorage,
-    ignoreUri?: boolean,
+    ignoreUri?: boolean
   ) => PaginationLocalStorage<T>
   useComputeLink?: (entity: any) => string
   useDataTableToggle: UseDataTableToggle
@@ -145,13 +157,24 @@ export interface DataTableProps {
   message?: string
   isLocalStorageEnabled?: boolean
   dataTableHooks: {
-    defaultColumnsMap:  Map<string, DataTableColumn>
+    defaultColumnsMap: Map<string, DataTableColumn>
     getDefaultFilterObject: (e: string) => Record<string, any>
-    useDataCellHelpers: (storageHelpers: Record<string, unknown>, variant: DataTableVariant) => (column: DataTableColumn) => any
+    useDataCellHelpers: (
+      storageHelpers: Record<string, unknown>,
+      variant: DataTableVariant
+    ) => (column: DataTableColumn) => any
     useDataTableComputeLink: (e: string) => string
     useDataTableFormatter: () => Record<string, any>
-    useDataTableLocalStorage: <T>(k: string, i: T, t?: boolean) => [a: T, Dispatch<SetStateAction<T>>]
-    useDataTablePaginationLocalStorage: (k: string, i: Record<string, any>, t?: boolean) => {
+    useDataTableLocalStorage: <T>(
+      k: string,
+      i: T,
+      t?: boolean
+    ) => [a: T, Dispatch<SetStateAction<T>>]
+    useDataTablePaginationLocalStorage: (
+      k: string,
+      i: Record<string, any>,
+      t?: boolean
+    ) => {
       viewStorage: Record<string, any>
       helpers: Record<string, any>
     }
@@ -173,17 +196,19 @@ export interface DataTableDisplayFiltersProps {
   entityTypes?: string[]
   additionalFilterKeys?: string[]
   availableRelationFilterTypes?: Record<string, string[]> | undefined
-  availableFilterKeys?: string[] | undefined;
+  availableFilterKeys?: string[] | undefined
   availableEntityTypes?: string[]
 }
 
 export interface DataTableFiltersProps {
-  availableFilterKeys?: string[] | undefined;
+  availableFilterKeys?: string[] | undefined
   availableRelationFilterTypes?: Record<string, string[]> | undefined
   availableEntityTypes?: string[]
   availableRelationshipTypes?: string[]
-  searchContextFinal?: { entityTypes: string[]; elementId?: string[] | undefined; } | undefined
-  exportContext?: { entity_type: string, entity_id?: string }
+  searchContextFinal?:
+    | {entityTypes: string[]; elementId?: string[] | undefined}
+    | undefined
+  exportContext?: {entity_type: string; entity_id?: string}
   paginationOptions: any
   currentView?: string
   additionalHeaderButtons?: ReactNode[]
@@ -203,7 +228,11 @@ export interface DataTableHeaderProps {
 export interface DataTableLineProps {
   row: any
   index: number
-  onToggleShiftEntity: (currentIndex: number, currentEntity: { id: string }, event?: React.MouseEvent) => void
+  onToggleShiftEntity: (
+    currentIndex: number,
+    currentEntity: {id: string},
+    event?: React.MouseEvent
+  ) => void
 }
 
 export interface DataTableCellProps {

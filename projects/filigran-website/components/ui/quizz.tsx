@@ -99,7 +99,7 @@ const QuizzQuestionChoice = ({
 }) => {
   const {onClickAnswer, selectedAnswers} = useContext(QuizzContext)
   return (
-    <div className="space-x-s flex items-center">
+    <div className="flex items-center space-x-s">
       <Checkbox
         checked={selectedAnswers.some((a) => a === id)}
         onClick={() => onClickAnswer(id)}
@@ -114,7 +114,7 @@ const QuizzExplanation = ({children}: {children: ReactNode}) => {
   return (
     <div
       className={cn(
-        'my-s border-primary bg-primary/10 p-s w-fit rounded border',
+        'my-s w-fit rounded border border-primary bg-primary/10 p-s',
         answerState !== ResponseEnum.CORRECT && 'hidden'
       )}>
       <div className="txt-category">Explanation :</div>

@@ -124,14 +124,14 @@ function GenericFileInput(
     ? Array.from(filesSelected)
     : null
   return (
-    <div className={hidden ? "hidden" : undefined}>
+    <div className={hidden ? 'hidden' : undefined}>
       <input
         type={'file'}
         className="hidden"
         accept={allowedTypes}
         ref={(e) => {
-          ref(e);
-          inputRef.current = e;
+          ref(e)
+          inputRef.current = e
         }}
         {...propsWithoutValue}
         onChange={handleOnChange}
@@ -139,8 +139,7 @@ function GenericFileInput(
       <Button
         type="button"
         onClick={() => inputRef.current?.click?.()}
-        disabled={props.disabled}
-      >
+        disabled={props.disabled}>
         {t.selectFile}
       </Button>
       <span className="p-s">

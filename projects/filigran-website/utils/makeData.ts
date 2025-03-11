@@ -1,4 +1,4 @@
-import { faker } from '@faker-js/faker'
+import {faker} from '@faker-js/faker'
 
 export type Person = {
   id: string
@@ -47,7 +47,7 @@ const newReport = (): Report => ({
     'not started',
     'done',
   ])[0]!,
-});
+})
 
 const newPerson = (): Person => {
   return {
@@ -66,10 +66,10 @@ const newPerson = (): Person => {
   }
 }
 
-export function makeData(nbItems: number, type = "person") {
+export function makeData(nbItems: number, type = 'person') {
   const makeDataLevel = (): (Person | Report)[] => {
     return range(nbItems).map((d): Report | Person => {
-      return type === "person" ? newPerson() : newReport();
+      return type === 'person' ? newPerson() : newReport()
     })
   }
 

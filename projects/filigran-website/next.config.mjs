@@ -2,6 +2,9 @@
 const nextConfig = {
   output: 'export',
   basePath: process.env.BASE_PATH ?? '',
+  images: {
+    unoptimized: true,
+  },
   //TODO fix correctly the Tsconfig to correctly setup type in libraries, TS look confused
   typescript: {
     // !! WARN !!

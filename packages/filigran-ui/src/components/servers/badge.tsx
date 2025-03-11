@@ -33,10 +33,14 @@ function Badge({className, variant, size, color, ...props}: BadgeProps) {
   return (
     <div
       className={cn(badgeVariants({variant, size}), className)}
-      style={color ? {
-        borderColor: color,
-        background: `${color}25`
-      } : {}}
+      style={
+        color
+          ? {
+              borderColor: color,
+              background: `${color}25`,
+            }
+          : {}
+      }
       {...props}>
       <div className="inline-flex items-center text-foreground">
         {props.children}

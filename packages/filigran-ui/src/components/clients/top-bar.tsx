@@ -1,10 +1,10 @@
 'use client'
 
-import { cn } from '../../lib/utils';
-import { SearchInput } from './search-input';
-import { IndividualIcon } from 'filigran-icon';
+import {IndividualIcon} from 'filigran-icon'
+import {cn} from '../../lib/utils'
+import {SearchInput} from './search-input'
 
-export const TopBar = ({ displayLogo = true }) => (
+export const TopBar = ({displayLogo = true}) => (
   <header
     className={cn(
       'sticky top-0 z-10 flex h-14 w-full flex-shrink-0 items-center border-b bg-page-background dark:bg-background px-4 justify-between',
@@ -12,8 +12,8 @@ export const TopBar = ({ displayLogo = true }) => (
     )}>
     <SearchInput />
     <div className={'flex flex-1'} />
-    <div className={"size-7"}>
+    <div className={'size-7'}>
       <IndividualIcon />
     </div>
   </header>
-);
+)

@@ -1,36 +1,35 @@
-
-type TODO = any;
+type TODO = any
 
 function toVal(mix: TODO) {
   let k,
     y,
-    str = "";
+    str = ''
 
-  if (typeof mix === "string" || typeof mix === "number") {
-    str += mix;
-  } else if (typeof mix === "object") {
+  if (typeof mix === 'string' || typeof mix === 'number') {
+    str += mix
+  } else if (typeof mix === 'object') {
     if (Array.isArray(mix)) {
-      let len = mix.length;
+      let len = mix.length
       for (k = 0; k < len; k++) {
         if (mix[k]) {
           if ((y = toVal(mix[k]))) {
             // Changed assignment to conditional expression
-            str && (str += " ");
-            str += y;
+            str && (str += ' ')
+            str += y
           }
         }
       }
     } else {
       for (y in mix) {
         if (mix[y]) {
-          str && (str += " ");
-          str += y;
+          str && (str += ' ')
+          str += y
         }
       }
     }
   }
 
-  return str;
+  return str
 }
 
 export type ClassValue =
@@ -41,28 +40,28 @@ export type ClassValue =
   | bigint
   | null
   | boolean
-  | undefined;
-export type ClassDictionary = Record<string, any>;
-export type ClassArray = ClassValue[];
+  | undefined
+export type ClassDictionary = Record<string, any>
+export type ClassArray = ClassValue[]
 
 export function clsx(...inputs: ClassValue[]): string {
-  const len = inputs.length; // Changed 'let' to 'const'
+  const len = inputs.length // Changed 'let' to 'const'
 
   let i = 0,
     tmp,
     x,
-    str = "";
+    str = ''
   for (; i < len; i++) {
     if ((tmp = inputs[i])) {
       // Changed assignment to conditional expression
       if ((x = toVal(tmp))) {
         // Changed assignment to conditional expression
-        str && (str += " ");
-        str += x;
+        str && (str += ' ')
+        str += x
       }
     }
   }
-  return str;
+  return str
 }
 
-export default clsx;
+export default clsx

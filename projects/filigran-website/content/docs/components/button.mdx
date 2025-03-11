@@ -3,6 +3,7 @@ title: Button
 ---
 
 # Button example
+
 Displays a button.
 
 <Button>Click me!</Button>
@@ -12,9 +13,9 @@ Displays a button.
 ### Props
 
 | Name        | Type                                                                                                                                                      | Default | Description                                                                                                      |
-| -------     | --------------------------------------------                                                                                                              | ------- | ---------------------------------------------------------------------------------------------------------------- |
-| **variant** | *enum* ("default" \| "secondary" \| "destructive" \| "outline" \| "ghost" \| "link" \| "outline-primary" \| "outline-destructive" \| "outline-secondary") | default | This attribute defines the visual style of the button. Here are the different variants and their characteristics |
-| **size**    | *enum* ("default" \| "sm" \| "lg" \| "icon" \| "icon-rounded")                                                                                            | default | This attribute defines the visual style of the button. Here are the different variants and their characteristics |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| **variant** | _enum_ ("default" \| "secondary" \| "destructive" \| "outline" \| "ghost" \| "link" \| "outline-primary" \| "outline-destructive" \| "outline-secondary") | default | This attribute defines the visual style of the button. Here are the different variants and their characteristics |
+| **size**    | _enum_ ("default" \| "sm" \| "lg" \| "icon" \| "icon-rounded")                                                                                            | default | This attribute defines the visual style of the button. Here are the different variants and their characteristics |
 
 **Variant attribute**: This attribute defines the visual style of the button. Here are the different variants and their characteristics:
 
@@ -24,14 +25,13 @@ Displays a button.
 - **outline**: This button has a border around the text instead of a filled background, providing a lighter and less visually dominant element.
 - **ghost**: This button has minimal styling, often with only text and a subtle hover effect, making it appear transparent on the page.
 - **link**: This button resembles a text link, typically underlined and changing color on hover. It's suitable for actions that navigate to another page or trigger an external link.
-- **\{main_variant\}_\{alternate_color\}**: Is just a mix of two variants, for example being outline with secondary color will be outline-secondary
+- **\{main*variant\}*\{alternate_color\}**: Is just a mix of two variants, for example being outline with secondary color will be outline-secondary
 
 ### Playground
 
-*Import from filigran-ui :*
+_Import from filigran-ui :_
 
 Import \{Button\} from 'filigran-ui'
-
 
 <ReactLiveDisplay
   codeExample={`

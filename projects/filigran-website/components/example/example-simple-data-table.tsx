@@ -1,17 +1,35 @@
 'use client'
-import { ColumnDef, getPaginationRowModel, getSortedRowModel, PaginationState, } from '@tanstack/react-table'
-import { Checkbox, DataTable, DataTableOptionsHeader, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, SearchInput, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from 'filigran-ui/clients'
-import { useEffect, useMemo, useState } from 'react'
-import { Button, Input } from 'filigran-ui'
-import { makeData, Person } from '@/utils/makeData'
-import { useLocalStorage } from 'usehooks-ts'
-import { MoreVertIcon, SearchIcon } from 'filigran-icon'
-import { Badge } from 'filigran-ui/servers';
+import {
+  ColumnDef,
+  getPaginationRowModel,
+  getSortedRowModel,
+  PaginationState,
+} from '@tanstack/react-table'
+import {
+  Checkbox,
+  DataTable,
+  DataTableOptionsHeader,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  SearchInput,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from 'filigran-ui/clients'
+import {useEffect, useMemo, useState} from 'react'
+import {Button, Input} from 'filigran-ui'
+import {makeData, Person} from '@/utils/makeData'
+import {useLocalStorage} from 'usehooks-ts'
+import {MoreVertIcon, SearchIcon} from 'filigran-icon'
+import {Badge} from 'filigran-ui/servers'
 
 export function ExampleSimpleDataTable() {
   const [rowSelection, setRowSelection] = useState({})
   const [inputSearch, setInputSearch] = useState('')
-  const [data, setData] = useState(() => makeData(100, "report"))
+  const [data, setData] = useState(() => makeData(100, 'report'))
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 50,
@@ -24,7 +42,7 @@ export function ExampleSimpleDataTable() {
     setLoading(true)
     // Cleanup the timer when the component unmounts
     return () => clearTimeout(timer)
-  }, [pagination]);
+  }, [pagination])
 
   const colors = [
     '#8F8F8F',
@@ -33,14 +51,14 @@ export function ExampleSimpleDataTable() {
     '#CB9CF2',
     '#497E76',
     '#9B111E',
-  ];
+  ]
 
   const columns = useMemo<ColumnDef<Report>[]>(
     () => [
       {
         id: 'select',
         size: 40,
-        header: ({ table }) => (
+        header: ({table}) => (
           <Checkbox
             className="flex"
             checked={
@@ -53,7 +71,7 @@ export function ExampleSimpleDataTable() {
             aria-label="Select all"
           />
         ),
-        cell: ({ row }) => (
+        cell: ({row}) => (
           <Checkbox
             className="flex"
             checked={row.getIsSelected()}
@@ -73,10 +91,16 @@ export function ExampleSimpleDataTable() {
         accessorKey: 'type',
         enableHiding: true,
         enableSorting: false,
-        cell: ({ row, getValue }) => (
+        cell: ({row, getValue}) => (
           <Badge
-            style={{ color: colors[(['Incident', 'Report', 'Vulnerability'].indexOf(row.original.type)+3)] }}
-          >
+            style={{
+              color:
+                colors[
+                  ['Incident', 'Report', 'Vulnerability'].indexOf(
+                    row.original.type
+                  ) + 3
+                ],
+            }}>
             {getValue().toUpperCase()}
           </Badge>
         ),
@@ -123,10 +147,16 @@ export function ExampleSimpleDataTable() {
         accessorKey: 'status',
         header: 'Status',
         size: 200,
-        cell: ({ row }) => (
+        cell: ({row}) => (
           <Badge
-            style={{ color: colors[(['in progress', 'not started', 'done'].indexOf(row.original.status))] }}
-          >
+            style={{
+              color:
+                colors[
+                  ['in progress', 'not started', 'done'].indexOf(
+                    row.original.status
+                  )
+                ],
+            }}>
             {row.original.status.toUpperCase()}
           </Badge>
         ),
@@ -136,7 +166,7 @@ export function ExampleSimpleDataTable() {
         accessorKey: 'description',
         header: 'Description',
         size: 400,
-        cell: ({ row }) => (
+        cell: ({row}) => (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger className={'w-full truncate text-left'}>
@@ -192,7 +222,7 @@ export function ExampleSimpleDataTable() {
     console.log('Reset table')
     removeColumnOrder()
   }
-  const HighlightSearchTerm = ({ text }: { text: string }) => {
+  const HighlightSearchTerm = ({text}: {text: string}) => {
     if (!inputSearch) {
       return <span>{text}</span>
     }

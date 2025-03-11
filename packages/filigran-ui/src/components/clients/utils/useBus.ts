@@ -1,34 +1,36 @@
-"use client"
+'use client'
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect } from 'react';
+import {useEffect} from 'react'
 
-type useBusCallback = (a: any) => void;
-let subscribers: [channel: string, callback: useBusCallback][] = [];
+type useBusCallback = (a: any) => void
+let subscribers: [channel: string, callback: useBusCallback][] = []
 
 const subscribe = (channel: string, callback: useBusCallback) => {
   if (!channel || !callback) {
-    return undefined;
+    return undefined
   }
-  subscribers = [
-    ...subscribers,
-    [channel, callback],
-  ];
+  subscribers = [...subscribers, [channel, callback]]
 
   return () => {
-    subscribers = subscribers.filter((subscriber) => subscriber[1] !== callback);
-  };
-};
+    subscribers = subscribers.filter((subscriber) => subscriber[1] !== callback)
+  }
+}
 
 export const dispatch = (channel: string, event?: any) => {
-  subscribers.filter(([filter]) => filter === channel)
+  subscribers
+    .filter(([filter]) => filter === channel)
     .forEach(([_, callback]) => {
-      callback(event);
-    });
-};
+      callback(event)
+    })
+}
 
-const useBus = (channel: string, callback: useBusCallback, deps: any[] = []) => {
-  useEffect(() => subscribe(channel, callback), deps);
-  return dispatch;
-};
+const useBus = (
+  channel: string,
+  callback: useBusCallback,
+  deps: any[] = []
+) => {
+  useEffect(() => subscribe(channel, callback), deps)
+  return dispatch
+}
 
-export default useBus;
+export default useBus

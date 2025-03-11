@@ -37,23 +37,23 @@ title: TDD
   ```js
 
   test('prints numbers from 1 to 100', () => {
-    const result = fizzbuzz();
-    expect(result[0]).toBe(1);  // The first element should be 1
-    expect(result[99]).toBe(100); // The last element should be 100
-  });
+  const result = fizzbuzz();
+  expect(result[0]).toBe(1);  // The first element should be 1
+  expect(result[99]).toBe(100); // The last element should be 100
+});
   ```
   ### Green: Write the Minimum Code
   Implement the `fizzBuzz` function to make the test pass.
 
   ```js
   export const fizzbuzz = () => {
-      const result = [];
-      for (let i = 1; i <= 100; i++) {
-      result.push(i);
-    }
-      return result;
-    }
-```
+  const result = [];
+  for (let i = 1; i <= 100; i++) {
+  result.push(i);
+}
+  return result;
+}
+  ```
 </ContentWithLeftColumnFixed>
 ---
  ## Quizz Time
@@ -154,6 +154,7 @@ Time to see if you've been paying attention—don't worry, it's just between you
 
   - An integer `num` (1 ≤ `num` ≤ 3999).
 
+  <CodePlaygroundTest/>
   ## Output:
 
   - A string representing the Roman numeral equivalent of the input integer.
@@ -189,4 +190,5 @@ Time to see if you've been paying attention—don't worry, it's just between you
   - Optimize the implementation without breaking the functionality as validated by the tests.
 
 </ContentWithLeftColumnFixed>
+
 

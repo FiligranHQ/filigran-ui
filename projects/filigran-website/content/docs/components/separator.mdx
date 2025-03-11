@@ -5,14 +5,10 @@ title: Separator
 # Separator Example
 
 <div>
-  <div>
-    Before the horizontal separator
-  </div>
+  <div>Before the horizontal separator</div>
   <Separator className="my-4" />
-    <div>
-        After the vertical separator
-    </div>
-    <div className="flex h-5 items-center space-x-4 text-sm">
+  <div>After the vertical separator</div>
+  <div className="flex h-5 items-center space-x-4 text-sm">
     <div>Before the vertical separator</div>
     <Separator orientation="vertical" />
     <div>After the vertical separator</div>
@@ -22,17 +18,17 @@ title: Separator
 ## How to use this separator
 
 ### Props
-| Name               | Type                                   | Default      | Description                                                                                                                                                                          |
-| -------------      | --------                               | -----------  | ----------------------------------------------------------------------------------------------------                                                                                 |
-| **orientation**    | *enum ("horizontal" \| "vertical")*    | "horizontal" | Change the default rendered element for the one passed as a child, merging their props and behavior.                                                                                 |
-| **decorative**     | *boolean*                              | true         | Whether or not the component is purely decorative. When true, accessibility-related attributes are updated so that that the rendered element is removed from the accessibility tree. |
+
+| Name            | Type                                | Default      | Description                                                                                                                                                                          |
+| --------------- | ----------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **orientation** | _enum ("horizontal" \| "vertical")_ | "horizontal" | Change the default rendered element for the one passed as a child, merging their props and behavior.                                                                                 |
+| **decorative**  | _boolean_                           | true         | Whether or not the component is purely decorative. When true, accessibility-related attributes are updated so that that the rendered element is removed from the accessibility tree. |
 
 ### Playground
 
-*Import from filigran-ui :*
+_Import from filigran-ui :_
 
 Import \{Separator\} from 'filigran-ui'
-
 
 <ReactLiveDisplay
   codeExample={`<div>

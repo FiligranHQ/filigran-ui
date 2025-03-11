@@ -1,8 +1,8 @@
-import React, { CSSProperties, FunctionComponent, useRef } from 'react';
-import { DataTableHeadersProps } from './dataTableTypes';
-import DataTableHeader, { SELECT_COLUMN_SIZE } from './DataTableHeader';
-import { useDataTableContext } from './DataTableContext';
-import { Checkbox } from '../../checkbox';
+import {CSSProperties, FunctionComponent, useRef} from 'react'
+import {Checkbox} from '../../checkbox'
+import {useDataTableContext} from './DataTableContext'
+import DataTableHeader, {SELECT_COLUMN_SIZE} from './DataTableHeader'
+import {DataTableHeadersProps} from './dataTableTypes'
 
 const DataTableHeaders: FunctionComponent<DataTableHeadersProps> = ({
   dataTableToolBarComponent,
@@ -20,10 +20,10 @@ const DataTableHeaders: FunctionComponent<DataTableHeadersProps> = ({
     startsWithAction,
     endsWithAction,
     useDataTablePaginationLocalStorage: {
-      viewStorage: { orderBy, sortBy, orderAsc },
+      viewStorage: {orderBy, sortBy, orderAsc},
     },
-  } = useDataTableContext();
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  } = useDataTableContext()
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   // const handleToggleVisibility = (columnId: string) => {
   //   const newColumns = [...columns];
@@ -37,62 +37,70 @@ const DataTableHeaders: FunctionComponent<DataTableHeadersProps> = ({
 
   // const draggableColumns = useMemo(() => columns.filter(({ id }) => !['select', 'navigate'].includes(id)), [columns]);
 
-  const hasSelectedElements = numberOfSelectedElements > 0 || selectAll;
+  const hasSelectedElements = numberOfSelectedElements > 0 || selectAll
   const checkboxStyle: CSSProperties = {
     background: hasSelectedElements
       ? 'hsl(var(--page-background))'
       : 'transparent',
     width: SELECT_COLUMN_SIZE,
-  };
+  }
 
-  const showToolbar = numberOfSelectedElements > 0 && !disableToolBar;
+  const showToolbar = numberOfSelectedElements > 0 && !disableToolBar
 
   return (
     <div
       ref={containerRef}
-      style={{ display: 'flex', height: 42 }}
+      style={{display: 'flex', height: 42}}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
-        const data = JSON.parse(e.dataTransfer.getData('application/my-app'));
-        const columnId = data.id.split('_draggable')[0];
-        const varX = e.clientX - data.x;
+        const data = JSON.parse(e.dataTransfer.getData('application/my-app'))
+        const columnId = data.id.split('_draggable')[0]
+        const varX = e.clientX - data.x
 
-        const column = columns.find(({ id }) => id === columnId);
+        const column = columns.find(({id}) => id === columnId)
 
         if (containerRef?.current && column && varX !== 0) {
           // Compute new width in percentage of the column.
-          const containerWidth = containerRef.current!.clientWidth;
-          const columnWidth = (column.percentWidth * containerWidth) / 100;
-          const newColumnWidth = columnWidth + varX;
-          const newPercentage = (newColumnWidth / containerWidth) * 100;
-          if (newPercentage < 0) return;
+          const containerWidth = containerRef.current!.clientWidth
+          const columnWidth = (column.percentWidth * containerWidth) / 100
+          const newColumnWidth = columnWidth + varX
+          const newPercentage = (newColumnWidth / containerWidth) * 100
+          if (newPercentage < 0) return
 
           // Override the new percent width.
           let newColumns = columns.map((c) => {
-            if (c.id === column.id) return { ...c, percentWidth: newPercentage };
-            return c;
-          });
+            if (c.id === column.id) return {...c, percentWidth: newPercentage}
+            return c
+          })
 
           // Total width should be at least 100% so extend neighbor column if necessary.
-          const sumPercentage = newColumns.reduce((acc, col) => acc + (col.percentWidth ?? 0), 0);
+          const sumPercentage = newColumns.reduce(
+            (acc, col) => acc + (col.percentWidth ?? 0),
+            0
+          )
           if (sumPercentage < 100) {
-            const maxOrder = Math.max(...newColumns.flatMap((c) => c.order ?? []));
-            const neighborOrder = column.order < maxOrder ? column.order + 1 : column.order - 1;
+            const maxOrder = Math.max(
+              ...newColumns.flatMap((c) => c.order ?? [])
+            )
+            const neighborOrder =
+              column.order < maxOrder ? column.order + 1 : column.order - 1
             newColumns = newColumns.map((c) => {
               if (c.order === neighborOrder) {
-                const percentWidth = c.percentWidth + (100 - sumPercentage);
-                return { ...c, percentWidth };
+                const percentWidth = c.percentWidth + (100 - sumPercentage)
+                return {...c, percentWidth}
               }
-              return c;
-            });
+              return c
+            })
           }
 
-          setColumns(newColumns);
+          setColumns(newColumns)
         }
-      }}
-    >
+      }}>
       {startsWithAction && (
-        <div data-testid="dataTableCheckAll" className="flex items-center justify-start pl-1" style={checkboxStyle}>
+        <div
+          data-testid="dataTableCheckAll"
+          className="flex items-center justify-start pl-1"
+          style={checkboxStyle}>
           <Checkbox
             className="flex"
             aria-label="Select all"
@@ -163,7 +171,7 @@ const DataTableHeaders: FunctionComponent<DataTableHeadersProps> = ({
       {/*    )}*/}
 
       {columns
-        .filter(({ id }) => !['select', 'navigate'].includes(id))
+        .filter(({id}) => !['select', 'navigate'].includes(id))
         .map((column) => (
           <DataTableHeader
             key={column.id}
@@ -174,9 +182,11 @@ const DataTableHeaders: FunctionComponent<DataTableHeadersProps> = ({
           />
         ))}
 
-      {(endsWithAction) && <div style={{ width: SELECT_COLUMN_SIZE, flex: '0 0 auto' }} />}
+      {endsWithAction && (
+        <div style={{width: SELECT_COLUMN_SIZE, flex: '0 0 auto'}} />
+      )}
     </div>
-  );
-};
+  )
+}
 
-export default DataTableHeaders;
+export default DataTableHeaders

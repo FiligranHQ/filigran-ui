@@ -1,5 +1,5 @@
-import { Group5Icon, SearchIcon } from 'filigran-icon';
-import { cn } from '../../lib/utils';
+import {Group5Icon, SearchIcon} from 'filigran-icon'
+import {cn} from '../../lib/utils'
 
 export const SearchInput = () => (
   <div
@@ -17,11 +17,10 @@ export const SearchInput = () => (
       px-3
       py-2
       text-sm
-    `)}
-  >
+    `)}>
     <SearchIcon />
     <span>Search the platform</span>
     <div className={'flex flex-1'} />
     <Group5Icon className="h-4 w-4" />
   </div>
-);
+)

@@ -5,30 +5,30 @@ import {
   parseClassNames,
   TW_VARS,
   Variants,
-} from "./core";
-import { forwardRef, useMemo } from "react";
+} from './core'
+import {forwardRef, useMemo} from 'react'
 import {
   AnyComponent,
   ClassedComponentType,
   ClassedFunctionProxy,
   StrictComponentType,
   VariantProps,
-} from "./types";
-import { isClassedComponent, COMPONENT_SYMBOL } from "./unique";
+} from './types'
+import {isClassedComponent, COMPONENT_SYMBOL} from './unique'
 
 type ClassedConfig = {
-  merger?: (...args: string[]) => any;
-};
+  merger?: (...args: string[]) => any
+}
 
 type CreateClassedType = {
   (config?: ClassedConfig): {
-    classed: ClassedFunctionProxy;
-  };
-};
+    classed: ClassedFunctionProxy
+  }
+}
 
 // 1. cx
 const cx = (...args: string[]): string =>
-  args.filter((v) => !!v && typeof v === "string").join(" ");
+  args.filter((v) => !!v && typeof v === 'string').join(' ')
 
 // 2. internalClassed
 const internalClassed = <
@@ -38,12 +38,12 @@ const internalClassed = <
   elementType: T,
 
   classNames: ClassNamesAndVariant<{}>[],
-  { merger = cx }: ClassedConfig = {},
+  {merger = cx}: ClassedConfig = {}
 ) => {
-  const toParse = Array.from(classNames);
-  const isClassed = isClassedComponent(elementType);
+  const toParse = Array.from(classNames)
+  const isClassed = isClassedComponent(elementType)
   if (isClassed) {
-    toParse.unshift(elementType as any);
+    toParse.unshift(elementType as any)
   }
   const {
     className,
@@ -52,17 +52,17 @@ const internalClassed = <
     compoundVariants,
     dataAttributes,
     defaultProps,
-  } = parseClassNames(toParse);
+  } = parseClassNames(toParse)
 
   // eslint-disable-next-line react/display-name
   const Comp = forwardRef(
-    ({ as, className: cName, ...props }: any, forwardedRef: any) => {
+    ({as, className: cName, ...props}: any, forwardedRef: any) => {
       // eslint-disable-next-line no-nested-ternary
       const Component = isClassed
         ? elementType
-        : typeof elementType === "object"
+        : typeof elementType === 'object'
           ? elementType
-          : as || elementType;
+          : as || elementType
 
       // Map props variant to className
       const [variantClassNames, dataAttributeProps] = useMemo(() => {
@@ -71,43 +71,43 @@ const internalClassed = <
           dataAttributes,
           variants,
           defaultVariants,
-        });
+        })
 
         return [
           mapPropsToVariantClass(
-            { variants, defaultVariants, compoundVariants },
+            {variants, defaultVariants, compoundVariants},
             props,
-            true,
+            true
           ),
           dataAttributeProps,
-        ] as const;
-      }, [props]);
+        ] as const
+      }, [props])
 
       const merged = useMemo(
         () => merger(className, variantClassNames, cName),
-        [className, cName, variantClassNames],
-      );
+        [className, cName, variantClassNames]
+      )
 
       return (
         <Component
           className={merged}
           {...props}
-          {...(isClassed && Object.keys(defaultVariants).length ? defaultVariants : {})}
+          {...(isClassed && Object.keys(defaultVariants).length
+            ? defaultVariants
+            : {})}
           {...dataAttributeProps}
           {...defaultProps}
           as={isClassed ? as : undefined}
           ref={forwardedRef}
         />
-      );
-    },
-  ) as unknown as ClassedComponentType<T, V>;
+      )
+    }
+  ) as unknown as ClassedComponentType<T, V>
 
   Comp.displayName =
-    typeof elementType !== "string"
-      ? elementType.displayName || elementType.name || "Compoonent"
-      : `TwComponent(${elementType})`;
-
-
+    typeof elementType !== 'string'
+      ? elementType.displayName || elementType.name || 'Compoonent'
+      : `TwComponent(${elementType})`
 
   Reflect.set(Comp, TW_VARS, {
     className,
@@ -115,31 +115,31 @@ const internalClassed = <
     defaultVariants,
     compoundVariants,
     dataAttributes,
-  });
+  })
 
-  Reflect.set(Comp, COMPONENT_SYMBOL, true);
+  Reflect.set(Comp, COMPONENT_SYMBOL, true)
 
-  return Comp;
-};
+  return Comp
+}
 
 // 3. createClassed
 const createClassed = ((config: any) => {
   const classedWithConfig = (elementType: any, ...args: any[]) => {
-    return internalClassed(elementType, args, config);
-  };
+    return internalClassed(elementType, args, config)
+  }
 
   const classedProxy = new Proxy(classedWithConfig, {
     get: (_, type) => {
       return function (this: unknown, ...args: any[]) {
-        return classedWithConfig.apply(this, [type as any, ...args]);
-      };
+        return classedWithConfig.apply(this, [type as any, ...args])
+      }
     },
-  });
+  })
 
   return {
     classed: classedProxy,
-  };
-}) as CreateClassedType;
+  }
+}) as CreateClassedType
 
 //
 /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -154,14 +154,14 @@ type StrictClassedFunction = <
   ...composers: Composers
 ) => Composers extends never[]
   ? StrictComponentType<T>
-  : StrictComponentType<T, Composers[number]>;
+  : StrictComponentType<T, Composers[number]>
 
-const makeStrict = ((component: any) => component) as StrictClassedFunction;
+const makeStrict = ((component: any) => component) as StrictClassedFunction
 
 //
 /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
 /*                         EXPORTS                            */
 /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-export { createClassed, makeStrict, internalClassed, cx };
-export type { ClassedConfig, CreateClassedType, StrictClassedFunction };
+export {createClassed, makeStrict, internalClassed, cx}
+export type {ClassedConfig, CreateClassedType, StrictClassedFunction}

@@ -20,7 +20,9 @@ const calloutVariants = cva(
   }
 )
 
-interface CalloutProps extends HTMLAttributes<HTMLDivElement>, VariantProps<typeof calloutVariants> {}
+interface CalloutProps
+  extends HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof calloutVariants> {}
 
 function Callout({className, variant, ...props}: CalloutProps) {
   return (

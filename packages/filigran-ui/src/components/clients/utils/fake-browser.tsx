@@ -1,8 +1,8 @@
 'use client'
 
-import { type ReactNode } from 'react';
+import {type ReactNode} from 'react'
 
-export const FakeBrowser = ({ children }: { children: ReactNode }) => (
+export const FakeBrowser = ({children}: {children: ReactNode}) => (
   <div
     style={{
       fontSize: '18px',
@@ -13,8 +13,7 @@ export const FakeBrowser = ({ children }: { children: ReactNode }) => (
       overflow: 'hidden',
       boxShadow: '0 0.25em 0.9em -0.1em rgba(0,0,0,.3)',
       width: '100%',
-    }}
-  >
+    }}>
     <div
       style={{
         display: 'block',
@@ -26,9 +25,8 @@ export const FakeBrowser = ({ children }: { children: ReactNode }) => (
         width: '100%',
         background: 'linear-gradient(to bottom, #eee 0%, #ccc 100%)',
         borderBottom: '2px solid #cbcbcb',
-      }}
-    >
-      {[0,1,2].map((i) => (
+      }}>
+      {[0, 1, 2].map((i) => (
         <i
           style={{
             display: 'inline-block',
@@ -36,7 +34,11 @@ export const FakeBrowser = ({ children }: { children: ReactNode }) => (
             width: '0.7em',
             borderRadius: '0.45em',
             margin: '0.4em 0.15em',
-            backgroundColor: ['rgb(255, 86, 79)', 'rgb(255, 183, 42)', 'rgb(37, 198, 58)'][i]
+            backgroundColor: [
+              'rgb(255, 86, 79)',
+              'rgb(255, 183, 42)',
+              'rgb(37, 198, 58)',
+            ][i],
           }}
         />
       ))}
@@ -65,9 +67,8 @@ export const FakeBrowser = ({ children }: { children: ReactNode }) => (
         overflowX: 'hidden',
         overflowY: 'auto',
         textAlign: 'center',
-      }}
-    >
+      }}>
       {children}
     </div>
   </div>
-);
+)

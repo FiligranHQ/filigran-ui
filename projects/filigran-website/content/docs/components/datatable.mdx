@@ -9,25 +9,29 @@ title: Datatable
 ## How to use this separator
 
 ### Props
-| Name               | Type                                   | Default      | Description                                                                                                                                                                          |
-| -------------      | --------                               | -----------  | ----------------------------------------------------------------------------------------------------                                                                                 |
-| **data**           | *MyCustomType[]*                       | -            | The data displayed in the tab.                                                                                                                                                       |
-| **columns**        | *\<ColumnDef\<MyCustomType\>[]\>*      | -            | The name of the colomns, how to get it, actions on column...                                                                                                                         |
-| **isLoading**      | *boolean*                              | -            | Displays a skeleton on rows while loading.                                                                                                                                           |
-| **tableOptions**   | *\{onRowSelectionChange, getSortedRowModel, getPaginationRowModel, onPaginationChange, enableRowSelection, onColumnOrderChange   \}*    | - | Change the default rendered element for the one passed as a child, merging their props and behavior.                                                                                 |
-| **tableState**     | *\{columnVisibility, columnOrder: string[], columnPinning:\{left: string[], right: string[] \}, rowPinning\{bottom: string[], top: string[] \}, columnFilters: \{id: string, value: unknown \}[], globalFilter: any, sorting: \{desc: boolean, id: string \}[], expanded:?, grouping: string[], columnSizing:?, columnSizingInfo: \{   columnSizingStart: [string, number][], deltaOffset: null \| number,deltaPercentage: null \| number,isResizingColumn: false \| string, startOffset: null \| number, startSize: null \| number  \} \}*    | - | Change the default rendered element for the one passed as a child, merging their props and behavior.                                                                                 |
-| **onClickRow**     | *(row: Row\<TData\>) => void*          | -            | Action function triggered when the user clicks on a row.                                                                                                                             |
-| **onResetTable**   | *() => void*                           | -            | Reset localStorage used for preferences (order table, number of rows...).                                                                                                            |
-| **toolbar**        | *ReactNode*                            | -            | Put anything in this toolbar : button, text, select...                                                                                                                               |
+
+| Name             | Type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Default | Description                                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| **data**         | _MyCustomType[]_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | -       | The data displayed in the tab.                                                                       |
+| **columns**      | _\<ColumnDef\<MyCustomType\>[]\>_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | -       | The name of the colomns, how to get it, actions on column...                                         |
+| **isLoading**    | _boolean_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | -       | Displays a skeleton on rows while loading.                                                           |
+| **tableOptions** | _\{onRowSelectionChange, getSortedRowModel, getPaginationRowModel, onPaginationChange, enableRowSelection, onColumnOrderChange \}_                                                                                                                                                                                                                                                                                                                                                                                                       | -       | Change the default rendered element for the one passed as a child, merging their props and behavior. |
+| **tableState**   | _\{columnVisibility, columnOrder: string[], columnPinning:\{left: string[], right: string[] \}, rowPinning\{bottom: string[], top: string[] \}, columnFilters: \{id: string, value: unknown \}[], globalFilter: any, sorting: \{desc: boolean, id: string \}[], expanded:?, grouping: string[], columnSizing:?, columnSizingInfo: \{ columnSizingStart: [string, number][], deltaOffset: null \| number,deltaPercentage: null \| number,isResizingColumn: false \| string, startOffset: null \| number, startSize: null \| number \} \}_ | -       | Change the default rendered element for the one passed as a child, merging their props and behavior. |
+| **onClickRow**   | _(row: Row\<TData\>) => void_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | -       | Action function triggered when the user clicks on a row.                                             |
+| **onResetTable** | _() => void_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | -       | Reset localStorage used for preferences (order table, number of rows...).                            |
+| **toolbar**      | _ReactNode_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | -       | Put anything in this toolbar : button, text, select...                                               |
 
 ### Playground
 
-*Import from filigran-ui :*
+_Import from filigran-ui :_
 
 Import \{Separator\} from 'filigran-ui'
 
 Everything possible for declaring columns :
-<ReactLiveDisplay displayError={false} codeExample={`const columns = useMemo<ColumnDef<Person>[]>(
+
+<ReactLiveDisplay
+  displayError={false}
+  codeExample={`const columns = useMemo<ColumnDef<Person>[]>(
     () => [
       {
         id: 'select',
@@ -98,9 +102,12 @@ Everything possible for declaring columns :
         id: 'age',
         accessorKey: 'age',
         header: 'Age'
-      }], [])`}/>
+      }], [])`}
+/>
 
-<ReactLiveDisplay displayError={false} codeExample={`
+<ReactLiveDisplay
+  displayError={false}
+  codeExample={`
 <DataTable
         data={data}
         columns={columns}
@@ -123,4 +130,5 @@ Everything possible for declaring columns :
           } //Force left column on the left, can not be pinned.
         }}
         onClickRow={(row) => console.log(row)} // Action on click
-      />`} />
+      />`}
+/>

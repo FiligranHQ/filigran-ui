@@ -4,28 +4,29 @@ title: Tag input
 
 # Tag input Example
 
-<ExampleTagInput/>
+<ExampleTagInput />
 
 ## How to use this tag input
 
 ### Props
-| Name                     | Type                                   | Default      | Description                                                                                |
-| -------------            | --------                               | -----------  | -----------------------------------------------------------------------------------------  |
-| **placeholder**          | *string*                               | -            | Text that appears in the form control when it has no value set.                            |
-| **tags**                 | *\{id: string text: string\}[]*        | -            | The precompleted tags.                                                                     |
-| **activeTagIndex**       | *number*                               | -            | The index of the current tag.                                                              |
-| **setActiveTagIndex**    | *() => void*                           | -            | Change the index of the current tag.                                                       |
-| **setTags**              | *() => void*                           | -            | Change the tags.                                                                           |
+
+| Name                  | Type                            | Default | Description                                                     |
+| --------------------- | ------------------------------- | ------- | --------------------------------------------------------------- |
+| **placeholder**       | _string_                        | -       | Text that appears in the form control when it has no value set. |
+| **tags**              | _\{id: string text: string\}[]_ | -       | The precompleted tags.                                          |
+| **activeTagIndex**    | _number_                        | -       | The index of the current tag.                                   |
+| **setActiveTagIndex** | _() => void_                    | -       | Change the index of the current tag.                            |
+| **setTags**           | _() => void_                    | -       | Change the tags.                                                |
 
 ### Playground
 
-*Import from filigran-ui :*
+_Import from filigran-ui :_
 
 Import \{Separator\} from 'filigran-ui'
 
 <ReactLiveDisplay
-displayError={false}
-    codeExample={`
+  displayError={false}
+  codeExample={`
            <TagInput
                             {...field}
                             placeholder="Enter a topic"
@@ -41,4 +42,5 @@ displayError={false}
 />
 
 ## Docs
+
 https://emblor.jaleelbennett.com/introduction

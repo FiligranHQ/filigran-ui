@@ -26,34 +26,37 @@ title: Alert dialog
 ## How to use this alerDialog
 
 ### Props
+
 #### Root
-| Name             | Type                    | Default | Description                                                                                                      |
-| -------          | ----------------------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
-| **defaultOpen**  | boolean                 | -       | The open state of the dialog when it is initially rendered. Use when you do not need to control its open state.  |
-| **open**         | boolean                 | -       | The controlled open state of the dialog. Must be used in conjunction with onOpenChange.                          |
-| **onOpenChange** | (open: boolean) => void | -       | Event handler called when the open state of the dialog changes.                                                  |
+
+| Name             | Type                    | Default | Description                                                                                                     |
+| ---------------- | ----------------------- | ------- | --------------------------------------------------------------------------------------------------------------- |
+| **defaultOpen**  | boolean                 | -       | The open state of the dialog when it is initially rendered. Use when you do not need to control its open state. |
+| **open**         | boolean                 | -       | The controlled open state of the dialog. Must be used in conjunction with onOpenChange.                         |
+| **onOpenChange** | (open: boolean) => void | -       | Event handler called when the open state of the dialog changes.                                                 |
 
 #### Trigger
-| Name        | Type                                         | Default | Description                                                                                                      |
-| -------     | -------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
-| **asChild** | boolean                                      | false   |Change the default rendered element for the one passed as a child, merging their props and behavior.              |
+
+| Name        | Type    | Default | Description                                                                                          |
+| ----------- | ------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| **asChild** | boolean | false   | Change the default rendered element for the one passed as a child, merging their props and behavior. |
 
 #### Content
-| Name                  | Type                           | Default | Description                                                                                                                                               |
-| -------               | ------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------                                          |
-| **asChild**           | boolean                        | false   |Change the default rendered element for the one passed as a child, merging their props and behavior.                                                       |
-| **forceMount**        | boolean                        | -       |Used to force mounting when more control is needed. Useful when controlling animation with React animation libraries. It inherits from AlertDialog.Portal. |
-| **onOpenAutoFocus**   | (event: Event) => void         | -       |Event handler called when focus moves to the destructive action after opening. It can be prevented by calling event.preventDefault.                        |
-| **onCloseAutoFocus**  | (event: Event) => void         | -       |Event handler called when focus moves to the trigger after closing. It can be prevented by calling event.preventDefault.                                   |
-| **onEscapeKeyDown**   | (event: KeyboardEvent) => void | -       |Event handler called when the escape key is down. It can be prevented by calling event.preventDefault.                                                     |
+
+| Name                 | Type                           | Default | Description                                                                                                                                                |
+| -------------------- | ------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **asChild**          | boolean                        | false   | Change the default rendered element for the one passed as a child, merging their props and behavior.                                                       |
+| **forceMount**       | boolean                        | -       | Used to force mounting when more control is needed. Useful when controlling animation with React animation libraries. It inherits from AlertDialog.Portal. |
+| **onOpenAutoFocus**  | (event: Event) => void         | -       | Event handler called when focus moves to the destructive action after opening. It can be prevented by calling event.preventDefault.                        |
+| **onCloseAutoFocus** | (event: Event) => void         | -       | Event handler called when focus moves to the trigger after closing. It can be prevented by calling event.preventDefault.                                   |
+| **onEscapeKeyDown**  | (event: KeyboardEvent) => void | -       | Event handler called when the escape key is down. It can be prevented by calling event.preventDefault.                                                     |
 
 ### Playground
 
-*Import from filigran-ui :*
+_Import from filigran-ui :_
 
 Import \{AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter,
 AlertDialogCancel, AlertDialogAction \} from 'filigran-ui'
-
 
 <ReactLiveDisplay
   codeExample={`

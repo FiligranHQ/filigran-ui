@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
 * {
   @apply border-border;
   font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
@@ -22,7 +21,7 @@ body {
   letter-spacing: 0.0035rem;
 }
 
-ol{
+ol {
   padding: 0 !important;
   margin: 0 !important;
 }

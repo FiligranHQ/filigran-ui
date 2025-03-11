@@ -28,7 +28,7 @@ const ColorBox: React.FunctionComponent<ColorBoxProps> = ({
       title: 'Copied !',
       description: 'Value copied to clipboard',
     })
-    selectedColor({colorBackground: colorBackground })
+    selectedColor({colorBackground: colorBackground})
   }
   return (
     <div

@@ -1,62 +1,83 @@
 'use client'
-import React, { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from 'react';
-import { type NumberOfElements } from './dataTableTypes';
-import { useDataTableContext } from './DataTableContext';
-import { Button } from '../../../servers';
-import { TableTuneIcon, ArrowPreviousIcon, ArrowNextIcon } from 'filigran-icon';
-import { DropdownMenu, DropdownMenuPortal, DropdownMenuSub, DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
-import { DropdownMenuContent, DropdownMenuSubContent, DropdownMenuSubTrigger } from '../../dropdown-menu';
-import { SimpleTooltip as Tooltip } from '../../tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuTrigger,
+} from '@radix-ui/react-dropdown-menu'
+import {ArrowNextIcon, ArrowPreviousIcon, TableTuneIcon} from 'filigran-icon'
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react'
+import {Button} from '../../../servers'
+import {
+  DropdownMenuContent,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from '../../dropdown-menu'
+import {SimpleTooltip as Tooltip} from '../../tooltip'
+import {useDataTableContext} from './DataTableContext'
+import {type NumberOfElements} from './dataTableTypes'
 
 const DataTablePagination = ({
   page,
   setPage,
   numberOfElements: unstoreNOE,
 }: {
-  page: number,
-  setPage: Dispatch<SetStateAction<number>>,
-  numberOfElements?: NumberOfElements,
+  page: number
+  setPage: Dispatch<SetStateAction<number>>
+  numberOfElements?: NumberOfElements
 }) => {
   const {
     resetColumns,
-    formatter: { t_i18n },
+    formatter: {t_i18n},
     useDataTablePaginationLocalStorage: {
       viewStorage: {
         pageSize,
-        numberOfElements: storedNOE = { original: 0, number: 0, symbol: '' },
+        numberOfElements: storedNOE = {original: 0, number: 0, symbol: ''},
       },
       helpers,
     },
-  } = useDataTableContext();
+  } = useDataTableContext()
 
-  const numberOfElements = unstoreNOE ?? storedNOE;
+  const numberOfElements = unstoreNOE ?? storedNOE
 
   // if the number of elements object changes, it means we have changed the filter or search
   // we reset to page 1 (we might be out-of-bound in this new context)
   useEffect(() => {
-    setPage(1);
-  }, [numberOfElements]);
+    setPage(1)
+  }, [numberOfElements])
 
-  const items = pageSize ? Number.parseInt(pageSize, 10) : 25;
-  const firstItem = items * ((page ?? 1) - 1) + 1;
-  const lastItem = Math.min(firstItem + items - 1, numberOfElements.original ?? 0);
+  const items = pageSize ? Number.parseInt(pageSize, 10) : 25
+  const firstItem = items * ((page ?? 1) - 1) + 1
+  const lastItem = Math.min(
+    firstItem + items - 1,
+    numberOfElements.original ?? 0
+  )
 
-  const fetchMore = useCallback((direction = 'forward') => {
-    let nextPage;
-    if (direction === 'previous' && page > 1) {
-      nextPage = page - 1;
-      setPage(nextPage);
-    } else {
-      nextPage = page + 1;
-      setPage(nextPage);
-    }
-  }, [page, pageSize]);
+  const fetchMore = useCallback(
+    (direction = 'forward') => {
+      let nextPage
+      if (direction === 'previous' && page > 1) {
+        nextPage = page - 1
+        setPage(nextPage)
+      } else {
+        nextPage = page + 1
+        setPage(nextPage)
+      }
+    },
+    [page, pageSize]
+  )
 
   const resetTable = () => {
-    resetColumns();
-    helpers.handleAddProperty('pageSize', '25');
-  };
-  const [menuOpen, setMenuOpen] = useState(false);
+    resetColumns()
+    helpers.handleAddProperty('pageSize', '25')
+  }
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <div
@@ -66,14 +87,12 @@ const DataTablePagination = ({
         borderColor: 'hsl(var(--border))',
         borderRadius: 'var(--radius)',
         padding: '0.25rem',
-      }}
-    >
+      }}>
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-        }}
-      >
+        }}>
         <Button
           variant="ghost"
           onClick={() => fetchMore('previous')}
@@ -84,8 +103,7 @@ const DataTablePagination = ({
             borderRight: 'none',
             width: 24,
             height: 24,
-          }}
-        >
+          }}>
           <ArrowPreviousIcon className="size-2" />
         </Button>
         <Tooltip
@@ -94,13 +112,12 @@ const DataTablePagination = ({
               <strong>{`${numberOfElements.original}`}</strong>{' '}
               {t_i18n('entitie(s)')}
             </div>
-          }
-        >
+          }>
           <div className="leading-none text-text-secondary txt-sub-content">
             <span className="text-foreground">{`${lastItem ? firstItem : 0} - ${lastItem} `}</span>
-            <span style={{ opacity: 0.6 }}>
-                {`/ ${numberOfElements.number}${numberOfElements.symbol}`}
-              </span>
+            <span style={{opacity: 0.6}}>
+              {`/ ${numberOfElements.number}${numberOfElements.symbol}`}
+            </span>
           </div>
         </Tooltip>
         <Button
@@ -113,14 +130,12 @@ const DataTablePagination = ({
             borderRight: 'none',
             width: 24,
             height: 24,
-          }}
-        >
+          }}>
           <ArrowNextIcon className="size-2" />
         </Button>
         <DropdownMenu
           open={menuOpen}
-          onOpenChange={setMenuOpen}
-        >
+          onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
@@ -135,8 +150,7 @@ const DataTablePagination = ({
               <Button
                 variant="ghost"
                 className="w-full justify-start normal-case"
-                onClick={resetTable}
-              >
+                onClick={resetTable}>
                 {t_i18n('Reset table')}
               </Button>
               <DropdownMenuSub>
@@ -149,8 +163,9 @@ const DataTablePagination = ({
                       <Button
                         variant="ghost"
                         className="w-full justify-start normal-case"
-                        onClick={() => helpers.handleAddProperty('pageSize', nb)}
-                      >
+                        onClick={() =>
+                          helpers.handleAddProperty('pageSize', nb)
+                        }>
                         {nb}
                       </Button>
                     ))}
@@ -162,7 +177,7 @@ const DataTablePagination = ({
         </DropdownMenu>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default DataTablePagination;
+export default DataTablePagination
