@@ -5,14 +5,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  //TODO fix correctly the Tsconfig to correctly setup type in libraries, TS look confused
-  typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
-    ignoreBuildErrors: true,
-  },
   webpack(config) {
     // Grab the existing rule that handles SVG imports
     const fileLoaderRule = config.module.rules.find((rule) =>

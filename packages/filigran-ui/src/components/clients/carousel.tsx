@@ -28,6 +28,8 @@ type CarouselProps = {
   plugins?: CarouselPlugin
   orientation?: 'horizontal' | 'vertical'
   setApi?: (api: CarouselApi) => void
+  scrollButton?: boolean
+  dotButton?: boolean
 }
 
 type CarouselContextProps = {
@@ -68,6 +70,8 @@ const Carousel = forwardRef<
       setApi,
       plugins,
       className,
+      scrollButton = true,
+      dotButton = true,
       children,
       ...props
     },
@@ -161,9 +165,10 @@ const Carousel = forwardRef<
           <CarouselContent>{children}</CarouselContent>
           {orientation === 'horizontal' ? (
             <>
-              <CarouselPrevious />
-              <CarouselNext />
-              <div className="absolute bottom-l left-1/2 -translate-x-1/2 flex justify-center gap-s">
+              {scrollButton && <>
+                <CarouselPrevious />
+                <CarouselNext /></>}
+              {dotButton && <div className="absolute bottom-l left-1/2 -translate-x-1/2 flex justify-center gap-s">
                 {scrollSnaps.map((_, index) => (
                   <CarouselDotButton
                     key={index}
@@ -171,11 +176,13 @@ const Carousel = forwardRef<
                     className={cn(index === selectedIndex && 'bg-primary')}
                   />
                 ))}
-              </div>
+              </div>}
+
             </>
           ) : (
             <div className="top-1/2 -translate-y-1/2 flex flex-col items-center right-l absolute gap-l">
-              <CarouselPrevious />
+              {scrollButton && <CarouselPrevious />}
+              {dotButton &&
               <div className="flex flex-col gap-xs">
                 {scrollSnaps.map((_, index) => (
                   <CarouselDotButton
@@ -184,8 +191,8 @@ const Carousel = forwardRef<
                     className={cn(index === selectedIndex && 'bg-primary')}
                   />
                 ))}
-              </div>
-              <CarouselNext />
+              </div>}
+              {scrollButton && <CarouselNext />}
             </div>
           )}
         </div>
@@ -209,7 +216,7 @@ const CarouselContent = forwardRef<
         ref={ref}
         className={cn(
           'flex',
-          orientation === 'horizontal' ? '-ml-4' : '-mt-4 flex-col h-full',
+          orientation === 'horizontal' ? '-ml-4 h-full' : '-mt-4 flex-col h-full',
           className
         )}
         {...props}
@@ -230,7 +237,7 @@ const CarouselItem = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
         aria-roledescription="slide"
         className={cn(
           'min-w-0 shrink-0 grow-0 basis-full relative',
-          orientation === 'horizontal' ? 'pl-4' : 'pt-4',
+          orientation === 'horizontal' ? 'px-s' : 'py-s',
           className
         )}
         {...props}

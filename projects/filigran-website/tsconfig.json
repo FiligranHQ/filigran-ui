@@ -30,7 +30,6 @@
       "filigran-ui/servers": [
         "../../packages/filigran-ui/src/components/servers/index.ts"
       ],
-      "filigran-icon": ["../../packages/filigran-icon/dist/index.js"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

@@ -18,6 +18,7 @@ interface ColorBoxProps {
 const ColorBox: React.FunctionComponent<ColorBoxProps> = ({
   colorName,
   colorBackground,
+  colorValue,
   primary = false,
   selectedColor,
 }) => {
@@ -28,7 +29,7 @@ const ColorBox: React.FunctionComponent<ColorBoxProps> = ({
       title: 'Copied !',
       description: 'Value copied to clipboard',
     })
-    selectedColor({colorBackground: colorBackground})
+    selectedColor({colorValue, colorBackground})
   }
   return (
     <div

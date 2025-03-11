@@ -6,7 +6,7 @@ import {
   PaginationState,
 } from '@tanstack/react-table'
 import {
-  Checkbox,
+  Checkbox, ColumnDefWithOptionsHeader,
   DataTable,
   DatatableI18nKey,
   DataTableOptionsHeader,
@@ -28,7 +28,7 @@ import {MoreVertIcon} from 'filigran-icon'
 export function ExampleDataTable() {
   const [rowSelection, setRowSelection] = useState({})
   const [inputSearch, setInputSearch] = useState('')
-  const [data, setData] = useState(() => makeData(500))
+  const [data, setData] = useState(() => makeData(500, 'person'))
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 50,
@@ -57,7 +57,7 @@ export function ExampleDataTable() {
     Columns: 'Colonnes',
     'Reset table': 'Reinitialiser',
   }
-  const columns = useMemo<ColumnDef<Person>[]>(
+  const columns = useMemo<ColumnDefWithOptionsHeader<Person, unknown>[]>(
     () => [
       {
         id: 'select',
@@ -107,10 +107,9 @@ export function ExampleDataTable() {
         cell: (info) => (
           <HighlightSearchTerm text={info.getValue() as string} />
         ),
-        header: (header) => (
+        optionsHeader: (header) => (
           <DataTableOptionsHeader
             column={header.column}
-            title={'Last name'}
             menuItems={
               <>
                 <DropdownMenuItem onClick={() => console.log(header.column)}>

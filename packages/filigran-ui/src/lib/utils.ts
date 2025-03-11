@@ -16,6 +16,7 @@ export function getValidChildren(children: ReactNode) {
 export function fixedForwardRef<T, P = {}>(
   render: (props: P, ref: Ref<T>) => ReactNode
 ): (props: P & RefAttributes<T>) => ReactNode {
+  // @ts-ignore
   return forwardRef(render) as any
 }
 

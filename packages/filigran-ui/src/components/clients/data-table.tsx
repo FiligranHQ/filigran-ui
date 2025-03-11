@@ -30,14 +30,14 @@ import {
   type SortDirection,
   type TableOptions,
   type TableState,
-  type Table as TableType,
+  type Table as TableType, type StringOrTemplateHeader,
 } from '@tanstack/react-table'
 import {
   ArrowNextIcon,
   ArrowPreviousIcon,
   DragIndicatorIcon,
   KeyboardArrowDownIcon,
-  KeyboardArrowUpIcon,
+  KeyboardArrowUpIcon, MoreVertIcon,
   TableTuneIcon,
   UnfoldMoreIcon,
   VisibilityOffIcon,
@@ -77,8 +77,13 @@ import {
   TableRow,
 } from './table'
 
+
+type ColumnDefWithOptionsHeader<TData, TValue> = ColumnDef<TData, TValue> & {
+  optionsHeader?: StringOrTemplateHeader<TData, TValue>
+}
+
 interface DataTableProps<TData extends {id: string}, TValue> {
-  columns: ColumnDef<TData, TValue>[]
+  columns: ColumnDefWithOptionsHeader<TData, TValue>[]
   data: TData[]
   toolbar?: ReactNode
   tableState?: Partial<TableState>
@@ -217,10 +222,10 @@ const DataTableSelectColumnVisibility = <TData,>() => {
 const SortIcon = ({sortState}: {sortState: SortDirection | false}) => {
   const iconMapping = {
     desc: (
-      <KeyboardArrowDownIcon className="ml-s h-3 w-3 text-text-secondary" />
+      <KeyboardArrowDownIcon className="ml-s size-3 text-text-secondary" />
     ),
-    asc: <KeyboardArrowUpIcon className="ml-s h-3 w-3 text-text-secondary" />,
-    default: <UnfoldMoreIcon className="ml-s h-4 w-4 text-text-secondary" />,
+    asc: <KeyboardArrowUpIcon className="ml-s size-3 text-text-secondary" />,
+    default: null,
   }
 
   if (sortState === false) {
@@ -233,42 +238,37 @@ const SortIcon = ({sortState}: {sortState: SortDirection | false}) => {
 const DataTableOptionsHeader = <TData, TValue>({
   column,
   menuItems,
-  title,
   className,
 }: {
   column: Column<TData, TValue>
   menuItems?: ReactNode
-  title: string
   className?: string
 }) => {
   const {t_i18n} = useContext(TableContext)
-  if (!column.getCanHide() && !column.getCanSort()) {
-    return <span className="txt-category"> {title}</span>
-  }
 
+  if(!column.getCanSort() && !column.getCanHide() && !menuItems) {
+    return null;
+  }
   return (
     <div className={className}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            size="sm"
-            className="data-[state=open]:bg-accent -ml-3 h-8">
-            <span className="txt-category"> {title}</span>
-            {column.getCanSort() && (
-              <SortIcon sortState={column.getIsSorted()} />
-            )}
+            size="icon"
+          className="w-6 text-border-medium">
+            <MoreVertIcon className="size-4"/>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
           {column.getCanSort() && (
             <>
               <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
-                <KeyboardArrowUpIcon className="mr-2 h-3 w-3 text-text-secondary" />
+                <KeyboardArrowUpIcon className="mr-2 size-3 text-text-secondary" />
                 {t_i18n('Asc')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
-                <KeyboardArrowDownIcon className="mr-2 h-3 w-3 text-text-secondary" />
+                <KeyboardArrowDownIcon className="mr-2 size-3 text-text-secondary" />
                 {t_i18n('Desc')}
               </DropdownMenuItem>
             </>
@@ -314,6 +314,8 @@ const DraggableTableHeader = <TData, TValue>({
     return styles
   }, [header, transform])
 
+  const optionsHeader = (header.column.columnDef as ColumnDefWithOptionsHeader<TData, TValue>).optionsHeader;
+
   return (
     <TableHead
       key={header.id}
@@ -325,31 +327,46 @@ const DraggableTableHeader = <TData, TValue>({
       )}
       ref={setNodeRef}
       style={thStyles}>
+      {!header.column.getIsPinned() && (
+        <button
+          className={cn(
+            'cursor-grab opacity-0 focus:opacity-100 group-hover:opacity-100 absolute left-0 top-0 bottom-0 w-4 text-border-medium',
+            isDragging && 'cursor-grabbing'
+          )}
+          {...attributes}
+          {...listeners}>
+          <DragIndicatorIcon className="size-3" />
+        </button>
+      )}
       <div
         className={cn('flex items-center justify-between', sticky && 'h-full')}>
-        {header.isPlaceholder ? null : typeof header.column.columnDef.header ===
-          'string' ? (
-          <DataTableOptionsHeader
-            column={header.column}
-            title={header.column.columnDef.header}
-          />
-        ) : (
-          <span className="txt-category">
-            {flexRender(header.column.columnDef.header, header.getContext())}
+        {header.isPlaceholder ? null : (
+          <span
+            className={
+            cn(
+              'flex items-center txt-category',
+              header.column.getCanSort() &&
+                'cursor-pointer select-none',
+            )}
+            onClick={header.column.getToggleSortingHandler()}
+          >
+            {flexRender(
+              header.column.columnDef.header,
+              header.getContext()
+            )}
+            <SortIcon sortState={header.column.getIsSorted()}/>
           </span>
         )}
+        <div className="opacity-0 group-hover:opacity-100">
+          {
+            optionsHeader ? flexRender(optionsHeader, header.getContext()) :
+              <DataTableOptionsHeader
+                column={header.column}
+              />
+          }
+        </div>
 
-        {!header.column.getIsPinned() && (
-          <button
-            className={cn(
-              'cursor-grab opacity-0 focus:opacity-100 group-hover:opacity-100',
-              isDragging && 'cursor-grabbing'
-            )}
-            {...attributes}
-            {...listeners}>
-            <DragIndicatorIcon className="mx-s h-3.5 w-3.5 rotate-90" />
-          </button>
-        )}
+
       </div>
       {header.column.getCanResize() && (
         <div
@@ -357,8 +374,8 @@ const DraggableTableHeader = <TData, TValue>({
           onMouseDown={header.getResizeHandler()}
           onTouchStart={header.getResizeHandler()}
           className={cn(
-            `absolute right-0 top-0 h-full w-1 cursor-col-resize select-none bg-text-secondary opacity-0`,
-            header.column.getIsResizing() && `bg-primary opacity-100`,
+            `absolute right-0 top-0 h-full w-1 cursor-col-resize select-none bg-primary opacity-0`,
+            header.column.getIsResizing() && `opacity-100`,
             !isDragging && 'group-hover:opacity-100'
           )}
         />
@@ -408,7 +425,7 @@ const DataTableHeadBarOptions = () => {
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
           aria-label={t_i18n('Go to previous page')}>
-          <ArrowPreviousIcon className="h-3 w-3" />
+          <ArrowPreviousIcon className="size-3" />
         </Button>
         <div className="px-s leading-none text-text-secondary txt-sub-content">
           <span className="text-foreground">
@@ -425,7 +442,7 @@ const DataTableHeadBarOptions = () => {
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
           aria-label={t_i18n('Go to next page')}>
-          <ArrowNextIcon className="h-3 w-3" />
+          <ArrowNextIcon className="size-3" />
         </Button>
 
         <DataTableSelectColumnVisibility />
@@ -599,4 +616,5 @@ export {
   DataTableHeadBarOptions,
   DataTableOptionsHeader,
   type DatatableI18nKey,
+  type ColumnDefWithOptionsHeader,
 }

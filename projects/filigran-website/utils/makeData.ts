@@ -18,6 +18,7 @@ export interface Report {
   type: string
   author: string
   creator: string
+  description: string
   date: Date
   status: 'in progress' | 'not started' | 'done'
 }
@@ -66,12 +67,12 @@ const newPerson = (): Person => {
   }
 }
 
-export function makeData(nbItems: number, type = 'person') {
-  const makeDataLevel = (): (Person | Report)[] => {
-    return range(nbItems).map((d): Report | Person => {
-      return type === 'person' ? newPerson() : newReport()
-    })
-  }
+export function makeData<T extends 'person' | 'report'>(nbItems: number, type: T ) :
+  T extends 'person' ? Person[] : Report[] {
 
-  return makeDataLevel()
+  const makeDataLevel = (): Person[] | Report[] => {
+    return range(nbItems).map(() => (type === 'person' ? newPerson() : newReport())) as Person[] | Report[];
+  };
+
+  return makeDataLevel() as any;
 }
