@@ -3,12 +3,22 @@ title: Input
 ---
 
 # Input Example
+<div className="space-y-2">
+  <Input
+    type="email"
+    placeholder="Email"
+  />
 
-<Input
-  type="email"
-  placeholder="Email"
-/>
-
+  <Input
+    placeholder="Search..."
+    startIcon={<SearchIcon className="size-4"/>}
+  />
+  <Input
+    type="password"
+    placeholder="Password"
+    endIcon={<VisibilityOffIcon className="size-4"/>}
+  />
+</div>
 ## How to use this input
 
 ### Props
@@ -49,6 +59,8 @@ title: Input
 | **step**                | On type _date, month, week, time, datetime-local, number, range_                 | -       | Incremental values that are valid.                                                                                                                                |
 | **value**               | On type _all except image_                                                       | -       | The value of the control. When specified in the HTML, corresponds to the initial value.                                                                           |
 | **width**               | On type _image_                                                                  | -       | Same as width attribute for img.                                                                                                                                  |
+| **startIcon**           | On React node                                                                    | -       | Will add element at the start                                                                                                                                     |
+| **endIcon**             | On React node                                                                    | -       | Will add element at the end                                                                                                                                       |
 
 #### Input type
 
