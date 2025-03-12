@@ -36,7 +36,7 @@ const ColorBox: React.FunctionComponent<ColorBoxProps> = ({
       className={`w-20 flex-col hover:cursor-pointer`}
       onClick={() => onClick(colorBackground)}>
       <div
-        className={`mr-xs h-10 w-10 rounded border-black ${colorBackground ? `bg${colorBackground.slice(1)}` : ''} ${primary ? 'border-4' : 'border'} `}
+        className={`mr-xs h-10 w-10 rounded border-black ${colorBackground ? `${colorBackground}` : ''} ${primary ? 'border-4' : 'border'} `}
       />
       <div className="font-bold">{colorName}</div>
     </div>
