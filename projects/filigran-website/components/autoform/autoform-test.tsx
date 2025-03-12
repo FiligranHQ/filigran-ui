@@ -58,18 +58,11 @@ const exampleJsonSchema: JSONSchema = {
   optional: ['name', 'age'],
 }
 
-const zodSchemaFromJSON = convertJsonSchemaToZod(exampleJsonSchema)
 
-const testObj = {
-  label: 'HEllo world',
-  inputProps: {
-    placeholder: 'Username placeholder'
-  }
-}
+
 const testSchema = z.object({
   username: z
     .string()
-    .describe(testObj)
     // You can use zod's built-in validation as normal
     .min(2, {
       message: 'Username must be at least 2 characters.'
@@ -105,10 +98,7 @@ const testSchema = z.object({
       message: 'You must accept the terms and conditions.',
       path: ['acceptTerms'],
     })
-    .describe({
-      label:'Accept terms and conditions.lbalba',
-      fieldType: 'switch'
-    }),
+    .describe('Accept terms and conditions'),
 
   // Date will show a date picker
   birthday: z.coerce.date().optional(),
