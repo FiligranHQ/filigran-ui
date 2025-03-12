@@ -39,7 +39,6 @@ const FiligranUIPlugin = () => {
           'font-size': '0.75rem',
           'letter-spacing': '0.00563rem',
           'text-transform': 'uppercase',
-          'font-family': 'var(--font-geologica)',
         },
         '.txt-default': {
           'font-size': '0.875rem',
@@ -48,6 +47,11 @@ const FiligranUIPlugin = () => {
         },
         '.txt-sub-content': {
           'font-size': '0.75rem',
+          'line-height': '1.52',
+          'letter-spacing': '0.003rem',
+        },
+        '.txt-table': {
+          'font-size': '0.8125rem',
           'line-height': '1.52',
           'letter-spacing': '0.003rem',
         },

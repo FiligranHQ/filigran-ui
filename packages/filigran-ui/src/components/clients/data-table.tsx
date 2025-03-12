@@ -344,7 +344,7 @@ const DraggableTableHeader = <TData, TValue>({
           <span
             className={
             cn(
-              'flex items-center txt-category',
+              'flex items-center',
               header.column.getCanSort() &&
                 'cursor-pointer select-none',
             )}
@@ -374,11 +374,13 @@ const DraggableTableHeader = <TData, TValue>({
           onMouseDown={header.getResizeHandler()}
           onTouchStart={header.getResizeHandler()}
           className={cn(
-            `absolute right-0 top-0 h-full w-1 cursor-col-resize select-none bg-primary opacity-0`,
+            `absolute right-0 top-0 bottom-0 flex justify-center w-s cursor-col-resize select-none opacity-0`,
             header.column.getIsResizing() && `opacity-100`,
             !isDragging && 'group-hover:opacity-100'
           )}
-        />
+        >
+          <span className="w-[0.125rem] h-full bg-primary"/>
+        </div>
       )}
     </TableHead>
   )
