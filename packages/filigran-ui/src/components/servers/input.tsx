@@ -6,16 +6,17 @@ import {SearchIcon} from 'filigran-icon'
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
+  containerClass?: string;
   startIcon?: ReactNode;
   endIcon?: ReactNode;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, startIcon, endIcon, ...props }, ref) => {
+  ({ className, type, startIcon, endIcon, containerClass, ...props }, ref) => {
 
 
     return (
-      <div className="w-full relative">
+      <div className={cn('w-full relative', containerClass)}>
         {startIcon && (
           <div className="absolute left-s top-1/2 transform -translate-y-1/2">
             {startIcon}
