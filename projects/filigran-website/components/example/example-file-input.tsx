@@ -40,7 +40,7 @@ const ExampleFileInput = () => {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-s">
       <div>
         <h2>File input in a form without drop zone</h2>
         <Form {...form}>

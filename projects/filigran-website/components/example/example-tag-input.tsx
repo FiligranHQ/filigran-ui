@@ -74,7 +74,7 @@ export const ExampleTagInput = () => {
         <div
           id="try"
           className="w-full py-8">
-          <div className="relative my-4 flex w-full flex-col space-y-2">
+          <div className="relative my-4 flex w-full flex-col space-y-s">
             <div className="preview relative mt-2 flex min-h-[350px] w-full items-center justify-center rounded-md border p-10 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <Form {...form}>
                 <form
@@ -119,7 +119,7 @@ export const ExampleTagInput = () => {
         <div
           id="try"
           className="w-full py-8">
-          <div className="relative my-4 flex w-full flex-col space-y-2">
+          <div className="relative my-4 flex w-full flex-col space-y-s">
             <div className="preview relative mt-2 flex min-h-[350px] w-full items-center justify-center rounded-md border p-10 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <Form {...form}>
                 <form
