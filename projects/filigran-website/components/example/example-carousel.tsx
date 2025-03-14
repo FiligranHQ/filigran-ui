@@ -62,7 +62,8 @@ export function ExampleCarousel() {
         </DialogContent>
       </Dialog>
       <h2>Without lightbox</h2>
-      <Carousel>
+      <Carousel
+      scrollButton="hover">
         {[
           `/francesco-ungaro.jpg`,
           '/the-chaffins.jpg',

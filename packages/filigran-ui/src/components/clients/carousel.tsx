@@ -28,7 +28,7 @@ type CarouselProps = {
   plugins?: CarouselPlugin
   orientation?: 'horizontal' | 'vertical'
   setApi?: (api: CarouselApi) => void
-  scrollButton?: boolean
+  scrollButton?: 'visible' | 'hover' | 'none'
   dotButton?: boolean
 }
 
@@ -70,7 +70,7 @@ const Carousel = forwardRef<
       setApi,
       plugins,
       className,
-      scrollButton = true,
+      scrollButton = 'visible',
       dotButton = true,
       children,
       ...props
@@ -158,16 +158,17 @@ const Carousel = forwardRef<
         <div
           ref={ref}
           onKeyDownCapture={handleKeyDown}
-          className={cn('relative', className)}
+          className={cn('relative group', className)}
           role="region"
           aria-roledescription="carousel"
           {...props}>
           <CarouselContent>{children}</CarouselContent>
           {orientation === 'horizontal' ? (
             <>
-              {scrollButton && <>
-                <CarouselPrevious />
-                <CarouselNext /></>}
+              {scrollButton !== 'none' && <>
+                <CarouselPrevious className={cn(scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}/>
+                <CarouselNext className={cn(scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')} />
+              </>}
               {dotButton && <div className="absolute bottom-l left-1/2 -translate-x-1/2 flex justify-center gap-s">
                 {scrollSnaps.map((_, index) => (
                   <CarouselDotButton
@@ -181,7 +182,7 @@ const Carousel = forwardRef<
             </>
           ) : (
             <div className="top-1/2 -translate-y-1/2 flex flex-col items-center right-l absolute gap-l">
-              {scrollButton && <CarouselPrevious />}
+              {scrollButton !== 'none' && <CarouselPrevious className={cn(scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}/>}
               {dotButton &&
               <div className="flex flex-col gap-xs">
                 {scrollSnaps.map((_, index) => (
@@ -192,7 +193,7 @@ const Carousel = forwardRef<
                   />
                 ))}
               </div>}
-              {scrollButton && <CarouselNext />}
+              {scrollButton !== 'none' && <CarouselNext className={cn(scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}/>}
             </div>
           )}
         </div>
@@ -216,7 +217,7 @@ const CarouselContent = forwardRef<
         ref={ref}
         className={cn(
           'flex',
-          orientation === 'horizontal' ? '-ml-4 h-full' : '-mt-4 flex-col h-full',
+          orientation === 'horizontal' ? ' h-full' : '-mt-4 flex-col h-full',
           className
         )}
         {...props}
