@@ -29,7 +29,7 @@ type CarouselProps = {
   orientation?: 'horizontal' | 'vertical'
   setApi?: (api: CarouselApi) => void
   scrollButton?: 'visible' | 'hover' | 'none'
-  dotButton?: boolean
+  dotButton?: 'visible' | 'hover' | 'none'
 }
 
 type CarouselContextProps = {
@@ -71,7 +71,7 @@ const Carousel = forwardRef<
       plugins,
       className,
       scrollButton = 'visible',
-      dotButton = true,
+      dotButton = 'visible',
       children,
       ...props
     },
@@ -169,12 +169,12 @@ const Carousel = forwardRef<
                 <CarouselPrevious className={cn(scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}/>
                 <CarouselNext className={cn(scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')} />
               </>}
-              {dotButton && <div className="absolute bottom-l left-1/2 -translate-x-1/2 flex justify-center gap-s">
+              {dotButton !== 'none' && <div className="absolute bottom-l left-1/2 -translate-x-1/2 flex justify-center gap-s">
                 {scrollSnaps.map((_, index) => (
                   <CarouselDotButton
                     key={index}
                     onClick={() => onDotButtonClick(index)}
-                    className={cn(index === selectedIndex && 'bg-primary')}
+                    className={cn(index === selectedIndex && 'bg-primary', scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}
                   />
                 ))}
               </div>}
@@ -183,13 +183,13 @@ const Carousel = forwardRef<
           ) : (
             <div className="top-1/2 -translate-y-1/2 flex flex-col items-center right-l absolute gap-l">
               {scrollButton !== 'none' && <CarouselPrevious className={cn(scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}/>}
-              {dotButton &&
+              {dotButton !== 'none' &&
               <div className="flex flex-col gap-xs">
                 {scrollSnaps.map((_, index) => (
                   <CarouselDotButton
                     key={index}
                     onClick={() => onDotButtonClick(index)}
-                    className={cn(index === selectedIndex && 'bg-primary')}
+                    className={cn(index === selectedIndex && 'bg-primary', scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}
                   />
                 ))}
               </div>}
