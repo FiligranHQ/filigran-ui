@@ -26,7 +26,7 @@ const Checkbox = React.forwardRef<
       {checked === undefined && <CheckBoldIcon className="w-[0.625rem]" />}
       {checked === true && <CheckBoldIcon className="w-[0.625rem]" />}
       {checked === 'indeterminate' && (
-        <CheckIndeterminateSmallBoldIcon className="text-border-medium w-2" />
+        <CheckIndeterminateSmallBoldIcon className="text-muted-foreground w-2" />
       )}
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>

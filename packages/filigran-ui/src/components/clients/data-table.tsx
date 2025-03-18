@@ -256,7 +256,7 @@ const DataTableOptionsHeader = <TData, TValue>({
           <Button
             variant="ghost"
             size="icon"
-          className="w-6 text-border-medium">
+          className="w-6 text-muted-foreground">
             <MoreVertIcon className="size-4"/>
           </Button>
         </DropdownMenuTrigger>
@@ -330,7 +330,7 @@ const DraggableTableHeader = <TData, TValue>({
       {!header.column.getIsPinned() && (
         <button
           className={cn(
-            'cursor-grab opacity-0 focus:opacity-100 group-hover:opacity-100 absolute left-0 top-0 bottom-0 w-4 text-border-medium',
+            'cursor-grab opacity-0 focus:opacity-100 group-hover:opacity-100 absolute left-0 top-0 bottom-0 w-4 text-muted-foreground',
             isDragging && 'cursor-grabbing'
           )}
           {...attributes}

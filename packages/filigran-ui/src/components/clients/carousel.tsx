@@ -174,7 +174,7 @@ const Carousel = forwardRef<
                   <CarouselDotButton
                     key={index}
                     onClick={() => onDotButtonClick(index)}
-                    className={cn(index === selectedIndex && 'bg-primary', scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}
+                    className={cn(index === selectedIndex && 'bg-primary', dotButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}
                   />
                 ))}
               </div>}
@@ -189,7 +189,7 @@ const Carousel = forwardRef<
                   <CarouselDotButton
                     key={index}
                     onClick={() => onDotButtonClick(index)}
-                    className={cn(index === selectedIndex && 'bg-primary', scrollButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}
+                    className={cn(index === selectedIndex && 'bg-primary', dotButton === 'hover' && 'opacity-0 group-hover:opacity-100 transition-opacity ')}
                   />
                 ))}
               </div>}
