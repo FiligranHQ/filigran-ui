@@ -14,13 +14,13 @@ import AutoFormObject from './object'
 function isZodArray(
   item: z.ZodArray<any> | z.ZodDefault<any>
 ): item is z.ZodArray<any> {
-  return item instanceof z.ZodArray
+  return item._def.typeName === "ZodArray"
 }
 
 function isZodDefault(
   item: z.ZodArray<any> | z.ZodDefault<any>
 ): item is z.ZodDefault<any> {
-  return item instanceof z.ZodDefault
+  return item._def?.typeName === "ZodDefault";
 }
 
 export default function AutoFormArray({
