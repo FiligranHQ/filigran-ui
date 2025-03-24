@@ -1,8 +1,8 @@
 'use client'
 import {z} from 'zod'
 import React from 'react'
-import {AutoForm} from 'filigran-ui/auto-form'
 import {Button} from 'filigran-ui/servers'
+import {AutoForm} from 'filigran-ui'
 
 type JSONSchema = {
   type: string
@@ -58,14 +58,12 @@ const exampleJsonSchema: JSONSchema = {
   optional: ['name', 'age'],
 }
 
-
-
 const testSchema = z.object({
   username: z
     .string()
     // You can use zod's built-in validation as normal
     .min(2, {
-      message: 'Username must be at least 2 characters.'
+      message: 'Username must be at least 2 characters.',
     }),
   password: z
     .string({
@@ -130,7 +128,7 @@ const testSchema = z.object({
       })
     )
     // Optionally set a custom label - otherwise this will be inferred from the field name
-    .describe("Guests invited to the party"),
+    .describe('Guests invited to the party'),
 })
 
 // export const zodSchemaProvider = new ZodProvider(testSchema)
@@ -144,12 +142,13 @@ export const AutoFormTest = () => {
       <AutoForm
         onSubmit={onSubmit}
         formSchema={testSchema}
-      fieldConfig={{
-        sendMeMails: {
-        // Booleans use a checkbox by default, you can use a switch instead
-          label: "Send me mail test",
-          fieldType: "switch",
-      }}}>
+        fieldConfig={{
+          sendMeMails: {
+            // Booleans use a checkbox by default, you can use a switch instead
+            label: 'Send me mail test',
+            fieldType: 'switch',
+          },
+        }}>
         <Button>Submit</Button>
       </AutoForm>
     </>

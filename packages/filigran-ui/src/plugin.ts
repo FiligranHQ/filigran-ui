@@ -95,7 +95,6 @@ const FiligranUIPlugin = () => {
               background: 'hsl(var(--box-background))',
             },
             menu: {
-              background: 'hsl(var(--menu-background))',
               active: 'hsl(var(--menu-active))',
             },
             input: 'hsl(var(--input))',

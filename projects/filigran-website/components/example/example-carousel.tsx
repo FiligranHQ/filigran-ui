@@ -3,18 +3,41 @@
 import * as React from 'react'
 
 import Image from 'next/image'
-import {Carousel, CarouselItem, Dialog, DialogContent} from 'filigran-ui/clients'
+import {
+  Carousel,
+  CarouselItem,
+  Dialog,
+  DialogContent,
+} from 'filigran-ui/clients'
 import {AspectRatio} from 'filigran-ui/servers'
 import {useState} from 'react'
 
 export function ExampleCarousel() {
-  const basePath = process.env.NODE_ENV === 'development' ? '' : '/filigran-ui';
+  const basePath = process.env.NODE_ENV === 'development' ? '' : '/filigran-ui'
   const [open, setOpen] = useState<boolean>(false)
   return (
     <>
       <h2>With lightbox</h2>
-      <Carousel>
+      <Carousel className="w-1/4">
         {[
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
           `/francesco-ungaro.jpg`,
           '/the-chaffins.jpg',
           '/nathan-gordon.jpg',
@@ -25,19 +48,21 @@ export function ExampleCarousel() {
               className="cursor-pointer"
               onClick={() => setOpen(true)}>
               <AspectRatio ratio={16 / 9}>
-              <Image
-                fill
-                objectFit="cover"
-                src={`${basePath}${img}`}
-                alt={img}
-              />
+                <Image
+                  fill
+                  objectFit="cover"
+                  src={`${basePath}${img}`}
+                  alt={img}
+                />
               </AspectRatio>
             </CarouselItem>
           )
         })}
       </Carousel>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent  className="max-h-[calc(100dvh)] h-screen w-screen max-w-[calc(100dvw)] ">
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}>
+        <DialogContent className="h-screen max-h-[calc(100dvh)] w-screen max-w-[calc(100dvw)]">
           <Carousel>
             {[
               `/francesco-ungaro.jpg`,
@@ -46,15 +71,14 @@ export function ExampleCarousel() {
             ].map((img) => {
               return (
                 <CarouselItem
-                  className="h-full w-full relative"
+                  className="relative h-full w-full"
                   key={img}>
-                    <Image
-                      fill
-                      objectFit="contain"
-                      src={`${basePath}${img}`}
-                      alt={img}
-                    />
-
+                  <Image
+                    fill
+                    objectFit="contain"
+                    src={`${basePath}${img}`}
+                    alt={img}
+                  />
                 </CarouselItem>
               )
             })}
@@ -62,16 +86,38 @@ export function ExampleCarousel() {
         </DialogContent>
       </Dialog>
       <h2>Without lightbox</h2>
-      <Carousel
-      scrollButton="hover">
+      <Carousel scrollButton="hover">
         {[
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
+          `/francesco-ungaro.jpg`,
+          '/the-chaffins.jpg',
+          '/nathan-gordon.jpg',
           `/francesco-ungaro.jpg`,
           '/the-chaffins.jpg',
           '/nathan-gordon.jpg',
         ].map((img, index) => {
           return (
-            <CarouselItem
-              key={img}>
+            <CarouselItem key={img}>
               <AspectRatio ratio={16 / 9}>
                 <Image
                   fill
@@ -89,7 +135,7 @@ export function ExampleCarousel() {
           align: 'start',
         }}
         orientation="vertical"
-        className=" h-[500px] w-full">
+        className="h-[500px] w-full">
         {[
           '/francesco-ungaro.jpg',
           '/the-chaffins.jpg',
