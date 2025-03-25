@@ -3,61 +3,52 @@ import {z} from 'zod'
 import React from 'react'
 import {AutoForm} from 'filigran-ui/auto-form'
 import {Button} from 'filigran-ui/servers'
+import {AutoJsonForm, JSONSchema} from 'filigran-ui'
+import TestJson from './test.json'
 
-type JSONSchema = {
-  type: string
-  properties?: Record<string, JSONSchema>
-  optional?: string[]
-  items?: JSONSchema
-  enum?: any[]
-  [key: string]: any
-}
 
-const convertJsonSchemaToZod = (jsonSchema: JSONSchema): any => {
-  switch (jsonSchema.type) {
-    case 'string':
-      return z.string()
-    case 'number':
-      return z.number()
-    case 'integer':
-      return z.number().int()
-    case 'boolean':
-      return z.boolean()
-    case 'array':
-      if (!jsonSchema.items) {
-        throw new Error("Array type must have 'items' defined")
-      }
-      return z.array(convertJsonSchemaToZod(jsonSchema.items))
-    case 'object':
-      const properties = jsonSchema.properties || {}
-      const optional = new Set(jsonSchema.optional || [])
-      const shape = Object.fromEntries(
-        Object.entries(properties).map(([key, value]) => {
-          const schema = convertJsonSchemaToZod(value)
-          return [key, optional.has(key) ? schema.optional() : schema]
-        })
-      )
-      return z.object(shape).partial()
-    default:
-      throw new Error(`Unsupported JSON Schema type: ${jsonSchema.type}`)
-  }
-}
-
-// Example Usage
-const exampleJsonSchema: JSONSchema = {
-  type: 'object',
-  properties: {
-    name: {type: 'string'},
-    age: {type: 'integer'},
-    hobbies: {
-      type: 'array',
-      items: {type: 'string'},
-    },
-    isActive: {type: 'boolean'},
+const jsonSchema = {
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://www.filigran.io/mitre.schema.json",
+  "title":"IpInfo connector",
+  "description":"IpInfo enrichment connector",
+  "container_image":"opencti/connector-ipinfo",
+  "container_type":"INTERNAL_ENRICHMENT",
+  "type":"object",
+  "default":{
+    "CONNECTOR_SCOPE":"IPv4-Addr",
+    "CONNECTOR_AUTO":true,
+    "IPINFO_MAX_TLP":"TLP:AMBER",
+    "IPINFO_USE_ASN_NAME":false
   },
-  optional: ['name', 'age'],
-}
-
+  "properties":{
+    "CONNECTOR_SCOPE":{
+      "description":"Scope",
+      "type":"string"
+    },
+    "CONNECTOR_AUTO":{
+      "description":"Auto trigger",
+      "type":"boolean"
+    },
+    "IPINFO_TOKEN":{
+      "description":"Token",
+      "type":"string",
+      "format":"password"
+    },
+    "IPINFO_MAX_TLP":{
+      "description":"Max TLP",
+      "type":"string"
+    },
+    "IPINFO_USE_ASN_NAME":{
+      "description":"use ASN name",
+      "type":"boolean"
+    }
+  },
+  "required":[
+    "IPINFO_TOKEN"
+  ],
+  "additionalProperties":false
+};
 
 
 const testSchema = z.object({
@@ -105,22 +96,11 @@ const testSchema = z.object({
 
   sendMeMails: z
     .boolean()
-    .optional()
-    .refine((value) => value, {
-      params: {
-        fieldType: 'switch',
-      },
-    }),
+    .optional(),
 
   // Enum will show a select
   color: z.enum(['red', 'green', 'blue']),
 
-  // Create sub-objects to create accordion sections
-  address: z.object({
-    street: z.string(),
-    city: z.string(),
-    zip: z.string(),
-  }),
   invitedGuests: z
     .array(
       // Define the fields for each item
@@ -136,20 +116,33 @@ const testSchema = z.object({
 // export const zodSchemaProvider = new ZodProvider(testSchema)
 
 export const AutoFormTest = () => {
-  const onSubmit = (data: z.infer<typeof testSchema>) => {
+  const onSubmit = (data: unknown) => {
     console.log('Submitted ', data)
   }
   return (
     <>
+      <h2>Example Autoform with Json Schema</h2>
+      <h3>Contracts </h3>
+      {TestJson.contracts.map((jsonSchema) => {
+        return <AutoJsonForm onSubmit={onSubmit}
+                             key={jsonSchema.title}
+                      jsonSchema={jsonSchema as unknown as JSONSchema}
+                      fieldConfig={{
+                        IPINFO_TOKEN: {
+                          inputProps: {
+                            type: 'password'
+                          }
+                        }}
+                      }
+        >
+          <Button>Submit</Button>
+        </AutoJsonForm>
+      })}
+
+      <h2>Example Autofom with Zod schema</h2>
       <AutoForm
         onSubmit={onSubmit}
-        formSchema={testSchema}
-      fieldConfig={{
-        sendMeMails: {
-        // Booleans use a checkbox by default, you can use a switch instead
-          label: "Send me mail test",
-          fieldType: "switch",
-      }}}>
+        formSchema={testSchema}>
         <Button>Submit</Button>
       </AutoForm>
     </>
