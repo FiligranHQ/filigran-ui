@@ -9,7 +9,7 @@ import {z} from 'zod'
 
 import {zodResolver} from '@hookform/resolvers/zod'
 
-import {useEffect} from 'react'
+import {type FunctionComponent, useEffect} from 'react'
 import {cn} from '../../lib/utils'
 import {Form} from '../clients'
 import {Button} from '../servers'
@@ -40,6 +40,29 @@ const AutoFormSubmit = ({
   )
 }
 
+export interface AutoFormProps<T extends ZodObjectOrWrapped> {
+  formSchema: T
+  values?: Partial<z.infer<T>>
+  onValuesChange?: (
+    values: Partial<z.infer<T>>,
+    form: UseFormReturn<z.infer<T>>
+  ) => void
+  onParsedValuesChange?: (
+    values: Partial<z.infer<T>>,
+    form: UseFormReturn<z.infer<T>>
+  ) => void
+  onSubmit?: (
+    values: z.infer<T>,
+    form: UseFormReturn<z.infer<T>>
+  ) => void
+  fieldConfig?: FieldConfig<z.infer<T>>
+  children?:
+    | React.ReactNode
+    | ((formState: FormState<z.infer<T>>) => React.ReactNode)
+  className?: string
+  dependencies?: Dependency<z.infer<T>>[]
+}
+
 const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
   formSchema,
   values: valuesProp,
@@ -50,28 +73,8 @@ const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
   children,
   className,
   dependencies,
-}: {
-  formSchema: SchemaType
-  values?: Partial<z.infer<SchemaType>>
-  onValuesChange?: (
-    values: Partial<z.infer<SchemaType>>,
-    form: UseFormReturn<z.infer<SchemaType>>
-  ) => void
-  onParsedValuesChange?: (
-    values: Partial<z.infer<SchemaType>>,
-    form: UseFormReturn<z.infer<SchemaType>>
-  ) => void
-  onSubmit?: (
-    values: z.infer<SchemaType>,
-    form: UseFormReturn<z.infer<SchemaType>>
-  ) => void
-  fieldConfig?: FieldConfig<z.infer<SchemaType>>
-  children?:
-    | React.ReactNode
-    | ((formState: FormState<z.infer<SchemaType>>) => React.ReactNode)
-  className?: string
-  dependencies?: Dependency<z.infer<SchemaType>>[]
-}) => {
+}: AutoFormProps<SchemaType> ) => {
+
   const objectFormSchema = getObjectFormSchema(formSchema)
   const defaultValues: DefaultValues<z.infer<typeof objectFormSchema>> | null =
     getDefaultValues(objectFormSchema, fieldConfig)
