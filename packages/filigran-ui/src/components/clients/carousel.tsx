@@ -180,23 +180,27 @@ const Carousel = forwardRef<
                 </>
               )}
               {dotButton !== 'none' && (
-                <div className="absolute bottom-l left-1/2 -translate-x-1/2 flex justify-center overflow-hidden  w-full gap-s opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div
-                    className="flex gap-s transition-transform duration-300 ease-in-out"
-                    style={{
-                      transform: `translateX(calc(50% - ${selectedIndex * 20}px))`,
-                    }}>
-                    {scrollSnaps.map((_, index) => (
-                      <CarouselDotButton
-                        key={index}
-                        onClick={() => onDotButtonClick(index)}
-                        className={cn(
-                          index === selectedIndex && 'bg-primary',
-                          dotButton === 'hover' &&
-                            'opacity-0 group-hover:opacity-100 transition-opacity '
-                        )}
-                      />
-                    ))}
+                <div className="absolute bottom-l left-1/2 -translate-x-1/2 flex justify-center overflow-hidden w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/*64 is the nextButton's size*/}
+                  <div className="mx-[64px] justify-center max-w-[calc(100%-128px)] overflow-hidden">
+                    <div
+                      className="flex gap-s transition-transform duration-300 ease-in-out "
+                      style={{
+                        transform: `translateX(calc(-${selectedIndex * 24}px + 50%))`, // 24 is 16 for the dot's size + half a dot size (the sides)
+                      }}>
+                      {scrollSnaps.map((_, index) => (
+                        <CarouselDotButton
+                          key={index}
+                          onClick={() => onDotButtonClick(index)}
+                          className={cn(
+                            'flex-shrink-0 w-4 h-4 rounded-full',
+                            index === selectedIndex && 'bg-primary',
+                            dotButton === 'hover' &&
+                              'opacity-0 group-hover:opacity-100 transition-opacity '
+                          )}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
