@@ -206,38 +206,42 @@ const Carousel = forwardRef<
               )}
             </>
           ) : (
-            <div className="top-1/2 -translate-y-1/2 flex flex-col items-center right-l absolute gap-l">
-              {scrollButton !== 'none' && (
-                <CarouselPrevious
-                  className={cn(
-                    scrollButton === 'hover' &&
-                      'opacity-0 group-hover:opacity-100 transition-opacity '
-                  )}
-                />
-              )}
-              {dotButton !== 'none' && (
-                <div className="flex flex-col gap-xs">
-                  {scrollSnaps.map((_, index) => (
-                    <CarouselDotButton
-                      key={index}
-                      onClick={() => onDotButtonClick(index)}
-                      className={cn(
-                        index === selectedIndex && 'bg-primary',
-                        dotButton === 'hover' &&
-                          'opacity-0 group-hover:opacity-100 transition-opacity '
-                      )}
-                    />
-                  ))}
-                </div>
-              )}
-              {scrollButton !== 'none' && (
-                <CarouselNext
-                  className={cn(
-                    scrollButton === 'hover' &&
-                      'opacity-0 group-hover:opacity-100 transition-opacity '
-                  )}
-                />
-              )}
+            <div className="top-1/2 -translate-y-1/2 flex items-center right-l absolute gap-l">
+              <div className="flex flex-col gap-xl">
+                {scrollButton !== 'none' && (
+                  <CarouselPrevious
+                    className={cn(
+                      scrollButton === 'hover' &&
+                        'opacity-0 group-hover:opacity-100 transition-opacity '
+                    )}
+                  />
+                )}
+                {scrollButton !== 'none' && (
+                  <CarouselNext
+                    className={cn(
+                      scrollButton === 'hover' &&
+                        'opacity-0 group-hover:opacity-100 transition-opacity '
+                    )}
+                  />
+                )}
+              </div>
+              <div className="overflow-hidden h-[200px]">
+                {dotButton !== 'none' && (
+                  <div className="flex flex-col gap-xs">
+                    {scrollSnaps.map((_, index) => (
+                      <CarouselDotButton
+                        key={index}
+                        onClick={() => onDotButtonClick(index)}
+                        className={cn(
+                          index === selectedIndex && 'bg-primary',
+                          dotButton === 'hover' &&
+                            'opacity-0 group-hover:opacity-100 transition-opacity '
+                        )}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
