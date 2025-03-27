@@ -16,7 +16,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
 
     return (
-      <div className={cn('w-full relative', containerClass)}>
+      <div className={cn('w-full relative h-fit', containerClass)}>
         {startIcon && (
           <div className="absolute left-s top-1/2 transform -translate-y-1/2">
             {startIcon}
