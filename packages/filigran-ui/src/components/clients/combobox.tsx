@@ -14,31 +14,35 @@ import {
 } from './command'
 import {Popover, PopoverContent, PopoverTrigger} from './popover'
 
-interface ComboboxProps {
-  dataTab: {value: string; label: string}[]
+export type ComboboxItem<T> = T & {
+  value: string;
+  label: string;
+}
+interface ComboboxProps<T> {
+  dataTab: ComboboxItem<T>[]
   order: string
   placeholder: string
   emptyCommand: string
-  onValueChange: (value: string) => void
+  onValueChange: (value: ComboboxItem<T> | undefined) => void
   onInputChange: (value: string) => void
-  value?: string
+  value?: ComboboxItem<T>
   className?: string
 }
 
-function Combobox({
+function Combobox<T>({
   dataTab,
   order,
   placeholder,
   emptyCommand,
   onValueChange,
   onInputChange,
-  value = '',
+  value,
   className,
-}: ComboboxProps) {
+}: ComboboxProps<T>) {
   const [open, setOpen] = React.useState(false)
 
-  const handleSelect = (currentValue: string) => {
-    const newValue = currentValue === value ? '' : currentValue
+  const handleSelect = (currentValue: ComboboxItem<T>) => {
+    const newValue = currentValue === value ? undefined : currentValue
     setOpen(false)
     onValueChange(newValue)
   }
@@ -64,7 +68,7 @@ function Combobox({
           )}
           onClick={() => setOpen(!open)}>
           {value ? (
-            dataTab.find((data) => data.value === value)?.label
+            dataTab.find((data) => data.value === value.value)?.label
           ) : (
             <span className="text-muted-foreground">{order}</span>
           )}
@@ -81,11 +85,11 @@ function Combobox({
                 <CommandItem
                   key={data.value}
                   value={data.value}
-                  onSelect={() => handleSelect(data.value)}>
+                  onSelect={() => handleSelect(data)}>
                   <CheckIcon
                     className={cn(
                       'mr-2 h-4 w-4',
-                      value === data.value ? 'opacity-100' : 'opacity-0'
+                      value?.value === data.value ? 'opacity-100' : 'opacity-0'
                     )}
                   />
                   <span className="mx-3 text-sm text-foreground">
