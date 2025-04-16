@@ -1,9 +1,9 @@
 'use client'
 
-import {CheckIcon, KeyboardArrowDownIcon} from 'filigran-icon'
+import { CheckIcon, KeyboardArrowDownIcon } from 'filigran-icon'
 import * as React from 'react'
-import {cn} from '../../lib/utils'
-import {Button} from '../servers'
+import { cn } from '../../lib/utils'
+import { Button } from '../servers'
 import {
   Command,
   CommandEmpty,
@@ -12,59 +12,66 @@ import {
   CommandItem,
   CommandList,
 } from './command'
-import {Popover, PopoverContent, PopoverTrigger} from './popover'
+import { Popover, PopoverContent, PopoverTrigger } from './popover'
 
-interface ComboboxProps {
-  dataTab: {value: string; label: string}[]
+export interface ComboboxItem {
+  value: string
+  label: string
+}
+
+interface ComboboxProps<T> {
+  dataTab: T[]
   order: string
   placeholder: string
   emptyCommand: string
-  onValueChange: (value: string) => void
+  onValueChange: (value: (T ) | undefined) => void
   onInputChange: (value: string) => void
-  value?: string
+  value?: T
   className?: string
+  keyValue?: keyof T | 'value'
+  keyLabel?: keyof T | 'label'
 }
 
-function Combobox({
-  dataTab,
-  order,
-  placeholder,
-  emptyCommand,
-  onValueChange,
-  onInputChange,
-  value = '',
-  className,
-}: ComboboxProps) {
+function Combobox<T>({
+                       dataTab,
+                       order,
+                       placeholder,
+                       emptyCommand,
+                       onValueChange,
+                       onInputChange,
+                       value,
+                       className,
+                       keyLabel = 'label',
+                       keyValue = 'value'
+                     }: ComboboxProps<T>) {
   const [open, setOpen] = React.useState(false)
 
-  const handleSelect = (currentValue: string) => {
-    const newValue = currentValue === value ? '' : currentValue
+  const handleSelect = (selectedValue: string) => {
+    const selectedItem = dataTab.find(
+      (item) => String(item[keyValue as keyof typeof item]) === selectedValue
+    ) || undefined
+
     setOpen(false)
-    onValueChange(newValue)
+    onValueChange(selectedItem)
   }
 
-  const handleSearchInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onInputChange(event.target.value)
   }
 
+  // @ts-ignore
   return (
-    <Popover
-      open={open}
-      onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn(
-            'normal-case w-full justify-between border-input',
-            className
-          )}
-          onClick={() => setOpen(!open)}>
+          className={cn('normal-case w-full justify-between border-input', className)}
+          onClick={() => setOpen(!open)}
+        >
           {value ? (
-            dataTab.find((data) => data.value === value)?.label
+            String(value[keyLabel as keyof T])
           ) : (
             <span className="text-muted-foreground">{order}</span>
           )}
@@ -79,17 +86,20 @@ function Combobox({
             <CommandGroup>
               {dataTab.map((data) => (
                 <CommandItem
-                  key={data.value}
-                  value={data.value}
-                  onSelect={() => handleSelect(data.value)}>
+                  key={String(data[keyValue as keyof T])}
+                  value={String(data[keyValue as keyof T])}
+                  onSelect={() => handleSelect(String(data[keyValue as keyof T]))}
+                >
                   <CheckIcon
                     className={cn(
                       'mr-2 h-4 w-4',
-                      value === data.value ? 'opacity-100' : 'opacity-0'
+                      (value as ComboboxItem)?.value === data[keyValue as keyof T]
+                        ? 'opacity-100'
+                        : 'opacity-0'
                     )}
                   />
                   <span className="mx-3 text-sm text-foreground">
-                    {data.label}
+                    {String(data[keyLabel as keyof T])}
                   </span>
                 </CommandItem>
               ))}
@@ -101,4 +111,4 @@ function Combobox({
   )
 }
 
-export {Combobox}
+export { Combobox }

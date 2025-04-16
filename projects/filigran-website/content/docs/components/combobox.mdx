@@ -3,3 +3,39 @@ title: Combobox
 ---
 
 <ExampleCombobox />
+
+<h2>How to use this loader </h2>
+<h3>Props</h3>
+
+| Name              | Type                                      | Default   | Description                                                                                       |
+| ----------------- | ----------------------------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| **dataTab**       | _T[]_ | `[]`      | This is the data to display in the combobox.                                                      |
+| **order**         | _string_                                  | -         | The title when the combobox is closed.                                                            |
+| **placeholder**   | _string_                                  | -         | The placeholder when the combobox is closed.                                                      |
+| **emptyCommand**  | _string_                                  | -         | The displayed string when the input value does not fit the possibilities.                         |
+| **onValueChange** | _(value:T) => void_                              | -         | The triggered function when a value is chosen.                                                    |
+| **onInputChange** | _(value: string) => void_                 | -         | The triggered function when the input changes.                                                    |
+| **value**         | _string_                                  | -         | The selected value.                                                                               |
+| **keyValue**      | _keyof T_                                 | `'value'` | The key in `dataTab` that corresponds to the value field.                                         |
+| **keyLabel**      | _keyof T_                                 | `'label'` | The key in `dataTab` that corresponds to the label field.                                         |
+
+<h3>Playground</h3>
+<p className="italic">Import from filigran-ui : </p>
+<span>{'import { Combobox } from "filigran-ui"'}</span>
+<ReactLiveDisplay
+  displayError={false}
+  codeExample={`<Combobox dataTab={[
+    {value: 'abcd', label: 'Abcd'},
+    {
+      value: 'acde',
+      label: 'Acde'
+    },
+    {value: 'acef', label: 'Acef'}
+    ]}
+    order={'Choose a value'}
+    placeholder={'Choose a value'}
+    emptyCommand={'Not found'}
+    onValueChange={(value) => setSelectedValue(value)}
+    onInputChange={(value) => setInputValue(value)}
+    value={selectedValue}/>`}
+/>

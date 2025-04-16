@@ -18,7 +18,7 @@ export function ExampleCarousel() {
   return (
     <>
       <h2>With lightbox</h2>
-      <Carousel className="w-1/4">
+      <Carousel className="w-1/4" displayDots={4}>
         {[
           `/francesco-ungaro.jpg`,
           '/the-chaffins.jpg',
