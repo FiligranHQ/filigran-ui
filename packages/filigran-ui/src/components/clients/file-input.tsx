@@ -130,7 +130,7 @@ function GenericFileInput(
         className="hidden"
         accept={allowedTypes}
         ref={(e) => {
-          ref(e)
+          ref && typeof ref === 'function' && ref(e)
           inputRef.current = e
         }}
         {...propsWithoutValue}
