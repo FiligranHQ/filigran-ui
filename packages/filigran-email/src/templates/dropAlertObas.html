@@ -1,0 +1,69 @@
+---
+title: "OBAS - Drop in your scenario results"
+bodyClass: bg-background
+---
+
+<x-main>
+  <div class="bg-background sm:px-4 font-sans">
+    <table align="center">
+      <tr>
+        <td class="w-[552px] max-w-full">
+          <x-header-obas/>
+
+          <table class="w-full">
+            <tr>
+              <td class="p-12 sm:px-6 text-base text-foreground bg-white rounded shadow-sm">
+                <h2 class="m-0 mb-6 text-2xl sm:leading-8 font-bold text-center">
+                  ALERT: Drop in risk detection score
+                </h2>
+                <h4 class="text-center">Scenario @{{ scenario_name }}</h4>
+
+                <div class="bg-red-200">
+                  <table align="center">
+                    <tr>
+                      <td>
+                        <h4 class="font-bold"><span style="color: #ec1d0b">-@{{ decrease_prev }}%</span> on Prevention & <span style="color: #ec1d0b">-@{{ decrease_detect }}%</span> on Detection</h4>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+               <table>
+                 <tr>
+                   <td>
+                     <table>
+                       <tr><h5 class="font-bold">Previous simulation</h5></tr>
+                       <tr><p>Date: @{{ prev_simulation_date }}</p></tr>
+                       <tr><p>Detection: @{{ prev_percentage_detection }}%</p></tr>
+                       <tr><p>Prevention: @{{ prev_percentage_prevention }}%</p></tr>
+                     </table>
+                   </td>
+                   <td align="end">
+                     <table>
+                       <tr><h5 class="font-bold">New simulation</h5></tr>
+                       <tr><p>Date: @{{ new_simulation_date }}</p></tr>
+                       <tr><p>Detection: @{{ new_percentage_detection }}% <span style="color: #ec1d0b">(<x-arrow-down/>-@{{ decrease_detect }}%)</span></p></tr>
+                       <tr><p>Prevention: @{{ new_percentage_prevention }}%<span style="color: #ec1d0b">(<x-arrow-down/>-@{{ decrease_prev }}%)</span></p></tr>
+                     </table>
+                   </td>
+                 </tr>
+               </table>
+                <x-button align="center" href="@{{ scenarioLink }}" class="mb-5">
+                  Access scenario
+                </x-button>
+                <div align="center">
+                  <a href="@{{ instanceLink }}">
+                    @{{ instanceLink }}
+                  </a>
+                </div>
+
+              </td>
+            </tr>
+            <tr>
+              <x-footer-obas />
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+</x-main>
