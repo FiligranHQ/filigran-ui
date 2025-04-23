@@ -18,7 +18,7 @@ bodyClass: bg-background
                 </h2>
                 <h4 class="text-center">Scenario @{{ scenario_name }}</h4>
 
-                <div style="background-color: #fecaca">
+                <div class="bg-red-200 sm:px-4">
                   <table align="center">
                     <tr>
                       <td>
@@ -39,8 +39,8 @@ bodyClass: bg-background
                       <td style="width: 50%">
                         <div><h5 class="font-bold">New simulation</h5></div>
                         <div><p>Date: @{{ new_simulation_date }}</p></div>
-                        <div><p>Detection: @{{ new_percentage_detection }}% <span style="color: #ec1d0b">(<x-arrow-down/>-@{{ decrease_detect }}%)</span></p></div>
-                        <div><p>Prevention: @{{ new_percentage_prevention }}%<span style="color: #ec1d0b">(<x-arrow-down/>-@{{ decrease_prev }}%)</span></p></div>
+                        <div><p>Detection: @{{ new_percentage_detection }}% <span style="color: #ec1d0b">(&#8595;-@{{ decrease_detect }}%)</span></p></div>
+                        <div><p>Prevention: @{{ new_percentage_prevention }}%<span style="color: #ec1d0b">(&#8595;-@{{ decrease_prev }}%)</span></p></div>
                       </td>
                     </tr>
                   </table>
