@@ -18,7 +18,7 @@ bodyClass: bg-background
                 </h2>
                 <h4 class="text-center">Scenario @{{ scenario_name }}</h4>
 
-                <div class="bg-red-200">
+                <div style="background-color: #fecaca">
                   <table align="center">
                     <tr>
                       <td>
@@ -27,34 +27,47 @@ bodyClass: bg-background
                     </tr>
                   </table>
                 </div>
-               <table>
-                 <tr>
-                   <td>
-                     <table>
-                       <tr><h5 class="font-bold">Previous simulation</h5></tr>
-                       <tr><p>Date: @{{ prev_simulation_date }}</p></tr>
-                       <tr><p>Detection: @{{ prev_percentage_detection }}%</p></tr>
-                       <tr><p>Prevention: @{{ prev_percentage_prevention }}%</p></tr>
-                     </table>
-                   </td>
-                   <td align="end">
-                     <table>
-                       <tr><h5 class="font-bold">New simulation</h5></tr>
-                       <tr><p>Date: @{{ new_simulation_date }}</p></tr>
-                       <tr><p>Detection: @{{ new_percentage_detection }}% <span style="color: #ec1d0b">(<x-arrow-down/>-@{{ decrease_detect }}%)</span></p></tr>
-                       <tr><p>Prevention: @{{ new_percentage_prevention }}%<span style="color: #ec1d0b">(<x-arrow-down/>-@{{ decrease_prev }}%)</span></p></tr>
-                     </table>
-                   </td>
-                 </tr>
-               </table>
-                <x-button align="center" href="@{{ scenarioLink }}" class="mb-5">
-                  Access scenario
-                </x-button>
-                <div align="center">
-                  <a href="@{{ instanceLink }}">
-                    @{{ instanceLink }}
-                  </a>
+                <div style="margin-top: 30px">
+                  <table>
+                    <tr>
+                      <td style="width: 50%">
+                        <div><h5 class="font-bold">Previous simulation</h5></div>
+                        <div><p>Date: @{{ prev_simulation_date }}</p></div>
+                        <div><p>Detection: @{{ prev_percentage_detection }}%</p></div>
+                        <div><p>Prevention: @{{ prev_percentage_prevention }}%</p></div>
+                      </td>
+                      <td style="width: 50%">
+                        <div><h5 class="font-bold">New simulation</h5></div>
+                        <div><p>Date: @{{ new_simulation_date }}</p></div>
+                        <div><p>Detection: @{{ new_percentage_detection }}% <span style="color: #ec1d0b">(<x-arrow-down/>-@{{ decrease_detect }}%)</span></p></div>
+                        <div><p>Prevention: @{{ new_percentage_prevention }}%<span style="color: #ec1d0b">(<x-arrow-down/>-@{{ decrease_prev }}%)</span></p></div>
+                      </td>
+                    </tr>
+                  </table>
                 </div>
+                <table style="width: 100%">
+                  <tr>
+                    <td>
+                      <div style="margin-top: 30px">
+                        <x-button align="center" href="@{{ scenarioLink }}" class="no-underline">
+                          Access scenario
+                        </x-button>
+                      </div>
+
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center">
+                      <div style="margin-top: 50px">
+                        <a href="@{{ instanceLink }}">
+                          @{{ instanceLink }}
+                        </a>
+                      </div>
+
+                    </td>
+
+                  </tr>
+                </table>
 
               </td>
             </tr>
