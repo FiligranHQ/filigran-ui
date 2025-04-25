@@ -12,6 +12,7 @@ type JSONSchema = {
   enum?: any[]
   [key: string]: any
 }
+const fileListCheck = (file: FileList | undefined) => file && file.length > 0
 
 const convertJsonSchemaToZod = (jsonSchema: JSONSchema): any => {
   switch (jsonSchema.type) {
@@ -129,6 +130,7 @@ const testSchema = z.object({
     )
     // Optionally set a custom label - otherwise this will be inferred from the field name
     .describe('Guests invited to the party'),
+  document: z.custom<FileList>(fileListCheck).optional(),
 })
 
 // export const zodSchemaProvider = new ZodProvider(testSchema)
@@ -147,6 +149,14 @@ export const AutoFormTest = () => {
             // Booleans use a checkbox by default, you can use a switch instead
             label: 'Send me mail test',
             fieldType: 'switch',
+          },
+          document: {
+            label: 'Add a file',
+            fieldType: 'file',
+            inputProps: {
+              allowedTypes: 'application/json',
+              multiple: 'multiple',
+            },
           },
         }}>
         <Button>Submit</Button>
