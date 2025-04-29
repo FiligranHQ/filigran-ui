@@ -16,45 +16,52 @@ bodyClass: bg-background
                 <h2 class="m-0 mb-6 text-2xl sm:leading-8 font-bold text-center">
                   ALERT: Drop in risk detection score
                 </h2>
-                <h4 class="text-center">Scenario @{{ scenario_name }}</h4>
+                <h4 class="text-center">Scenario: @{{ scenario_name }}</h4>
 
-                <div class="bg-red-200">
-                  <table align="center">
-                    <tr>
-                      <td>
-                        <h4 class="font-bold"><span style="color: #ec1d0b">-@{{ decrease_prev }}%</span> on Prevention & <span style="color: #ec1d0b">-@{{ decrease_detect }}%</span> on Detection</h4>
-                      </td>
-                    </tr>
-                  </table>
-                </div>
-               <table>
-                 <tr>
-                   <td>
-                     <table>
-                       <tr><h5 class="font-bold">Previous simulation</h5></tr>
-                       <tr><p>Date: @{{ prev_simulation_date }}</p></tr>
-                       <tr><p>Detection: @{{ prev_percentage_detection }}%</p></tr>
-                       <tr><p>Prevention: @{{ prev_percentage_prevention }}%</p></tr>
-                     </table>
-                   </td>
-                   <td align="end">
-                     <table>
-                       <tr><h5 class="font-bold">New simulation</h5></tr>
-                       <tr><p>Date: @{{ new_simulation_date }}</p></tr>
-                       <tr><p>Detection: @{{ new_percentage_detection }}% <span style="color: #ec1d0b">(<x-arrow-down/>-@{{ decrease_detect }}%)</span></p></tr>
-                       <tr><p>Prevention: @{{ new_percentage_prevention }}%<span style="color: #ec1d0b">(<x-arrow-down/>-@{{ decrease_prev }}%)</span></p></tr>
-                     </table>
-                   </td>
-                 </tr>
-               </table>
-                <x-button align="center" href="@{{ scenarioLink }}" class="mb-5">
-                  Access scenario
-                </x-button>
-                <div align="center">
-                  <a href="@{{ instanceLink }}">
-                    @{{ instanceLink }}
-                  </a>
-                </div>
+                <table align="center">
+                  <tr>
+                    <td class="bg-red-200">
+                      <h4 class="font-bold"><span style="color: #ec1d0b">-@{{ decrease_prev }}%</span> on Prevention & <span style="color: #ec1d0b">-@{{ decrease_detect }}%</span> on Detection</h4>
+                    </td>
+                  </tr>
+                </table>
+                <table role="presentation" class="w-full table-fixed border-collapse">
+                  <tr>
+                    <td class="w-1/2 p-5">
+                      <h5 class="font-bold">Previous simulation</h5>
+                      <div>Date: @{{ prev_simulation_date }}</div>
+                      <div>Detection: @{{ prev_percentage_detection }}%</div>
+                      <div>Prevention: @{{ prev_percentage_prevention }}%</div>
+                    </td>
+                    <td class="w-1/2 p-5">
+                      <h5 class="font-bold">New simulation</h5>
+                      <div>Date: @{{ new_simulation_date }}</div>
+                      <div>Detection: @{{ new_percentage_detection }}% <span style="color: #ec1d0b">(&#8595;-@{{ decrease_detect }}%)</span></div>
+                      <div>Prevention: @{{ new_percentage_prevention }}%<span style="color: #ec1d0b">(&#8595;-@{{ decrease_prev }}%)</span></div>
+                    </td>
+                  </tr>
+                </table>
+                <table class="w-full">
+                  <tr>
+                    <td>
+                      <div class="pt-8">
+                        <x-button align="center" href="@{{ scenarioLink }}">
+                          Access scenario
+                        </x-button>
+                      </div>
+
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" class="p-7">
+                      <a href="@{{ instanceLink }}">
+                        @{{ instanceLink }}
+                      </a>
+
+                    </td>
+
+                  </tr>
+                </table>
 
               </td>
             </tr>
