@@ -34,6 +34,7 @@ const multiSelectVariants = cva('', {
   },
 })
 
+// make the the options label value to generic key value, you can check how I did in combobox component AI!
 interface MultiSelectFormFieldProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof multiSelectVariants> {
