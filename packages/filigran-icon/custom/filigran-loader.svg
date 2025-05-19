@@ -2,6 +2,7 @@
 <svg id="Loader" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150">
     <defs>
         <style>
+            /* Variables CSS avec fallbacks pour une meilleure compatibilité */
             :root {
                 --animation-duration: 2.5s;
                 --animation-timing: linear;
@@ -13,33 +14,66 @@
             }
 
             .animated-element {
+                animation-duration: 2.5s;
                 animation-duration: var(--animation-duration);
+                animation-timing-function: linear;
                 animation-timing-function: var(--animation-timing);
+                animation-iteration-count: infinite;
                 animation-iteration-count: var(--animation-iteration);
+                fill: currentColor;
                 fill: var(--primary-color);
                 stroke-width: 0px;
+                -webkit-animation-duration: 2.5s;
+                -webkit-animation-duration: var(--animation-duration);
+                -webkit-animation-timing-function: linear;
+                -webkit-animation-timing-function: var(--animation-timing);
+                -webkit-animation-iteration-count: infinite;
+                -webkit-animation-iteration-count: var(--animation-iteration);
             }
 
             .main-circle {
                 fill: none;
+                stroke: currentColor;
                 stroke: var(--primary-color);
                 stroke-width: 6;
+                animation: grow 2.5s linear infinite;
                 animation: grow var(--animation-duration) var(--animation-timing) var(--animation-iteration);
+                -webkit-animation: grow 2.5s linear infinite;
+                -webkit-animation: grow var(--animation-duration) var(--animation-timing) var(--animation-iteration);
             }
 
             .animated-clip-path {
+                animation: expandCircle 2.5s linear infinite;
                 animation: expandCircle var(--animation-duration) var(--animation-timing) var(--animation-iteration);
+                -webkit-animation: expandCircle 2.5s linear infinite;
+                -webkit-animation: expandCircle var(--animation-duration) var(--animation-timing) var(--animation-iteration);
             }
 
             /* Animation pour le cercle de clip-path */
+            @-webkit-keyframes expandCircle {
+                0% { r: 0; }
+                20% { r: 75; r: var(--circle-radius); }
+                83% { r: 75; r: var(--circle-radius); }
+                100% { r: 0; }
+            }
             @keyframes expandCircle {
                 0% { r: 0; }
-                20% { r: var(--circle-radius); }
-                83% { r: var(--circle-radius); }
+                20% { r: 75; r: var(--circle-radius); }
+                83% { r: 75; r: var(--circle-radius); }
                 100% { r: 0; }
             }
 
             /* Animation pour le cercle principal */
+            @-webkit-keyframes grow {
+                0% { r: 0; }
+                20% { r: 70; }
+                28% { r: 58; }
+                35% { r: 70; }
+                40% { r: 65; }
+                45% { r: 70; }
+                83% { r: 70; }
+                100% { r: 0; }
+            }
             @keyframes grow {
                 0% { r: 0; }
                 20% { r: 70; }
@@ -52,104 +86,216 @@
             }
 
             /* Animations pour les points */
-            #Ellipse-right { animation-name: ellipse-animation-right; }
-            #Ellipse-center { animation-name: ellipse-animation-center; }
-            #Ellipse-left { animation-name: ellipse-animation-left; }
+            #Ellipse-right { 
+                animation-name: ellipse-animation-right; 
+                -webkit-animation-name: ellipse-animation-right;
+            }
+            #Ellipse-center { 
+                animation-name: ellipse-animation-center; 
+                -webkit-animation-name: ellipse-animation-center;
+            }
+            #Ellipse-left { 
+                animation-name: ellipse-animation-left; 
+                -webkit-animation-name: ellipse-animation-left;
+            }
 
+            @-webkit-keyframes ellipse-animation-right {
+                0%, 11.25% { r: 0; -webkit-transform: translateY(25px); transform: translateY(25px); }
+                18% { -webkit-transform: translateY(-15px); transform: translateY(-15px); }
+                22.5% { -webkit-transform: translateY(10px); transform: translateY(10px); }
+                27% { -webkit-transform: translateY(-5px); transform: translateY(-5px); }
+                31.5% { -webkit-transform: translateY(-2px); transform: translateY(-2px); }
+                36% { -webkit-transform: translateY(2px); transform: translateY(2px); }
+                40.5% { -webkit-transform: translateY(-4px); transform: translateY(-4px); }
+                44.9% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
+                45% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
+            }
             @keyframes ellipse-animation-right {
-                0%, 11.25% { r: 0; transform: translateY(25px); }
-                18% { transform: translateY(-15px); }
-                22.5% { transform: translateY(10px); }
-                27% { transform: translateY(-5px); }
-                31.5% { transform: translateY(-2px); }
-                36% { transform: translateY(2px); }
-                40.5% { transform: translateY(-4px); }
-                44.9% { r: var(--dot-radius); transform: translateY(0); }
-                45% { r: var(--dot-radius); transform: translateY(0); }
+                0%, 11.25% { r: 0; -webkit-transform: translateY(25px); transform: translateY(25px); }
+                18% { -webkit-transform: translateY(-15px); transform: translateY(-15px); }
+                22.5% { -webkit-transform: translateY(10px); transform: translateY(10px); }
+                27% { -webkit-transform: translateY(-5px); transform: translateY(-5px); }
+                31.5% { -webkit-transform: translateY(-2px); transform: translateY(-2px); }
+                36% { -webkit-transform: translateY(2px); transform: translateY(2px); }
+                40.5% { -webkit-transform: translateY(-4px); transform: translateY(-4px); }
+                44.9% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
+                45% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
             }
 
+            @-webkit-keyframes ellipse-animation-center {
+                0%, 8% { r: 0; -webkit-transform: translateY(25px); transform: translateY(25px); }
+                15% { -webkit-transform: translateY(-15px); transform: translateY(-15px); }
+                18% { -webkit-transform: translateY(10px); transform: translateY(10px); }
+                25% { -webkit-transform: translateY(-5px); transform: translateY(-5px); }
+                28% { -webkit-transform: translateY(-2px); transform: translateY(-2px); }
+                33% { -webkit-transform: translateY(2px); transform: translateY(2px); }
+                38% { -webkit-transform: translateY(-4px); transform: translateY(-4px); }
+                44.9% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
+                45% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
+            }
             @keyframes ellipse-animation-center {
-                0%, 8% { r: 0; transform: translateY(25px); }
-                15% { transform: translateY(-15px); }
-                18% { transform: translateY(10px); }
-                25% { transform: translateY(-5px); }
-                28% { transform: translateY(-2px); }
-                33% { transform: translateY(2px); }
-                38% { transform: translateY(-4px); }
-                44.9% { r: var(--dot-radius); transform: translateY(0); }
-                45% { r: var(--dot-radius); transform: translateY(0); }
+                0%, 8% { r: 0; -webkit-transform: translateY(25px); transform: translateY(25px); }
+                15% { -webkit-transform: translateY(-15px); transform: translateY(-15px); }
+                18% { -webkit-transform: translateY(10px); transform: translateY(10px); }
+                25% { -webkit-transform: translateY(-5px); transform: translateY(-5px); }
+                28% { -webkit-transform: translateY(-2px); transform: translateY(-2px); }
+                33% { -webkit-transform: translateY(2px); transform: translateY(2px); }
+                38% { -webkit-transform: translateY(-4px); transform: translateY(-4px); }
+                44.9% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
+                45% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
             }
 
+            @-webkit-keyframes ellipse-animation-left {
+                0%, 13% { r: 0; -webkit-transform: translateY(25px); transform: translateY(25px); }
+                20% { -webkit-transform: translateY(-15px); transform: translateY(-15px); }
+                25% { -webkit-transform: translateY(10px); transform: translateY(10px); }
+                30% { -webkit-transform: translateY(-5px); transform: translateY(-5px); }
+                33% { -webkit-transform: translateY(-2px); transform: translateY(-2px); }
+                39% { -webkit-transform: translateY(2px); transform: translateY(2px); }
+                42% { -webkit-transform: translateY(-4px); transform: translateY(-4px); }
+                44.9% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
+                45% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
+            }
             @keyframes ellipse-animation-left {
-                0%, 13% { r: 0; transform: translateY(25px); }
-                20% { transform: translateY(-15px); }
-                25% { transform: translateY(10px); }
-                30% { transform: translateY(-5px); }
-                33% { transform: translateY(-2px); }
-                39% { transform: translateY(2px); }
-                42% { transform: translateY(-4px); }
-                44.9% { r: var(--dot-radius); transform: translateY(0); }
-                45% { r: var(--dot-radius); transform: translateY(0); }
+                0%, 13% { r: 0; -webkit-transform: translateY(25px); transform: translateY(25px); }
+                20% { -webkit-transform: translateY(-15px); transform: translateY(-15px); }
+                25% { -webkit-transform: translateY(10px); transform: translateY(10px); }
+                30% { -webkit-transform: translateY(-5px); transform: translateY(-5px); }
+                33% { -webkit-transform: translateY(-2px); transform: translateY(-2px); }
+                39% { -webkit-transform: translateY(2px); transform: translateY(2px); }
+                42% { -webkit-transform: translateY(-4px); transform: translateY(-4px); }
+                44.9% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
+                45% { r: 4.6; r: var(--dot-radius); -webkit-transform: translateY(0); transform: translateY(0); }
             }
 
             /* Animations pour les rectangles */
-            #Rectangle-Right-Low { animation-name: rectangle-right-low; }
-            #Rectangle-Center { animation-name: rectangle-center; }
-            #Rectangle-Middle-Left { animation-name: rectangle-middle-left; }
-            #Rectangle-Left { animation-name: rectangle-left; }
-            #Rectangle-Low { animation-name: rectangle-low; }
-            #Rectangle-Middle-low { animation-name: rectangle-middle-low; }
-            #Rectangle-Center-2 { animation-name: rectangle-center-2; }
-            #Rectangle-Middle-Hight { animation-name: rectangle-middle-hight; }
-            #Rectangle-Hight { animation-name: rectangle-hight; }
+            #Rectangle-Right-Low { 
+                animation-name: rectangle-right-low; 
+                -webkit-animation-name: rectangle-right-low;
+            }
+            #Rectangle-Center { 
+                animation-name: rectangle-center; 
+                -webkit-animation-name: rectangle-center;
+            }
+            #Rectangle-Middle-Left { 
+                animation-name: rectangle-middle-left; 
+                -webkit-animation-name: rectangle-middle-left;
+            }
+            #Rectangle-Left { 
+                animation-name: rectangle-left; 
+                -webkit-animation-name: rectangle-left;
+            }
+            #Rectangle-Low { 
+                animation-name: rectangle-low; 
+                -webkit-animation-name: rectangle-low;
+            }
+            #Rectangle-Middle-low { 
+                animation-name: rectangle-middle-low; 
+                -webkit-animation-name: rectangle-middle-low;
+            }
+            #Rectangle-Center-2 { 
+                animation-name: rectangle-center-2; 
+                -webkit-animation-name: rectangle-center-2;
+            }
+            #Rectangle-Middle-Hight { 
+                animation-name: rectangle-middle-hight; 
+                -webkit-animation-name: rectangle-middle-hight;
+            }
+            #Rectangle-Hight { 
+                animation-name: rectangle-hight; 
+                -webkit-animation-name: rectangle-hight;
+            }
 
+            @-webkit-keyframes rectangle-right-low {
+                0%, 50% { height: 0; }
+                50%, 69% { rx: 3; }
+                70% { rx: 0; height: 46.51px; }
+            }
             @keyframes rectangle-right-low {
                 0%, 50% { height: 0; }
                 50%, 69% { rx: 3; }
                 70% { rx: 0; height: 46.51px; }
             }
 
+            @-webkit-keyframes rectangle-center {
+                0%, 45% { height: 0; }
+                45% { -webkit-transform: translateY(70px); transform: translateY(70px); }
+                70% { -webkit-transform: translateY(0); transform: translateY(0); height: 139.33px; }
+            }
             @keyframes rectangle-center {
                 0%, 45% { height: 0; }
-                45% { transform: translateY(70px); }
-                70% { transform: translateY(0); height: 139.33px; }
+                45% { -webkit-transform: translateY(70px); transform: translateY(70px); }
+                70% { -webkit-transform: translateY(0); transform: translateY(0); height: 139.33px; }
             }
 
+            @-webkit-keyframes rectangle-middle-left {
+                0%, 51% { height: 0; }
+                51% { -webkit-transform: translateY(66px); transform: translateY(66px); }
+                70% { -webkit-transform: translateY(0); transform: translateY(0); height: 131.7px; }
+            }
             @keyframes rectangle-middle-left {
                 0%, 51% { height: 0; }
-                51% { transform: translateY(66px); }
-                70% { transform: translateY(0); height: 131.7px; }
+                51% { -webkit-transform: translateY(66px); transform: translateY(66px); }
+                70% { -webkit-transform: translateY(0); transform: translateY(0); height: 131.7px; }
             }
 
+            @-webkit-keyframes rectangle-left {
+                0%, 58% { height: 0; }
+                58% { -webkit-transform: translateY(50px); transform: translateY(50px); }
+                70% { -webkit-transform: translateY(0); transform: translateY(0); height: 105.19px; }
+            }
             @keyframes rectangle-left {
                 0%, 58% { height: 0; }
-                58% { transform: translateY(50px); }
-                70% { transform: translateY(0); height: 105.19px; }
+                58% { -webkit-transform: translateY(50px); transform: translateY(50px); }
+                70% { -webkit-transform: translateY(0); transform: translateY(0); height: 105.19px; }
             }
 
+            @-webkit-keyframes rectangle-low {
+                0%, 65% { height: 0; }
+                65%, 69% { rx: 3; }
+                70% { rx: 0; height: 13.8px; }
+            }
             @keyframes rectangle-low {
                 0%, 65% { height: 0; }
                 65%, 69% { rx: 3; }
                 70% { rx: 0; height: 13.8px; }
             }
 
+            @-webkit-keyframes rectangle-middle-low {
+                0%, 45% { height: 0; }
+                45%, 69% { rx: 3; }
+                70% { rx: 0; height: 45.64px; }
+            }
             @keyframes rectangle-middle-low {
                 0%, 45% { height: 0; }
                 45%, 69% { rx: 3; }
                 70% { rx: 0; height: 45.64px; }
             }
 
+            @-webkit-keyframes rectangle-center-2 {
+                0%, 48% { height: 0; }
+                48% { -webkit-transform: translate(54.43px, 184.7px) rotate(-90deg); transform: translate(54.43px, 184.7px) rotate(-90deg); }
+                70% { -webkit-transform: translate(34.43px, 184.7px) rotate(-90deg); transform: translate(34.43px, 184.7px) rotate(-90deg); height: 69.44px; }
+            }
             @keyframes rectangle-center-2 {
                 0%, 48% { height: 0; }
-                48% { transform: translate(54.43px, 184.7px) rotate(-90deg); }
-                70% { transform: translate(34.43px, 184.7px) rotate(-90deg); height: 69.44px; }
+                48% { -webkit-transform: translate(54.43px, 184.7px) rotate(-90deg); transform: translate(54.43px, 184.7px) rotate(-90deg); }
+                70% { -webkit-transform: translate(34.43px, 184.7px) rotate(-90deg); transform: translate(34.43px, 184.7px) rotate(-90deg); height: 69.44px; }
             }
 
+            @-webkit-keyframes rectangle-middle-hight {
+                0%, 57% { height: 0; }
+                70% { height: 65.72px; }
+            }
             @keyframes rectangle-middle-hight {
                 0%, 57% { height: 0; }
                 70% { height: 65.72px; }
             }
 
+            @-webkit-keyframes rectangle-hight {
+                0%, 63% { height: 0; }
+                70% { height: 52.39px; }
+            }
             @keyframes rectangle-hight {
                 0%, 63% { height: 0; }
                 70% { height: 52.39px; }

@@ -87,13 +87,14 @@ const MultiSelectFormField = React.forwardRef<
       const target = event.target as HTMLInputElement
       if (event.key === 'Enter') {
         setIsPopoverOpen(true)
-      } else if (event.key === 'Backspace' && !target) {
-        selectedValues.pop()
-        setSelectedValues([...selectedValues])
-        selectedValuesSet.current.delete(
-          selectedValues[selectedValues.length - 1]
-        )
-        onValueChange([...selectedValues])
+      } else if (event.key === 'Backspace' && !target.value) {
+        if (selectedValues.length > 0) {
+          const newValues = [...selectedValues]
+          const lastValue = newValues.pop() || ''
+          setSelectedValues(newValues)
+          selectedValuesSet.current.delete(lastValue)
+          onValueChange(newValues)
+        }
       }
     }
 
@@ -131,31 +132,37 @@ const MultiSelectFormField = React.forwardRef<
                           multiSelectVariants({variant, className})
                         )}>
                         {option ? String(option[keyLabel]) : value}
-                        <CloseIcon
-                          className="ml-s h-3 w-3 cursor-pointer"
-                          onClick={(
-                            event: React.MouseEvent<SVGSVGElement, MouseEvent>
-                          ) => {
+                        <button
+                          type="button"
+                          className="ml-s flex items-center justify-center"
+                          onClick={(event) => {
                             event.stopPropagation()
                             toggleOption(value)
                           }}
-                        />
+                          aria-label={`Remove ${option ? String(option[keyLabel]) : value}`}>
+                          <CloseIcon
+                            className="h-3 w-3 cursor-pointer"
+                          />
+                        </button>
                       </Badge>
                     )
                   })}
                 </div>
                 <div className="flex items-center justify-between">
-                  <CloseIcon
-                    className="mx-s h-3 cursor-pointer text-muted-foreground"
-                    onClick={(
-                      event: React.MouseEvent<SVGSVGElement, MouseEvent>
-                    ) => {
+                  <button
+                    type="button"
+                    className="flex items-center justify-center"
+                    onClick={(event) => {
                       setSelectedValues([])
                       selectedValuesSet.current.clear()
                       onValueChange([])
                       event.stopPropagation()
                     }}
-                  />
+                    aria-label="Clear all selections">
+                    <CloseIcon
+                      className="mx-s h-3 cursor-pointer text-muted-foreground"
+                    />
+                  </button>
                   <Separator
                     orientation="vertical"
                     className="flex h-full min-h-6"
@@ -165,10 +172,10 @@ const MultiSelectFormField = React.forwardRef<
               </div>
             ) : (
               <div className="mx-auto flex w-full items-center justify-between">
-                <span className="mx-3 text-sm text-muted-foreground normal-case">
+                <span className="mx-3 text-sm text-muted-foreground normal-case" role="textbox" aria-readonly="true">
                   {placeholder}
                 </span>
-                <KeyboardArrowDownIcon className="mx-2 w-2.5 h-2.5 cursor-pointer text-muted-foreground" />
+                <KeyboardArrowDownIcon className="mx-2 w-2.5 h-2.5 cursor-pointer text-muted-foreground" aria-hidden="true" />
               </div>
             )}
           </Button>
