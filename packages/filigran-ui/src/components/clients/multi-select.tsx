@@ -34,15 +34,13 @@ const multiSelectVariants = cva('', {
   },
 })
 
-// make the the options label value to generic key value, you can check how I did in combobox component AI!
-interface MultiSelectFormFieldProps
+interface MultiSelectFormFieldProps<T extends Record<string, any> = Record<string, any>>
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof multiSelectVariants> {
   asChild?: boolean
-  options: {
-    label: string
-    value: string
-  }[]
+  options: T[]
+  keyLabel?: keyof T
+  keyValue?: keyof T
   defaultValue?: string[]
   disabled?: boolean
   placeholder: string
@@ -61,6 +59,8 @@ const MultiSelectFormField = React.forwardRef<
       variant,
       asChild = false,
       options,
+      keyLabel = 'label',
+      keyValue = 'value',
       defaultValue,
       onValueChange,
       disabled,
@@ -122,7 +122,7 @@ const MultiSelectFormField = React.forwardRef<
               <div className="flex w-full items-center justify-between">
                 <div className="flex flex-wrap items-center gap-s">
                   {selectedValues.map((value) => {
-                    const option = options.find((o) => o.value === value)
+                    const option = options.find((o) => String(o[keyValue]) === value)
 
                     return (
                       <Badge
@@ -130,7 +130,7 @@ const MultiSelectFormField = React.forwardRef<
                         className={cn(
                           multiSelectVariants({variant, className})
                         )}>
-                        {option?.label}
+                        {option ? String(option[keyLabel]) : value}
                         <CloseIcon
                           className="ml-s h-3 w-3 cursor-pointer"
                           onClick={(
@@ -186,11 +186,12 @@ const MultiSelectFormField = React.forwardRef<
               <CommandEmpty>{noResultString}</CommandEmpty>
               <CommandGroup>
                 {options.map((option) => {
-                  const isSelected = selectedValuesSet.current.has(option.value)
+                  const optionValue = String(option[keyValue])
+                  const isSelected = selectedValuesSet.current.has(optionValue)
                   return (
                     <CommandItem
-                      key={option.value}
-                      onSelect={() => toggleOption(option.value)}
+                      key={optionValue}
+                      onSelect={() => toggleOption(optionValue)}
                       style={{
                         pointerEvents: 'auto',
                         opacity: 1,
@@ -206,7 +207,7 @@ const MultiSelectFormField = React.forwardRef<
                         <CheckIcon className="h-4 w-4" />
                       </div>
 
-                      <span>{option.label}</span>
+                      <span>{String(option[keyLabel])}</span>
                     </CommandItem>
                   )
                 })}
