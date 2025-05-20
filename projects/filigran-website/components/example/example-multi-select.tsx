@@ -63,7 +63,7 @@ const FormSchemaCustomKeys = z.object({
   languages: z
     .array(z.string().min(1))
     .min(1)
-    .nonempty('Veuillez sélectionner au moins un langage.'),
+    .nonempty('Please select at least one language.'),
 })
 
 export function ExampleMultiSelect() {
@@ -110,9 +110,8 @@ export function ExampleMultiSelect() {
           />
         </form>
       </Form>
-
       <div className="mt-10">
-        <h3 className="text-lg font-medium mb-4">Exemple avec keyValue et keyLabel personnalisés</h3>
+        <h3 className="text-lg font-medium mb-4">Example with custom keyValue and keyLabel</h3>
         <Form {...formCustomKeys}>
           <form className="space-y-8">
             <FormField
@@ -120,21 +119,21 @@ export function ExampleMultiSelect() {
               name="languages"
               render={({field}) => (
                 <FormItem>
-                  <FormLabel>Langages de programmation</FormLabel>
+                  <FormLabel>Programming Languages</FormLabel>
                   <FormControl>
                     <MultiSelectFormField
                       options={languagesList}
                       defaultValue={field.value}
                       onValueChange={field.onChange}
-                      placeholder="Sélectionner des langages"
-                      noResultString={'Aucun résultat trouvé'}
+                      placeholder="Select languages"
+                      noResultString={'No results found'}
                       variant="inverted"
                       keyValue="id"
                       keyLabel="name"
                     />
                   </FormControl>
                   <FormDescription>
-                    Choisissez les langages de programmation que vous maîtrisez.
+                    Choose the programming languages you are proficient in.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
