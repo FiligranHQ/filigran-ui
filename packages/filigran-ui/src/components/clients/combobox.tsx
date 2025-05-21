@@ -25,7 +25,7 @@ interface ComboboxProps<T> {
   placeholder: string
   emptyCommand: string
   onValueChange: (value: (T ) | undefined) => void
-  onInputChange: (value: string) => void
+  onInputChange?: (value: string) => void
   value?: T
   className?: string
   keyValue?: keyof T | 'value'
@@ -56,7 +56,7 @@ function Combobox<T>({
   }
 
   const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    onInputChange(event.target.value)
+    onInputChange && onInputChange(event.target.value)
   }
 
   // @ts-ignore

@@ -10,15 +10,18 @@ title: Multiselect
 
 ### Props
 
-| Name                 | Type                                | Default | Description                                                                                          |
-| -------------------- | ----------------------------------- | ------- | ---------------------------------------------------------------------------------------------------- |
-| **asChild**          | _boolean_                           | false   | Change the default rendered element for the one passed as a child, merging their props and behavior. |
-| **options** \*       | _\{label: string value: string\}[]_ | -       | The options the user can choose in the multiselect.                                                  |
-| **defaultValue**     | _string[]_                          | -       | The values already choosen in the multiselect.                                                       |
-| **disabled**         | _boolean_                           | false   | Wheter the user can interract with the field or not.                                                 |
-| **placeholder** \*   | _string_                            | -       | Text that appears in the form control when it has no value set.                                      |
-| **variant** \*       | _enum (default \| inverted)_        | default | Badges appareance in the multiselect, for the selected items.                                        |
-| **onValueChange** \* | _(value: string[]) => void_         | -       | Function triggered when a new value is selected, with all the selected values in param.              |
+| Name                 | Type                                | Default   | Description                                                                                          |
+| -------------------- | ----------------------------------- | --------- | ---------------------------------------------------------------------------------------------------- |
+| **asChild**          | _boolean_                           | false     | Change the default rendered element for the one passed as a child, merging their props and behavior. |
+| **options** \*       | _\{label: string value: string\}[]_ | -         | The options the user can choose in the multiselect.                                                  |
+| **defaultValue**     | _string[]_                          | -         | The values already chosen in the multiselect.                                                        |
+| **disabled**         | _boolean_                           | false     | Whether the user can interact with the field or not.                                                 |
+| **placeholder** \*   | _string_                            | -         | Text that appears in the form control when it has no value set.                                      |
+| **variant** \*       | _enum (default \| inverted)_        | default   | Badges appearance in the multiselect, for the selected items.                                        |
+| **onValueChange** \* | _(value: string[]) => void_         | -         | Function triggered when a new value is selected, with all the selected values in param.              |
+| **keyValue**         | _string_                            | "value"   | The key to use for the value in the options array when using custom object structures.               |
+| **keyLabel**         | _string_                            | "label"   | The key to use for the label in the options array when using custom object structures.               |
+| **noResultString**   | _string_                            | "No results found" | Text displayed when no options match the search criteria.                                   |
 
 ### Playground
 
