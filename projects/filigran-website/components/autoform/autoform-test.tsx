@@ -155,6 +155,7 @@ export const AutoFormTest = () => {
             fieldType: 'file',
             inputProps: {
               allowedTypes: 'application/json',
+              // @ts-ignore
               multiple: 'multiple',
             },
           },
