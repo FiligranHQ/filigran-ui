@@ -132,8 +132,7 @@ const MultiSelectFormField = React.forwardRef<
                           multiSelectVariants({variant, className})
                         )}>
                         {option ? String(option[keyLabel]) : value}
-                        <button
-                          type="button"
+                        <span
                           className="ml-s flex items-center justify-center"
                           onClick={(event) => {
                             event.stopPropagation()
@@ -143,7 +142,7 @@ const MultiSelectFormField = React.forwardRef<
                           <CloseIcon
                             className="h-3 w-3 cursor-pointer"
                           />
-                        </button>
+                        </span>
                       </Badge>
                     )
                   })}
