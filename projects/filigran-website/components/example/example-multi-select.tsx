@@ -19,6 +19,18 @@ const frameworksList = [
     label: 'Next.js',
   },
   {
+    value: 'preact',
+    label: 'Preact',
+  },
+  {
+    value: 'astro',
+    label: 'Astro',
+  },
+  {
+    value: 'vue.js',
+    label: 'Vue.js',
+  },
+  {
     value: 'sveltekit',
     label: 'SvelteKit',
   },
@@ -27,8 +39,92 @@ const frameworksList = [
     label: 'Nuxt.js',
   },
   {
+    value: 'qwik',
+    label: 'Qwik',
+  },
+  {
     value: 'remix',
     label: 'Remix',
+  },
+  {
+    value: 'react',
+    label: 'React',
+  },
+  {
+    value: 'angular',
+    label: 'Angular',
+  },
+  {
+    value: 'solidjs',
+    label: 'SolidJS',
+  },
+  {
+    value: 'lit',
+    label: 'Lit',
+  },
+  {
+    value: 'marko',
+    label: 'Marko',
+  },
+  {
+    value: 'stimulus',
+    label: 'Stimulus',
+  },
+  {
+    value: 'alpinejs',
+    label: 'Alpine.js',
+  },
+  {
+    value: 'ember',
+    label: 'Ember.js',
+  },
+  {
+    value: 'backbone',
+    label: 'Backbone.js',
+  },
+  {
+    value: 'inferno',
+    label: 'Inferno',
+  },
+  {
+    value: 'riot',
+    label: 'Riot.js',
+  },
+  {
+    value: 'mithril',
+    label: 'Mithril.js',
+  },
+  {
+    value: 'dojo',
+    label: 'Dojo',
+  },
+  {
+    value: 'ractive',
+    label: 'Ractive.js',
+  },
+  {
+    value: 'vuepress',
+    label: 'VuePress',
+  },
+  {
+    value: 'eleventy',
+    label: 'Eleventy (11ty)',
+  },
+  {
+    value: 'blitz',
+    label: 'Blitz.js',
+  },
+  {
+    value: 'sapper',
+    label: 'Sapper',
+  },
+  {
+    value: 'hydrogen',
+    label: 'Hydrogen',
+  },
+  {
+    value: 'redwoodjs',
+    label: 'RedwoodJS',
   },
 ]
 
@@ -111,7 +207,9 @@ export function ExampleMultiSelect() {
         </form>
       </Form>
       <div className="mt-10">
-        <h3 className="text-lg font-medium mb-4">Example with custom keyValue and keyLabel</h3>
+        <h3 className="mb-4 text-lg font-medium">
+          Example with custom keyValue and keyLabel
+        </h3>
         <Form {...formCustomKeys}>
           <form className="space-y-8">
             <FormField
