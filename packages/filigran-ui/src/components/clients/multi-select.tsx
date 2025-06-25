@@ -1,6 +1,7 @@
 import {cva, type VariantProps} from 'class-variance-authority'
 import {CheckIcon, CloseIcon, KeyboardArrowDownIcon} from 'filigran-icon'
 import * as React from 'react'
+import {useMemo} from 'react'
 import {
   Command,
   CommandEmpty,
@@ -165,6 +166,58 @@ const MultiSelectFormField = React.forwardRef<
 
     const hiddenCount = selectedValues.length - visibleBadges
 
+    const renderBadges = (values: string[]) =>
+      values.map((value) => {
+        const option = options.find((opt) => String(opt[keyValue]) === value)
+        return (
+          <Badge key={value}>
+            {option ? String(option[keyLabel]) : value}
+            <span
+              className="ml-s flex items-center justify-center"
+              onClick={(event) => {
+                event.stopPropagation()
+                toggleOption(value)
+              }}
+              aria-label={`Remove ${option ? String(option[keyLabel]) : value}`}>
+              <CloseIcon className="h-3 w-3 cursor-pointer" />
+            </span>
+          </Badge>
+        )
+      })
+
+    const memoizedBadgesMeasurement = useMemo(() => {
+      return renderBadges(selectedValues)
+    }, [
+      selectedValues,
+      visibleBadges,
+      options,
+      keyLabel,
+      keyValue,
+      toggleOption,
+    ])
+
+    const memoizedBadges = useMemo(() => {
+      return renderBadges(selectedValues.slice(0, visibleBadges))
+    }, [
+      selectedValues,
+      visibleBadges,
+      options,
+      keyLabel,
+      keyValue,
+      toggleOption,
+    ])
+
+    const memoizedBadgesTooltip = useMemo(() => {
+      return renderBadges(selectedValues.slice(visibleBadges))
+    }, [
+      selectedValues,
+      visibleBadges,
+      options,
+      keyLabel,
+      keyValue,
+      toggleOption,
+    ])
+
     return (
       <TooltipProvider delayDuration={0}>
         <div
@@ -190,39 +243,10 @@ const MultiSelectFormField = React.forwardRef<
                       ref={measurementRef}
                       className="absolute invisible flex items-center gap-s"
                       aria-hidden="true">
-                      {selectedValues.map((value) => {
-                        const option = options.find(
-                          (opt) => String(opt[keyValue]) === value
-                        )
-                        return (
-                          <Badge key={value}>
-                            {option ? String(option[keyLabel]) : value}
-                            <CloseIcon className="ml-s h-3 w-3" />
-                          </Badge>
-                        )
-                      })}
+                      {memoizedBadgesMeasurement}
                     </div>
 
-                    {selectedValues.slice(0, visibleBadges).map((value) => {
-                      const option = options.find(
-                        (opt) => String(opt[keyValue]) === value
-                      )
-
-                      return (
-                        <Badge key={value}>
-                          {option ? String(option[keyLabel]) : value}
-                          <span
-                            className="ml-s flex items-center justify-center"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              toggleOption(value)
-                            }}
-                            aria-label={`Remove ${option ? String(option[keyLabel]) : value}`}>
-                            <CloseIcon className="h-3 w-3 cursor-pointer" />
-                          </span>
-                        </Badge>
-                      )
-                    })}
+                    {memoizedBadges}
 
                     {hiddenCount > 0 && (
                       <Tooltip>
@@ -235,27 +259,7 @@ const MultiSelectFormField = React.forwardRef<
                         </TooltipTrigger>
                         <TooltipContent>
                           <div className="flex flex-wrap gap-s p-s max-w-sm">
-                            {selectedValues
-                              .slice(visibleBadges)
-                              .map((value) => {
-                                const option = options.find(
-                                  (o) => String(o[keyValue]) === value
-                                )
-                                return (
-                                  <Badge key={value}>
-                                    {option ? String(option[keyLabel]) : value}
-                                    <span
-                                      className="ml-s flex items-center justify-center"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        toggleOption(value)
-                                      }}
-                                      aria-label={`Remove ${option ? String(option[keyLabel]) : value}`}>
-                                      <CloseIcon className="h-3 w-3 cursor-pointer" />
-                                    </span>
-                                  </Badge>
-                                )
-                              })}
+                            {memoizedBadgesTooltip}
                           </div>
                         </TooltipContent>
                       </Tooltip>
