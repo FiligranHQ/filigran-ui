@@ -244,6 +244,7 @@ export function ExampleMultiSelect() {
                     options={frameworksList}
                     defaultValue={field.value}
                     onValueChange={field.onChange}
+                    onInputChange={(value) => console.log('input', value)}
                     placeholder="Select options"
                     noResultString={'You can change me!'}
                     variant="inverted"
@@ -275,6 +276,7 @@ export function ExampleMultiSelect() {
                       options={languagesList}
                       defaultValue={field.value}
                       onValueChange={field.onChange}
+                      onInputChange={(value) => console.log('input', value)}
                       placeholder="Select languages"
                       noResultString={'No results found'}
                       variant="inverted"

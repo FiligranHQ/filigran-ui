@@ -19,6 +19,7 @@ title: Multiselect
 | **placeholder** \*   | _string_                            | -         | Text that appears in the form control when it has no value set.                                      |
 | **variant** \*       | _enum (default \| inverted)_        | default   | Badges appearance in the multiselect, for the selected items.                                        |
 | **onValueChange** \* | _(value: string[]) => void_         | -         | Function triggered when a new value is selected, with all the selected values in param.              |
+| **onInputChange**    | _(value: string) => void_           | -         | Function triggered when a new value is entered in the search form.                                   |
 | **keyValue**         | _string_                            | "value"   | The key to use for the value in the options array when using custom object structures.               |
 | **keyLabel**         | _string_                            | "label"   | The key to use for the label in the options array when using custom object structures.               |
 | **noResultString**   | _string_                            | "No results found" | Text displayed when no options match the search criteria.                                   |
