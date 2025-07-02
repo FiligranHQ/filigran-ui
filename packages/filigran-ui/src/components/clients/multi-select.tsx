@@ -98,7 +98,8 @@ const MultiSelectFormField = React.forwardRef<
 
       const container = badgesContainerRef.current
       const measurementContainer = measurementRef.current
-      const containerWidth = container.offsetWidth - 100 // Save space for controls
+
+      const containerWidth = container.offsetWidth - 10 // Save space for controls
 
       let totalWidth = 0
       let lastVisibleIndex = 0
