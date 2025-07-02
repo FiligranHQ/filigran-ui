@@ -52,6 +52,7 @@ interface MultiSelectFormFieldProps<
   noResultString: string
   className?: string
   onValueChange: (value: string[]) => void
+  onInputChange?: (value: string) => void
 }
 
 const MultiSelectFormField = React.forwardRef<
@@ -68,6 +69,7 @@ const MultiSelectFormField = React.forwardRef<
       keyValue = 'value',
       defaultValue,
       onValueChange,
+      onInputChange,
       disabled,
       placeholder,
       noResultString = 'No results found',
@@ -78,6 +80,13 @@ const MultiSelectFormField = React.forwardRef<
     const [selectedValues, setSelectedValues] = React.useState<string[]>(
       defaultValue || []
     )
+
+    const handleSearchInputChange = (
+      event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+      onInputChange && onInputChange(event.target.value)
+    }
+
     const selectedValuesSet = React.useRef(new Set(selectedValues))
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false)
     const [visibleBadges, setVisibleBadges] = React.useState<number>(
@@ -306,7 +315,7 @@ const MultiSelectFormField = React.forwardRef<
             className="w-[300px] p-0 drop-shadow-sm"
             align="start"
             onEscapeKeyDown={() => setIsPopoverOpen(false)}>
-            <Command>
+            <Command onChange={handleSearchInputChange}>
               <CommandInput
                 placeholder="Search..."
                 onKeyDown={handleInputKeyDown}
