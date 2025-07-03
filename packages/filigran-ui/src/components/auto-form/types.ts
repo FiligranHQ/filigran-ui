@@ -77,3 +77,8 @@ export type AutoFormInputComponentProps = {
   zodItem: z.ZodAny;
   className?: string;
 };
+
+export type IntlTranslateFunction = (
+  key: string,
+  values?: Record<string, string | number | Date> | undefined
+) => string;

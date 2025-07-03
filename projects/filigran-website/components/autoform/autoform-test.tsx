@@ -11,6 +11,52 @@ const convertJson = JSONSchemaToZod.convert(jsonTest);
 
 const fileListCheck = (file: FileList | undefined) => file && file.length > 0
 
+const intlTranslations = {
+  en: {
+    username: "Username",
+    password: "Your secure password",
+    "Your secure password": "Your secure password",
+    favouriteNumber: "Favourite number",
+    acceptTerms: "Accept terms and conditions",
+    "Accept terms and conditions": "Accept terms and conditions",
+    birthday: "Birthday",
+    sendMeMails: "Send me mails",
+    "Send me mails": "Send me mails",
+    color: "Color",
+    address: "Address",
+    street: "Street",
+    city: "City",
+    zip: "Zip code",
+    invitedGuests: "Guests invited to the party",
+    "Guests invited to the party": "Guests invited to the party",
+    document: "Document",
+  },
+  fr: {
+    username: "Nom d'utilisateur",
+    password: "Votre mot de passe sécurisé",
+    "Your secure password": "Votre mot de passe sécurisé",
+    favouriteNumber: "Nombre préféré",
+    acceptTerms: "Accepter les termes et conditions",
+    "Send me mails": "Accepter les termes et conditions",
+    "Accept terms and conditions": "Accepter les termes et conditions",
+    birthday: "Date de naissance",
+    sendMeMails: "M'envoyer des e-mails",
+    color: "Couleur",
+    address: "Adresse",
+    street: "Rue",
+    city: "Ville",
+    zip: "Code postal",
+    invitedGuests: "Invités à la fête",
+    "Guests invited to the party": "Invités à la fête",
+    document: "Document",
+  },
+};
+export const intlTranslation =
+  (locale: keyof typeof intlTranslations): IntlTranslateFunction =>
+    (key) =>
+      intlTranslations[locale][key] ?? key;
+
+
 const testSchema = z.object({
   username: z
     .string()
@@ -97,12 +143,12 @@ export const AutoFormTest = () => {
   return (
     <div className="space-y-xl">
       <AutoForm
+        intlTranslation={intlTranslation('fr')}
         onSubmit={onSubmit}
         formSchema={testSchema}
         fieldConfig={{
           sendMeMails: {
             // Booleans use a checkbox by default, you can use a switch instead
-            label: 'Send me mail test',
             fieldType: 'switch',
           },
           document: {
