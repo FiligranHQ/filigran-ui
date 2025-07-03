@@ -19,9 +19,6 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "filigran-ui/clients/utils": [
-        "../../packages/filigran-ui/src/components/clients/utils/index.ts"
-      ],
       "filigran-ui": ["../../packages/filigran-ui/src/index.ts"],
       "filigran-ui/plugin": ["../../packages/filigran-ui/src/plugin.ts"],
       "filigran-ui/clients": [
