@@ -34,16 +34,14 @@ export type JSONSchema = {
   [key: string]: any; // For any other additional properties
 };
 
-export class JSONSchemaToZod
-{
+export class JSONSchemaToZod {
   /**
    * Converts a JSON schema to a Zod schema.
    *
    * @param {JSONSchema} schema - The JSON schema.
    * @returns {ZodObjectOrWrapped} - The Zod schema.
    */
-  public static convert(schema: JSONSchema): ZodObjectOrWrapped
-  {
+  public static convert(schema: JSONSchema): ZodObjectOrWrapped {
     return this.parseSchema(schema) as ZodObjectOrWrapped;
   }
 
@@ -54,17 +52,14 @@ export class JSONSchemaToZod
    * @param {JSONSchema} condition - The condition schema.
    * @returns {boolean} - Whether the data matches the condition.
    */
-  private static matchesCondition(data: JSONValue, condition: JSONSchema): boolean
-  {
+  private static matchesCondition(data: JSONValue, condition: JSONSchema): boolean {
     // If no properties to check, condition is met
-    if (!condition.properties)
-    {
+    if (!condition.properties) {
       return true;
     }
 
     // If data is not an object or is null, it can't match a schema with properties
-    if (typeof data !== 'object' || data === null || Array.isArray(data))
-    {
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
       return false;
     }
 
@@ -72,14 +67,11 @@ export class JSONSchemaToZod
     const objectData = data as JSONObject;
 
     // Check all property conditions
-    for (const [key, propCondition] of Object.entries(condition.properties))
-    {
+    for (const [key, propCondition] of Object.entries(condition.properties)) {
       // If property doesn't exist in data
-      if (!(key in objectData))
-      {
+      if (!(key in objectData)) {
         // If there's a const condition and property is missing, it doesn't match
-        if ('const' in propCondition)
-        {
+        if ('const' in propCondition) {
           return false;
         }
 
@@ -90,20 +82,17 @@ export class JSONSchemaToZod
       const value = objectData[key];
 
       // Check for const condition
-      if ('const' in propCondition && value !== propCondition['const'])
-      {
+      if ('const' in propCondition && value !== propCondition['const']) {
         return false;
       }
 
       // Check for minimum condition
-      if ('minimum' in propCondition && typeof value === 'number' && value < propCondition['minimum'])
-      {
+      if ('minimum' in propCondition && typeof value === 'number' && value < propCondition['minimum']) {
         return false;
       }
 
       // Check for maximum condition
-      if ('maximum' in propCondition && typeof value === 'number' && value > propCondition['maximum'])
-      {
+      if ('maximum' in propCondition && typeof value === 'number' && value > propCondition['maximum']) {
         return false;
       }
     }
@@ -118,8 +107,7 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The conditional schema.
    * @param {z.RefinementCtx} ctx - The Zod refinement context.
    */
-  private static validateConditionalSchema(data: JSONValue, schema: JSONSchema, ctx: z.RefinementCtx): void
-  {
+  private static validateConditionalSchema(data: JSONValue, schema: JSONSchema, ctx: z.RefinementCtx): void {
     this.validateRequiredProperties(data, schema, ctx);
     this.validatePropertyPatterns(data, schema, ctx);
     this.validateNestedConditions(data, schema, ctx);
@@ -132,18 +120,14 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The schema containing required properties.
    * @param {z.RefinementCtx} ctx - The Zod refinement context.
    */
-  private static validateRequiredProperties(data: JSONValue, schema: JSONSchema, ctx: z.RefinementCtx): void
-  {
-    if (!schema.required)
-    {
+  private static validateRequiredProperties(data: JSONValue, schema: JSONSchema, ctx: z.RefinementCtx): void {
+    if (!schema.required) {
       return;
     }
 
     // If data is not an object or is null, all required properties are missing
-    if (typeof data !== 'object' || data === null)
-    {
-      for (const requiredProp of schema.required)
-      {
+    if (typeof data !== 'object' || data === null) {
+      for (const requiredProp of schema.required) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `Required property '${requiredProp}' is missing`,
@@ -154,10 +138,8 @@ export class JSONSchemaToZod
     }
 
     // Now we know data is an object (either a plain object or an array)
-    for (const requiredProp of schema.required)
-    {
-      if (!(requiredProp in data))
-      {
+    for (const requiredProp of schema.required) {
+      if (!(requiredProp in data)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `Required property '${requiredProp}' is missing`,
@@ -174,22 +156,18 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The schema containing property patterns.
    * @param {z.RefinementCtx} ctx - The Zod refinement context.
    */
-  private static validatePropertyPatterns(data: JSONValue, schema: JSONSchema, ctx: z.RefinementCtx): void
-  {
-    if (!schema.properties)
-    {
+  private static validatePropertyPatterns(data: JSONValue, schema: JSONSchema, ctx: z.RefinementCtx): void {
+    if (!schema.properties) {
       return;
     }
 
     // If data is not an object or is null, we can't validate property patterns
-    if (typeof data !== 'object' || data === null)
-    {
+    if (typeof data !== 'object' || data === null) {
       return;
     }
 
     // If data is an array, we can't validate property patterns
-    if (Array.isArray(data))
-    {
+    if (Array.isArray(data)) {
       return;
     }
 
@@ -197,22 +175,18 @@ export class JSONSchemaToZod
     const objectData = data as JSONObject;
 
     // Process each property in the schema
-    for (const [key, propSchema] of Object.entries(schema.properties))
-    {
+    for (const [key, propSchema] of Object.entries(schema.properties)) {
       // Skip if property doesn't exist in data
-      if (!(key in objectData))
-      {
+      if (!(key in objectData)) {
         continue;
       }
 
       const value = objectData[key];
 
       // Check pattern validation for strings
-      if (propSchema['pattern'] && typeof value === 'string')
-      {
+      if (propSchema['pattern'] && typeof value === 'string') {
         const regex = new RegExp(propSchema['pattern']);
-        if (!regex.test(value))
-        {
+        if (!regex.test(value)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: `String '${value}' does not match pattern '${propSchema['pattern']}'`,
@@ -230,20 +204,15 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The schema containing if-then-else conditions.
    * @param {z.RefinementCtx} ctx - The Zod refinement context.
    */
-  private static validateNestedConditions(data: JSONValue, schema: JSONSchema, ctx: z.RefinementCtx): void
-  {
-    if (!schema['if'] || !schema['then'])
-    {
+  private static validateNestedConditions(data: JSONValue, schema: JSONSchema, ctx: z.RefinementCtx): void {
+    if (!schema['if'] || !schema['then']) {
       return;
     }
 
     const matchesIf = this.matchesCondition(data, schema['if']);
-    if (matchesIf)
-    {
+    if (matchesIf) {
       this.validateConditionalSchema(data, schema['then'], ctx);
-    }
-    else if (schema['else'])
-    {
+    } else if (schema['else']) {
       this.validateConditionalSchema(data, schema['else'], ctx);
     }
   }
@@ -255,29 +224,24 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static parseSchema(schema: JSONSchema): ZodTypeAny
-  {
+  private static parseSchema(schema: JSONSchema): ZodTypeAny {
     // Handle array of types (e.g., ['string', 'null'] for nullable types)
-    if (Array.isArray(schema.type))
-    {
+    if (Array.isArray(schema.type)) {
       return this.handleTypeArray(schema);
     }
 
     // Handle combinators (oneOf, anyOf, allOf)
-    if (schema.oneOf || schema.anyOf || schema.allOf)
-    {
+    if (schema.oneOf || schema.anyOf || schema.allOf) {
       return this.parseCombinator(schema);
     }
 
     // Handle if-then-else conditional validation
-    if (schema['if'] && schema['then'])
-    {
+    if (schema['if'] && schema['then']) {
       return this.parseObject(schema);
     }
 
     // Handle object schema without explicit type but with properties
-    if (schema.properties && (!schema.type || schema.type === 'object'))
-    {
+    if (schema.properties && (!schema.type || schema.type === 'object')) {
       return this.parseObject(schema);
     }
 
@@ -291,16 +255,13 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with type array.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static handleTypeArray(schema: JSONSchema): ZodTypeAny
-  {
-    if (!Array.isArray(schema.type))
-    {
+  private static handleTypeArray(schema: JSONSchema): ZodTypeAny {
+    if (!Array.isArray(schema.type)) {
       throw new Error('Expected schema.type to be an array');
     }
 
     // Check if the type array includes 'null' to create a nullable type
-    if (schema.type.includes('null'))
-    {
+    if (schema.type.includes('null')) {
       return this.handleNullableType(schema);
     }
 
@@ -314,21 +275,18 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with nullable type.
    * @returns {ZodTypeAny} - The nullable Zod schema.
    */
-  private static handleNullableType(schema: JSONSchema): ZodTypeAny
-  {
-    if (!Array.isArray(schema.type))
-    {
+  private static handleNullableType(schema: JSONSchema): ZodTypeAny {
+    if (!Array.isArray(schema.type)) {
       throw new Error('Expected schema.type to be an array');
     }
 
     // Create a copy of the schema without the 'null' type
-    const nonNullSchema = { ...schema };
+    const nonNullSchema = {...schema};
     nonNullSchema.type = schema.type.filter(t => t !== 'null');
 
     // If there's only one type left, handle it as a single type and make it nullable
-    if (nonNullSchema.type.length === 1)
-    {
-      const singleTypeSchema = this.handleSingleType({ ...schema, type: nonNullSchema.type[0] });
+    if (nonNullSchema.type.length === 1) {
+      const singleTypeSchema = this.handleSingleType({...schema, type: nonNullSchema.type[0]});
       return singleTypeSchema.nullable();
     }
 
@@ -344,11 +302,9 @@ export class JSONSchemaToZod
    * @param {JSONSchema} baseSchema - The base schema to apply to each type.
    * @returns {ZodTypeAny} - The union Zod schema.
    */
-  private static createUnionFromTypes(types: string[], baseSchema: JSONSchema): ZodTypeAny
-  {
-    const schemas = types.map(type =>
-    {
-      const singleTypeSchema = { ...baseSchema, type };
+  private static createUnionFromTypes(types: string[], baseSchema: JSONSchema): ZodTypeAny {
+    const schemas = types.map(type => {
+      const singleTypeSchema = {...baseSchema, type};
       return this.parseSchema(singleTypeSchema);
     });
 
@@ -361,20 +317,16 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with single type.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static handleSingleType(schema: JSONSchema): ZodTypeAny
-  {
+  private static handleSingleType(schema: JSONSchema): ZodTypeAny {
     // Handle schemas without a type property
-    if (schema.type === undefined)
-    {
+    if (schema.type === undefined) {
       // Check for combinators first
-      if (schema.oneOf || schema.anyOf || schema.allOf)
-      {
+      if (schema.oneOf || schema.anyOf || schema.allOf) {
         return this.parseCombinator(schema);
       }
 
       // Check for object properties
-      if (schema.properties)
-      {
+      if (schema.properties) {
         return this.parseObject(schema);
       }
 
@@ -383,15 +335,20 @@ export class JSONSchemaToZod
     }
 
     // Handle specific types
-    switch (schema.type)
-    {
-      case 'string': return this.parseString(schema);
+    switch (schema.type) {
+      case 'string':
+        return this.parseString(schema);
       case 'number':
-      case 'integer': return this.parseNumberSchema(schema);
-      case 'boolean': return z.boolean();
-      case 'array': return this.parseArray(schema);
-      case 'object': return this.parseObject(schema);
-      default: throw new Error('Unsupported schema type');
+      case 'integer':
+        return this.parseNumberSchema(schema);
+      case 'boolean':
+        return z.boolean();
+      case 'array':
+        return this.parseArray(schema);
+      case 'object':
+        return this.parseObject(schema);
+      default:
+        throw new Error('Unsupported schema type');
     }
   }
 
@@ -401,8 +358,7 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema for a number.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static parseNumberSchema(schema: JSONSchema): ZodTypeAny
-  {
+  private static parseNumberSchema(schema: JSONSchema): ZodTypeAny {
     let numberSchema = z.number();
 
     // Apply all number validations
@@ -422,19 +378,16 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with bounds.
    * @returns {z.ZodNumber} - The updated schema with bounds validation.
    */
-  private static applyNumberBounds(numberSchema: z.ZodNumber, schema: JSONSchema): z.ZodTypeAny
-  {
+  private static applyNumberBounds(numberSchema: z.ZodNumber, schema: JSONSchema): z.ZodTypeAny {
     let result = numberSchema;
 
-    if (schema['minimum'] !== undefined)
-    {
+    if (schema['minimum'] !== undefined) {
       result = schema['exclusiveMinimum'] ?
         result.gt(schema['minimum']) :
         result.gte(schema['minimum']);
     }
 
-    if (schema['maximum'] !== undefined)
-    {
+    if (schema['maximum'] !== undefined) {
       result = schema['exclusiveMaximum'] ?
         result.lt(schema['maximum']) :
         result.lte(schema['maximum']);
@@ -450,16 +403,14 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with multipleOf.
    * @returns {z.ZodNumber} - The updated schema with multipleOf validation.
    */
-  private static applyNumberMultipleOf(numberSchema: z.ZodNumber, schema: JSONSchema): z.ZodTypeAny
-  {
-    if (schema['multipleOf'] === undefined)
-    {
+  private static applyNumberMultipleOf(numberSchema: z.ZodNumber, schema: JSONSchema): z.ZodTypeAny {
+    if (schema['multipleOf'] === undefined) {
       return numberSchema;
     }
 
     return numberSchema.refine(
       val => val % schema['multipleOf']! === 0,
-      { message: `Number must be a multiple of ${schema['multipleOf']}` }
+      {message: `Number must be a multiple of ${schema['multipleOf']}`}
     );
   }
 
@@ -470,24 +421,21 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with enum.
    * @returns {z.ZodNumber} - The updated schema with enum validation.
    */
-  private static applyNumberEnum(numberSchema: z.ZodNumber, schema: JSONSchema): z.ZodTypeAny
-  {
-    if (!schema.enum)
-    {
+  private static applyNumberEnum(numberSchema: z.ZodNumber, schema: JSONSchema): z.ZodTypeAny {
+    if (!schema.enum) {
       return numberSchema;
     }
 
     // Filter out non-number values from enum
     const numberEnums = schema.enum.filter(val => typeof val === 'number') as number[];
-    if (numberEnums.length === 0)
-    {
+    if (numberEnums.length === 0) {
       return numberSchema;
     }
 
     // Use refinement to validate against enum values
     return numberSchema.refine(
       val => numberEnums.includes(val),
-      { message: `Number must be one of: ${numberEnums.join(', ')}` }
+      {message: `Number must be one of: ${numberEnums.join(', ')}`}
     );
   }
 
@@ -498,16 +446,14 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema.
    * @returns {z.ZodNumber} - The updated schema with integer validation if needed.
    */
-  private static applyIntegerConstraint(numberSchema: z.ZodNumber, schema: JSONSchema): z.ZodTypeAny
-  {
-    if (schema.type !== 'integer')
-    {
+  private static applyIntegerConstraint(numberSchema: z.ZodNumber, schema: JSONSchema): z.ZodTypeAny {
+    if (schema.type !== 'integer') {
       return numberSchema;
     }
 
     return numberSchema.refine(
       val => Number.isInteger(val),
-      { message: 'Number must be an integer' }
+      {message: 'Number must be an integer'}
     );
   }
 
@@ -517,19 +463,15 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema for a string.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static parseString(schema: JSONSchema): ZodTypeAny
-  {
+  private static parseString(schema: JSONSchema): ZodTypeAny {
     let stringSchema = z.string();
     let result: z.ZodTypeAny = stringSchema;
 
     // Apply all string validations
-    if (schema.format)
-    {
+    if (schema.format) {
       // Handle format-specific string validation
       return this.applyStringFormat(stringSchema, schema);
-    }
-    else
-    {
+    } else {
       // Only apply other validations if format is not specified
       // or apply them to the formatted string
       result = this.applyStringPattern(stringSchema, schema) as z.ZodTypeAny;
@@ -547,15 +489,12 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with format.
    * @returns {ZodTypeAny} - The updated schema with format validation.
    */
-  private static applyStringFormat(stringSchema: z.ZodString, schema: JSONSchema): ZodTypeAny
-  {
-    if (!schema.format)
-    {
+  private static applyStringFormat(stringSchema: z.ZodString, schema: JSONSchema): ZodTypeAny {
+    if (!schema.format) {
       return stringSchema;
     }
 
-    switch (schema.format)
-    {
+    switch (schema.format) {
       case 'email':
         return stringSchema.email();
       case 'date-time':
@@ -578,15 +517,13 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with pattern.
    * @returns {z.ZodString} - The updated schema with pattern validation.
    */
-  private static applyStringPattern(stringSchema: z.ZodString, schema: JSONSchema): z.ZodTypeAny
-  {
-    if (!schema['pattern'])
-    {
+  private static applyStringPattern(stringSchema: z.ZodString, schema: JSONSchema): z.ZodTypeAny {
+    if (!schema['pattern']) {
       return stringSchema;
     }
 
     const regex = new RegExp(schema['pattern']);
-    return stringSchema.regex(regex, { message: `String must match pattern: ${schema['pattern']}` });
+    return stringSchema.regex(regex, {message: `String must match pattern: ${schema['pattern']}`});
   }
 
   /**
@@ -596,17 +533,14 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with length constraints.
    * @returns {z.ZodString} - The updated schema with length validation.
    */
-  private static applyStringLength(stringSchema: z.ZodString, schema: JSONSchema): z.ZodTypeAny
-  {
+  private static applyStringLength(stringSchema: z.ZodString, schema: JSONSchema): z.ZodTypeAny {
     let result = stringSchema;
 
-    if (schema['minLength'] !== undefined)
-    {
+    if (schema['minLength'] !== undefined) {
       stringSchema = stringSchema.min(schema['minLength']);
     }
 
-    if (schema['maxLength'] !== undefined)
-    {
+    if (schema['maxLength'] !== undefined) {
       stringSchema = stringSchema.max(schema['maxLength']);
     }
 
@@ -620,10 +554,8 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with enum.
    * @returns {ZodTypeAny} - The updated schema with enum validation.
    */
-  private static applyStringEnum(stringSchema: z.ZodString, schema: JSONSchema): ZodTypeAny
-  {
-    if (!schema.enum)
-    {
+  private static applyStringEnum(stringSchema: z.ZodString, schema: JSONSchema): ZodTypeAny {
+    if (!schema.enum) {
       return stringSchema;
     }
 
@@ -639,11 +571,9 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static parseArray(schema: JSONSchema): ZodTypeAny
-  {
+  private static parseArray(schema: JSONSchema): ZodTypeAny {
     // Handle tuple validation (items is an array)
-    if (Array.isArray(schema.items))
-    {
+    if (Array.isArray(schema.items)) {
       const tupleSchemas = schema.items.map(item => this.parseSchema(item));
       return z.union(tupleSchemas as [ZodTypeAny, ZodTypeAny, ...ZodTypeAny[]]);
     }
@@ -666,26 +596,22 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with array constraints.
    * @returns {z.ZodTypeAny} - The updated array schema with constraints.
    */
-  private static applyArrayConstraints(arraySchema: z.ZodArray<any>, schema: JSONSchema): z.ZodTypeAny
-  {
+  private static applyArrayConstraints(arraySchema: z.ZodArray<any>, schema: JSONSchema): z.ZodTypeAny {
     // Handle minItems
-    if (schema['minItems'] !== undefined)
-    {
+    if (schema['minItems'] !== undefined) {
       arraySchema = arraySchema.min(schema['minItems']);
     }
 
     // Handle maxItems
-    if (schema['maxItems'] !== undefined)
-    {
+    if (schema['maxItems'] !== undefined) {
       arraySchema = arraySchema.max(schema['maxItems']);
     }
 
     // Handle uniqueItems
-    if (schema['uniqueItems'])
-    {
+    if (schema['uniqueItems']) {
       return arraySchema.refine(
         (items) => new Set(items).size === items.length,
-        { message: 'Array items must be unique' }
+        {message: 'Array items must be unique'}
       );
     }
 
@@ -698,11 +624,9 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema for an object.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static parseObject(schema: JSONSchema): ZodTypeAny
-  {
+  private static parseObject(schema: JSONSchema): ZodTypeAny {
     // Handle conditional validation (if-then-else) first
-    if (schema['if'] && schema['then'])
-    {
+    if (schema['if'] && schema['then']) {
       return this.parseConditional(schema);
     }
 
@@ -722,17 +646,14 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema for an object.
    * @param {Record<string, ZodTypeAny>} shape - The shape object to populate.
    */
-  private static processObjectProperties(schema: JSONSchema, shape: Record<string, ZodTypeAny>): void
-  {
+  private static processObjectProperties(schema: JSONSchema, shape: Record<string, ZodTypeAny>): void {
     const required = new Set(schema.required || []);
 
-    if (!schema.properties)
-    {
+    if (!schema.properties) {
       return;
     }
 
-    for (const [key, propSchema] of Object.entries(schema.properties))
-    {
+    for (const [key, propSchema] of Object.entries(schema.properties)) {
       const zodSchema = this.parseSchema(propSchema);
       shape[key] = required.has(key) ? zodSchema : zodSchema.optional();
     }
@@ -745,20 +666,14 @@ export class JSONSchemaToZod
    * @param {z.ZodObject<any, any>} objectSchema - The Zod object schema.
    * @returns {z.ZodObject<any, any>} - The updated Zod object schema.
    */
-  private static processAdditionalProperties(schema: JSONSchema, objectSchema: z.ZodObject<any, any>): z.ZodObject<any, any>
-  {
-    if (schema.additionalProperties === true)
-    {
+  private static processAdditionalProperties(schema: JSONSchema, objectSchema: z.ZodObject<any, any>): z.ZodObject<any, any> {
+    if (schema.additionalProperties === true) {
       return objectSchema.passthrough();
-    }
-    else if (schema.additionalProperties && typeof schema.additionalProperties === 'object')
-    {
+    } else if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
       // Handle schema for additional properties
       const additionalPropSchema = this.parseSchema(schema.additionalProperties);
       return objectSchema.catchall(additionalPropSchema);
-    }
-    else
-    {
+    } else {
       return objectSchema.strict();
     }
   }
@@ -769,8 +684,7 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with conditional validation.
    * @returns {ZodTypeAny} - The conditional Zod schema.
    */
-  private static parseConditional(schema: JSONSchema): ZodTypeAny
-  {
+  private static parseConditional(schema: JSONSchema): ZodTypeAny {
     // Create base object schema
     const zodObject = this.createBaseObjectSchema(schema);
 
@@ -780,18 +694,14 @@ export class JSONSchemaToZod
     const elseSchema = schema['else'];
 
     // Apply conditional validation using superRefine
-    return zodObject.superRefine((data, ctx) =>
-    {
+    return zodObject.superRefine((data, ctx) => {
       // Apply default values to data for condition checking
       const dataWithDefaults = this.applyDefaultValues(data, schema);
 
       // Apply appropriate validation based on condition
-      if (this.matchesCondition(dataWithDefaults, ifCondition))
-      {
+      if (this.matchesCondition(dataWithDefaults, ifCondition)) {
         this.validateConditionalSchema(dataWithDefaults, thenSchema, ctx);
-      }
-      else if (elseSchema)
-      {
+      } else if (elseSchema) {
         this.validateConditionalSchema(dataWithDefaults, elseSchema, ctx);
       }
     });
@@ -803,13 +713,11 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema.
    * @returns {z.ZodObject<any, any>} - The base Zod object schema.
    */
-  private static createBaseObjectSchema(schema: JSONSchema): z.ZodObject<any, any>
-  {
+  private static createBaseObjectSchema(schema: JSONSchema): z.ZodObject<any, any> {
     const shape: Record<string, ZodTypeAny> = {};
     const required = new Set(schema.required || []);
 
-    for (const [key, value] of Object.entries(schema.properties || {}))
-    {
+    for (const [key, value] of Object.entries(schema.properties || {})) {
       const zodSchema = this.parseSchema(value);
       shape[key] = required.has(key) ? zodSchema : zodSchema.optional();
     }
@@ -825,33 +733,27 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The schema with default values.
    * @returns {JSONValue} - The data object with defaults applied.
    */
-  private static applyDefaultValues(data: JSONValue, schema: JSONSchema): JSONValue
-  {
+  private static applyDefaultValues(data: JSONValue, schema: JSONSchema): JSONValue {
     // If data is not an object or is null, we can't apply defaults
-    if (typeof data !== 'object' || data === null)
-    {
+    if (typeof data !== 'object' || data === null) {
       return data;
     }
 
     // If data is an array, we can't apply defaults from schema properties
-    if (Array.isArray(data))
-    {
+    if (Array.isArray(data)) {
       return data;
     }
 
     // Now we know data is a JSONObject
     const objectData = data as JSONObject;
-    const dataWithDefaults = { ...objectData };
+    const dataWithDefaults = {...objectData};
 
-    if (!schema.properties)
-    {
+    if (!schema.properties) {
       return dataWithDefaults;
     }
 
-    for (const [key, propSchema] of Object.entries(schema.properties))
-    {
-      if (!(key in dataWithDefaults) && 'default' in propSchema)
-      {
+    for (const [key, propSchema] of Object.entries(schema.properties)) {
+      if (!(key in dataWithDefaults) && 'default' in propSchema) {
         dataWithDefaults[key] = propSchema['default'];
       }
     }
@@ -866,20 +768,16 @@ export class JSONSchemaToZod
    * @param {JSONSchema} schema - The JSON schema with combinators.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static parseCombinator(schema: JSONSchema): ZodTypeAny
-  {
-    if (schema.oneOf)
-    {
+  private static parseCombinator(schema: JSONSchema): ZodTypeAny {
+    if (schema.oneOf) {
       return this.parseOneOf(schema.oneOf);
     }
 
-    if (schema.anyOf)
-    {
+    if (schema.anyOf) {
       return this.parseAnyOf(schema.anyOf);
     }
 
-    if (schema.allOf)
-    {
+    if (schema.allOf) {
       return this.parseAllOf(schema.allOf);
     }
 
@@ -893,8 +791,7 @@ export class JSONSchemaToZod
    * @param {JSONSchema[]} schemas - Array of JSON schemas in the oneOf.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static parseOneOf(schemas: JSONSchema[]): ZodTypeAny
-  {
+  private static parseOneOf(schemas: JSONSchema[]): ZodTypeAny {
     return this.createUnionFromSchemas(schemas);
   }
 
@@ -904,8 +801,7 @@ export class JSONSchemaToZod
    * @param {JSONSchema[]} schemas - Array of JSON schemas in the anyOf.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static parseAnyOf(schemas: JSONSchema[]): ZodTypeAny
-  {
+  private static parseAnyOf(schemas: JSONSchema[]): ZodTypeAny {
     return this.createUnionFromSchemas(schemas);
   }
 
@@ -915,43 +811,33 @@ export class JSONSchemaToZod
    * @param {JSONSchema[]} schemas - Array of JSON schemas to create a union from.
    * @returns {ZodTypeAny} - The union Zod schema.
    */
-  private static createUnionFromSchemas(schemas: JSONSchema[]): ZodTypeAny
-  {
+  private static createUnionFromSchemas(schemas: JSONSchema[]): ZodTypeAny {
     // Handle empty array case
-    if (schemas.length === 0)
-    {
+    if (schemas.length === 0) {
       return z.any();
     }
 
     // Handle single schema case
-    if (schemas.length === 1)
-    {
+    if (schemas.length === 1) {
       return this.parseSchema(schemas[0]);
     }
 
     // Process each subschema individually
     const zodSchemas: ZodTypeAny[] = [];
 
-    for (const subSchema of schemas)
-    {
+    for (const subSchema of schemas) {
       // Handle null type specially
-      if (subSchema.type === 'null')
-      {
+      if (subSchema.type === 'null') {
         zodSchemas.push(z.null());
-      }
-      else
-      {
+      } else {
         zodSchemas.push(this.parseSchema(subSchema));
       }
     }
 
     // Return appropriate schema based on number of valid schemas
-    if (zodSchemas.length >= 2)
-    {
+    if (zodSchemas.length >= 2) {
       return z.union(zodSchemas as [ZodTypeAny, ZodTypeAny, ...ZodTypeAny[]]);
-    }
-    else if (zodSchemas.length === 1)
-    {
+    } else if (zodSchemas.length === 1) {
       return zodSchemas[0];
     }
 
@@ -965,17 +851,14 @@ export class JSONSchemaToZod
    * @param {JSONSchema[]} schemas - Array of JSON schemas in the allOf.
    * @returns {ZodTypeAny} - The ZodTypeAny schema.
    */
-  private static parseAllOf(schemas: JSONSchema[]): ZodTypeAny
-  {
+  private static parseAllOf(schemas: JSONSchema[]): ZodTypeAny {
     // Handle empty array case
-    if (schemas.length === 0)
-    {
+    if (schemas.length === 0) {
       return z.any();
     }
 
     // Handle single schema case
-    if (schemas.length === 1)
-    {
+    if (schemas.length === 1) {
       return this.parseSchema(schemas[0]);
     }
 
@@ -994,18 +877,17 @@ export class JSONSchemaToZod
    * @param {JSONSchema} addSchema - The JSON schema to add.
    * @returns {JSONSchema} - The merged JSON schema
    */
-  private static mergeSchemas(baseSchema: JSONSchema, addSchema: JSONSchema): JSONSchema
-  {
-    const merged: JSONSchema = { ...baseSchema, ...addSchema };
-    if (baseSchema.properties && addSchema.properties)
-    {
-      merged.properties = {...baseSchema.properties, ...addSchema.properties}
+  private static mergeSchemas(baseSchema: JSONSchema, addSchema: JSONSchema): JSONSchema {
+    const merged: JSONSchema = {...baseSchema, ...addSchema};
+
+    if (baseSchema.properties && addSchema.properties) {
+      merged.properties = {...baseSchema.properties, ...addSchema.properties};
     }
-    if (baseSchema.required && addSchema.required)
-    {
-      merged.required = [
-        ...new Set([...baseSchema.required, ...addSchema.required]),
-      ]
+
+    if (baseSchema.required && addSchema.required) {
+      merged.required = Array.from(
+        new Set([...baseSchema.required, ...addSchema.required])
+      );
     }
     return merged;
   }

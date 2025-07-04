@@ -118,6 +118,20 @@ export default function AutoFormObject<
           )
         }
 
+        // Not implemented yet
+        // if (zodBaseType === "ZodArray") {
+        //   return (
+        //     <AutoFormArray
+        //       key={key}
+        //       name={name}
+        //       item={item as unknown as z.ZodArray<any>}
+        //       form={form}
+        //       fieldConfig={fieldConfig?.[name] ?? {}}
+        //       path={[...path, name]}
+        //     />
+        //   );
+        // }
+
         const fieldConfigItem: FieldConfigItem = fieldConfig?.[name] ?? {}
         const zodInputProps = zodToHtmlInputProps(item)
         const isRequired =

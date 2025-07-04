@@ -6,6 +6,17 @@ import {JSONSchemaToZod} from 'filigran-ui/auto-form'
 import {AutoForm} from 'filigran-ui'
 import jsonTest from './test.json';
 
+export enum UserServiceOrderingEnum {
+  EMAIL = "email",
+  FIRST_NAME = "first_name",
+  LAST_NAME = "last_name",
+  ORDERING = "ordering",
+  SERVICE_DESCRIPTION = "service_description",
+  SERVICE_NAME = "service_name",
+  SERVICE_PROVIDER = "service_provider",
+  SERVICE_TYPE = "service_type",
+  SUBSCRIPTION_STATUS = "subscription_status",
+}
 
 const convertJson = JSONSchemaToZod.convert(jsonTest);
 
@@ -88,7 +99,7 @@ const testSchema = z.object({
     })
     .default(5) // You can set a default value
     .optional(),
-
+  userServiceEnum: z.nativeEnum(UserServiceOrderingEnum),
   acceptTerms: z
     .boolean()
     .refine((value) => value, {
