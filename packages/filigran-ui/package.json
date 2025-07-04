@@ -1,6 +1,6 @@
 {
   "name": "filigran-ui",
-  "version": "0.38.2",
+  "version": "0.38.3",
   "description": "Filigran UI library",
   "author": "Filigran",
   "main": "./dist/index.js",
