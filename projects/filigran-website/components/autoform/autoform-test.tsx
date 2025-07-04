@@ -63,9 +63,9 @@ const intlTranslations = {
   },
 };
 export const intlTranslation =
-  (locale: keyof typeof intlTranslations): IntlTranslateFunction =>
-    (key) =>
-      intlTranslations[locale][key] ?? key;
+  (locale: keyof typeof intlTranslations) =>
+    // @ts-ignore
+    (key: string) => intlTranslations[locale][key] ?? key;
 
 
 const testSchema = z.object({
