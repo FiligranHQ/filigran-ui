@@ -14,12 +14,13 @@ import {cn} from '../../lib/utils'
 import {Form} from '../clients'
 import {Button} from '../servers'
 import AutoFormObject from './fields/object'
-import type {Dependency, FieldConfig} from './types'
+import type {Dependency, FieldConfig, IntlTranslateFunction} from './types'
 import {
   getDefaultValues,
   getObjectFormSchema,
   type ZodObjectOrWrapped,
 } from './utils'
+
 
 const AutoFormSubmit = ({
   children,
@@ -50,6 +51,7 @@ const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
   children,
   className,
   dependencies,
+  intlTranslation
 }: {
   formSchema: SchemaType
   values?: Partial<z.infer<SchemaType>>
@@ -70,7 +72,8 @@ const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
     | React.ReactNode
     | ((formState: FormState<z.infer<SchemaType>>) => React.ReactNode)
   className?: string
-  dependencies?: Dependency<z.infer<SchemaType>>[]
+  dependencies?: Dependency<z.infer<SchemaType>>[],
+  intlTranslation?: IntlTranslateFunction
 }) => {
   const objectFormSchema = getObjectFormSchema(formSchema)
   const defaultValues: DefaultValues<z.infer<typeof objectFormSchema>> | null =
@@ -119,6 +122,7 @@ const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
             form={form}
             dependencies={dependencies}
             fieldConfig={fieldConfig}
+            intlTranslation={intlTranslation}
           />
 
           {renderChildren}
