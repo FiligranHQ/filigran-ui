@@ -55,6 +55,7 @@ export const DashboardIcon = lazy(() => import("./Dashboard"));
 export const DataSourceIcon = lazy(() => import("./DataSource"));
 export const DatabaseOutline1Icon = lazy(() => import("./DatabaseOutline1"));
 export const DeleteIcon = lazy(() => import("./Delete"));
+export const DownloadIcon = lazy(() => import("./Download"));
 export const DragHandleIcon = lazy(() => import("./DragHandle"));
 export const DragIndicatorIcon = lazy(() => import("./DragIndicator"));
 export const EditIcon = lazy(() => import("./Edit"));
