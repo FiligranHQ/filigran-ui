@@ -1,6 +1,6 @@
 {
   "name": "filigran-icon",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "Filigran icon",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
