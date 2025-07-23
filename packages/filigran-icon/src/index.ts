@@ -10,6 +10,7 @@ export const AddNotesIcon = lazy(() => import("./AddNotes"));
 export const AdministrativeAreaIcon = lazy(
   () => import("./AdministrativeArea"),
 );
+export const ArrowCircleDownIcon = lazy(() => import("./ArrowCircleDown"));
 export const ArrowDownwardIcon = lazy(() => import("./ArrowDownward"));
 export const ArrowDownwardAltIcon = lazy(() => import("./ArrowDownwardAlt"));
 export const ArrowFirstIcon = lazy(() => import("./ArrowFirst"));
