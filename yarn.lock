@@ -5287,7 +5287,7 @@ filigran-icon@^0.15.0:
   integrity sha512-WslCZcPHXoHXWYWKFmjxNjBNBDc8ocHmaPy2sbtZzxBN+mtRGeUsoOqrlxqexXo0kTFefESzU4j5AsKI/gWm+g==
 
 "filigran-icon@file:C:\\Users\\Tiffaine HERVY\\Documents\\repos\\filigran-ui\\packages\\filigran-icon":
-  version "0.16.0"
+  version "0.17.0"
   resolved "file:packages/filigran-icon"
 
 "filigran-ui@file:C:\\Users\\Tiffaine HERVY\\Documents\\repos\\filigran-ui\\packages\\filigran-ui":
