@@ -5281,8 +5281,13 @@ filigran-icon@^0.14.1:
   resolved "https://registry.npmjs.org/filigran-icon/-/filigran-icon-0.14.1.tgz"
   integrity sha512-KtjWKYEdsUyC4VIdEWa4cuKXz65jXums8cmCk16kNYpDbTztxRnhJ9VpNN2eA/f+sN8Xlc2LGp5SqnDKYxkfCQ==
 
-filigran-icon@^0.15.0, "filigran-icon@file:C:\\Users\\Tiffaine HERVY\\Documents\\repos\\filigran-ui\\packages\\filigran-icon":
+filigran-icon@^0.15.0:
   version "0.15.1"
+  resolved "https://registry.npmjs.org/filigran-icon/-/filigran-icon-0.15.1.tgz"
+  integrity sha512-WslCZcPHXoHXWYWKFmjxNjBNBDc8ocHmaPy2sbtZzxBN+mtRGeUsoOqrlxqexXo0kTFefESzU4j5AsKI/gWm+g==
+
+"filigran-icon@file:C:\\Users\\Tiffaine HERVY\\Documents\\repos\\filigran-ui\\packages\\filigran-icon":
+  version "0.16.0"
   resolved "file:packages/filigran-icon"
 
 "filigran-ui@file:C:\\Users\\Tiffaine HERVY\\Documents\\repos\\filigran-ui\\packages\\filigran-ui":
