@@ -1,0 +1,63 @@
+name: Handle Merged PRs
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  update-deployment-status:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Extract issue number from branch
+        id: extract_issue
+        run: |
+          if [[ "${{ github.event.pull_request.head.ref }}" =~ ^issue/([0-9]+)$ ]]; then
+            echo "issue_number=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          else
+            echo "issue_number=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update issue to deployment status
+        if: steps.extract_issue.outputs.issue_number != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = ${{ steps.extract_issue.outputs.issue_number }};
+            
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            const statusRegex = /<!-- status: .* -->/;
+            let newBody = issue.body || '';
+            const newStatus = 'Ready for deployment';
+            
+            if (statusRegex.test(newBody)) {
+              newBody = newBody.replace(statusRegex, `<!-- status: ${newStatus} -->`);
+            } else {
+              newBody = `<!-- status: ${newStatus} -->\n${newBody}`;
+            }
+            
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: newBody
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `🚀 Status updated to: **${newStatus}**`
+            });

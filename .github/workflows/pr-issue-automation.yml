@@ -1,0 +1,237 @@
+name: PR and Issue Status Management
+
+on:
+  pull_request:
+    types: [opened, edited, ready_for_review, converted_to_draft]
+    branches:
+      - main
+  pull_request_review:
+    types: [submitted]
+  pull_request_target:
+    types: [labeled]
+
+jobs:
+  manage-pr-and-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Extract issue number from branch
+        id: extract_issue
+        run: |
+          if [[ "${{ github.head_ref }}" =~ ^issue/([0-9]+)$ ]]; then
+            echo "issue_number=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+            echo "Found issue number: ${BASH_REMATCH[1]}"
+          else
+            echo "Branch name doesn't match pattern issue/XYZ"
+            echo "issue_number=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if creator is in FiligranHQ organization
+        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'edited')
+        id: check_org_membership
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              const { data: membership } = await github.rest.orgs.checkMembershipForUser({
+                org: 'FiligranHQ',
+                username: context.payload.pull_request.user.login
+              });
+              return true;
+            } catch (error) {
+              if (error.status === 404) {
+                return false;
+              }
+              throw error;
+            }
+
+      - name: Add Filigran Team label
+        if: steps.check_org_membership.outputs.result == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['Filigran Team']
+            });
+
+      - name: Update issue status based on PR state
+        if: steps.extract_issue.outputs.issue_number != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = ${{ steps.extract_issue.outputs.issue_number }};
+            const pr = context.payload.pull_request;
+
+            let status = '';
+
+            // Determine the status based on PR state
+            if (context.eventName === 'pull_request') {
+              if (pr.draft) {
+                status = 'dev in progress';
+              } else if (pr.state === 'open') {
+                status = 'In review';
+              }
+            }
+
+            // Update issue if status is determined
+            if (status) {
+              // Get current issue data
+              const { data: issue } = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber
+              });
+
+              // Update issue body to include status
+              const statusRegex = /<!-- status: .* -->/;
+              let newBody = issue.body || '';
+
+              if (statusRegex.test(newBody)) {
+                newBody = newBody.replace(statusRegex, `<!-- status: ${status} -->`);
+              } else {
+                newBody = `<!-- status: ${status} -->\n${newBody}`;
+              }
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: newBody
+              });
+
+              // Add a comment to show status change
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `🔄 Status updated to: **${status}**`
+              });
+            }
+
+      - name: Check for approval and label
+        if: github.event_name == 'pull_request_review' || github.event_name == 'pull_request_target'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = ${{ steps.extract_issue.outputs.issue_number }};
+
+            if (!issueNumber) return;
+
+            // Get PR data
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            // Get reviews
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            // Check if PR has approval
+            const hasApproval = reviews.some(review => review.state === 'APPROVED');
+
+            // Check if PR has "needs feature env" label
+            const hasLabel = pr.labels.some(label => label.name === 'needs feature env');
+
+            if (hasApproval && hasLabel) {
+              // Update issue status
+              const { data: issue } = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber
+              });
+
+              const statusRegex = /<!-- status: .* -->/;
+              let newBody = issue.body || '';
+              const newStatus = 'Ready for product testing';
+
+              if (statusRegex.test(newBody)) {
+                newBody = newBody.replace(statusRegex, `<!-- status: ${newStatus} -->`);
+              } else {
+                newBody = `<!-- status: ${newStatus} -->\n${newBody}`;
+              }
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: newBody
+              });
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `🔄 Status updated to: **${newStatus}**`
+              });
+            }
+
+  update-deployment-status:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.base_ref == 'main'
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Extract issue number from branch
+        id: extract_issue
+        run: |
+          if [[ "${{ github.head_ref }}" =~ ^issue/([0-9]+)$ ]]; then
+            echo "issue_number=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          else
+            echo "issue_number=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update issue to deployment status
+        if: steps.extract_issue.outputs.issue_number != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = ${{ steps.extract_issue.outputs.issue_number }};
+
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            const statusRegex = /<!-- status: .* -->/;
+            let newBody = issue.body || '';
+            const newStatus = 'Ready for deployment';
+
+            if (statusRegex.test(newBody)) {
+              newBody = newBody.replace(statusRegex, `<!-- status: ${newStatus} -->`);
+            } else {
+              newBody = `<!-- status: ${newStatus} -->\n${newBody}`;
+            }
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: newBody
+            });
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `🚀 Status updated to: **${newStatus}**`
+            });
