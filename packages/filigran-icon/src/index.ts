@@ -97,6 +97,7 @@ export const MoreHorizIcon = lazy(() => import("./MoreHoriz"));
 export const MoreVertIcon = lazy(() => import("./MoreVert"));
 export const NarrativeIcon = lazy(() => import("./Narrative"));
 export const NoteIcon = lazy(() => import("./Note"));
+export const NotificationsIcon = lazy(() => import("./Notifications"));
 export const ObservedDataIcon = lazy(() => import("./ObservedData"));
 export const OpinionIcon = lazy(() => import("./Opinion"));
 export const OrganizationIcon = lazy(() => import("./Organization"));
