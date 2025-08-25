@@ -24,6 +24,12 @@ jobs:
       repository-projects: write
 
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.FILIGRANHQ_PROJECT_APP_ID }}
+          private-key: ${{ secrets.FILIGRANHQ_PROJECT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
       - name: Extract issue number from branch
         id: extract_issue
         run: |
@@ -34,7 +40,6 @@ jobs:
             echo "Branch name doesn't match pattern issue/XYZ"
             echo "issue_number=" >> $GITHUB_OUTPUT
           fi
-
       - name: Check if creator is in FiligranHQ organization
         if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'edited')
         id: check_org_membership
@@ -72,7 +77,7 @@ jobs:
         if: steps.extract_issue.outputs.issue_number != ''
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const issueNumber = ${{ steps.extract_issue.outputs.issue_number }};
             const pr = context.payload.pull_request;
@@ -160,7 +165,7 @@ jobs:
             
                 // Check if issue is already in the project
                 const findItemQuery = `
-                  query($projectId: ID!, $issueId: ID!) {
+                  query($projectId: ID!) {
                     node(id: $projectId) {
                       ... on ProjectV2 {
                         items(first: 100) {
@@ -179,8 +184,7 @@ jobs:
                 `;
             
                 const itemsData = await github.graphql(findItemQuery, {
-                  projectId: project.id,
-                  issueId: issue.node_id
+                  projectId: project.id
                 });
             
                 let itemId = null;
