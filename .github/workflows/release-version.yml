@@ -66,16 +66,25 @@ jobs:
       - name: Commit version changes
         run: |
           git add .
-          # Build commit message
-          COMMIT_MSG="chore: bump version(s) [skip ci]"
-          if [ -n "$FILIGRAN_UI_VERSION" ]; then
-            COMMIT_MSG="$COMMIT_MSG
-          - filigran-ui: v$FILIGRAN_UI_VERSION"
+          
+          # Build commit message based on which packages were versioned
+          COMMIT_MSG=""
+          
+          if [ -n "$FILIGRAN_UI_VERSION" ] && [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            # Both packages updated
+            COMMIT_MSG="chore: bump filigran-ui to v$FILIGRAN_UI_VERSION and filigran-icon to v$FILIGRAN_ICON_VERSION"
+          elif [ -n "$FILIGRAN_UI_VERSION" ]; then
+            # Only filigran-ui updated
+            COMMIT_MSG="chore: bump filigran-ui to v$FILIGRAN_UI_VERSION"
+          elif [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            # Only filigran-icon updated
+            COMMIT_MSG="chore: bump filigran-icon to v$FILIGRAN_ICON_VERSION"
+          else
+            # No versions to update
+            echo "No version changes to commit"
+            exit 0
           fi
-          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            COMMIT_MSG="$COMMIT_MSG
-          - filigran-icon: v$FILIGRAN_ICON_VERSION"
-          fi
+          
           git commit -m "$COMMIT_MSG"
           git push
 
