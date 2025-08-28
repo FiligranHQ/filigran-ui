@@ -1,15 +1,16 @@
 name: PR and Issue Status Management
-
 on:
   pull_request:
-    types: [opened, edited, ready_for_review, converted_to_draft]
+    types: [opened, edited, ready_for_review, converted_to_draft, closed]
     branches:
       - main
   pull_request_review:
     types: [submitted]
   pull_request_target:
     types: [labeled]
-
+env:
+  ORGANIZATION: 'FiligranHQ'
+  PROJECT_NUMBER: 30
 jobs:
   manage-pr-and-issues:
     runs-on: ubuntu-latest
@@ -17,21 +18,36 @@ jobs:
       issues: write
       pull-requests: write
       contents: read
-
+      repository-projects: write
     steps:
-      - name: Extract issue number from branch
-        id: extract_issue
-        run: |
-          if [[ "${{ github.head_ref }}" =~ ^issue/([0-9]+)$ ]]; then
-            echo "issue_number=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
-            echo "Found issue number: ${BASH_REMATCH[1]}"
-          else
-            echo "Branch name doesn't match pattern issue/XYZ"
-            echo "issue_number=" >> $GITHUB_OUTPUT
-          fi
-
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.FILIGRANHQ_PROJECT_APP_ID }}
+          private-key: ${{ secrets.FILIGRANHQ_PROJECT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+      - name: Assign PR to creator
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prCreator = context.payload.pull_request.user.login;
+            console.log(`Assigning PR to creator: ${prCreator}`);
+            
+            try {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                assignees: [prCreator]
+              });
+              console.log(`✅ Successfully assigned PR to ${prCreator}`);
+            } catch (error) {
+              console.error(`Failed to assign PR to ${prCreator}:`, error);
+            }
       - name: Check if creator is in FiligranHQ organization
-        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'edited')
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
         id: check_org_membership
         uses: actions/github-script@v7
         with:
@@ -49,7 +65,6 @@ jobs:
               }
               throw error;
             }
-
       - name: Add Filigran Team label
         if: steps.check_org_membership.outputs.result == 'true'
         uses: actions/github-script@v7
@@ -62,18 +77,50 @@ jobs:
               issue_number: context.issue.number,
               labels: ['Filigran Team']
             });
-
-      - name: Update issue status based on PR state
-        if: steps.extract_issue.outputs.issue_number != ''
+      - name: Extract issue numbers from PR body and title
+        id: extract_issues
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issueNumber = ${{ steps.extract_issue.outputs.issue_number }};
+            const issueNumbers = new Set();
+            
+            // Extract from PR body
+            const body = context.payload.pull_request.body || '';
+            // Match #123, fixes #123, closes #123, resolves #123, etc.
+            const bodyMatches = body.matchAll(/(?:(?:fixes|closes|resolves|fix|close|resolve)\s+)?#(\d+)/gi);
+            for (const match of bodyMatches) {
+              issueNumbers.add(match[1]);
+            }
+            
+            // Extract from PR title
+            const title = context.payload.pull_request.title || '';
+            const titleMatches = title.matchAll(/#(\d+)/g);
+            for (const match of titleMatches) {
+              issueNumbers.add(match[1]);
+            }
+            
+            const uniqueIssues = Array.from(issueNumbers).filter(num => num);
+            core.setOutput('issue_numbers', uniqueIssues.join(','));
+            
+            if (uniqueIssues.length > 0) {
+              console.log('Found issue numbers:', uniqueIssues.join(', '));
+            } else {
+              console.log('No issue numbers found in PR body or title');
+            }
+            
+            return uniqueIssues;
+      - name: Update issues status in project
+        if: steps.extract_issues.outputs.issue_numbers != '' && github.event.action != 'closed'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const issueNumbers = "${{ steps.extract_issues.outputs.issue_numbers }}".split(',').filter(num => num);
             const pr = context.payload.pull_request;
-
+            
             let status = '';
-
+            
             // Determine the status based on PR state
             if (context.eventName === 'pull_request') {
               if (pr.draft) {
@@ -82,156 +129,436 @@ jobs:
                 status = 'In review';
               }
             }
-
-            // Update issue if status is determined
-            if (status) {
-              // Get current issue data
-              const { data: issue } = await github.rest.issues.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber
+            
+            if (status && issueNumbers.length > 0) {
+              // Query the project once
+              const projectQuery = `
+                query($org: String!, $projectNumber: Int!) {
+                  organization(login: $org) {
+                    projectV2(number: $projectNumber) {
+                      id
+                      title
+                      fields(first: 20) {
+                        nodes {
+                          __typename
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
+                              id
+                              name
+                            }
+                          }
+                          ... on ProjectV2Field {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `;
+            
+              console.log('Fetching project from organization...');
+              const projectData = await github.graphql(projectQuery, {
+                org: process.env.ORGANIZATION,
+                projectNumber: parseInt(process.env.PROJECT_NUMBER)
               });
-
-              // Update issue body to include status
-              const statusRegex = /<!-- status: .* -->/;
-              let newBody = issue.body || '';
-
-              if (statusRegex.test(newBody)) {
-                newBody = newBody.replace(statusRegex, `<!-- status: ${status} -->`);
-              } else {
-                newBody = `<!-- status: ${status} -->\n${newBody}`;
+            
+              const project = projectData.organization.projectV2;
+              console.log(`Found project: ${project.title}`);
+            
+              // Find the Status field
+              const statusField = project.fields.nodes.find(field => 
+                field.name === 'Status' && field.options
+              );
+            
+              if (!statusField) {
+                console.log('Status field not found');
+                console.log('Available fields:', project.fields.nodes.map(f => f.name));
+                return;
               }
-
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body: newBody
-              });
-
-              // Add a comment to show status change
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body: `🔄 Status updated to: **${status}**`
-              });
+            
+              // Find the matching status option
+              const statusOption = statusField.options.find(option => 
+                option.name.toLowerCase() === status.toLowerCase()
+              );
+            
+              if (!statusOption) {
+                console.log(`Status option "${status}" not found`);
+                console.log('Available options:', statusField.options.map(o => o.name));
+                return;
+              }
+            
+              // Process each issue
+              for (const issueNumber of issueNumbers) {
+                try {
+                  console.log(`Processing issue #${issueNumber}...`);
+            
+                  // Get issue node ID
+                  const { data: issue } = await github.rest.issues.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: parseInt(issueNumber)
+                  });
+            
+                  // Check if issue is already in the project
+                  const findItemQuery = `
+                    query($projectId: ID!) {
+                      node(id: $projectId) {
+                        ... on ProjectV2 {
+                          items(first: 100) {
+                            nodes {
+                              id
+                              content {
+                                ... on Issue {
+                                  id
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  `;
+            
+                  const itemsData = await github.graphql(findItemQuery, {
+                    projectId: project.id
+                  });
+            
+                  let itemId = null;
+                  const existingItem = itemsData.node.items.nodes.find(item => 
+                    item.content && item.content.id === issue.node_id
+                  );
+            
+                  if (existingItem) {
+                    itemId = existingItem.id;
+                    console.log(`Issue #${issueNumber} already in project`);
+                  } else {
+                    // Add issue to project
+                    console.log(`Adding issue #${issueNumber} to project...`);
+                    const addItemMutation = `
+                      mutation($projectId: ID!, $contentId: ID!) {
+                        addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+                          item {
+                            id
+                          }
+                        }
+                      }
+                    `;
+            
+                    const addResult = await github.graphql(addItemMutation, {
+                      projectId: project.id,
+                      contentId: issue.node_id
+                    });
+            
+                    itemId = addResult.addProjectV2ItemById.item.id;
+                    console.log(`Issue #${issueNumber} added to project`);
+                  }
+            
+                  // Update the status field
+                  console.log(`Updating status for issue #${issueNumber}...`);
+                  const updateMutation = `
+                    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                      updateProjectV2ItemFieldValue(
+                        input: {
+                          projectId: $projectId
+                          itemId: $itemId
+                          fieldId: $fieldId
+                          value: { 
+                            singleSelectOptionId: $optionId
+                          }
+                        }
+                      ) {
+                        projectV2Item {
+                          id
+                        }
+                      }
+                    }
+                  `;
+            
+                  await github.graphql(updateMutation, {
+                    projectId: project.id,
+                    itemId: itemId,
+                    fieldId: statusField.id,
+                    optionId: statusOption.id
+                  });
+            
+                  console.log(`✅ Successfully updated issue #${issueNumber} status to "${status}"`);
+            
+                } catch (error) {
+                  console.error(`Error updating issue #${issueNumber}:`, error);
+                  if (error.errors) {
+                    error.errors.forEach(e => console.error('GraphQL error:', e.message));
+                  }
+                }
+              }
             }
-
+      - name: Update issues status to Ready to be deployed on merge
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && steps.extract_issues.outputs.issue_numbers != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const issueNumbers = "${{ steps.extract_issues.outputs.issue_numbers }}".split(',').filter(num => num);
+            
+            if (issueNumbers.length === 0) {
+              console.log('No issues to update');
+              return;
+            }
+            
+            const newStatus = 'Ready to be deployed';
+            console.log(`PR merged! Updating ${issueNumbers.length} issue(s) to status: "${newStatus}"`);
+            
+            try {
+              // Get project once
+              const projectData = await github.graphql(`
+                query($org: String!, $projectNumber: Int!) {
+                  organization(login: $org) {
+                    projectV2(number: $projectNumber) {
+                      id
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
+                              id
+                              name
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `, {
+                org: process.env.ORGANIZATION,
+                projectNumber: parseInt(process.env.PROJECT_NUMBER)
+              });
+            
+              const project = projectData.organization.projectV2;
+              const statusField = project.fields.nodes.find(f => f.name === 'Status' && f.options);
+            
+              if (!statusField) {
+                console.log('Status field not found');
+                return;
+              }
+            
+              const statusOption = statusField.options.find(o => 
+                o.name.toLowerCase() === newStatus.toLowerCase()
+              );
+            
+              if (!statusOption) {
+                console.log(`Status option "${newStatus}" not found`);
+                console.log('Available options:', statusField.options.map(o => o.name));
+                return;
+              }
+            
+              // Process each issue
+              for (const issueNumber of issueNumbers) {
+                try {
+                  console.log(`Processing issue #${issueNumber} for merge status...`);
+            
+                  const { data: issue } = await github.rest.issues.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: parseInt(issueNumber)
+                  });
+            
+                  // Find item in project
+                  const itemsData = await github.graphql(`
+                    query($projectId: ID!) {
+                      node(id: $projectId) {
+                        ... on ProjectV2 {
+                          items(first: 100) {
+                            nodes {
+                              id
+                              content {
+                                ... on Issue {
+                                  id
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  `, {
+                    projectId: project.id
+                  });
+            
+                  const item = itemsData.node.items.nodes.find(i => 
+                    i.content && i.content.id === issue.node_id
+                  );
+            
+                  if (item) {
+                    await github.graphql(`
+                      mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                        updateProjectV2ItemFieldValue(
+                          input: {
+                            projectId: $projectId
+                            itemId: $itemId
+                            fieldId: $fieldId
+                            value: { singleSelectOptionId: $optionId }
+                          }
+                        ) {
+                          projectV2Item { id }
+                        }
+                      }
+                    `, {
+                      projectId: project.id,
+                      itemId: item.id,
+                      fieldId: statusField.id,
+                      optionId: statusOption.id
+                    });
+            
+                    console.log(`✅ Updated issue #${issueNumber} status to "${newStatus}"`);
+                  } else {
+                    console.log(`Issue #${issueNumber} not found in project`);
+                  }
+                } catch (error) {
+                  console.error(`Error updating issue #${issueNumber}:`, error);
+                }
+              }
+            } catch (error) {
+              console.error('Error updating project status:', error);
+            }
       - name: Check for approval and label
         if: github.event_name == 'pull_request_review' || github.event_name == 'pull_request_target'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
-            const issueNumber = ${{ steps.extract_issue.outputs.issue_number }};
-
-            if (!issueNumber) return;
-
+            const issueNumbers = "${{ steps.extract_issues.outputs.issue_numbers }}".split(',').filter(num => num);
+            
+            if (issueNumbers.length === 0) return;
+            
             // Get PR data
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
-
+            
             // Get reviews
             const { data: reviews } = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
-
-            // Check if PR has approval
+            
+            // Check conditions
             const hasApproval = reviews.some(review => review.state === 'APPROVED');
-
-            // Check if PR has "needs feature env" label
             const hasLabel = pr.labels.some(label => label.name === 'needs feature env');
-
+            
             if (hasApproval && hasLabel) {
-              // Update issue status
-              const { data: issue } = await github.rest.issues.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber
-              });
-
-              const statusRegex = /<!-- status: .* -->/;
-              let newBody = issue.body || '';
               const newStatus = 'Ready for product testing';
-
-              if (statusRegex.test(newBody)) {
-                newBody = newBody.replace(statusRegex, `<!-- status: ${newStatus} -->`);
-              } else {
-                newBody = `<!-- status: ${newStatus} -->\n${newBody}`;
+            
+              try {
+                // Get project once
+                const projectData = await github.graphql(`
+                  query($org: String!, $projectNumber: Int!) {
+                    organization(login: $org) {
+                      projectV2(number: $projectNumber) {
+                        id
+                        fields(first: 20) {
+                          nodes {
+                            ... on ProjectV2SingleSelectField {
+                              id
+                              name
+                              options {
+                                id
+                                name
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                `, {
+                  org: process.env.ORGANIZATION,
+                  projectNumber: parseInt(process.env.PROJECT_NUMBER)
+                });
+            
+                const project = projectData.organization.projectV2;
+                const statusField = project.fields.nodes.find(f => f.name === 'Status' && f.options);
+            
+                if (statusField) {
+                  const statusOption = statusField.options.find(o => 
+                    o.name.toLowerCase() === newStatus.toLowerCase()
+                  );
+            
+                  if (statusOption) {
+                    // Process each issue
+                    for (const issueNumber of issueNumbers) {
+                      try {
+                        console.log(`Processing issue #${issueNumber} for approval status...`);
+            
+                        const { data: issue } = await github.rest.issues.get({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          issue_number: parseInt(issueNumber)
+                        });
+            
+                        // Find item in project
+                        const itemsData = await github.graphql(`
+                          query($projectId: ID!) {
+                            node(id: $projectId) {
+                              ... on ProjectV2 {
+                                items(first: 100) {
+                                  nodes {
+                                    id
+                                    content {
+                                      ... on Issue {
+                                        id
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        `, {
+                          projectId: project.id
+                        });
+            
+                        const item = itemsData.node.items.nodes.find(i => 
+                          i.content && i.content.id === issue.node_id
+                        );
+            
+                        if (item) {
+                          await github.graphql(`
+                            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                              updateProjectV2ItemFieldValue(
+                                input: {
+                                  projectId: $projectId
+                                  itemId: $itemId
+                                  fieldId: $fieldId
+                                  value: { singleSelectOptionId: $optionId }
+                                }
+                              ) {
+                                projectV2Item { id }
+                              }
+                            }
+                          `, {
+                            projectId: project.id,
+                            itemId: item.id,
+                            fieldId: statusField.id,
+                            optionId: statusOption.id
+                          });
+            
+                          console.log(`✅ Updated issue #${issueNumber} status to "${newStatus}"`);
+                        }
+                      } catch (error) {
+                        console.error(`Error updating issue #${issueNumber}:`, error);
+                      }
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error('Error updating project status:', error);
               }
-
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body: newBody
-              });
-
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body: `🔄 Status updated to: **${newStatus}**`
-              });
             }
-
-  update-deployment-status:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.base_ref == 'main'
-    permissions:
-      issues: write
-      contents: read
-
-    steps:
-      - name: Extract issue number from branch
-        id: extract_issue
-        run: |
-          if [[ "${{ github.head_ref }}" =~ ^issue/([0-9]+)$ ]]; then
-            echo "issue_number=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
-          else
-            echo "issue_number=" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Update issue to deployment status
-        if: steps.extract_issue.outputs.issue_number != ''
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const issueNumber = ${{ steps.extract_issue.outputs.issue_number }};
-
-            const { data: issue } = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber
-            });
-
-            const statusRegex = /<!-- status: .* -->/;
-            let newBody = issue.body || '';
-            const newStatus = 'Ready for deployment';
-
-            if (statusRegex.test(newBody)) {
-              newBody = newBody.replace(statusRegex, `<!-- status: ${newStatus} -->`);
-            } else {
-              newBody = `<!-- status: ${newStatus} -->\n${newBody}`;
-            }
-
-            await github.rest.issues.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              body: newBody
-            });
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              body: `🚀 Status updated to: **${newStatus}**`
-            });
