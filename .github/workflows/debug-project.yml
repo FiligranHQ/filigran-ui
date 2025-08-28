@@ -5,7 +5,7 @@ on:
 
 env:
   ORGANIZATION: 'FiligranHQ'
-  PROJECT_NUMBER: 20
+  PROJECT_NUMBER: 30
   ISSUE_NUMBER: 100
   TEST_VERSION: 'v1.0.0-test'
 
@@ -14,8 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
-      repository-projects: write
-      projects: write
 
     steps:
       - uses: actions/create-github-app-token@v2
