@@ -451,11 +451,17 @@ jobs:
             
             // Check conditions
             const hasApproval = reviews.some(review => review.state === 'APPROVED');
-            const hasLabel = pr.labels.some(label => label.name === 'needs feature env');
+            const hasNeedsFeatureEnvLabel = pr.labels.some(label => label.name === 'needs feature env');
             
-            if (hasApproval && hasLabel) {
-              const newStatus = 'Ready for product testing';
+            let newStatus = '';
             
+            if (hasApproval && hasNeedsFeatureEnvLabel) {
+              newStatus = 'Ready for product testing';
+            } else if (hasApproval && !hasNeedsFeatureEnvLabel) {
+              newStatus = 'Ready for merging';
+            }
+            
+            if (newStatus) {
               try {
                 // Get project once
                 const projectData = await github.graphql(`
