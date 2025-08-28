@@ -20,14 +20,24 @@ on:
           - filigran-ui
           - filigran-icon
           - both
+env:
+  ORGANIZATION: 'FiligranHQ'
+  PROJECT_NUMBER: 30
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
-      id-token: write  # Needed for npm provenance
+      id-token: write
+      issues: write  # Needed to close issues
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.FILIGRANHQ_PROJECT_APP_ID }}
+          private-key: ${{ secrets.FILIGRANHQ_PROJECT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -49,6 +59,15 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Get current versions
+        run: |
+          if [[ "${{ github.event.inputs.package }}" == "filigran-ui" ]] || [[ "${{ github.event.inputs.package }}" == "both" ]]; then
+            echo "FILIGRAN_UI_CURRENT_VERSION=$(node -p "require('./packages/filigran-ui/package.json').version")" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.package }}" == "filigran-icon" ]] || [[ "${{ github.event.inputs.package }}" == "both" ]]; then
+            echo "FILIGRAN_ICON_CURRENT_VERSION=$(node -p "require('./packages/filigran-icon/package.json').version")" >> $GITHUB_ENV
+          fi
+
       - name: Update version for Filigran-ui
         if: github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both'
         working-directory: ./packages/filigran-ui
@@ -63,28 +82,86 @@ jobs:
           npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
           echo "FILIGRAN_ICON_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
 
+      - name: Collect commits and issues for changelog
+        id: changelog
+        run: |
+          # Initialize variables
+          CHANGELOG=""
+          UI_ISSUES=""
+          
+          # Function to extract issue numbers from text
+          extract_issues() {
+            echo "$1" | grep -oE '#[0-9]+|[Cc]loses? #[0-9]+|[Ff]ixes? #[0-9]+|[Rr]esolves? #[0-9]+' | grep -oE '[0-9]+' | sort -u
+          }
+          
+          # Get commits since last tag for each package
+          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+            echo "Processing filigran-ui commits..."
+            LAST_UI_TAG=$(git tag -l "filigran-ui-v*" | sort -V | tail -n 1)
+            if [ -z "$LAST_UI_TAG" ]; then
+              LAST_UI_TAG=$(git rev-list --max-parents=0 HEAD)
+            fi
+          
+            UI_COMMITS=$(git log $LAST_UI_TAG..HEAD --pretty=format:"%h %s" -- packages/filigran-ui/)
+            UI_CHANGELOG="### Filigran UI Changes\n"
+          
+            while IFS= read -r commit; do
+              if [ -n "$commit" ]; then
+                UI_CHANGELOG="$UI_CHANGELOG- $commit\n"
+                ISSUES=$(extract_issues "$commit")
+                for issue in $ISSUES; do
+                  UI_ISSUES="$UI_ISSUES $issue"
+                done
+              fi
+            done <<< "$UI_COMMITS"
+          
+            CHANGELOG="$CHANGELOG$UI_CHANGELOG\n"
+          
+            # Remove duplicates from UI issues list
+            UI_ISSUES=$(echo $UI_ISSUES | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          fi
+          
+          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            echo "Processing filigran-icon commits..."
+            LAST_ICON_TAG=$(git tag -l "filigran-icon-v*" | sort -V | tail -n 1)
+            if [ -z "$LAST_ICON_TAG" ]; then
+              LAST_ICON_TAG=$(git rev-list --max-parents=0 HEAD)
+            fi
+          
+            ICON_COMMITS=$(git log $LAST_ICON_TAG..HEAD --pretty=format:"%h %s" -- packages/filigran-icon/)
+            ICON_CHANGELOG="### Filigran Icon Changes\n"
+          
+            while IFS= read -r commit; do
+              if [ -n "$commit" ]; then
+                ICON_CHANGELOG="$ICON_CHANGELOG- $commit\n"
+              fi
+            done <<< "$ICON_COMMITS"
+          
+            CHANGELOG="$CHANGELOG$ICON_CHANGELOG\n"
+          fi
+          
+          # Export for use in next steps
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "ui_issues=$UI_ISSUES" >> $GITHUB_OUTPUT
+          
+          # Also save to environment for debugging
+          echo "UI_ISSUES_TO_CLOSE=$UI_ISSUES" >> $GITHUB_ENV
+
       - name: Commit version changes
         run: |
           git add .
-          
-          # Build commit message based on which packages were versioned
-          COMMIT_MSG=""
-          
-          if [ -n "$FILIGRAN_UI_VERSION" ] && [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            # Both packages updated
-            COMMIT_MSG="chore: bump filigran-ui to v$FILIGRAN_UI_VERSION and filigran-icon to v$FILIGRAN_ICON_VERSION"
-          elif [ -n "$FILIGRAN_UI_VERSION" ]; then
-            # Only filigran-ui updated
-            COMMIT_MSG="chore: bump filigran-ui to v$FILIGRAN_UI_VERSION"
-          elif [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            # Only filigran-icon updated
-            COMMIT_MSG="chore: bump filigran-icon to v$FILIGRAN_ICON_VERSION"
-          else
-            # No versions to update
-            echo "No version changes to commit"
-            exit 0
+          # Build commit message
+          COMMIT_MSG="chore: bump version(s) [skip ci]"
+          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+            COMMIT_MSG="$COMMIT_MSG
+          - filigran-ui: v$FILIGRAN_UI_VERSION"
           fi
-          
+          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            COMMIT_MSG="$COMMIT_MSG
+          - filigran-icon: v$FILIGRAN_ICON_VERSION"
+          fi
           git commit -m "$COMMIT_MSG"
           git push
 
@@ -120,14 +197,16 @@ jobs:
           name: Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
           body: |
             ## Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
-            ### Changes
-            - Version bump: ${{ github.event.inputs.version_type }}
+            
             ### Installation
             ```bash
             npm install @filigran/filigran-ui@${{ env.FILIGRAN_UI_VERSION }}
             ```
-            ### Changelog
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/packages/filigran-ui/CHANGELOG.md) for detailed changes.
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### Issues Closed
+            ${{ steps.changelog.outputs.ui_issues }}
           draft: false
           prerelease: false
 
@@ -139,17 +218,177 @@ jobs:
           name: Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
           body: |
             ## Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
-            ### Changes
-            - Version bump: ${{ github.event.inputs.version_type }}
             ### Installation
             ```bash
             npm install @filigran/filigran-icon@${{ env.FILIGRAN_ICON_VERSION }}
             ```
-            ### Changelog
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/packages/filigran-icon/CHANGELOG.md) for detailed changes.
+            
+            ${{ steps.changelog.outputs.changelog }}
           draft: false
           prerelease: false
 
+      - name: Close issues and update project status (Filigran-UI only)
+        if: env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const issues = '${{ steps.changelog.outputs.ui_issues }}'.trim().split(' ');
+            const version = '${{ env.FILIGRAN_UI_VERSION }}';
+            const releaseMessage = `🎉 This issue has been resolved and released in filigran-ui v${version}`;
+            
+            // GraphQL query to get project information
+            const projectQuery = `
+              query($owner: String!, $repo: String!, $issue: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  issue(number: $issue) {
+                    projectItems(first: 10) {
+                      nodes {
+                        id
+                        project {
+                          id
+                          title
+                        }
+                        fieldValues(first: 20) {
+                          nodes {
+                            ... on ProjectV2ItemFieldSingleSelectValue {
+                              id
+                              field {
+                                ... on ProjectV2SingleSelectField {
+                                  id
+                                  name
+                                  options {
+                                    id
+                                    name
+                                  }
+                                }
+                              }
+                            }
+                            ... on ProjectV2ItemFieldTextValue {
+                              id
+                              text
+                              field {
+                                ... on ProjectV2Field {
+                                  id
+                                  name
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            
+            // GraphQL mutation to update field value
+            const updateFieldMutation = `
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: ProjectV2FieldValue!) {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: $projectId
+                    itemId: $itemId
+                    fieldId: $fieldId
+                    value: $value
+                  }
+                ) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+            `;
+            
+            for (const issue of issues) {
+              if (issue) {
+                try {
+                  const issueNumber = parseInt(issue);
+            
+                  // Get project information for the issue
+                  const projectData = await github.graphql(projectQuery, {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue: issueNumber
+                  });
+            
+                  const projectItems = projectData.repository.issue.projectItems.nodes;
+            
+                  // Process each project item
+                  for (const projectItem of projectItems) {
+                    console.log(`Processing project item ${projectItem.id} in project ${projectItem.project.title}`);
+            
+                    // Find Status field and Version field
+                    let statusField = null;
+                    let statusDoneOptionId = null;
+                    let versionField = null;
+            
+                    for (const fieldValue of projectItem.fieldValues.nodes) {
+                      if (fieldValue.field) {
+                        // Check for Status field (SingleSelect)
+                        if (fieldValue.field.name === 'Status' && fieldValue.field.options) {
+                          statusField = fieldValue.field.id;
+                          // Find "Done" option
+                          const doneOption = fieldValue.field.options.find(opt => 
+                            opt.name.toLowerCase() === 'done'
+                          );
+                          if (doneOption) {
+                            statusDoneOptionId = doneOption.id;
+                          }
+                        }
+                        // Check for Version field (Text)
+                        if (fieldValue.field.name.toLowerCase() === 'version') {
+                          versionField = fieldValue.field.id;
+                        }
+                      }
+                    }
+            
+                    // Update Status to Done
+                    if (statusField && statusDoneOptionId) {
+                      await github.graphql(updateFieldMutation, {
+                        projectId: projectItem.project.id,
+                        itemId: projectItem.id,
+                        fieldId: statusField,
+                        value: { singleSelectOptionId: statusDoneOptionId }
+                      });
+                      console.log(`Updated status to Done for issue #${issue}`);
+                    }
+            
+                    // Update Version field
+                    if (versionField) {
+                      await github.graphql(updateFieldMutation, {
+                        projectId: projectItem.project.id,
+                        itemId: projectItem.id,
+                        fieldId: versionField,
+                        value: { text: `v${version}` }
+                      });
+                      console.log(`Updated version to v${version} for issue #${issue}`);
+                    }
+                  }
+            
+                  // Add comment to issue
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNumber,
+                    body: releaseMessage
+                  });
+            
+                  // Close the issue
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNumber,
+                    state: 'closed'
+                  });
+            
+                  console.log(`Closed issue #${issue}`);
+                } catch (error) {
+                  console.error(`Failed to process issue #${issue}: ${error.message}`);
+                }
+              }
+            }
       - name: Summary
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
@@ -161,6 +400,15 @@ jobs:
             echo "✅ **Filigran Icon** released: v$FILIGRAN_ICON_VERSION" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "$UI_ISSUES_TO_CLOSE" ] && [ -n "$FILIGRAN_UI_VERSION" ]; then
+            echo "### Closed Issues (Filigran-UI)" >> $GITHUB_STEP_SUMMARY
+            for issue in $UI_ISSUES_TO_CLOSE; do
+              echo "- #$issue" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "- Check the [NPM Registry](https://www.npmjs.com/org/filigran) for published packages" >> $GITHUB_STEP_SUMMARY
           echo "- View the created [GitHub Releases](https://github.com/${{ github.repository }}/releases)" >> $GITHUB_STEP_SUMMARY
