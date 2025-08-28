@@ -1,0 +1,160 @@
+name: Release and Publish to NPM
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version type (patch/minor/major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      package:
+        description: 'Package to release'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - filigran-ui
+          - filigran-icon
+          - both
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write  # Needed for npm provenance
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'yarn'
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Update version for Filigran-ui
+        if: github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both'
+        working-directory: ./packages/filigran-ui
+        run: |
+          npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+          echo "FILIGRAN_UI_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Update version for Filigran-icon
+        if: github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both'
+        working-directory: ./packages/filigran-icon
+        run: |
+          npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+          echo "FILIGRAN_ICON_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: yarn test
+
+      - name: Commit version changes
+        run: |
+          git add .
+          # Build commit message
+          COMMIT_MSG="chore: bump version(s) [skip ci]"
+          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+            COMMIT_MSG="$COMMIT_MSG
+          - filigran-ui: v$FILIGRAN_UI_VERSION"
+          fi
+          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            COMMIT_MSG="$COMMIT_MSG
+          - filigran-icon: v$FILIGRAN_ICON_VERSION"
+          fi
+          git commit -m "$COMMIT_MSG"
+          git push
+
+      - name: Create Git tags
+        run: |
+          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+            git tag "filigran-ui-v$FILIGRAN_UI_VERSION"
+            echo "Created tag: filigran-ui-v$FILIGRAN_UI_VERSION"
+          fi
+          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            git tag "filigran-icon-v$FILIGRAN_ICON_VERSION"
+            echo "Created tag: filigran-icon-v$FILIGRAN_ICON_VERSION"
+          fi
+          git push --tags
+
+      - name: Publish Filigran-ui to NPM
+        if: (github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both') && env.FILIGRAN_UI_VERSION != ''
+        run: yarn publish:filigran-ui
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish Filigran-icon to NPM
+        if: (github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both') && env.FILIGRAN_ICON_VERSION != ''
+        run: yarn publish:filigran-icon
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release for Filigran-ui
+        if: (github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both') && env.FILIGRAN_UI_VERSION != ''
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: filigran-ui-v${{ env.FILIGRAN_UI_VERSION }}
+          name: Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
+          body: |
+            ## Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
+            ### Changes
+            - Version bump: ${{ github.event.inputs.version_type }}
+            ### Installation
+            ```bash
+            npm install @filigran/filigran-ui@${{ env.FILIGRAN_UI_VERSION }}
+            ```
+            ### Changelog
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/packages/filigran-ui/CHANGELOG.md) for detailed changes.
+          draft: false
+          prerelease: false
+
+      - name: Create GitHub Release for Filigran-icon
+        if: (github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both') && env.FILIGRAN_ICON_VERSION != ''
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: filigran-icon-v${{ env.FILIGRAN_ICON_VERSION }}
+          name: Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
+          body: |
+            ## Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
+            ### Changes
+            - Version bump: ${{ github.event.inputs.version_type }}
+            ### Installation
+            ```bash
+            npm install @filigran/filigran-icon@${{ env.FILIGRAN_ICON_VERSION }}
+            ```
+            ### Changelog
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/packages/filigran-icon/CHANGELOG.md) for detailed changes.
+          draft: false
+          prerelease: false
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+            echo "✅ **Filigran UI** released: v$FILIGRAN_UI_VERSION" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            echo "✅ **Filigran Icon** released: v$FILIGRAN_ICON_VERSION" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "- Check the [NPM Registry](https://www.npmjs.com/org/filigran) for published packages" >> $GITHUB_STEP_SUMMARY
+          echo "- View the created [GitHub Releases](https://github.com/${{ github.repository }}/releases)" >> $GITHUB_STEP_SUMMARY
