@@ -93,13 +93,13 @@ jobs:
 
       - name: Publish Filigran-ui to NPM
         if: (github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both') && env.FILIGRAN_UI_VERSION != ''
-        run: yarn publish:filigran-ui
+        run: npm run publish:filigran-ui
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish Filigran-icon to NPM
         if: (github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both') && env.FILIGRAN_ICON_VERSION != ''
-        run: yarn publish:filigran-icon
+        run: npm run publish:filigran-icon
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
