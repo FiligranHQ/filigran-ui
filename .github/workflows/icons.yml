@@ -24,8 +24,6 @@ jobs:
         run: cd packages/filigran-icon && yarn install
       - name: Run extract-icons
         run: cd packages/filigran-icon && yarn build:all
-      - name: Run extract-icons
-        run: cd packages/filigran-icon && yarn build:all
         env:
           FIGMA_FILE_ID: ${{ secrets.FIGMA_FILE_ID_ICONS }}
           FIGMA_API_TOKEN: ${{ secrets.FIGMA_API_TOKEN }}
