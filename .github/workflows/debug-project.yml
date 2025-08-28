@@ -38,7 +38,7 @@ jobs:
                     projectV2(number: $number) {
                       id
                       title
-                      fields(first: 20) {
+                      fields(first: 40) {
                         nodes {
                           ... on ProjectV2Field {
                             id
@@ -80,7 +80,7 @@ jobs:
                   console.log(`  Options: ${field.options.map(o => `${o.name} (${o.id})`).join(', ')}`);
                 }
             
-                if (field.name.toLowerCase().includes('version')) {
+                if (field.name?.toLowerCase().includes('version')) {
                   versionFieldId = field.id;
                   console.log(`  ✓ Found Version field!`);
                 }
