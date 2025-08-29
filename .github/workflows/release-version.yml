@@ -234,7 +234,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Close issues and update project status (Filigran-UI only)
+      - name: Update project status (Filigran-UI only)
         if: env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != ''
         uses: actions/github-script@v7
         with:
@@ -403,6 +403,29 @@ jobs:
                   }
                 }
             
+                console.log(`✓ Closed issue #${issue} and added release comment`);
+            
+              } catch (error) {
+                console.error(`Failed to process issue #${issue}: ${error.message}`);
+              }
+            }
+
+      - name: Close issues and add comments (Filigran-UI only)
+        if: env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issues = '${{ steps.changelog.outputs.ui_issues }}'.trim().split(' ');
+            const version = '${{ env.FILIGRAN_UI_VERSION }}';
+            const releaseMessage = `🎉 This issue has been resolved and released in filigran-ui v${version}`;
+
+            for (const issue of issues) {
+              if (!issue) continue;
+
+              try {
+                const issueNumber = parseInt(issue);
+
                 // Add comment to issue
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
@@ -410,7 +433,7 @@ jobs:
                   issue_number: issueNumber,
                   body: releaseMessage
                 });
-            
+
                 // Close the issue
                 await github.rest.issues.update({
                   owner: context.repo.owner,
@@ -418,11 +441,11 @@ jobs:
                   issue_number: issueNumber,
                   state: 'closed'
                 });
-            
+
                 console.log(`✓ Closed issue #${issue} and added release comment`);
-            
+
               } catch (error) {
-                console.error(`Failed to process issue #${issue}: ${error.message}`);
+                console.error(`Failed to close issue #${issue}: ${error.message}`);
               }
             }
       - name: Summary
