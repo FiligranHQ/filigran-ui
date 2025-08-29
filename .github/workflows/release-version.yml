@@ -234,7 +234,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Close issues and update project status (Filigran-UI only)
+      - name: Update project status (Filigran-UI only)
         if: env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != ''
         uses: actions/github-script@v7
         with:
@@ -244,44 +244,27 @@ jobs:
             const version = '${{ env.FILIGRAN_UI_VERSION }}';
             const releaseMessage = `🎉 This issue has been resolved and released in filigran-ui v${version}`;
             
-            // GraphQL query to get project information
-            const projectQuery = `
-              query($owner: String!, $repo: String!, $issue: Int!) {
-                repository(owner: $owner, name: $repo) {
-                  issue(number: $issue) {
-                    projectItems(first: 10) {
+            // First part: Get project field IDs
+            const projectFieldsQuery = `
+              query($org: String!, $number: Int!) {
+                organization(login: $org) {
+                  projectV2(number: $number) {
+                    id
+                    title
+                    fields(first: 40) {
                       nodes {
-                        id
-                        project {
+                        ... on ProjectV2Field {
                           id
-                          title
-                          number
+                          name
+                          dataType
                         }
-                        fieldValues(first: 40) {
-                          nodes {
-                            ... on ProjectV2ItemFieldSingleSelectValue {
-                              name
-                              field {
-                                ... on ProjectV2SingleSelectField {
-                                  id
-                                  name
-                                  options {
-                                    id
-                                    name
-                                  }
-                                }
-                              }
-                            }
-                            ... on ProjectV2ItemFieldTextValue {
-                              text
-                              field {
-                                ... on ProjectV2Field {
-                                  id
-                                  name
-                                  dataType
-                                }
-                              }
-                            }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                          dataType
+                          options {
+                            id
+                            name
                           }
                         }
                       }
@@ -291,7 +274,65 @@ jobs:
               }
             `;
             
-            // GraphQL mutation to update field value
+            const projectData = await github.graphql(projectFieldsQuery, {
+              org: '${{ env.ORGANIZATION }}',
+              number: parseInt('${{ env.PROJECT_NUMBER }}')
+            });
+            
+            const projectId = projectData.organization.projectV2.id;
+            let versionFieldId = null;
+            let statusFieldId = null;
+            let doneOptionId = null;
+            
+            // Find Version field, Status field, and Done option
+            for (const field of projectData.organization.projectV2.fields.nodes) {
+              if (field.name?.toLowerCase().includes('version')) {
+                versionFieldId = field.id;
+                console.log(`✓ Found Version field: ${field.id}`);
+              }
+            
+              if (field.name === 'Status' && field.options) {
+                statusFieldId = field.id;
+                console.log(`✓ Found Status field: ${field.id}`);
+            
+                // Find the Done option
+                const doneOption = field.options.find(opt => 
+                  opt.name.toLowerCase() === 'done'
+                );
+                if (doneOption) {
+                  doneOptionId = doneOption.id;
+                  console.log(`✓ Found Done option: ${doneOption.id}`);
+                }
+              }
+            }
+            
+            if (!versionFieldId || !statusFieldId || !doneOptionId) {
+              console.error('Missing required fields:', {
+                versionFieldId,
+                statusFieldId,
+                doneOptionId
+              });
+            }
+            
+            // Second part: Get issue project items and update them
+            const getProjectItemQuery = `
+              query($owner: String!, $repo: String!, $issue: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  issue(number: $issue) {
+                    projectItems(first: 10) {
+                      nodes {
+                        id
+                        project {
+                          id
+                          number
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            
             const updateFieldMutation = `
               mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: ProjectV2FieldValue!) {
                 updateProjectV2ItemFieldValue(
@@ -309,62 +350,39 @@ jobs:
               }
             `;
             
+            // Process each issue
             for (const issue of issues) {
-              if (issue) {
-                try {
-                  const issueNumber = parseInt(issue);
+              if (!issue) continue;
             
-                  // Get project information for the issue
-                  const projectData = await github.graphql(projectQuery, {
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue: issueNumber
-                  });
+              try {
+                const issueNumber = parseInt(issue);
             
-                  const projectItems = projectData.repository.issue.projectItems.nodes;
+                // Get project items for this issue
+                const itemData = await github.graphql(getProjectItemQuery, {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue: issueNumber
+                });
             
-                  // Process each project item
-                  for (const projectItem of projectItems) {
-                    console.log(`Processing project item ${projectItem.id} in project ${projectItem.project.title}`);
+                const projectItems = itemData.repository.issue.projectItems.nodes;
             
-                    // Find Status field and Version field
-                    let statusFieldData = null;
-                    let versionFieldId = null;
-            
-                    for (const fieldValue of projectItem.fieldValues.nodes) {
-                      if (fieldValue.field) {
-                        // Check for Status field (SingleSelect)
-                        if (fieldValue.field.name === 'Status' && fieldValue.field.options) {
-                          statusFieldData = {
-                            fieldId: fieldValue.field.id,
-                            options: fieldValue.field.options
-                          };
-                        }
-                        // Check for Version field (Text) - look for any field with "version" in the name
-                        if (fieldValue.field.name && fieldValue.field.name.toLowerCase().includes('version')) {
-                          versionFieldId = fieldValue.field.id;
-                          console.log(`Found version field: ${fieldValue.field.name} (ID: ${versionFieldId})`);
-                        }
-                      }
-                    }
+                // Update each project item that belongs to our project
+                for (const item of projectItems) {
+                  if (item.project.number === parseInt('${{ env.PROJECT_NUMBER }}')) {
+                    console.log(`Updating project item ${item.id} for issue #${issue}`);
             
                     // Update Status to Done
-                    if (statusFieldData) {
-                      const doneOption = statusFieldData.options.find(opt => 
-                        opt.name.toLowerCase() === 'done'
-                      );
-                      if (doneOption) {
-                        try {
-                          await github.graphql(updateFieldMutation, {
-                            projectId: projectItem.project.id,
-                            itemId: projectItem.id,
-                            fieldId: statusFieldData.fieldId,
-                            value: { singleSelectOptionId: doneOption.id }
-                          });
-                          console.log(`Updated status to Done for issue #${issue}`);
-                        } catch (error) {
-                          console.error(`Failed to update status for issue #${issue}: ${error.message}`);
-                        }
+                    if (statusFieldId && doneOptionId) {
+                      try {
+                        await github.graphql(updateFieldMutation, {
+                          projectId: projectId,
+                          itemId: item.id,
+                          fieldId: statusFieldId,
+                          value: { singleSelectOptionId: doneOptionId }
+                        });
+                        console.log(`✓ Updated status to Done`);
+                      } catch (error) {
+                        console.error(`Failed to update status: ${error.message}`);
                       }
                     }
             
@@ -372,40 +390,62 @@ jobs:
                     if (versionFieldId) {
                       try {
                         await github.graphql(updateFieldMutation, {
-                          projectId: projectItem.project.id,
-                          itemId: projectItem.id,
+                          projectId: projectId,
+                          itemId: item.id,
                           fieldId: versionFieldId,
                           value: { text: `v${version}` }
                         });
-                        console.log(`Updated version to v${version} for issue #${issue}`);
+                        console.log(`✓ Updated version to v${version}`);
                       } catch (error) {
-                        console.error(`Failed to update version for issue #${issue}: ${error.message}`);
+                        console.error(`Failed to update version: ${error.message}`);
                       }
-                    } else {
-                      console.log(`Version field not found for issue #${issue}`);
                     }
                   }
-            
-                  // Add comment to issue
-                  await github.rest.issues.createComment({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issueNumber,
-                    body: releaseMessage
-                  });
-            
-                  // Close the issue
-                  await github.rest.issues.update({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issueNumber,
-                    state: 'closed'
-                  });
-            
-                  console.log(`Closed issue #${issue}`);
-                } catch (error) {
-                  console.error(`Failed to process issue #${issue}: ${error.message}`);
                 }
+            
+                console.log(`✓ Closed issue #${issue} and added release comment`);
+            
+              } catch (error) {
+                console.error(`Failed to process issue #${issue}: ${error.message}`);
+              }
+            }
+
+      - name: Close issues and add comments (Filigran-UI only)
+        if: env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issues = '${{ steps.changelog.outputs.ui_issues }}'.trim().split(' ');
+            const version = '${{ env.FILIGRAN_UI_VERSION }}';
+            const releaseMessage = `🎉 This issue has been resolved and released in filigran-ui v${version}`;
+
+            for (const issue of issues) {
+              if (!issue) continue;
+
+              try {
+                const issueNumber = parseInt(issue);
+
+                // Add comment to issue
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body: releaseMessage
+                });
+
+                // Close the issue
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  state: 'closed'
+                });
+
+                console.log(`✓ Closed issue #${issue} and added release comment`);
+
+              } catch (error) {
+                console.error(`Failed to close issue #${issue}: ${error.message}`);
               }
             }
       - name: Summary
