@@ -255,11 +255,12 @@ jobs:
                         project {
                           id
                           title
+                          number
                         }
                         fieldValues(first: 40) {
                           nodes {
                             ... on ProjectV2ItemFieldSingleSelectValue {
-                              id
+                              name
                               field {
                                 ... on ProjectV2SingleSelectField {
                                   id
@@ -272,12 +273,12 @@ jobs:
                               }
                             }
                             ... on ProjectV2ItemFieldTextValue {
-                              id
                               text
                               field {
                                 ... on ProjectV2Field {
                                   id
                                   name
+                                  dataType
                                 }
                               }
                             }
@@ -327,50 +328,61 @@ jobs:
                     console.log(`Processing project item ${projectItem.id} in project ${projectItem.project.title}`);
             
                     // Find Status field and Version field
-                    let statusField = null;
-                    let statusDoneOptionId = null;
-                    let versionField = null;
+                    let statusFieldData = null;
+                    let versionFieldId = null;
             
                     for (const fieldValue of projectItem.fieldValues.nodes) {
                       if (fieldValue.field) {
                         // Check for Status field (SingleSelect)
                         if (fieldValue.field.name === 'Status' && fieldValue.field.options) {
-                          statusField = fieldValue.field.id;
-                          // Find "Done" option
-                          const doneOption = fieldValue.field.options.find(opt => 
-                            opt.name.toLowerCase() === 'done'
-                          );
-                          if (doneOption) {
-                            statusDoneOptionId = doneOption.id;
-                          }
+                          statusFieldData = {
+                            fieldId: fieldValue.field.id,
+                            options: fieldValue.field.options
+                          };
                         }
-                        // Check for Version field (Text)
-                        if (fieldValue.field.name.toLowerCase() === 'version') {
-                          versionField = fieldValue.field.id;
+                        // Check for Version field (Text) - look for any field with "version" in the name
+                        if (fieldValue.field.name && fieldValue.field.name.toLowerCase().includes('version')) {
+                          versionFieldId = fieldValue.field.id;
+                          console.log(`Found version field: ${fieldValue.field.name} (ID: ${versionFieldId})`);
                         }
                       }
                     }
             
                     // Update Status to Done
-                    if (statusField && statusDoneOptionId) {
-                      await github.graphql(updateFieldMutation, {
-                        projectId: projectItem.project.id,
-                        itemId: projectItem.id,
-                        fieldId: statusField,
-                        value: { singleSelectOptionId: statusDoneOptionId }
-                      });
-                      console.log(`Updated status to Done for issue #${issue}`);
+                    if (statusFieldData) {
+                      const doneOption = statusFieldData.options.find(opt => 
+                        opt.name.toLowerCase() === 'done'
+                      );
+                      if (doneOption) {
+                        try {
+                          await github.graphql(updateFieldMutation, {
+                            projectId: projectItem.project.id,
+                            itemId: projectItem.id,
+                            fieldId: statusFieldData.fieldId,
+                            value: { singleSelectOptionId: doneOption.id }
+                          });
+                          console.log(`Updated status to Done for issue #${issue}`);
+                        } catch (error) {
+                          console.error(`Failed to update status for issue #${issue}: ${error.message}`);
+                        }
+                      }
                     }
             
                     // Update Version field
-                    if (versionField) {
-                      await github.graphql(updateFieldMutation, {
-                        projectId: projectItem.project.id,
-                        itemId: projectItem.id,
-                        fieldId: versionField,
-                        value: { text: `v${version}` }
-                      });
-                      console.log(`Updated version to v${version} for issue #${issue}`);
+                    if (versionFieldId) {
+                      try {
+                        await github.graphql(updateFieldMutation, {
+                          projectId: projectItem.project.id,
+                          itemId: projectItem.id,
+                          fieldId: versionFieldId,
+                          value: { text: `v${version}` }
+                        });
+                        console.log(`Updated version to v${version} for issue #${issue}`);
+                      } catch (error) {
+                        console.error(`Failed to update version for issue #${issue}: ${error.message}`);
+                      }
+                    } else {
+                      console.log(`Version field not found for issue #${issue}`);
                     }
                   }
             
