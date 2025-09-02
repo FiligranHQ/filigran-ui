@@ -145,7 +145,7 @@ jobs:
                             project {
                               id
                               number
-                              fields(first: 20) {
+                              fields(first: 50) {
                                 nodes {
                                   __typename
                                   ... on ProjectV2Field {
