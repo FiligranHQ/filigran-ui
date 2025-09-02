@@ -110,6 +110,132 @@ jobs:
             }
             
             return uniqueIssues;
+      - name: Update Feature env field when "needs feature env" label is added
+        if: github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == 'needs feature env' && steps.extract_issues.outputs.issue_numbers != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const issueNumbers = "${{ steps.extract_issues.outputs.issue_numbers }}".split(',').filter(num => num);
+            const prNumber = context.payload.pull_request.number;
+            const featureEnvUrl = `https://dev-pr-${prNumber}.hub.staging.filigran.io/`;
+
+            console.log(`"needs feature env" label added to PR #${prNumber}`);
+            console.log(`Setting Feature env URL: ${featureEnvUrl}`);
+
+            if (issueNumbers.length === 0) {
+              console.log('No linked issues to update');
+              return;
+            }
+
+            // Process each linked issue
+            for (const issueNumber of issueNumbers) {
+              try {
+                console.log(`Processing issue #${issueNumber}...`);
+
+                // Get issue and its project items
+                const issueData = await github.graphql(`
+                  query($owner: String!, $repo: String!, $issueNumber: Int!) {
+                    repository(owner: $owner, name: $repo) {
+                      issue(number: $issueNumber) {
+                        id
+                        projectItems(first: 10) {
+                          nodes {
+                            id
+                            project {
+                              id
+                              number
+                              fields(first: 20) {
+                                nodes {
+                                  __typename
+                                  ... on ProjectV2Field {
+                                    id
+                                    name
+                                    dataType
+                                  }
+                                  ... on ProjectV2SingleSelectField {
+                                    id
+                                    name
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                `, {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issueNumber: parseInt(issueNumber)
+                });
+
+                if (!issueData.repository.issue) {
+                  console.log(`Issue #${issueNumber} not found`);
+                  continue;
+                }
+
+                // Find the project item that matches our project number
+                const projectItem = issueData.repository.issue.projectItems.nodes.find(
+                  item => item.project.number === parseInt(process.env.PROJECT_NUMBER)
+                );
+
+                if (!projectItem) {
+                  console.log(`Issue #${issueNumber} is not in project #${process.env.PROJECT_NUMBER}, skipping...`);
+                  continue;
+                }
+
+                console.log(`Issue #${issueNumber} found in project #${process.env.PROJECT_NUMBER}`);
+
+                // Find the Feature env field
+                const featureEnvField = projectItem.project.fields.nodes.find(f => 
+                  f.name === 'Feature env' && f.dataType
+                );
+
+                if (!featureEnvField) {
+                  console.log('Feature env field not found in project');
+                  console.log('Available fields:', projectItem.project.fields.nodes.map(f => `${f.name} (${f.dataType || 'select'})`));
+                  continue;
+                }
+
+                console.log(`Found Feature env field with ID: ${featureEnvField.id}`);
+
+                // Update the Feature env field with PR number URL
+                console.log(`Updating Feature env for issue #${issueNumber} with PR #${prNumber} URL...`);
+                await github.graphql(`
+                  mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!) {
+                    updateProjectV2ItemFieldValue(
+                      input: {
+                        projectId: $projectId
+                        itemId: $itemId
+                        fieldId: $fieldId
+                        value: { 
+                          text: $value
+                        }
+                      }
+                    ) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }
+                `, {
+                  projectId: projectItem.project.id,
+                  itemId: projectItem.id,
+                  fieldId: featureEnvField.id,
+                  value: featureEnvUrl
+                });
+
+                console.log(`✅ Successfully set Feature env for issue #${issueNumber} to: ${featureEnvUrl}`);
+
+              } catch (error) {
+                console.error(`Error updating issue #${issueNumber}:`, error);
+                if (error.errors) {
+                  error.errors.forEach(e => console.error('GraphQL error:', e.message));
+                }
+              }
+            }
       - name: Update issues status in project
         if: steps.extract_issues.outputs.issue_numbers != '' && github.event.action != 'closed'
         uses: actions/github-script@v7
@@ -118,9 +244,9 @@ jobs:
           script: |
             const issueNumbers = "${{ steps.extract_issues.outputs.issue_numbers }}".split(',').filter(num => num);
             const pr = context.payload.pull_request;
-            
+
             let status = '';
-            
+
             // Determine the status based on PR state
             if (context.eventName === 'pull_request') {
               if (pr.draft) {
@@ -129,9 +255,9 @@ jobs:
                 status = 'In review';
               }
             }
-            
+
             if (status && issueNumbers.length > 0) {
-              // Query the project once
+              // First, get the project details to find the status field and options
               const projectQuery = `
                 query($org: String!, $projectNumber: Int!) {
                   organization(login: $org) {
@@ -159,62 +285,55 @@ jobs:
                   }
                 }
               `;
-            
+
               console.log('Fetching project from organization...');
               const projectData = await github.graphql(projectQuery, {
                 org: process.env.ORGANIZATION,
                 projectNumber: parseInt(process.env.PROJECT_NUMBER)
               });
-            
+
               const project = projectData.organization.projectV2;
               console.log(`Found project: ${project.title}`);
-            
+
               // Find the Status field
               const statusField = project.fields.nodes.find(field => 
                 field.name === 'Status' && field.options
               );
-            
+
               if (!statusField) {
                 console.log('Status field not found');
                 console.log('Available fields:', project.fields.nodes.map(f => f.name));
                 return;
               }
-            
+
               // Find the matching status option
               const statusOption = statusField.options.find(option => 
                 option.name.toLowerCase() === status.toLowerCase()
               );
-            
+
               if (!statusOption) {
                 console.log(`Status option "${status}" not found`);
                 console.log('Available options:', statusField.options.map(o => o.name));
                 return;
               }
-            
+
               // Process each issue
               for (const issueNumber of issueNumbers) {
                 try {
                   console.log(`Processing issue #${issueNumber}...`);
-            
-                  // Get issue node ID
-                  const { data: issue } = await github.rest.issues.get({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: parseInt(issueNumber)
-                  });
-            
-                  // Check if issue is already in the project
-                  const findItemQuery = `
-                    query($projectId: ID!) {
-                      node(id: $projectId) {
-                        ... on ProjectV2 {
-                          items(first: 100) {
+
+                  // Query for the issue and its project items
+                  const issueQuery = `
+                    query($owner: String!, $repo: String!, $issueNumber: Int!) {
+                      repository(owner: $owner, name: $repo) {
+                        issue(number: $issueNumber) {
+                          id
+                          projectItems(first: 10) {
                             nodes {
                               id
-                              content {
-                                ... on Issue {
-                                  id
-                                }
+                              project {
+                                id
+                                number
                               }
                             }
                           }
@@ -222,41 +341,28 @@ jobs:
                       }
                     }
                   `;
-            
-                  const itemsData = await github.graphql(findItemQuery, {
-                    projectId: project.id
+
+                  const issueData = await github.graphql(issueQuery, {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issueNumber: parseInt(issueNumber)
                   });
-            
-                  let itemId = null;
-                  const existingItem = itemsData.node.items.nodes.find(item => 
-                    item.content && item.content.id === issue.node_id
-                  );
-            
-                  if (existingItem) {
-                    itemId = existingItem.id;
-                    console.log(`Issue #${issueNumber} already in project`);
-                  } else {
-                    // Add issue to project
-                    console.log(`Adding issue #${issueNumber} to project...`);
-                    const addItemMutation = `
-                      mutation($projectId: ID!, $contentId: ID!) {
-                        addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
-                          item {
-                            id
-                          }
-                        }
-                      }
-                    `;
-            
-                    const addResult = await github.graphql(addItemMutation, {
-                      projectId: project.id,
-                      contentId: issue.node_id
-                    });
-            
-                    itemId = addResult.addProjectV2ItemById.item.id;
-                    console.log(`Issue #${issueNumber} added to project`);
+
+                  if (!issueData.repository.issue) {
+                    console.log(`Issue #${issueNumber} not found`);
+                    continue;
                   }
-            
+
+                  // Find the project item for our specific project
+                  const projectItem = issueData.repository.issue.projectItems.nodes.find(item => 
+                    item.project.number === parseInt(process.env.PROJECT_NUMBER)
+                  );
+
+                  if (!projectItem) {
+                    console.log(`Issue #${issueNumber} is not in project #${process.env.PROJECT_NUMBER}, skipping...`);
+                    continue;
+                  }
+
                   // Update the status field
                   console.log(`Updating status for issue #${issueNumber}...`);
                   const updateMutation = `
@@ -277,16 +383,16 @@ jobs:
                       }
                     }
                   `;
-            
+
                   await github.graphql(updateMutation, {
                     projectId: project.id,
-                    itemId: itemId,
+                    itemId: projectItem.id,
                     fieldId: statusField.id,
                     optionId: statusOption.id
                   });
-            
+
                   console.log(`✅ Successfully updated issue #${issueNumber} status to "${status}"`);
-            
+
                 } catch (error) {
                   console.error(`Error updating issue #${issueNumber}:`, error);
                   if (error.errors) {
