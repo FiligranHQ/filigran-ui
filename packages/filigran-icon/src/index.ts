@@ -85,7 +85,6 @@ export const ListViewIcon = lazy(() => import("./ListView"));
 export const LittleArrowIcon = lazy(() => import("./LittleArrow"));
 export const LogoFiligranIcon = lazy(() => import("./LogoFiligran"));
 export const LogoutIcon = lazy(() => import("./Logout"));
-export const LogoxtmoneIcon = lazy(() => import("./Logoxtmone"));
 export const MalwareAnalysisIcon = lazy(() => import("./MalwareAnalysis"));
 export const MalwareIcon = lazy(() => import("./Malware"));
 export const MapIcon = lazy(() => import("./Map"));
