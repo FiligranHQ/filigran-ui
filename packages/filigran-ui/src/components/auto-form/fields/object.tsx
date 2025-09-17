@@ -69,7 +69,12 @@ export default function AutoFormObject<
   const formatItemName = (item: z.ZodAny, name: string) => {
 
     if(intlTranslation) {
-      return intlTranslation(item._def.description ?? name)
+      try {
+        return intlTranslation(item._def.description ?? name);
+      } catch (error) {
+        // If translation fails, fall back to the description
+        return item._def.description ?? beautifyObjectName(name);
+      }
     }
     return item._def.description  ?? beautifyObjectName(name)
   }
