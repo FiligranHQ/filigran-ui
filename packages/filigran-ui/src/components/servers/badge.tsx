@@ -42,7 +42,7 @@ function Badge({className, variant, size, color, ...props}: BadgeProps) {
           : {}
       }
       {...props}>
-      <div className="inline-flex items-center text-foreground">
+      <div className="inline-flex w-full items-center text-foreground">
         {props.children}
       </div>
     </div>
