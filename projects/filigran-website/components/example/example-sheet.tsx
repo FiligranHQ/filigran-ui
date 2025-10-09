@@ -33,21 +33,21 @@ const profileFormSchema = z.object({
   username: z
     .string()
     .min(2, {
-      message: 'Username must be at least 2 characters.',
+      error: 'Username must be at least 2 characters.',
     })
     .max(30, {
-      message: 'Username must not be longer than 30 characters.',
+      error: 'Username must not be longer than 30 characters.',
     }),
-  email: z
-    .string({
-      required_error: 'Please select an email to display.',
-    })
-    .email(),
+  email: z.email({
+    error: 'Please select an email to display.',
+  }),
   bio: z.string().max(160).min(4),
   urls: z
     .array(
       z.object({
-        value: z.string().url({message: 'Please enter a valid URL.'}),
+        value: z.url({
+          error: 'Please enter a valid URL.',
+        }),
       })
     )
     .optional(),
