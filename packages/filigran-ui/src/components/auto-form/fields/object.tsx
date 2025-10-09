@@ -9,7 +9,12 @@ import {
 } from '../../clients'
 import {DEFAULT_ZOD_HANDLERS, INPUT_COMPONENTS} from '../config'
 import resolveDependencies from '../dependencies'
-import type {Dependency, FieldConfig, FieldConfigItem, IntlTranslateFunction} from '../types'
+import type {
+  Dependency,
+  FieldConfig,
+  FieldConfigItem,
+  IntlTranslateFunction,
+} from '../types'
 import {
   beautifyObjectName,
   getBaseSchema,
@@ -30,53 +35,47 @@ export default function AutoFormObject<
   fieldConfig,
   path = [],
   dependencies = [],
-  intlTranslation
+  intlTranslation,
 }: {
-  schema: SchemaType | z.ZodEffects<SchemaType>
+  schema: SchemaType | z.ZodType<any, any, any>
   form: ReturnType<typeof useForm>
   fieldConfig?: FieldConfig<z.infer<SchemaType>>
   path?: string[]
   dependencies?: Dependency<z.infer<SchemaType>>[]
   intlTranslation?: IntlTranslateFunction
 }) {
-  const {watch} = useFormContext() // Use useFormContext to access the watch function
+  const {watch} = useFormContext()
 
   if (!schema) {
     return null
   }
-  const {shape} = getBaseSchema<SchemaType>(schema) || {}
+
+  const baseSchema = getBaseSchema(schema)
+  const shape = (baseSchema as z.ZodObject<any, any> | null)?.shape
 
   if (!shape) {
     return null
   }
 
-  const handleIfZodNumber = (item: z.ZodAny) => {
-    const isZodNumber = (item as any)._def.typeName === 'ZodNumber'
-    const isInnerZodNumber =
-      (item._def as any).innerType?._def?.typeName === 'ZodNumber'
-
-    if (isZodNumber) {
-      ;(item as any)._def.coerce = true
-    } else if (isInnerZodNumber) {
-      ;(item._def as any).innerType._def.coerce = true
-    }
-
+  const processSchemaItem = (item: z.ZodAny) => {
     return item
   }
 
   const sortedFieldKeys = sortFieldsByOrder(fieldConfig, Object.keys(shape))
 
   const formatItemName = (item: z.ZodAny, name: string) => {
+    const def = (item as any)._def
+    const description = def.description
 
-    if(intlTranslation) {
+    if (intlTranslation) {
       try {
-        return intlTranslation(item._def.description ?? name);
+        return intlTranslation(description ?? name)
       } catch (error) {
         // If translation fails, fall back to the description
-        return item._def.description ?? beautifyObjectName(name);
+        return description ?? beautifyObjectName(name)
       }
     }
-    return item._def.description  ?? beautifyObjectName(name)
+    return description ?? beautifyObjectName(name)
   }
 
   return (
@@ -85,7 +84,8 @@ export default function AutoFormObject<
       className="space-y-5 border-none">
       {sortedFieldKeys.map((name) => {
         let item = shape[name] as z.ZodAny
-        item = handleIfZodNumber(item) as z.ZodAny
+        item = processSchemaItem(item)
+
         const zodBaseType = getBaseType(item)
         const itemName = formatItemName(item, name)
         const key = [...path, name].join('.')
@@ -146,7 +146,9 @@ export default function AutoFormObject<
           false
 
         if (overrideOptions) {
-          item = z.enum(overrideOptions) as unknown as z.ZodAny
+          item = z.enum(
+            overrideOptions as [string, ...string[]]
+          ) as unknown as z.ZodAny
         }
 
         return (
