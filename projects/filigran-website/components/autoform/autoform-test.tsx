@@ -73,38 +73,38 @@ const testSchema = z.object({
     .string()
     // You can use zod's built-in validation as normal
     .min(2, {
-      message: 'Username must be at least 2 characters.',
+        error: 'Username must be at least 2 characters.'
     }),
   password: z
     .string({
-      required_error: 'Password is required.',
+        error: (issue) => issue.input === undefined ? 'Password is required.' : undefined
     })
     // Use the "describe" method to set the label
     // If no label is set, the field name will be used
     // and un-camel-cased
     .min(8, {
-      message: 'Password must be at least 8 characters.',
+        error: 'Password must be at least 8 characters.'
     })
     .describe('Your secure password'),
 
   favouriteNumber: z.coerce // When using numbers and dates, you must use coerce
     .number({
-      invalid_type_error: 'Favourite number must be a number.',
+        error: (issue) => issue.input === undefined ? undefined : 'Favourite number must be a number.'
     })
     .min(1, {
-      message: 'Favourite number must be at least 1.',
+        error: 'Favourite number must be at least 1.'
     })
     .max(10, {
-      message: 'Favourite number must be at most 10.',
+        error: 'Favourite number must be at most 10.'
     })
-    .default(5) // You can set a default value
+    .prefault(5) // You can set a default value
     .optional(),
-  userServiceEnum: z.nativeEnum(UserServiceOrderingEnum),
+  userServiceEnum: z.enum(UserServiceOrderingEnum),
   acceptTerms: z
     .boolean()
     .refine((value) => value, {
-      message: 'You must accept the terms and conditions.',
       path: ['acceptTerms'],
+        error: 'You must accept the terms and conditions.'
     })
     .describe('Accept terms and conditions'),
 

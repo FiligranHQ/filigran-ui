@@ -21,7 +21,6 @@ import {
   type ZodObjectOrWrapped,
 } from './utils'
 
-
 const AutoFormSubmit = ({
   children,
   className,
@@ -51,10 +50,10 @@ const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
   children,
   className,
   dependencies,
-  intlTranslation
+  intlTranslation,
 }: {
   formSchema: SchemaType
-  values?: Partial<z.infer<SchemaType>>
+  values?: z.infer<SchemaType>
   onValuesChange?: (
     values: Partial<z.infer<SchemaType>>,
     form: UseFormReturn<z.infer<SchemaType>>
@@ -72,20 +71,24 @@ const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
     | React.ReactNode
     | ((formState: FormState<z.infer<SchemaType>>) => React.ReactNode)
   className?: string
-  dependencies?: Dependency<z.infer<SchemaType>>[],
+  dependencies?: Dependency<z.infer<SchemaType>>[]
   intlTranslation?: IntlTranslateFunction
 }) => {
   const objectFormSchema = getObjectFormSchema(formSchema)
-  const defaultValues: DefaultValues<z.infer<typeof objectFormSchema>> | null =
-    getDefaultValues(objectFormSchema, fieldConfig)
 
-  const form = useForm<z.infer<typeof objectFormSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: defaultValues ?? undefined,
+  const defaultValues =
+    getDefaultValues(objectFormSchema, fieldConfig as FieldConfig<any>) ??
+    undefined
+
+  const form = useForm<z.infer<SchemaType>>({
+    resolver: zodResolver(formSchema as any),
+    defaultValues: defaultValues as
+      | DefaultValues<z.infer<SchemaType>>
+      | undefined,
     values: valuesProp,
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  function onSubmit(values: z.infer<SchemaType>) {
     const parsedValues = formSchema.safeParse(values)
     if (parsedValues.success) {
       onSubmitProp?.(parsedValues.data, form)
@@ -94,7 +97,8 @@ const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
 
   useEffect(() => {
     const subscription = form.watch((values) => {
-      onValuesChangeProp?.(values, form)
+      onValuesChangeProp?.(values as Partial<z.infer<SchemaType>>, form)
+
       const parsedValues = formSchema.safeParse(values)
       if (parsedValues.success) {
         onParsedValuesChange?.(parsedValues.data, form)
@@ -118,10 +122,16 @@ const AutoForm = <SchemaType extends ZodObjectOrWrapped>({
           }}
           className={cn('space-y-5', className)}>
           <AutoFormObject
-            schema={objectFormSchema}
-            form={form}
-            dependencies={dependencies}
-            fieldConfig={fieldConfig}
+            schema={
+              objectFormSchema as
+                | z.ZodObject<any, any>
+                | z.ZodType<any, any, any>
+            }
+            form={form as any}
+            dependencies={
+              dependencies as Dependency<Record<string, unknown>>[] | undefined
+            }
+            fieldConfig={fieldConfig as FieldConfig<any>}
             intlTranslation={intlTranslation}
           />
 

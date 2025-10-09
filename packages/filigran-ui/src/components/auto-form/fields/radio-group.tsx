@@ -1,4 +1,3 @@
-import * as z from 'zod'
 import {FormControl, FormItem, FormLabel, FormMessage} from '../../clients'
 import {RadioGroup, RadioGroupItem} from '../../clients/radio-group'
 import AutoFormLabel from '../common/label'
@@ -14,14 +13,29 @@ export default function AutoFormRadioGroup({
   fieldProps,
   fieldConfigItem,
 }: AutoFormInputComponentProps) {
-  const baseValues = (getBaseSchema(zodItem) as unknown as z.ZodEnum<any>)._def
-    .values
-
+  const baseSchema = getBaseSchema(zodItem)
   let values: string[] = []
-  if (!Array.isArray(baseValues)) {
-    values = Object.entries(baseValues).map((item) => item[0])
-  } else {
-    values = baseValues
+
+  if (baseSchema) {
+    const def = (baseSchema as any)._def
+
+    if (def.typeName === 'ZodEnum' && def.values) {
+      const baseValues = def.values
+
+      if (!Array.isArray(baseValues)) {
+        values = Object.entries(baseValues).map(([key, value]) => key)
+      } else {
+        values = baseValues
+      }
+    } else if (def.typeName === 'ZodNativeEnum' && def.values) {
+      values = Object.entries(def.values)
+        .filter(([key, value]) => typeof value === 'string')
+        .map(([key, value]) => value as string)
+    } else if (def.typeName === 'ZodUnion' && def.options) {
+      values = def.options
+        .filter((opt: any) => opt._def.typeName === 'ZodLiteral')
+        .map((opt: any) => String(opt._def.value))
+    }
   }
 
   return (
