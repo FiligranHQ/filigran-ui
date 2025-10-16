@@ -8,7 +8,6 @@ export interface ContentMenu {
   slug?: string
 }
 async function parseFrontmatter(fileContent: string) {
-  // Need to find a better way to extract Frontmatter. Maybe Gray-matter ? https://github.com/jonschlinkert/gray-matter
   const {frontmatter} = await serialize(fileContent, {
     parseFrontmatter: true,
     mdxOptions: {},
@@ -59,7 +58,14 @@ async function getMDXMenu(
       const filePath = path.join(dir, file)
       const stat = fs.statSync(filePath)
       if (stat.isDirectory()) {
-        const childMenu = await getMDXMenu(`${filePath}`, file)
+        const newParentDir = parentDir ? `${parentDir}/${file}` : file
+        const childMenu = await getMDXMenu(filePath, newParentDir)
+
+        const indexPath = path.join(filePath, 'index.mdx')
+        if (fs.existsSync(indexPath)) {
+          childMenu.slug = newParentDir
+        }
+
         data.content.push(childMenu)
       }
     }

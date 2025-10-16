@@ -12,7 +12,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const contentMenu = await getContentMenu()
+  const contentMenu = await getContentMenu();
   return (
     <main className="flex max-w-full">
       <Menu contentMenu={contentMenu} />
