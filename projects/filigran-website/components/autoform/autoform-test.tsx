@@ -103,13 +103,8 @@ const testSchema = z.object({
     })
     .describe('Your secure password'),
 
-  favouriteNumber: z.coerce // When using numbers and dates, you must use coerce
-    .number({
-      error: (issue) =>
-        issue.input === undefined
-          ? undefined
-          : 'Favourite number must be a number.',
-    })
+  favouriteNumber: z.coerce
+    .number()
     .min(1, {
       error: 'Favourite number must be at least 1.',
     })
