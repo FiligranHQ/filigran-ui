@@ -763,7 +763,7 @@ export class JSONSchemaToZod {
     const thenSchema = schema['then']
     const elseSchema = schema['else']
 
-    // Apply conditional validation using superRefine
+    // Apply conditional validation using check
     return zodObject.superRefine((data, ctx) => {
       // Apply default values to data for condition checking
       const jsonData = data as unknown as JSONValue

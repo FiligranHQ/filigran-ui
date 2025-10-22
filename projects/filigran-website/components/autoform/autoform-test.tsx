@@ -3,7 +3,13 @@ import {z} from 'zod'
 import React from 'react'
 import {Button} from 'filigran-ui/servers'
 import {JSONSchemaToZod} from 'filigran-ui/auto-form'
-import {AutoForm} from 'filigran-ui'
+import {
+  AutoForm,
+  FormControl,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from 'filigran-ui'
 import jsonTest from './test.json'
 
 export enum UserServiceOrderingEnum {
@@ -97,20 +103,15 @@ const testSchema = z.object({
     })
     .describe('Your secure password'),
 
-  favouriteNumber: z.coerce // When using numbers and dates, you must use coerce
-    .number({
-      error: (issue) =>
-        issue.input === undefined
-          ? undefined
-          : 'Favourite number must be a number.',
-    })
+  favouriteNumber: z.coerce
+    .number()
     .min(1, {
       error: 'Favourite number must be at least 1.',
     })
     .max(10, {
       error: 'Favourite number must be at most 10.',
     })
-    .prefault(5) // You can set a default value
+    .default(5) // You can set a default value
     .optional(),
   userServiceEnum: z.enum(UserServiceOrderingEnum),
   acceptTerms: z
@@ -122,7 +123,7 @@ const testSchema = z.object({
     .describe('Accept terms and conditions'),
 
   // Date will show a date picker
-  birthday: z.coerce.date().optional(),
+  birthday: z.date().optional(),
 
   sendMeMails: z
     .boolean()
@@ -134,7 +135,7 @@ const testSchema = z.object({
     }),
 
   // Enum will show a select
-  color: z.enum(['red', 'green', 'blue']),
+  color: z.enum(['red', 'green', 'blue']).optional(),
 
   // Create sub-objects to create accordion sections
   address: z.object({
@@ -151,7 +152,9 @@ const testSchema = z.object({
       })
     )
     // Optionally set a custom label - otherwise this will be inferred from the field name
-    .describe('Guests invited to the party'),
+    .describe('Guests invited to the party')
+    .optional(),
+
   document: zFileList
     .refine((files) => files.length > 0, {
       message: 'Please select at least one file',
@@ -186,6 +189,9 @@ export const AutoFormTest = () => {
               // @ts-ignore
               multiple: 'multiple',
             },
+          },
+          userServiceEnum: {
+            label: 'User Service',
           },
         }}>
         <Button>Submit</Button>

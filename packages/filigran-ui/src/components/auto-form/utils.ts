@@ -3,7 +3,6 @@ import type {DefaultValues} from 'react-hook-form'
 import {z} from 'zod'
 import type {FieldConfig} from './types'
 
-// ZodEffects n'est plus exporté dans Zod 4, mais existe toujours en interne
 export type ZodObjectOrWrapped =
   | z.ZodObject<any, any>
   | z.ZodType<any, any, any>
@@ -30,10 +29,12 @@ export function getBaseSchema<ChildType extends z.ZodTypeAny = z.ZodTypeAny>(
 
   const def = (schema as any)._def
 
-  if (def.typeName === 'ZodEffects') {
+  if (def.typeName === 'effects') {
     return getBaseSchema(def.schema as ChildType)
   }
-
+  if (def.typeName === 'pipeline') {
+    return getBaseSchema(def.out as ChildType)
+  }
   if ('innerType' in def) {
     return getBaseSchema(def.innerType as ChildType)
   }
@@ -51,7 +52,7 @@ export function extractShape(
 
   if (!baseSchema) return null
 
-  if ((baseSchema as any)._def?.typeName === 'ZodObject') {
+  if ((baseSchema as any)._def?.typeName === 'object') {
     return (baseSchema as z.ZodObject<any, any>).shape
   }
 
@@ -64,7 +65,7 @@ export function extractShape(
  */
 export function getBaseType(schema: z.ZodTypeAny): string {
   const baseSchema = getBaseSchema(schema)
-  return baseSchema ? (baseSchema as any)._def.typeName : ''
+  return baseSchema ? (baseSchema as any)._def.type : ''
 }
 
 /**
@@ -159,8 +160,13 @@ export function zodToHtmlInputProps(
 ): React.InputHTMLAttributes<HTMLInputElement> {
   const def = (schema as any)._def
 
+  // Handle ZodPipeline (z.coerce)
+  if (def.typeName === 'ZodPipeline') {
+    return zodToHtmlInputProps(def.out)
+  }
+
   // Handle Optional and Nullable types
-  if (['ZodOptional', 'ZodNullable'].includes(def.typeName)) {
+  if (['optional', 'nullable'].includes(def.typeName)) {
     return {
       ...zodToHtmlInputProps(def.innerType),
       required: false,
@@ -174,7 +180,7 @@ export function zodToHtmlInputProps(
   const baseType = getBaseType(schema)
 
   // Set input type based on Zod type
-  if (baseType === 'ZodNumber') {
+  if (baseType === 'number') {
     inputProps.type = 'number'
   }
 
@@ -183,17 +189,17 @@ export function zodToHtmlInputProps(
     for (const check of def.checks as any[]) {
       switch (check.kind) {
         case 'min':
-          if (baseType === 'ZodString') {
+          if (baseType === 'string') {
             inputProps.minLength = check.value
-          } else if (baseType === 'ZodNumber') {
+          } else if (baseType === 'number') {
             inputProps.min = check.value
           }
           break
 
         case 'max':
-          if (baseType === 'ZodString') {
+          if (baseType === 'string') {
             inputProps.maxLength = check.value
-          } else if (baseType === 'ZodNumber') {
+          } else if (baseType === 'number') {
             inputProps.max = check.value
           }
           break
@@ -217,7 +223,7 @@ export function zodToHtmlInputProps(
           break
 
         case 'multipleOf':
-          if (baseType === 'ZodNumber' && check.value) {
+          if (baseType === 'number' && check.value) {
             inputProps.step = String(check.value)
           }
           break
