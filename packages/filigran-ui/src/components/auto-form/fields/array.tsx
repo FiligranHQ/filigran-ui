@@ -15,14 +15,14 @@ import AutoFormObject from './object'
  * Check if a schema is a ZodArray
  */
 function isZodArray(schema: z.ZodTypeAny): schema is z.ZodArray<any> {
-  return (schema as any)._def?.typeName === 'ZodArray'
+  return (schema as any)._def?.typeName === 'array'
 }
 
 /**
  * Check if a schema is a ZodDefault
  */
 function isZodDefault(schema: z.ZodTypeAny): schema is z.ZodDefault<any> {
-  return (schema as any)._def?.typeName === 'ZodDefault'
+  return (schema as any)._def?.typeName === 'default'
 }
 
 /**
@@ -32,20 +32,20 @@ function getArrayItemType(schema: z.ZodTypeAny): z.ZodTypeAny | null {
   const def = (schema as any)._def
 
   // Direct ZodArray
-  if (def?.typeName === 'ZodArray') {
+  if (def?.typeName === 'array') {
     return def.type
   }
 
   // ZodDefault wrapping a ZodArray
-  if (def?.typeName === 'ZodDefault') {
+  if (def?.typeName === 'default') {
     const innerDef = def.innerType?._def
-    if (innerDef?.typeName === 'ZodArray') {
+    if (innerDef?.typeName === 'array') {
       return innerDef.type
     }
   }
 
   // ZodOptional or ZodNullable wrapping a ZodArray
-  if (def?.typeName === 'ZodOptional' || def?.typeName === 'ZodNullable') {
+  if (def?.typeName === 'optional' || def?.typeName === 'nullable') {
     return getArrayItemType(def.innerType)
   }
 
@@ -64,7 +64,7 @@ function getDefaultItemValue(itemType: z.ZodTypeAny): any {
   const def = (itemType as any)._def
 
   // If it's a ZodObject, return empty object
-  if (def?.typeName === 'ZodObject') {
+  if (def?.typeName === 'object') {
     const shape = (itemType as z.ZodObject<any>).shape
     const defaultObj: Record<string, any> = {}
 
@@ -74,7 +74,7 @@ function getDefaultItemValue(itemType: z.ZodTypeAny): any {
       const fieldDef = (fieldSchema as any)._def
 
       // Check for default value
-      if (fieldDef?.typeName === 'ZodDefault') {
+      if (fieldDef?.typeName === 'default') {
         defaultObj[key] = fieldDef.defaultValue()
       }
     }
@@ -84,13 +84,13 @@ function getDefaultItemValue(itemType: z.ZodTypeAny): any {
 
   // For primitives, return appropriate default
   switch (def?.typeName) {
-    case 'ZodString':
+    case 'string':
       return ''
-    case 'ZodNumber':
+    case 'number':
       return 0
-    case 'ZodBoolean':
+    case 'boolean':
       return false
-    case 'ZodDate':
+    case 'date':
       return new Date()
     default:
       return {}

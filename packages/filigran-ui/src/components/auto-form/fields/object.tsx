@@ -66,6 +66,9 @@ export default function AutoFormObject<
   const formatItemName = (item: z.ZodAny, name: string) => {
     const def = (item as any)._def
     const description = def.description
+    if (def.type === 'array') {
+      return 'Array not supported yet :) '
+    }
 
     if (intlTranslation) {
       try {
@@ -100,7 +103,17 @@ export default function AutoFormObject<
           return null
         }
 
-        if (zodBaseType === 'ZodObject') {
+        if (zodBaseType === 'array') {
+          return (
+            <div>
+              <label className="font-bold">{itemName}</label>
+              <br />
+              {'Array not implemented yet. Define it manually.'}
+            </div>
+          )
+        }
+
+        if (zodBaseType === 'object') {
           return (
             <AccordionItem
               value={name}

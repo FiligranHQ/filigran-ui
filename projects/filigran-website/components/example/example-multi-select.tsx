@@ -129,8 +129,7 @@ const frameworksList = [
 ]
 
 const FormSchema = z.object({
-  frameworks: z.tuple([z.string().min(1)], z.string().min(1))
-        .min(1),
+  frameworks: z.array(z.string()).min(1),
 })
 
 // Exemple avec des clés personnalisées
@@ -206,8 +205,7 @@ const languagesList = [
 ]
 
 const FormSchemaCustomKeys = z.object({
-  languages: z.tuple([z.string().min(1)], z.string().min(1))
-        .min(1),
+  languages: z.array(z.string()).min(1),
 })
 
 export function ExampleMultiSelect() {
