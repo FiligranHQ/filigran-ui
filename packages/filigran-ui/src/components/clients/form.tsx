@@ -155,7 +155,7 @@ const FormMessage = React.forwardRef<
       body = error
     } else if (error.message) {
       body = error.message
-    } else if (error.type === 'invalid_format' || error.code) {
+    } else if (error.type === 'invalid_format') {
       body = error.message || 'Invalid format'
     }
   }
