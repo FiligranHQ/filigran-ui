@@ -44,7 +44,7 @@ export default function AutoFormObject<
   dependencies?: Dependency<z.infer<SchemaType>>[]
   intlTranslation?: IntlTranslateFunction
 }) {
-  const {watch} = useFormContext()
+  const {watch, control} = useFormContext()
 
   if (!schema) {
     return null
@@ -163,10 +163,9 @@ export default function AutoFormObject<
             overrideOptions as [string, ...string[]]
           ) as unknown as z.ZodAny
         }
-
         return (
           <FormField
-            control={form.control}
+            control={control}
             name={key}
             key={key}
             render={({field}) => {
