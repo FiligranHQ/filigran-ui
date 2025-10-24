@@ -3,13 +3,7 @@ import {z} from 'zod'
 import React from 'react'
 import {Button} from 'filigran-ui/servers'
 import {JSONSchemaToZod} from 'filigran-ui/auto-form'
-import {
-  AutoForm,
-  FormControl,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from 'filigran-ui'
+import {AutoForm} from 'filigran-ui'
 import jsonTest from './test.json'
 
 export enum UserServiceOrderingEnum {
@@ -103,15 +97,20 @@ const testSchema = z.object({
     })
     .describe('Your secure password'),
 
-  favouriteNumber: z.coerce
-    .number()
+  favouriteNumber: z.coerce // When using numbers and dates, you must use coerce
+    .number({
+      error: (issue) =>
+        issue.input === undefined
+          ? undefined
+          : 'Favourite number must be a number.',
+    })
     .min(1, {
       error: 'Favourite number must be at least 1.',
     })
     .max(10, {
       error: 'Favourite number must be at most 10.',
     })
-    .default(5) // You can set a default value
+    .prefault(5) // You can set a default value
     .optional(),
   userServiceEnum: z.enum(UserServiceOrderingEnum),
   acceptTerms: z
@@ -123,7 +122,7 @@ const testSchema = z.object({
     .describe('Accept terms and conditions'),
 
   // Date will show a date picker
-  birthday: z.date().optional(),
+  birthday: z.coerce.date().optional(),
 
   sendMeMails: z
     .boolean()
@@ -133,9 +132,11 @@ const testSchema = z.object({
         fieldType: 'switch',
       },
     }),
-
+  email: z.email({error: 'Invalid email'}).min(2, {
+    error: 'Email must be at least 2 characters.',
+  }),
   // Enum will show a select
-  color: z.enum(['red', 'green', 'blue']).optional(),
+  color: z.enum(['red', 'green', 'blue']),
 
   // Create sub-objects to create accordion sections
   address: z.object({
@@ -189,9 +190,6 @@ export const AutoFormTest = () => {
               // @ts-ignore
               multiple: 'multiple',
             },
-          },
-          userServiceEnum: {
-            label: 'User Service',
           },
         }}>
         <Button>Submit</Button>
