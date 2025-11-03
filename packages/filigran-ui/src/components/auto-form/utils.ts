@@ -166,7 +166,7 @@ export function zodToHtmlInputProps(
   }
 
   // Handle Optional and Nullable types
-  if (['optional', 'nullable'].includes(def.typeName)) {
+  if (['optional', 'nullable'].includes(def.type)) {
     return {
       ...zodToHtmlInputProps(def.innerType),
       required: false,
