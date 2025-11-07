@@ -3,7 +3,13 @@ import {z} from 'zod'
 import React from 'react'
 import {Button} from 'filigran-ui/servers'
 import {JSONSchemaToZod} from 'filigran-ui/auto-form'
-import {AutoForm} from 'filigran-ui'
+import {
+  AutoForm,
+  FormControl,
+  FormItem,
+  FormLabel,
+  MultiSelectFormField,
+} from 'filigran-ui'
 import jsonTest from './test.json'
 
 export enum UserServiceOrderingEnum {
@@ -145,17 +151,9 @@ const testSchema = z.object({
     zip: z.string(),
   }),
   invitedGuests: z
-    .array(
-      // Define the fields for each item
-      z.object({
-        name: z.string(),
-        age: z.coerce.number(),
-      })
-    )
-    // Optionally set a custom label - otherwise this will be inferred from the field name
+    .array(z.string())
     .describe('Guests invited to the party')
     .optional(),
-
   document: zFileList
     .refine((files) => files.length > 0, {
       message: 'Please select at least one file',
@@ -190,6 +188,28 @@ export const AutoFormTest = () => {
               // @ts-ignore
               multiple: 'multiple',
             },
+          },
+          invitedGuests: {
+            fieldType: ({field}) => (
+              <FormItem>
+                <FormLabel>{'Invited guests'}</FormLabel>
+                <FormControl>
+                  <MultiSelectFormField
+                    noResultString={'Not found'}
+                    options={[
+                      {id: 'Aa', name: 'a'},
+                      {id: 'Bb', name: 'b'},
+                    ]}
+                    keyValue="id"
+                    keyLabel="name"
+                    value={field.value ?? []}
+                    onValueChange={(val) => field.onChange(val)}
+                    placeholder={'placeholder'}
+                    variant="inverted"
+                  />
+                </FormControl>
+              </FormItem>
+            ),
           },
         }}>
         <Button>Submit</Button>

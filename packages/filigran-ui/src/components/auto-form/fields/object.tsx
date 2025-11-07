@@ -104,11 +104,61 @@ export default function AutoFormObject<
         }
 
         if (zodBaseType === 'array') {
+          const fieldConfigItem: FieldConfigItem = fieldConfig?.[name] ?? {}
+
+          if (fieldConfigItem.fieldType) {
+            const FieldType = fieldConfigItem.fieldType
+            const zodInputProps = zodToHtmlInputProps(item)
+
+            return (
+              <FormField
+                control={control}
+                name={key}
+                key={key}
+                render={({field}) => {
+                  if (typeof FieldType === 'function') {
+                    const fieldProps = {
+                      ...field,
+                      ...fieldConfigItem.inputProps,
+                      disabled:
+                        fieldConfigItem.inputProps?.disabled || isDisabled,
+                      ref: undefined,
+                      value:
+                        field.value ??
+                        fieldConfigItem.inputProps?.defaultValue ??
+                        [],
+                    }
+                    return (
+                      <FieldType
+                        field={field}
+                        fieldConfigItem={fieldConfigItem}
+                        label={key}
+                        isRequired={
+                          fieldConfigItem.inputProps?.required ?? false
+                        }
+                        zodItem={item}
+                        fieldProps={fieldProps}
+                        zodInputProps={zodInputProps}
+                      />
+                    )
+                  }
+
+                  return (
+                    <input
+                      type={FieldType}
+                      {...field}
+                    />
+                  )
+                }}
+              />
+            )
+          }
+
           return (
-            <div>
+            <div key={key}>
               <label className="font-bold">{itemName}</label>
               <br />
-              {'Array not implemented yet. Define it manually.'}
+              {'Array not implemented yet. Define it manually in fieldConfig.'}
             </div>
           )
         }
