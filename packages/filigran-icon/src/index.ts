@@ -21,6 +21,7 @@ export { default as BooksMoviesAndMusicIcon } from "./BooksMoviesAndMusic";
 export { default as CalendarViewMonthIcon } from "./CalendarViewMonth";
 export { default as CalendarMonthIcon } from "./CalendarMonth";
 export { default as CampaignIcon } from "./Campaign";
+export { default as CancelIcon } from "./Cancel";
 export { default as CaseIncidentIcon } from "./CaseIncident";
 export { default as CaseRfiIcon } from "./CaseRfi";
 export { default as CaseRftIcon } from "./CaseRft";
