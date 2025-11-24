@@ -1,0 +1,141 @@
+---
+title: Gradient Button
+---
+
+# GradientButton
+
+Displays a button with an animated gradient border and optional gradient text.
+
+## Preview
+
+<GradientButton>Import from hub</GradientButton>
+
+<GradientButton size="lg">Large Button</GradientButton>
+
+<GradientButton
+  gradientFrom="#ec4899"
+  gradientTo="#8b5cf6"
+>
+  Custom Colors
+</GradientButton>
+
+## Description
+
+The GradientButton component is a specialized button with an animated gradient border that reverses on hover. It features customizable gradient colors and includes an optional gradient text effect. Built on top of the base Button component, it inherits all standard button functionality while adding unique visual styling.
+
+## How to use this button
+
+### Props
+
+| Name             | Type      | Default                      | Description                                                                                           |
+| ---------------- | --------- | ---------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **gradientFrom** | _string_  | `hsl(var(--blue-default))`           | The starting color of the gradient. Accepts any valid CSS color (hex, rgb, hsl, CSS variables)       |
+| **gradientTo**   | _string_  | `hsl(var(--turquoise-300))`  | The ending color of the gradient. Accepts any valid CSS color (hex, rgb, hsl, CSS variables)         |
+| **gradientBg**   | _string_  | `hsl(var(--background))`     | The background color inside the button. Typically matches your theme background                       |
+| **textGradient** | _boolean_ | `true`                       | When true, applies the gradient effect to the text. When false, text uses normal foreground color    |
+| **size**         | _enum_    | `"default"`                  | Inherited from Button: "default" \| "sm" \| "lg" \| "icon" \| "icon-rounded"                         |
+
+**gradientFrom & gradientTo**: These props control the gradient colors used for both the border and the text (if textGradient is enabled). The gradient animates on hover by reversing the color direction.
+
+**Color formats supported:**
+- **Hex**: `"#3b82f6"`
+- **RGB**: `"rgb(59, 130, 246)"`
+- **HSL**: `"hsl(217, 91%, 60%)"`
+- **CSS Variables**: `"hsl(var(--primary))"`
+
+**textGradient**: Controls whether the button text has a gradient effect. When set to false, you may want to add a text color class like `className="text-foreground"`.
+
+**size**: Inherits all size variants from the base Button component, controlling the height and padding of the button.
+
+### Playground
+
+_Import from filigran-ui:_
+
+Import \{GradientButton\} from 'filigran-ui'
+
+<ReactLiveDisplay
+  codeExample={`
+    <div className="flex flex-col gap-4">
+      {/* Default gradient (blue to turquoise) */}
+      <div className="flex flex-col gap-2">
+        <h3 className="text-sm font-semibold">Default Gradient</h3>
+        <div className="flex gap-2 items-center flex-wrap">
+          <GradientButton size="sm">Small</GradientButton>
+          <GradientButton>Default</GradientButton>
+          <GradientButton size="lg">Large</GradientButton>
+          <GradientButton size="icon">
+            <AddIcon className="size-4" />
+          </GradientButton>
+        </div>
+      </div>
+
+        {/* Custom colors */}
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">Custom Colors</h3>
+          <div className="flex gap-2 flex-wrap">
+            <GradientButton
+              gradientFrom="#ec4899"
+              gradientTo="#8b5cf6"
+            >
+              Pink to Purple
+            </GradientButton>
+
+            <GradientButton
+              gradientFrom="#10b981"
+              gradientTo="#3b82f6"
+            >
+              Green to Blue
+            </GradientButton>
+
+            <GradientButton
+              gradientFrom="#f59e0b"
+              gradientTo="#ef4444"
+            >
+              Orange to Red
+            </GradientButton>
+          </div>
+        </div>
+
+        {/* Without text gradient */}
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">Solid Text</h3>
+          <div className="flex gap-2 flex-wrap">
+            <GradientButton
+              textGradient={false}
+              className="text-foreground"
+              gradientFrom="#06b6d4"
+              gradientTo="#3b82f6"
+            >
+              Solid Text Color
+            </GradientButton>
+          </div>
+        </div>
+
+        {/* Disabled state */}
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">States</h3>
+          <div className="flex gap-2 flex-wrap">
+            <GradientButton disabled>
+              Disabled
+            </GradientButton>
+            <GradientButton onClick={() => alert('Clicked!')}>
+              With Click Handler
+            </GradientButton>
+          </div>
+        </div>
+
+        {/* Using CSS variables */}
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">Theme Colors</h3>
+          <div className="flex gap-2 flex-wrap">
+            <GradientButton
+              gradientFrom="hsl(var(--primary))"
+              gradientTo="hsl(var(--primary) / 0.6)"
+            >
+              Theme Primary
+            </GradientButton>
+          </div>
+        </div>
+      </div>
+`}
+/>
