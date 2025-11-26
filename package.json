@@ -4,13 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "build:filigran-website": "npm run build -w filigran-website",
-    "build:filigran-icon": "npm run build:all -w filigran-icon",
-    "build:filigran-ui": "npm run build -w filigran-ui",
-    "dev": "npm run dev -w filigran-website",
-    "publish:filigran-icon": "yarn build --workspace packages/filigran-icon && npm publish --provenance --access public --workspace packages/filigran-icon",
-    "publish:filigran-ui": "yarn build --workspace packages/filigran-icon && yarn build --workspace packages/filigran-ui && npm publish --provenance --access public --workspace packages/filigran-ui"
+    "build": "yarn workspaces foreach -pt run build",
+    "build:filigran-website": "yarn workspace filigran-website run build",
+    "build:filigran-icon": "yarn workspace filigran-icon run build",
+    "build:filigran-ui": "yarn workspace filigran-ui run build",
+    "dev": "yarn workspace filigran-website run dev",
+    "publish:filigran-icon": "yarn build:filigran-icon && yarn workspace packages/filigran-icon publish --provenance --access public",
+    "publish:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace packages/filigran-ui publish --provenance --access public"
   },
   "private": true,
   "keywords": [],

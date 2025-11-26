@@ -20,9 +20,11 @@ on:
           - filigran-ui
           - filigran-icon
           - both
+
 env:
   ORGANIZATION: 'FiligranHQ'
   PROJECT_NUMBER: 30
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -30,7 +32,8 @@ jobs:
       contents: write
       packages: write
       id-token: write
-      issues: write  # Needed to close issues
+      issues: write
+
     steps:
       - uses: actions/create-github-app-token@v2
         id: app-token
@@ -38,6 +41,7 @@ jobs:
           app-id: ${{ vars.FILIGRANHQ_PROJECT_APP_ID }}
           private-key: ${{ secrets.FILIGRANHQ_PROJECT_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -72,14 +76,14 @@ jobs:
         if: github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both'
         working-directory: ./packages/filigran-ui
         run: |
-          npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+          yarn version --${{ github.event.inputs.version_type }} --no-git-tag-version
           echo "FILIGRAN_UI_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
 
       - name: Update version for Filigran-icon
         if: github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both'
         working-directory: ./packages/filigran-icon
         run: |
-          npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+          yarn version --${{ github.event.inputs.version_type }} --no-git-tag-version
           echo "FILIGRAN_ICON_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
 
       - name: Collect commits and issues for changelog
@@ -88,6 +92,7 @@ jobs:
           # Initialize variables
           CHANGELOG=""
           UI_ISSUES=""
+          ICON_ISSUES=""
           
           # Function to extract issue numbers from text
           extract_issues() {
@@ -134,10 +139,17 @@ jobs:
             while IFS= read -r commit; do
               if [ -n "$commit" ]; then
                 ICON_CHANGELOG="$ICON_CHANGELOG- $commit\n"
+                ISSUES=$(extract_issues "$commit")
+                for issue in $ISSUES; do
+                  ICON_ISSUES="$ICON_ISSUES $issue"
+                done
               fi
             done <<< "$ICON_COMMITS"
           
             CHANGELOG="$CHANGELOG$ICON_CHANGELOG\n"
+          
+            # Remove duplicates from ICON issues list
+            ICON_ISSUES=$(echo $ICON_ISSUES | tr ' ' '\n' | sort -u | tr '\n' ' ')
           fi
           
           # Export for use in next steps
@@ -145,9 +157,11 @@ jobs:
           echo -e "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           echo "ui_issues=$UI_ISSUES" >> $GITHUB_OUTPUT
+          echo "icon_issues=$ICON_ISSUES" >> $GITHUB_OUTPUT
           
           # Also save to environment for debugging
           echo "UI_ISSUES_TO_CLOSE=$UI_ISSUES" >> $GITHUB_ENV
+          echo "ICON_ISSUES_TO_CLOSE=$ICON_ISSUES" >> $GITHUB_ENV
 
       - name: Commit version changes
         run: |
@@ -156,19 +170,16 @@ jobs:
           COMMIT_MSG=""
           
           if [ -n "$FILIGRAN_UI_VERSION" ] && [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            # Both packages updated
             COMMIT_MSG="chore: bump filigran-ui to v$FILIGRAN_UI_VERSION and filigran-icon to v$FILIGRAN_ICON_VERSION"
           elif [ -n "$FILIGRAN_UI_VERSION" ]; then
-            # Only filigran-ui updated
             COMMIT_MSG="chore: bump filigran-ui to v$FILIGRAN_UI_VERSION"
           elif [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            # Only filigran-icon updated
             COMMIT_MSG="chore: bump filigran-icon to v$FILIGRAN_ICON_VERSION"
           else
-            # No versions to update
             echo "No version changes to commit"
             exit 0
           fi
+          
           git commit -m "$COMMIT_MSG"
           git push
 
@@ -184,15 +195,28 @@ jobs:
           fi
           git push --tags
 
-      - name: Publish Filigran-ui to NPM
-        if: (github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both') && env.FILIGRAN_UI_VERSION != ''
-        run: npm run publish:filigran-ui
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Build packages
+        run: |
+          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            echo "Building filigran-icon..."
+            yarn workspace filigran-icon run build
+          fi
+          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+            echo "Building filigran-ui..."
+            yarn workspace filigran-ui run build
+          fi
 
       - name: Publish Filigran-icon to NPM
         if: (github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both') && env.FILIGRAN_ICON_VERSION != ''
-        run: npm run publish:filigran-icon
+        working-directory: ./packages/filigran-icon
+        run: yarn publish --access public --no-git-tag-version
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish Filigran-ui to NPM
+        if: (github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both') && env.FILIGRAN_UI_VERSION != ''
+        working-directory: ./packages/filigran-ui
+        run: yarn publish --access public --no-git-tag-version
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -208,6 +232,8 @@ jobs:
             ### Installation
             ```bash
             npm install @filigran/filigran-ui@${{ env.FILIGRAN_UI_VERSION }}
+            # or
+            yarn add @filigran/filigran-ui@${{ env.FILIGRAN_UI_VERSION }}
             ```
             
             ${{ steps.changelog.outputs.changelog }}
@@ -225,24 +251,39 @@ jobs:
           name: Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
           body: |
             ## Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
+            
             ### Installation
             ```bash
             npm install @filigran/filigran-icon@${{ env.FILIGRAN_ICON_VERSION }}
+            # or
+            yarn add @filigran/filigran-icon@${{ env.FILIGRAN_ICON_VERSION }}
             ```
             
             ${{ steps.changelog.outputs.changelog }}
+            
+            ### Issues Closed
+            ${{ steps.changelog.outputs.icon_issues }}
           draft: false
           prerelease: false
 
-      - name: Update project status (Filigran-UI only)
-        if: env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != ''
+      - name: Update project status
+        if: (env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != '') || (env.FILIGRAN_ICON_VERSION != '' && steps.changelog.outputs.icon_issues != '')
         uses: actions/github-script@v7
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
-            const issues = '${{ steps.changelog.outputs.ui_issues }}'.trim().split(' ');
-            const version = '${{ env.FILIGRAN_UI_VERSION }}';
-            const releaseMessage = `🎉 This issue has been resolved and released in filigran-ui v${version}`;
+            const uiIssues = '${{ steps.changelog.outputs.ui_issues }}'.trim().split(' ').filter(Boolean);
+            const iconIssues = '${{ steps.changelog.outputs.icon_issues }}'.trim().split(' ').filter(Boolean);
+            const uiVersion = '${{ env.FILIGRAN_UI_VERSION }}';
+            const iconVersion = '${{ env.FILIGRAN_ICON_VERSION }}';
+            
+            // Combine all issues
+            const allIssues = [...new Set([...uiIssues, ...iconIssues])];
+            
+            if (allIssues.length === 0) {
+              console.log('No issues to process');
+              return;
+            }
             
             // First part: Get project field IDs
             const projectFieldsQuery = `
@@ -295,7 +336,6 @@ jobs:
                 statusFieldId = field.id;
                 console.log(`✓ Found Status field: ${field.id}`);
             
-                // Find the Done option
                 const doneOption = field.options.find(opt => 
                   opt.name.toLowerCase() === 'done'
                 );
@@ -314,7 +354,6 @@ jobs:
               });
             }
             
-            // Second part: Get issue project items and update them
             const getProjectItemQuery = `
               query($owner: String!, $repo: String!, $issue: Int!) {
                 repository(owner: $owner, name: $repo) {
@@ -351,11 +390,19 @@ jobs:
             `;
             
             // Process each issue
-            for (const issue of issues) {
+            for (const issue of allIssues) {
               if (!issue) continue;
             
               try {
                 const issueNumber = parseInt(issue);
+            
+                // Determine which version to use
+                let version = '';
+                if (uiIssues.includes(issue) && uiVersion) {
+                  version = uiVersion;
+                } else if (iconIssues.includes(issue) && iconVersion) {
+                  version = iconVersion;
+                }
             
                 // Get project items for this issue
                 const itemData = await github.graphql(getProjectItemQuery, {
@@ -387,7 +434,7 @@ jobs:
                     }
             
                     // Update Version field
-                    if (versionFieldId) {
+                    if (versionFieldId && version) {
                       try {
                         await github.graphql(updateFieldMutation, {
                           projectId: projectId,
@@ -403,51 +450,78 @@ jobs:
                   }
                 }
             
-                console.log(`✓ Closed issue #${issue} and added release comment`);
+                console.log(`✓ Updated project fields for issue #${issue}`);
             
               } catch (error) {
                 console.error(`Failed to process issue #${issue}: ${error.message}`);
               }
             }
 
-      - name: Close issues and add comments (Filigran-UI only)
-        if: env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != ''
+      - name: Close issues and add comments
+        if: (env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != '') || (env.FILIGRAN_ICON_VERSION != '' && steps.changelog.outputs.icon_issues != '')
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issues = '${{ steps.changelog.outputs.ui_issues }}'.trim().split(' ');
-            const version = '${{ env.FILIGRAN_UI_VERSION }}';
-            const releaseMessage = `🎉 This issue has been resolved and released in filigran-ui v${version}`;
-
-            for (const issue of issues) {
+            const uiIssues = '${{ steps.changelog.outputs.ui_issues }}'.trim().split(' ').filter(Boolean);
+            const iconIssues = '${{ steps.changelog.outputs.icon_issues }}'.trim().split(' ').filter(Boolean);
+            const uiVersion = '${{ env.FILIGRAN_UI_VERSION }}';
+            const iconVersion = '${{ env.FILIGRAN_ICON_VERSION }}';
+            
+            // Process UI issues
+            for (const issue of uiIssues) {
               if (!issue) continue;
-
               try {
                 const issueNumber = parseInt(issue);
-
-                // Add comment to issue
+                const releaseMessage = `🎉 This issue has been resolved and released in filigran-ui v${uiVersion}`;
+            
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issueNumber,
                   body: releaseMessage
                 });
-
-                // Close the issue
+            
                 await github.rest.issues.update({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issueNumber,
                   state: 'closed'
                 });
-
-                console.log(`✓ Closed issue #${issue} and added release comment`);
-
+            
+                console.log(`✓ Closed UI issue #${issue} and added release comment`);
               } catch (error) {
-                console.error(`Failed to close issue #${issue}: ${error.message}`);
+                console.error(`Failed to close UI issue #${issue}: ${error.message}`);
               }
             }
+            
+            // Process Icon issues
+            for (const issue of iconIssues) {
+              if (!issue || uiIssues.includes(issue)) continue; // Skip duplicates
+              try {
+                const issueNumber = parseInt(issue);
+                const releaseMessage = `🎉 This issue has been resolved and released in filigran-icon v${iconVersion}`;
+            
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body: releaseMessage
+                });
+            
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  state: 'closed'
+                });
+            
+                console.log(`✓ Closed Icon issue #${issue} and added release comment`);
+              } catch (error) {
+                console.error(`Failed to close Icon issue #${issue}: ${error.message}`);
+              }
+            }
+
       - name: Summary
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
@@ -468,7 +542,14 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
           
+          if [ -n "$ICON_ISSUES_TO_CLOSE" ] && [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            echo "### Closed Issues (Filigran-Icon)" >> $GITHUB_STEP_SUMMARY
+            for issue in $ICON_ISSUES_TO_CLOSE; do
+              echo "- #$issue" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "- Check the [NPM Registry](https://www.npmjs.com/org/filigran) for published packages" >> $GITHUB_STEP_SUMMARY
           echo "- View the created [GitHub Releases](https://github.com/${{ github.repository }}/releases)" >> $GITHUB_STEP_SUMMARY
-
