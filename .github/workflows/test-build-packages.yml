@@ -1,0 +1,130 @@
+name: Test Build Packages
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+concurrency:
+  group: "test-build-${{ github.ref }}"
+  cancel-in-progress: true
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "23"
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Setup Yarn
+        run: corepack prepare yarn@4.10.3 --activate
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .next/cache
+            .yarn/cache
+            packages/*/node_modules
+            projects/*/node_modules
+            node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}-
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Cache workspace
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .
+            !.git
+          key: workspace-${{ github.sha }}
+
+  build-packages:
+    runs-on: ubuntu-latest
+    needs: install
+    strategy:
+      matrix:
+        package: [filigran-icon, filigran-ui]
+      fail-fast: false
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "23"
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Setup Yarn
+        run: corepack prepare yarn@4.10.3 --activate
+      - name: Restore workspace
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .
+            !.git
+          key: workspace-${{ github.sha }}
+      - name: Build ${{ matrix.package }}
+        run: yarn build:${{ matrix.package }}
+      - name: Cache ${{ matrix.package }} build
+        uses: actions/cache/save@v4
+        with:
+          path: packages/${{ matrix.package }}/dist
+          key: build-${{ matrix.package }}-${{ github.sha }}
+      - name: Check build output
+        run: |
+          echo "✅ Build completed successfully for ${{ matrix.package }}"
+
+  build-website:
+    runs-on: ubuntu-latest
+    needs: build-packages
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "23"
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Setup Yarn
+        run: corepack prepare yarn@4.10.3 --activate
+      - name: Restore workspace
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .
+            !.git
+          key: workspace-${{ github.sha }}
+      - name: Restore filigran-icon build
+        uses: actions/cache/restore@v4
+        with:
+          path: packages/filigran-icon/dist
+          key: build-filigran-icon-${{ github.sha }}
+      - name: Restore filigran-ui build
+        uses: actions/cache/restore@v4
+        with:
+          path: packages/filigran-ui/dist
+          key: build-filigran-ui-${{ github.sha }}
+      - name: Build filigran-website
+        run: yarn build:filigran-website
+      - name: Check build output
+        run: |
+          echo "✅ Build completed successfully for filigran-website"
+
+  test-build-summary:
+    runs-on: ubuntu-latest
+    needs: [build-packages, build-website]
+    if: always()
+    steps:
+      - name: Check build status
+        run: |
+          if [ "${{ needs.build-packages.result }}" == "success" ] && [ "${{ needs.build-website.result }}" == "success" ]; then
+            echo "✅ All package builds passed!"
+            exit 0
+          else
+            echo "❌ Some package builds failed"
+            exit 1
+          fi

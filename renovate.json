@@ -1,3 +1,24 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base"],
+  "timezone": "Europe/Paris",
+  "schedule": ["* * * * 0,6"],
+  "labels": ["dependencies", "filigran team"],
+  "ignorePaths": ["charts/**"],
+  "prConcurrentLimit": 5,
+  "rebaseWhen": "behind-base-branch",
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    {
+      "description": "batch on sunday morning, non-major update of dev dependencies",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "devDependencies (non-major)",
+      "groupSlug": "dev-dependencies-non-major"
+    }
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* * * * 0,6"]
+  }
 }
