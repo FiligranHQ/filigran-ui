@@ -20,11 +20,9 @@ on:
           - filigran-ui
           - filigran-icon
           - both
-
 env:
   ORGANIZATION: 'FiligranHQ'
   PROJECT_NUMBER: 30
-
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -33,7 +31,6 @@ jobs:
       packages: write
       id-token: write
       issues: write
-
     steps:
       - uses: actions/create-github-app-token@v2
         id: app-token
@@ -41,28 +38,29 @@ jobs:
           app-id: ${{ vars.FILIGRANHQ_PROJECT_APP_ID }}
           private-key: ${{ secrets.FILIGRANHQ_PROJECT_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '23'
           registry-url: 'https://registry.npmjs.org'
-          cache: 'yarn'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Yarn
+        run: corepack prepare yarn@4.10.3 --activate
 
       - name: Configure Git
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
+        run: yarn install --immutable
       - name: Get current versions
         run: |
           if [[ "${{ github.event.inputs.package }}" == "filigran-ui" ]] || [[ "${{ github.event.inputs.package }}" == "both" ]]; then
@@ -71,21 +69,18 @@ jobs:
           if [[ "${{ github.event.inputs.package }}" == "filigran-icon" ]] || [[ "${{ github.event.inputs.package }}" == "both" ]]; then
             echo "FILIGRAN_ICON_CURRENT_VERSION=$(node -p "require('./packages/filigran-icon/package.json').version")" >> $GITHUB_ENV
           fi
-
       - name: Update version for Filigran-ui
         if: github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both'
         working-directory: ./packages/filigran-ui
         run: |
           yarn version --${{ github.event.inputs.version_type }} --no-git-tag-version
           echo "FILIGRAN_UI_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-
       - name: Update version for Filigran-icon
         if: github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both'
         working-directory: ./packages/filigran-icon
         run: |
           yarn version --${{ github.event.inputs.version_type }} --no-git-tag-version
           echo "FILIGRAN_ICON_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-
       - name: Collect commits and issues for changelog
         id: changelog
         run: |
@@ -162,7 +157,6 @@ jobs:
           # Also save to environment for debugging
           echo "UI_ISSUES_TO_CLOSE=$UI_ISSUES" >> $GITHUB_ENV
           echo "ICON_ISSUES_TO_CLOSE=$ICON_ISSUES" >> $GITHUB_ENV
-
       - name: Commit version changes
         run: |
           git add .
@@ -182,7 +176,6 @@ jobs:
           
           git commit -m "$COMMIT_MSG"
           git push
-
       - name: Create Git tags
         run: |
           if [ -n "$FILIGRAN_UI_VERSION" ]; then
@@ -194,7 +187,6 @@ jobs:
             echo "Created tag: filigran-icon-v$FILIGRAN_ICON_VERSION"
           fi
           git push --tags
-
       - name: Build packages
         run: |
           if [ -n "$FILIGRAN_ICON_VERSION" ]; then
@@ -205,21 +197,20 @@ jobs:
             echo "Building filigran-ui..."
             yarn workspace filigran-ui run build
           fi
-
       - name: Publish Filigran-icon to NPM
         if: (github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both') && env.FILIGRAN_ICON_VERSION != ''
         working-directory: ./packages/filigran-icon
-        run: yarn publish --access public --no-git-tag-version
+        run: yarn npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish Filigran-ui to NPM
         if: (github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both') && env.FILIGRAN_UI_VERSION != ''
         working-directory: ./packages/filigran-ui
-        run: yarn publish --access public --no-git-tag-version
+        run: yarn npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create GitHub Release for Filigran-ui
         if: (github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both') && env.FILIGRAN_UI_VERSION != ''
         uses: softprops/action-gh-release@v1
@@ -242,7 +233,6 @@ jobs:
             ${{ steps.changelog.outputs.ui_issues }}
           draft: false
           prerelease: false
-
       - name: Create GitHub Release for Filigran-icon
         if: (github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both') && env.FILIGRAN_ICON_VERSION != ''
         uses: softprops/action-gh-release@v1
@@ -265,7 +255,6 @@ jobs:
             ${{ steps.changelog.outputs.icon_issues }}
           draft: false
           prerelease: false
-
       - name: Update project status
         if: (env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != '') || (env.FILIGRAN_ICON_VERSION != '' && steps.changelog.outputs.icon_issues != '')
         uses: actions/github-script@v7
@@ -456,7 +445,6 @@ jobs:
                 console.error(`Failed to process issue #${issue}: ${error.message}`);
               }
             }
-
       - name: Close issues and add comments
         if: (env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != '') || (env.FILIGRAN_ICON_VERSION != '' && steps.changelog.outputs.icon_issues != '')
         uses: actions/github-script@v7
@@ -521,7 +509,6 @@ jobs:
                 console.error(`Failed to close Icon issue #${issue}: ${error.message}`);
               }
             }
-
       - name: Summary
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
