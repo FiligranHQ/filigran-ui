@@ -5135,7 +5135,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:*, @types/react@npm:^18.3.3":
+"@types/react@npm:*":
   version: 18.3.24
   resolution: "@types/react@npm:18.3.24"
   dependencies:
@@ -8759,7 +8759,6 @@ __metadata:
     "@radix-ui/react-tooltip": "npm:1.2.7"
     "@tanstack/react-table": "npm:8.21.2"
     "@types/ramda": "npm:0.30.2"
-    "@types/react": "npm:^18.3.3"
     "@types/react-color": "npm:3.0.13"
     "@types/react-dom": "npm:^18.3.1"
     autoprefixer: "npm:10.4.21"
@@ -8792,6 +8791,7 @@ __metadata:
     usehooks-ts: "npm:3.1.1"
     zod: "npm:4.1.12"
   peerDependencies:
+    "@types/react": ^16.8 || ^17.0 || ^18.0 || ^19.0
     react: ^16.8 || ^17.0 || ^18.0 || ^19.0
     react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0
   languageName: unknown
