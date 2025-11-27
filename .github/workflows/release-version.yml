@@ -73,13 +73,13 @@ jobs:
         if: github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both'
         working-directory: ./packages/filigran-ui
         run: |
-          yarn version --${{ github.event.inputs.version_type }} --no-git-tag-version
+          yarn version ${{ github.event.inputs.version_type }}
           echo "FILIGRAN_UI_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
       - name: Update version for Filigran-icon
         if: github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both'
         working-directory: ./packages/filigran-icon
         run: |
-          yarn version --${{ github.event.inputs.version_type }} --no-git-tag-version
+          yarn version ${{ github.event.inputs.version_type }}
           echo "FILIGRAN_ICON_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
       - name: Collect commits and issues for changelog
         id: changelog
