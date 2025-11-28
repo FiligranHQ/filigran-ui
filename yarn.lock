@@ -8712,14 +8712,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"filigran-icon@npm:^0.15.0":
-  version: 0.15.1
-  resolution: "filigran-icon@npm:0.15.1"
-  checksum: 10c0/3f25dce5e1f9a8399c4ed03b1865695882b0ec4b0c1aad2fdec64b53cca6eed8390a6896b1def586b1a9e9d508c53e7facb5eff1596a8db96f6ed04128f1af8f
-  languageName: node
-  linkType: hard
-
-"filigran-icon@workspace:packages/filigran-icon":
+"filigran-icon@npm:^0.20.0, filigran-icon@workspace:packages/filigran-icon":
   version: 0.0.0-use.local
   resolution: "filigran-icon@workspace:packages/filigran-icon"
   dependencies:
@@ -8767,7 +8760,7 @@ __metadata:
     cmdk: "npm:1.1.1"
     date-fns: "npm:4.1.0"
     embla-carousel-react: "npm:8.6.0"
-    filigran-icon: "npm:^0.15.0"
+    filigran-icon: "npm:^0.20.0"
     postcss: "npm:8.5.6"
     prettier: "npm:3.6.2"
     prettier-plugin-organize-imports: "npm:4.1.0"
