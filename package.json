@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "yarn workspaces foreach -pt run build",
+    "build": "yarn build:filigran-icon && yarn build:filigran-ui && yarn build:filigran-website",
     "build:filigran-website": "yarn workspace filigran-website run build",
     "build:filigran-icon": "yarn workspace filigran-icon run build",
     "build:filigran-ui": "yarn workspace filigran-ui run build",
