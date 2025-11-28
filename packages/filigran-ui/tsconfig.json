@@ -12,6 +12,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "skipDefaultLibCheck": true
+    "skipDefaultLibCheck": true,
+    "paths": {
+      "filigran-icon": ["../filigran-icon/src/index.ts"]
+    }
   }
 }
