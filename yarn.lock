@@ -8717,7 +8717,7 @@ __metadata:
   resolution: "filigran-icon@workspace:packages/filigran-icon"
   dependencies:
     "@svgr/cli": "npm:8.1.0"
-    rimraf: "npm:3.0.2"
+    rimraf: "npm:6.1.2"
     tsup: "npm:8.3.5"
     typescript: "npm:^5.7.2"
   languageName: unknown
@@ -8772,7 +8772,7 @@ __metadata:
     react-easy-sort: "npm:1.6.0"
     react-hook-form: "npm:7.55.0"
     react-router-dom: "npm:7.1.5"
-    rimraf: "npm:3.0.2"
+    rimraf: "npm:6.1.2"
     tailwind-merge: "npm:2.3.0"
     tailwindcss: "npm:3.4.4"
     tailwindcss-animate: "npm:1.0.7"
@@ -13030,7 +13030,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"package-json-from-dist@npm:^1.0.0":
+"package-json-from-dist@npm:^1.0.0, package-json-from-dist@npm:^1.0.1":
   version: 1.0.1
   resolution: "package-json-from-dist@npm:1.0.1"
   checksum: 10c0/62ba2785eb655fec084a257af34dbe24292ab74516d6aecef97ef72d4897310bc6898f6c85b5cd22770eaa1ce60d55a0230e150fb6a966e3ecd6c511e23d164b
@@ -14670,7 +14670,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rimraf@npm:3.0.2, rimraf@npm:^3.0.2":
+"rimraf@npm:6.1.2":
+  version: 6.1.2
+  resolution: "rimraf@npm:6.1.2"
+  dependencies:
+    glob: "npm:^13.0.0"
+    package-json-from-dist: "npm:^1.0.1"
+  bin:
+    rimraf: dist/esm/bin.mjs
+  checksum: 10c0/c11a6a6fad937ada03c12fe688860690df8296d7cd08dbe59e3cc087f44e43573ae26ecbe48e54cb7a6db745b8c81fe5a15b9359233cc21d52d9b5b3330fcc74
+  languageName: node
+  linkType: hard
+
+"rimraf@npm:^3.0.2":
   version: 3.0.2
   resolution: "rimraf@npm:3.0.2"
   dependencies:
