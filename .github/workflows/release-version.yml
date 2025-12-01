@@ -213,7 +213,7 @@ jobs:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create GitHub Release for Filigran-ui
         if: (github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both') && env.FILIGRAN_UI_VERSION != ''
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: filigran-ui-v${{ env.FILIGRAN_UI_VERSION }}
           name: Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
@@ -235,7 +235,7 @@ jobs:
           prerelease: false
       - name: Create GitHub Release for Filigran-icon
         if: (github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both') && env.FILIGRAN_ICON_VERSION != ''
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: filigran-icon-v${{ env.FILIGRAN_ICON_VERSION }}
           name: Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
