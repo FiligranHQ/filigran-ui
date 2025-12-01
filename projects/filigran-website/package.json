@@ -39,7 +39,7 @@
     "tailwind-merge": "2.5.3",
     "tailwindcss-animate": "1.0.7",
     "twind": "0.16.19",
-    "usehooks-ts": "3.1.0"
+    "usehooks-ts": "3.1.1"
   },
   "devDependencies": {
     "@svgr/webpack": "8.1.0",
