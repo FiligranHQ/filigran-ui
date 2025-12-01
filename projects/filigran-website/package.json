@@ -13,7 +13,7 @@
     "@codesandbox/sandpack-react": "2.19.9",
     "@codesandbox/sandpack-themes": "2.0.21",
     "@faker-js/faker": "10.1.0",
-    "@floating-ui/react-dom": "2.1.2",
+    "@floating-ui/react-dom": "2.1.6",
     "@jsdevtools/rehype-toc": "3.0.2",
     "@radix-ui/react-accordion": "1.2.1",
     "@radix-ui/react-dropdown-menu": "2.1.2",
