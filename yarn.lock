@@ -8837,7 +8837,7 @@ __metadata:
     tailwindcss-animate: "npm:1.0.7"
     twind: "npm:0.16.19"
     typescript: "npm:5.6.2"
-    usehooks-ts: "npm:3.1.0"
+    usehooks-ts: "npm:3.1.1"
   languageName: unknown
   linkType: soft
 
@@ -17056,17 +17056,6 @@ __metadata:
   peerDependencies:
     react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
   checksum: 10c0/1b8663515c0be34fa653feb724fdcce3984037c78dd4a18f68b2c8be55cc1a1084c578d5b75f158d41b5ddffc2bf5600766d1af3c19c8e329bb20af2ec6f52f4
-  languageName: node
-  linkType: hard
-
-"usehooks-ts@npm:3.1.0":
-  version: 3.1.0
-  resolution: "usehooks-ts@npm:3.1.0"
-  dependencies:
-    lodash.debounce: "npm:^4.0.8"
-  peerDependencies:
-    react: ^16.8.0  || ^17 || ^18
-  checksum: 10c0/2204d8c95109302bdaaa51a66bf216f3dba750f1d2795c20ecba75ba1c44a070a253935d537ef536514ab6e363bcc02ccc78b5ad63576ff8d880d577cf3fc48f
   languageName: node
   linkType: hard
 
