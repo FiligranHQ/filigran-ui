@@ -21,7 +21,7 @@
     "@radix-ui/react-tabs": "1.1.1",
     "@types/resize-observer-browser": "0.1.11",
     "aria-hidden": "1.2.6",
-    "canvas-confetti": "1.9.3",
+    "canvas-confetti": "1.9.4",
     "class-variance-authority": "0.7.0",
     "clsx": "2.1.1",
     "lucide-react": "0.447.0",
