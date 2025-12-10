@@ -4997,7 +4997,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:^18.3.1":
+"@types/react-dom@npm:18.3.7":
   version: 18.3.7
   resolution: "@types/react-dom@npm:18.3.7"
   peerDependencies:
@@ -8602,7 +8602,7 @@ __metadata:
     "@radix-ui/react-tooltip": "npm:1.2.7"
     "@tanstack/react-table": "npm:8.21.2"
     "@types/react-color": "npm:3.0.13"
-    "@types/react-dom": "npm:^18.3.1"
+    "@types/react-dom": "npm:18.3.7"
     autoprefixer: "npm:10.4.21"
     class-variance-authority: "npm:0.7.1"
     clsx: "npm:2.1.1"
