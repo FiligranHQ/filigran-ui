@@ -1,5 +1,7 @@
 {
-  "private": true,
+  "name": "filigran-email",
+  "version": "1.0.0",
+  "license": "MIT",
   "scripts": {
     "dev": "maizzle serve",
     "build": "maizzle build production"
@@ -7,9 +9,5 @@
   "dependencies": {
     "@maizzle/framework": "4.8.9",
     "tailwindcss-preset-email": "1.1.0"
-  },
-  "name": "filigran-email",
-  "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT"
+  }
 }
