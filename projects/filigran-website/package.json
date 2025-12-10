@@ -22,7 +22,7 @@
     "@types/resize-observer-browser": "0.1.11",
     "aria-hidden": "1.2.6",
     "canvas-confetti": "1.9.4",
-    "class-variance-authority": "0.7.0",
+    "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "0.447.0",
     "next": "14.2.14",
