@@ -8676,7 +8676,7 @@ __metadata:
     react-live: "npm:4.1.7"
     react-remove-scroll: "npm:2.6.0"
     rehype-slug: "npm:6.0.0"
-    remark-gfm: "npm:3.0.0"
+    remark-gfm: "npm:3.0.1"
     styled-components: "npm:6.1.13"
     tailwind-merge: "npm:2.5.3"
     tailwindcss: "npm:3.4.13"
@@ -14156,15 +14156,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"remark-gfm@npm:3.0.0":
-  version: 3.0.0
-  resolution: "remark-gfm@npm:3.0.0"
+"remark-gfm@npm:3.0.1":
+  version: 3.0.1
+  resolution: "remark-gfm@npm:3.0.1"
   dependencies:
     "@types/mdast": "npm:^3.0.0"
     mdast-util-gfm: "npm:^2.0.0"
     micromark-extension-gfm: "npm:^2.0.0"
     unified: "npm:^10.0.0"
-  checksum: 10c0/857f282171bc813f8daea47e0b209489b4a297db0d267d6854ed7ce80eeee296201feb66ca6cacf594563276f22750bb1977ef3b1ae28cebf9ba9ca0395c1bb3
+  checksum: 10c0/53c4e82204f82f81949a170efdeb49d3c45137b7bca06a7ff857a483aac1a44b55ef0de8fb1bbe4f1292f2a378058e2e42e644f2c61f3e0cdc3e56afa4ec2a2c
   languageName: node
   linkType: hard
 
