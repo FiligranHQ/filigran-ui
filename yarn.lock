@@ -1202,7 +1202,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/runtime@npm:^7.14.0, @babel/runtime@npm:^7.24.1":
+"@babel/runtime@npm:^7.14.0":
   version: 7.28.4
   resolution: "@babel/runtime@npm:7.28.4"
   checksum: 10c0/792ce7af9750fb9b93879cc9d1db175701c4689da890e6ced242ea0207c9da411ccf16dc04e689cc01158b28d7898c40d75598f4559109f761c12ce01e959bf7
@@ -8022,7 +8022,7 @@ __metadata:
     react-easy-sort: "npm:1.6.0"
     react-hook-form: "npm:7.68.0"
     rimraf: "npm:6.1.2"
-    tailwind-merge: "npm:2.3.0"
+    tailwind-merge: "npm:2.6.0"
     tailwindcss: "npm:3.4.4"
     tailwindcss-animate: "npm:1.0.7"
     tailwindcss-scoped-preflight: "npm:3.4.12"
@@ -8080,7 +8080,7 @@ __metadata:
     rehype-slug: "npm:6.0.0"
     remark-gfm: "npm:3.0.1"
     styled-components: "npm:6.1.19"
-    tailwind-merge: "npm:2.5.3"
+    tailwind-merge: "npm:2.6.0"
     tailwindcss: "npm:3.4.13"
     tailwindcss-animate: "npm:1.0.7"
     twind: "npm:0.16.19"
@@ -15034,19 +15034,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwind-merge@npm:2.3.0":
-  version: 2.3.0
-  resolution: "tailwind-merge@npm:2.3.0"
-  dependencies:
-    "@babel/runtime": "npm:^7.24.1"
-  checksum: 10c0/5ea308e23c3ab1cf4c3f35f0a471753f4d3ed232d63dd7c09151a74428737321902203d90e9f0cb76ea5c3978e71b0adbc503dc455e56cda967a7674ae4b94b5
-  languageName: node
-  linkType: hard
-
-"tailwind-merge@npm:2.5.3":
-  version: 2.5.3
-  resolution: "tailwind-merge@npm:2.5.3"
-  checksum: 10c0/1d3fb3eae7b5d7c30aad1e7cf74cf5e6fcb1e0319cc91bb29e266837819b23cd226d667a15e8d3f26db81b4abc30332be5d831f2c819e1bebafdcd7b2a1d4e48
+"tailwind-merge@npm:2.6.0":
+  version: 2.6.0
+  resolution: "tailwind-merge@npm:2.6.0"
+  checksum: 10c0/fc8a5535524de9f4dacf1c16ab298581c7bb757d68a95faaf28942b1c555a619bba9d4c6726fe83986e44973b315410c1a5226e5354c30ba82353bd6d2288fa5
   languageName: node
   linkType: hard
 
