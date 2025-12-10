@@ -1,6 +1,5 @@
 'use client'
 import {
-  ColumnDef,
   getPaginationRowModel,
   getSortedRowModel,
   PaginationState,
@@ -24,6 +23,31 @@ import {Button, Input} from 'filigran-ui'
 import {makeData, Person} from '@/utils/makeData'
 import {useLocalStorage} from 'usehooks-ts'
 import {MoreVertIcon} from 'filigran-icon'
+
+const HighlightSearchTerm = ({inputSearch, text}: {inputSearch: string, text: string}) => {
+  if (!inputSearch) {
+    return <span>{text}</span>
+  }
+
+  // Split the text into parts based on the search term
+  const parts = text.split(new RegExp(`(${inputSearch})`, 'gi'))
+
+  return (
+    <span>
+        {parts.map((part, index) =>
+          part.toLowerCase() === inputSearch.toLowerCase() ? (
+            <span
+              key={index}
+              className={'bg-red text-white'}>
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+  )
+}
 
 export function ExampleDataTable() {
   const [rowSelection, setRowSelection] = useState({})
@@ -96,16 +120,16 @@ export function ExampleDataTable() {
         enableHiding: true,
         enableSorting: false,
         cell: (info) => (
-          <HighlightSearchTerm text={info.getValue() as string} />
+          <HighlightSearchTerm inputSearch={inputSearch} text={info.getValue() as string} />
         ),
         header: 'First name',
       },
       {
-        accessorFn: (row) => row.lastName,
         id: 'lastName',
+        accessorKey: 'lastName',
         enableHiding: false,
         cell: (info) => (
-          <HighlightSearchTerm text={info.getValue() as string} />
+          <HighlightSearchTerm inputSearch={inputSearch} text={info.getValue() as string} />
         ),
         optionsHeader: (header) => (
           <DataTableOptionsHeader
@@ -201,30 +225,6 @@ export function ExampleDataTable() {
   const onResetTable = () => {
     console.log('Reset table')
     removeColumnOrder()
-  }
-  const HighlightSearchTerm = ({text}: {text: string}) => {
-    if (!inputSearch) {
-      return <span>{text}</span>
-    }
-
-    // Split the text into parts based on the search term
-    const parts = text.split(new RegExp(`(${inputSearch})`, 'gi'))
-
-    return (
-      <span>
-        {parts.map((part, index) =>
-          part.toLowerCase() === inputSearch.toLowerCase() ? (
-            <span
-              key={index}
-              className={'bg-red text-white'}>
-              {part}
-            </span>
-          ) : (
-            part
-          )
-        )}
-      </span>
-    )
   }
   return (
     <div className="not-prose">
