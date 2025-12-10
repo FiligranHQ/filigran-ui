@@ -8065,7 +8065,7 @@ __metadata:
     clsx: "npm:2.1.1"
     eslint: "npm:8.57.0"
     eslint-config-next: "npm:14.2.14"
-    lucide-react: "npm:0.447.0"
+    lucide-react: "npm:0.556.0"
     next: "npm:14.2.33"
     next-mdx-remote: "npm:4.4.1"
     next-themes: "npm:0.3.0"
@@ -10387,12 +10387,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lucide-react@npm:0.447.0":
-  version: 0.447.0
-  resolution: "lucide-react@npm:0.447.0"
+"lucide-react@npm:0.556.0":
+  version: 0.556.0
+  resolution: "lucide-react@npm:0.556.0"
   peerDependencies:
-    react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
-  checksum: 10c0/c8831795a4b4429d0cad28f33baf924d285eb64a0ecbce013a3307e7fab998cd5a48e3dce3607bbfa88fa383b8c603947965453acb60c94e2ef39956afe1eb67
+    react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10c0/5c73bd317b2cd7d220082d1cc6f78c864819652be87a84c976f2b08aae0bf257b0f066f86f5d84c2cb838ba8fbd2fb1d2b9d84fbe025d9c6cb97dbf1cdbf6bbc
   languageName: node
   linkType: hard
 
