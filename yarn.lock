@@ -5043,13 +5043,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"array-move@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "array-move@npm:3.0.1"
-  checksum: 10c0/c8c33c987a98026ffab27f7a9be72a8b3198b05d16feb5fe7623f3ac0d7b4c97ad4275053238b130fbccb1e6da8cedff494004329411d27b9e7c67f9c33b6a73
-  languageName: node
-  linkType: hard
-
 "array.prototype.findlast@npm:^1.2.5":
   version: 1.2.5
   resolution: "array.prototype.findlast@npm:1.2.5"
@@ -8019,7 +8012,7 @@ __metadata:
     react-color: "npm:2.19.3"
     react-day-picker: "npm:8.10.1"
     react-dom: "npm:18.3.1"
-    react-easy-sort: "npm:1.6.0"
+    react-easy-sort: "npm:1.8.0"
     react-hook-form: "npm:7.68.0"
     rimraf: "npm:6.1.2"
     tailwind-merge: "npm:2.3.0"
@@ -13251,16 +13244,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-easy-sort@npm:1.6.0":
-  version: 1.6.0
-  resolution: "react-easy-sort@npm:1.6.0"
+"react-easy-sort@npm:1.8.0":
+  version: 1.8.0
+  resolution: "react-easy-sort@npm:1.8.0"
   dependencies:
-    array-move: "npm:^3.0.1"
-    tslib: "npm:2.0.1"
+    tslib: "npm:^2.8.1"
   peerDependencies:
     react: ">=16.4.0"
     react-dom: ">=16.4.0"
-  checksum: 10c0/a5d00d72acb82702d0991f8fd2a5a135b9d3dc857ecb9e87f9ace1864380fda913558493819d7f361bad1b399bac1b952cbda1ebef711435bb66471c74073847
+  checksum: 10c0/f77b95041856b46ab619d5ac3188cc0ff73f4ae8d28ed364cfaa756ce20032dad58d337ff1a49c649f3b42cbbf174378de342e04d3cf5ed7473515af7acd07bd
   languageName: node
   linkType: hard
 
@@ -15394,13 +15386,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:2.0.1":
-  version: 2.0.1
-  resolution: "tslib@npm:2.0.1"
-  checksum: 10c0/5f370da8ac0e9c7f2440a3fd8013682c042a8eeace93849a44a8d4252770e4830fce3201b0bc5a6045c7e28b80eaebe3a3b48e656aa7b4f9681b9a9d7263cfaf
-  languageName: node
-  linkType: hard
-
 "tslib@npm:2.6.2":
   version: 2.6.2
   resolution: "tslib@npm:2.6.2"
@@ -15415,7 +15400,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:^2.0.0, tslib@npm:^2.0.3, tslib@npm:^2.1.0, tslib@npm:^2.4.0":
+"tslib@npm:^2.0.0, tslib@npm:^2.0.3, tslib@npm:^2.1.0, tslib@npm:^2.4.0, tslib@npm:^2.8.1":
   version: 2.8.1
   resolution: "tslib@npm:2.8.1"
   checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
