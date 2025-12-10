@@ -85,29 +85,29 @@
   },
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/index.js"
     },
     "./plugin": {
+      "types": "./dist/plugin.d.ts",
       "require": "./dist/plugin.js",
-      "import": "./dist/plugin.js",
-      "types": "./dist/plugin.d.ts"
+      "import": "./dist/plugin.js"
     },
     "./clients": {
+      "types": "./dist/components/clients/index.d.ts",
       "require": "./dist/components/clients/index.js",
-      "import": "./dist/components/clients/index.js",
-      "types": "./dist/components/clients/index.d.ts"
+      "import": "./dist/components/clients/index.js"
     },
     "./servers": {
+      "types": "./dist/components/servers/index.d.ts",
       "require": "./dist/components/servers/index.js",
-      "import": "./dist/components/servers/index.js",
-      "types": "./dist/components/servers/index.d.ts"
+      "import": "./dist/components/servers/index.js"
     },
     "./auto-form": {
+      "types": "./dist/components/auto-form/index.d.ts",
       "require": "./dist/components/auto-form/index.js",
-      "import": "./dist/components/auto-form/index.js",
-      "types": "./dist/components/auto-form/index.d.ts"
+      "import": "./dist/components/auto-form/index.js"
     },
     "./index.css": "./dist/index.css",
     "./theme.css": "./dist/theme.css"
