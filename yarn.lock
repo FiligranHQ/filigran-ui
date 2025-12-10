@@ -7961,7 +7961,7 @@ __metadata:
   resolution: "filigran-email@workspace:packages/filigran-email"
   dependencies:
     "@maizzle/framework": "npm:4.8.9"
-    tailwindcss-preset-email: "npm:1.1.0"
+    tailwindcss-preset-email: "npm:1.4.1"
   languageName: unknown
   linkType: soft
 
@@ -15059,43 +15059,33 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwindcss-box-shadow@npm:^2.0.1":
-  version: 2.0.3
-  resolution: "tailwindcss-box-shadow@npm:2.0.3"
-  peerDependencies:
-    tailwindcss: ">=3.4.0"
-  checksum: 10c0/21a18c2f96850db28522d1dfe09223ee784fe7d17945d2b395faa226c3bad55da4741bf75ce9b7bc85546b7a73a291e535f0a377006f53ef1c0a9e3071f117c2
-  languageName: node
-  linkType: hard
-
-"tailwindcss-email-variants@npm:^3.0.0":
-  version: 3.0.4
-  resolution: "tailwindcss-email-variants@npm:3.0.4"
+"tailwindcss-email-variants@npm:^3.0.3":
+  version: 3.0.5
+  resolution: "tailwindcss-email-variants@npm:3.0.5"
   peerDependencies:
     tailwindcss: ">=3.4.0 < 4"
-  checksum: 10c0/9d31dc5656f2f5d0eb65f365c894c9f471143bc1493ee0ee620883d27a3123915353003c80c595c547abe4007441243443e3c240515b7c251320cf9da90fe529
+  checksum: 10c0/e58c74536905051faae296c5621c08e1e0a857635c1966e2cb984658b1b7bdaaa610aa925c30a71c95766113e7bb6e0029b8c2f761a01cd75405a0cfbca773b2
   languageName: node
   linkType: hard
 
-"tailwindcss-mso@npm:^1.4.2":
-  version: 1.4.4
-  resolution: "tailwindcss-mso@npm:1.4.4"
+"tailwindcss-mso@npm:^2.0.1":
+  version: 2.0.3
+  resolution: "tailwindcss-mso@npm:2.0.3"
   peerDependencies:
-    tailwindcss: ">=3.4.0"
-  checksum: 10c0/f6bd5856c1e25e296461cba1393e35bb97546b538c849f06f8aa1724a634fefaf1a68b202d518a32fab8cce71d4437d08bb7a24a4cb548cdb7500a1815c19db8
+    tailwindcss: ">=3.4.0 < 4"
+  checksum: 10c0/20b5c0b788aeb4017918ade4c07270a95f635bf18fa29149403b0714618bcc3da55e53fef9c15f782dba0a233afee39ed836a15cb6b438ee8dcadc01dd6376dd
   languageName: node
   linkType: hard
 
-"tailwindcss-preset-email@npm:1.1.0":
-  version: 1.1.0
-  resolution: "tailwindcss-preset-email@npm:1.1.0"
+"tailwindcss-preset-email@npm:1.4.1":
+  version: 1.4.1
+  resolution: "tailwindcss-preset-email@npm:1.4.1"
   dependencies:
-    tailwindcss-box-shadow: "npm:^2.0.1"
-    tailwindcss-email-variants: "npm:^3.0.0"
-    tailwindcss-mso: "npm:^1.4.2"
+    tailwindcss-email-variants: "npm:^3.0.3"
+    tailwindcss-mso: "npm:^2.0.1"
   peerDependencies:
-    tailwindcss: ">=3.4.0"
-  checksum: 10c0/7bdf79ac41841cb1138bd5e281d2b2b6e2df78a04448f58da623a3d1bfd0c97482ef10514f4cfa125b0bebbe49d676d48f15b3350d36051a2272f45abbcb9575
+    tailwindcss: ">=3.4.17"
+  checksum: 10c0/29d1ef78868bdc1935115345b8723398d3c72d988d36ea404e938f4c6b3e81e8ba06a26e97a27c36777223872df4c5773ee20ec66ddb923f0b31c564b6a5b222
   languageName: node
   linkType: hard
 
