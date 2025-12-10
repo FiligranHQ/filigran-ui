@@ -17,6 +17,6 @@ const ${componentName} = ({
 
 ${exports}
   `
-}
+};
 
-module.exports = svgTemplate
+export default svgTemplate;

@@ -1,6 +1,6 @@
-const path = require('path');
+import path from 'node:path';
 
-function defaultIndexTemplate(filePaths) {
+const defaultIndexTemplate = (filePaths) => {
   const exportEntries = filePaths.map(({ path: filePath }) => {
     const basename = path.basename(filePath, path.extname(filePath));
     const componentName = /^\d/.test(basename) ? `Svg${basename}Icon` : `${basename}Icon`;
@@ -9,4 +9,4 @@ function defaultIndexTemplate(filePaths) {
   return exportEntries.join('\n');
 }
 
-module.exports = defaultIndexTemplate;
+export default defaultIndexTemplate;
