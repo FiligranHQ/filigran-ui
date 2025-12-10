@@ -1,6 +1,22 @@
-/node_modules/
-/.idea/
-/yarn-error.log
-*~
-ui-library.iml
-/.yarn/
+# MacOS Finder files
+.DS_Store
+
+# IntelliJ Platform) | JetBrains
+.idea/
+*.iml
+
+# VSCode
+.vscode/
+.history/
+
+# NodeJS
+node_modules/
+
+# Yarn
+.yarn/
+
+# Build
+build/
+dist/
+out/
+
