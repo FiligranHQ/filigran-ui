@@ -1,24 +1,27 @@
 {
-  "name": "monorepo",
-  "version": "1.1.0",
-  "description": "",
-  "main": "index.js",
+  "name": "filigran-commons",
+  "type": "module",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FiligranHQ/filigran-ui.git"
+  },
   "scripts": {
-    "build": "yarn build:filigran-icon && yarn build:filigran-ui && yarn build:filigran-website",
-    "build:filigran-website": "yarn workspace filigran-website run build",
+    "build": "yarn workspaces foreach --all -t run build",
+    "build:filigran-email": "yarn workspace filigran-email run build",
     "build:filigran-icon": "yarn workspace filigran-icon run build",
     "build:filigran-ui": "yarn workspace filigran-ui run build",
+    "build:filigran-website": "yarn workspace filigran-website run build",
     "dev": "yarn workspace filigran-website run dev",
-    "publish:filigran-icon": "yarn build:filigran-icon && yarn workspace packages/filigran-icon publish --provenance --access public",
-    "publish:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace packages/filigran-ui publish --provenance --access public"
+    "publish:filigran-icon": "yarn build:filigran-icon && yarn workspace filigran-icon publish --provenance --access public",
+    "publish:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace filigran-ui publish --provenance --access public"
   },
-  "private": true,
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "workspaces": [
     "packages/*",
     "projects/*"
   ],
-  "packageManager": "yarn@4.12.0"
+  "packageManager": "yarn@4.12.0+sha512.f45ab632439a67f8bc759bf32ead036a1f413287b9042726b7cc4818b7b49e14e9423ba49b18f9e06ea4941c1ad062385b1d8760a8d5091a1a31e5f6219afca8",
+  "engines": {
+    "node": ">= 20.0.0"
+  }
 }
