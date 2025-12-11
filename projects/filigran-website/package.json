@@ -34,7 +34,7 @@
     "react-live": "4.1.8",
     "react-remove-scroll": "2.7.2",
     "rehype-slug": "6.0.0",
-    "remark-gfm": "3.0.1",
+    "remark-gfm": "4.0.1",
     "styled-components": "6.1.19",
     "tailwind-merge": "2.6.0",
     "tailwindcss-animate": "1.0.7",
