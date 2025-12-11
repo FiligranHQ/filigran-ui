@@ -2,7 +2,7 @@
   "name": "filigran-email",
   "type": "module",
   "version": "1.0.0",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "maizzle serve",
     "build": "maizzle build production"

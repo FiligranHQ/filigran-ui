@@ -4,7 +4,7 @@
   "version": "0.21.0",
   "description": "Filigran icon",
   "author": "Filigran",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "exports": {
