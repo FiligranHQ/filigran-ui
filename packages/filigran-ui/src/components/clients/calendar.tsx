@@ -1,10 +1,10 @@
 'use client'
 
+import {KeyboardArrowLeftIcon, KeyboardArrowRightIcon} from 'filigran-icon'
 import * as React from 'react'
 import {DayPicker} from 'react-day-picker'
 import {cn} from '../../lib/utils'
 import {buttonVariants} from '../servers'
-import {KeyboardArrowLeftIcon, KeyboardArrowRightIcon} from 'filigran-icon'
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -53,18 +53,18 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({className, ...props}) => (
-          <KeyboardArrowLeftIcon
-            className={cn('h-3 w-3', className)}
-            {...props}
-          />
-        ),
-        IconRight: ({className, ...props}) => (
-          <KeyboardArrowRightIcon
-            className={cn('h-3 w-3', className)}
-            {...props}
-          />
-        ),
+        Chevron: (props) =>
+          props.orientation === 'left' ? (
+            <KeyboardArrowLeftIcon
+              className={cn('h-3 w-3', className)}
+              {...props}
+            />
+          ) : (
+            <KeyboardArrowRightIcon
+              className={cn('h-3 w-3', className)}
+              {...props}
+            />
+          ),
       }}
       {...props}
     />
