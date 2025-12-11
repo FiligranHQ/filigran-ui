@@ -7,8 +7,8 @@
     "type": "git",
     "url": "git+https://github.com/FiligranHQ/filigran-ui.git"
   },
-  "type": "module",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev": "maizzle serve",
     "build": "maizzle build production"

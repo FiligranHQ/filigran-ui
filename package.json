@@ -7,8 +7,8 @@
     "type": "git",
     "url": "git+https://github.com/FiligranHQ/filigran-ui.git"
   },
-  "type": "module",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "yarn workspaces foreach --all -t run build",
     "build:filigran-email": "yarn workspace filigran-email run build",
