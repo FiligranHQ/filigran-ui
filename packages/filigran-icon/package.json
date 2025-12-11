@@ -21,7 +21,7 @@
     "build": "rimraf dist && yarn svgr && tsup",
     "tsup": "tsup",
     "extract-icons": "node script/fetchFromFigma.js FIGMA_FILE_ID=$FIGMA_FILE_ID FIGMA_API_TOKEN=$FIGMA_API_TOKEN",
-    "svgr": "svgr --icon --no-dimensions  --title-prop --typescript --jsx-runtime automatic --svg-props role=img -d src --index-template index-template.js  --template svg-template.js -- assets",
+    "svgr": "svgr --icon --no-dimensions  --title-prop --typescript --jsx-runtime automatic --svg-props role=img -d src --index-template index-template.js  --template svg-template.ts -- assets",
     "build:all": "yarn extract-icons && yarn svgr && yarn build"
   },
   "devDependencies": {
