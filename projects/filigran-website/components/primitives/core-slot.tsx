@@ -1,27 +1,32 @@
-import * as React from 'react'
+import { Children, cloneElement, forwardRef, isValidElement } from 'react'
+import type { HTMLAttributes, ReactElement, ReactNode } from 'react'
 
 import {composeRefs} from './use-compose-refs'
 
-interface SlotProps extends React.HTMLAttributes<HTMLElement> {
-  children?: React.ReactNode
+interface SlotProps extends HTMLAttributes<HTMLElement> {
+  children?: ReactNode
 }
 
 interface SlotCloneProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
 /*                       SLOTTABLE                            */
 /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-const Slottable = ({children}: {children: React.ReactNode}) => {
+interface SlottableProps {
+  children: ReactNode
+}
+
+const Slottable = ({children}: SlottableProps) => {
   return <>{children}</>
 }
 
 type AnyProps = Record<string, any>
 
-function isSlottable(child: React.ReactNode): child is React.ReactElement {
-  return React.isValidElement(child) && child.type === Slottable
+function isSlottable(child: ReactNode): child is ReactElement<SlottableProps> {
+  return isValidElement(child) && child.type === Slottable
 }
 
 //
@@ -29,25 +34,23 @@ function isSlottable(child: React.ReactNode): child is React.ReactElement {
 /*                         SLOT                               */
 /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-const Slot = React.forwardRef<HTMLElement, SlotProps>((props, forwardedRef) => {
+const Slot = forwardRef<HTMLElement, SlotProps>((props, forwardedRef) => {
   const {children, ...slotProps} = props
-  const childrenArray = React.Children.toArray(children)
+  const childrenArray = Children.toArray(children)
   const slottable = childrenArray.find(isSlottable)
 
   if (slottable) {
     // the new element to render is the one passed as a child of `Slottable`
-    const newElement = slottable.props.children as React.ReactNode
+    const newElement = slottable.props.children as ReactElement<SlottableProps>
 
     const newChildren = childrenArray.map((child) => {
       if (child === slottable) {
         // because the new element will be the one rendered, we are only interested
         // in grabbing its children (`newElement.props.children`)
-        if (React.Children.count(newElement) > 1) {
-          return React.Children.only(null)
+        if (Children.count(newElement) > 1) {
+          return Children.only(null)
         }
-        return React.isValidElement(newElement)
-          ? (newElement.props.children as React.ReactNode)
-          : null
+        return isValidElement(newElement) ? newElement.props.children : null
       }
       return child
     })
@@ -56,8 +59,8 @@ const Slot = React.forwardRef<HTMLElement, SlotProps>((props, forwardedRef) => {
       <SlotClone
         {...slotProps}
         ref={forwardedRef}>
-        {React.isValidElement(newElement)
-          ? React.cloneElement(newElement, undefined, newChildren)
+        {isValidElement(newElement)
+          ? cloneElement(newElement, undefined, newChildren)
           : null}
       </SlotClone>
     )
@@ -78,12 +81,12 @@ Slot.displayName = 'Slot'
 /*                       SLOT CLONE                           */
 /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-const SlotClone = React.forwardRef<any, SlotCloneProps>(
+const SlotClone = forwardRef<any, SlotCloneProps>(
   (props, forwardedRef) => {
     const {children, ...slotProps} = props
 
-    if (React.isValidElement(children)) {
-      return React.cloneElement(children, {
+    if (isValidElement<ReactElement>(children)) {
+      return cloneElement<AnyProps>(children, {
         ...mergeProps(slotProps, children.props),
         ref: forwardedRef
           ? composeRefs(forwardedRef, (children as any).ref)
@@ -91,7 +94,7 @@ const SlotClone = React.forwardRef<any, SlotCloneProps>(
       })
     }
 
-    return React.Children.count(children) > 1 ? React.Children.only(null) : null
+    return Children.count(children) > 1 ? Children.only(null) : null
   }
 )
 
