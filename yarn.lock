@@ -7184,7 +7184,7 @@ __metadata:
     react-hook-form: "npm:7.68.0"
     rimraf: "npm:6.1.2"
     tailwind-merge: "npm:3.4.0"
-    tailwindcss: "npm:3.4.18"
+    tailwindcss: "npm:4.1.17"
     tailwindcss-animate: "npm:1.0.7"
     tailwindcss-scoped-preflight: "npm:3.5.4"
     terser: "npm:5.44.1"
@@ -7242,7 +7242,7 @@ __metadata:
     remark-gfm: "npm:3.0.1"
     styled-components: "npm:6.1.19"
     tailwind-merge: "npm:3.4.0"
-    tailwindcss: "npm:3.4.18"
+    tailwindcss: "npm:4.1.17"
     tailwindcss-animate: "npm:1.0.7"
     twind: "npm:0.16.19"
     typescript: "npm:5.9.3"
@@ -12770,7 +12770,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwindcss@npm:3.4.18, tailwindcss@npm:^3.4.16":
+"tailwindcss@npm:4.1.17":
+  version: 4.1.17
+  resolution: "tailwindcss@npm:4.1.17"
+  checksum: 10c0/1fecf618ba9895e068e5a6d842b978f56a815bc849a28338cebbcb07b13df763715c2f8848def938403c73d59f08ffff33a4b83a977a9e38fa56adc60d1d56c8
+  languageName: node
+  linkType: hard
+
+"tailwindcss@npm:^3.4.16":
   version: 3.4.18
   resolution: "tailwindcss@npm:3.4.18"
   dependencies:
