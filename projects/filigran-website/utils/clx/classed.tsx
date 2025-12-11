@@ -7,6 +7,7 @@ import {
   Variants,
 } from './core'
 import {forwardRef, useMemo} from 'react'
+import type {JSX} from 'react'
 import {
   AnyComponent,
   ClassedComponentType,
