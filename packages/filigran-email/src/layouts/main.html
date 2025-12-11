@@ -23,7 +23,7 @@
     <title>{{{ page.title }}}</title>
   </if>
   <style>
-    {{{ page.css }}}
+    {{{ page.css }}}  @tailwind components;   @tailwind utilities;
   </style>
   <stack name="head" />
 </head>
@@ -35,7 +35,7 @@
     </div>
   </if>
   <div role="article" aria-roledescription="email" aria-label="{{{ page.title || '' }}}" lang="{{ page.language || 'en' }}">
-    <content />
+    <yield />
   </div>
 </body>
 </html>

@@ -10,16 +10,19 @@
 */
 
 /** @type {import('@maizzle/framework').Config} */
-module.exports = {
+const config = {
   build: {
-    templates: {
-      destination: {
-        path: 'build_production',
-      },
+    output: {
+      path: 'build_production',
+      extension: 'html',
     },
   },
-  inlineCSS: true,
-  removeUnusedCSS: true,
-  shorthandCSS: true,
+  css: {
+    inline: true,
+    purge: true,
+    shorthand: true,
+  },
   prettify: true,
-}
+};
+
+export default config;

@@ -1,6 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   presets: [require("tailwindcss-preset-email")],
+  content: [
+      './src/components/**/*.html',
+      './src/templates/**/*.html',
+      './src/layouts/**/*.html',
+  ],
   theme: {
     extend: {
       colors: {

@@ -21,10 +21,6 @@
   <![endif]-->
   <title>OAEV - Drop in your scenario results</title>
   <style>
-    img {
-      max-width: 100%;
-      vertical-align: middle
-    }
     @media (max-width: 600px) {
       .sm-my-8 {
         margin-top: 32px !important;
@@ -52,41 +48,41 @@
           <td style="width: 552px; max-width: 100%">
             <div class="sm-my-8" style="margin-bottom: 40px; margin-top: 40px; text-align: center">
             </div>
-            <table style="width: 100%;" cellpadding="0" cellspacing="0" role="none">
+            <table style="width: 100%" cellpadding="0" cellspacing="0" role="none">
               <tr>
                 <td class="sm-px-6" style="border-radius: 4px; background-color: #fffffe; padding: 48px; font-size: 16px; color: #00020c; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05)">
                   <h2 class="sm-leading-8" style="margin: 0 0 24px; text-align: center; font-size: 24px; font-weight: 700">
                     ALERT: Drop in risk detection score
                   </h2>
-                  <h4 style="text-align: center;">Scenario: {{ scenario_name }}</h4>
+                  <h4 style="text-align: center">Scenario: {{ scenario_name }}</h4>
                   <table align="center" cellpadding="0" cellspacing="0" role="none">
                     <tr>
                       <td style="background-color: #fecaca">
-                        <h4 style="font-weight: 700;"><span style="color: #ec1d0b">-{{ decrease_prev }}%</span> on Prevention & <span style="color: #ec1d0b">-{{ decrease_detect }}%</span> on Detection</h4>
+                        <h4 style="font-weight: 700"><span style="color: #ec1d0b">-{{ decrease_prev }}%</span> on Prevention & <span style="color: #ec1d0b">-{{ decrease_detect }}%</span> on Detection</h4>
                       </td>
                     </tr>
                   </table>
                   <table role="presentation" style="width: 100%; table-layout: fixed; border-collapse: collapse" cellpadding="0" cellspacing="0">
                     <tr>
                       <td style="width: 50%; padding: 20px">
-                        <h5 style="font-weight: 700;">Previous simulation</h5>
+                        <h5 style="font-weight: 700">Previous simulation</h5>
                         <div>Date: {{ prev_simulation_date }}</div>
                         <div>Detection: {{ prev_percentage_detection }}%</div>
                         <div>Prevention: {{ prev_percentage_prevention }}%</div>
                       </td>
-                      <td style="width: 50%; padding: 20px;">
-                        <h5 style="font-weight: 700;">New simulation</h5>
+                      <td style="width: 50%; padding: 20px">
+                        <h5 style="font-weight: 700">New simulation</h5>
                         <div>Date: {{ new_simulation_date }}</div>
                         <div>Detection: {{ new_percentage_detection }}% <span style="color: #ec1d0b">(&#8595;-{{ decrease_detect }}%)</span></div>
                         <div>Prevention: {{ new_percentage_prevention }}%<span style="color: #ec1d0b">(&#8595;-{{ decrease_prev }}%)</span></div>
                       </td>
                     </tr>
                   </table>
-                  <table style="width: 100%;" cellpadding="0" cellspacing="0" role="none">
+                  <table style="width: 100%" cellpadding="0" cellspacing="0" role="none">
                     <tr>
                       <td>
                         <div style="padding-top: 32px">
-                          <div style="text-align: center;">
+                          <div style="text-align: center">
                             <a href="{{ scenarioLink }}" style="color: #F4F4F6; background-color: #001BDB; display: inline-block; border-radius: 4px; padding: 16px 24px; font-size: 16px; line-height: 1; font-weight: 600; text-decoration: none">
                               <!--[if mso]>
       <i style="mso-font-width: 150%; mso-text-raise: 30px" hidden>&emsp;</i>
@@ -95,7 +91,7 @@
                           Access scenario
                         </span>
                               <!--[if mso]>
-      <i hidden style="mso-font-width: 150%;">&emsp;&#8203;</i>
+      <i hidden style="mso-font-width: 150%">&emsp;&#8203;</i>
     <![endif]-->
                             </a>
                           </div>

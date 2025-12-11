@@ -10,17 +10,20 @@
 */
 
 /** @type {import('@maizzle/framework').Config} */
-module.exports = {
+const config = {
   build: {
-    templates: {
-      source: 'src/templates',
-      destination: {
-        path: 'build_local',
-      },
-      assets: {
-        source: 'src/images',
-        destination: 'images',
-      },
+    content: [ 'src/templates/**/*.html' ],
+    static: {
+      source: [ 'src/images/**/*.*' ],
+      destination: 'images',
+    },
+    output: {
+      path: 'build_local',
+      extension: 'html',
     },
   },
-}
+};
+
+
+
+export default config;
