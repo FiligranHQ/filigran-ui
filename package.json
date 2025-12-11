@@ -1,12 +1,14 @@
 {
   "name": "filigran-commons",
-  "type": "module",
-  "private": true,
+  "description": "Filigran commons packages",
+  "author": "Filigran",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/FiligranHQ/filigran-ui.git"
   },
+  "type": "module",
+  "private": true,
   "scripts": {
     "build": "yarn workspaces foreach --all -t run build",
     "build:filigran-email": "yarn workspace filigran-email run build",

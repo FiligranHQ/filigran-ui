@@ -1,10 +1,14 @@
 {
   "name": "filigran-icon",
-  "type": "module",
-  "version": "0.21.0",
   "description": "Filigran icon",
   "author": "Filigran",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FiligranHQ/filigran-ui.git"
+  },
+  "type": "module",
+  "version": "0.21.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "exports": {

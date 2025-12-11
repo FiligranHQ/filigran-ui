@@ -1,6 +1,12 @@
 {
   "name": "filigran-website",
-  "version": "0.0.0",
+  "description": "Filigran UI testing website",
+  "author": "Filigran",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FiligranHQ/filigran-ui.git"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev -p 3010",

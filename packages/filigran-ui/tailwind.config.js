@@ -2,6 +2,7 @@ import {
   isolateInsideOfContainer,
   scopedPreflightStyles,
 } from 'tailwindcss-scoped-preflight'
+import tailwindcssAnimate from 'tailwindcss-animate';
 import FiligranUIPlugin from './src/plugin'
 
 const config = {
@@ -14,7 +15,7 @@ const config = {
   ],
   prefix: '',
   plugins: [
-    require('tailwindcss-animate'),
+    tailwindcssAnimate,
     FiligranUIPlugin(),
     scopedPreflightStyles({
       isolationStrategy: isolateInsideOfContainer('.twp', {
