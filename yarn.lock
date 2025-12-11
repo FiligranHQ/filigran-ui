@@ -6977,7 +6977,7 @@ __metadata:
     react-easy-sort: "npm:1.8.0"
     react-hook-form: "npm:7.68.0"
     rimraf: "npm:6.1.2"
-    tailwind-merge: "npm:2.6.0"
+    tailwind-merge: "npm:3.4.0"
     tailwindcss: "npm:3.4.18"
     tailwindcss-animate: "npm:1.0.7"
     tailwindcss-scoped-preflight: "npm:3.5.4"
@@ -7035,7 +7035,7 @@ __metadata:
     rehype-slug: "npm:6.0.0"
     remark-gfm: "npm:3.0.1"
     styled-components: "npm:6.1.19"
-    tailwind-merge: "npm:2.6.0"
+    tailwind-merge: "npm:3.4.0"
     tailwindcss: "npm:3.4.18"
     tailwindcss-animate: "npm:1.0.7"
     twind: "npm:0.16.19"
@@ -12463,10 +12463,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwind-merge@npm:2.6.0":
-  version: 2.6.0
-  resolution: "tailwind-merge@npm:2.6.0"
-  checksum: 10c0/fc8a5535524de9f4dacf1c16ab298581c7bb757d68a95faaf28942b1c555a619bba9d4c6726fe83986e44973b315410c1a5226e5354c30ba82353bd6d2288fa5
+"tailwind-merge@npm:3.4.0":
+  version: 3.4.0
+  resolution: "tailwind-merge@npm:3.4.0"
+  checksum: 10c0/eaf17bb695c51c7bb7a90366a9c62be295473ee97fcfd1da54287714d4a5788a88ff4ad1ab9e0128638257fda777d6c9ea88682e36195e31a7fa2cf43f45e310
   languageName: node
   linkType: hard
 
