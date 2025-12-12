@@ -219,11 +219,13 @@ Source code in this repository is made available under the [Apache 2.0 License](
 1. At the end a tar.gz archive is on the [Release page](https://github.com/FiligranHQ/filigran-chatbot/releases)
 
 In short:
+
 ```bash
 git tag -a 1.0.0 -m "Releasing version 1.0.0"
 ```
 
 Example of usage with yarn:
+
 ```bash
 yarn add filigran-chatbot@https://github.com/FiligranHQ/filigran-chatbot/releases/download/1.0.0/filigran-chatbot-v1.0.0.tgz
 ```

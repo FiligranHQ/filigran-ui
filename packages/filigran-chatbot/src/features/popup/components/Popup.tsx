@@ -72,7 +72,7 @@ export const Popup = (props: PopupProps) => {
     document.body.style.overflow = 'auto';
   };
 
-  const toggleBot = () => isBotOpened() ? closeBot() : openBot();
+  const toggleBot = () => (isBotOpened() ? closeBot() : openBot());
 
   return (
     <Show when={isBotOpened()}>

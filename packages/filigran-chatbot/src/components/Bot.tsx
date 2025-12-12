@@ -309,14 +309,14 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
         }));
         return { ...item, fileUploads };
       }
-      // To prevent localStorage overloading 
+      // To prevent localStorage overloading
       delete item.agentFlowEventStatus;
       delete item.agentFlowExecutedData;
-      
+
       return item;
     });
     setLocalStorageChatDetails(props.agenticUrl, chatId(), { chatHistory: messages });
-};
+  };
 
   // Define the audioRef
   let audioRef: HTMLAudioElement | undefined;
@@ -534,7 +534,8 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
         if (response.ok && response.headers.get('content-type')?.startsWith(EventStreamContentType)) {
           return; // everything's good
         } else if (response.status === 429) {
-          const errMessage = 'Preview API limit reached (50 requests per day). As this is a preview version, requests are limited. Your limit will reset in 24 hours.';
+          const errMessage =
+            'Preview API limit reached (50 requests per day). As this is a preview version, requests are limited. Your limit will reset in 24 hours.';
           handleError(errMessage, true);
           throw new Error(errMessage);
         } else if (response.status === 403) {

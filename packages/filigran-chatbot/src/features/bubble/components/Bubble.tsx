@@ -8,10 +8,11 @@ import { getBubbleButtonSize } from '@/utils';
 const defaultButtonColor = '#3B81F6';
 const defaultIconColor = 'white';
 
-export type BubbleProps = BotProps & BubbleParams & {
-  open?: boolean;
-  onClose?: () => void;
-};
+export type BubbleProps = BotProps &
+  BubbleParams & {
+    open?: boolean;
+    onClose?: () => void;
+  };
 
 export const Bubble = (props: BubbleProps) => {
   const [bubbleProps] = splitProps(props, ['theme', 'open', 'onClose']);
@@ -105,7 +106,7 @@ export const Bubble = (props: BubbleProps) => {
           left: `${props.left + 24}px`,
           'user-select': 'text',
           'pointer-events': isBotOpened() ? 'auto' : 'none',
-          'cursor': 'default',
+          cursor: 'default',
         }}
         class={
           `fixed sm:right-5 rounded-lg w-full ${!full() ? 'sm:w-[400px]' : 'sm:w-[80%]'} ${!full() ? 'max-h-[704px]' : 'max-h-[80%]'}` +
