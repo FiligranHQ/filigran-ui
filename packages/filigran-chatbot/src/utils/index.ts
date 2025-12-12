@@ -83,7 +83,7 @@ export const setLocalStorageChatDetails = (agenticUrl: string, chatId: string, s
     try {
       const parsedChatDetails = JSON.parse(chatDetails);
       localStorage.setItem(`${agenticUrl}_EXTERNAL`, JSON.stringify({ ...parsedChatDetails, ...obj }));
-    } catch (e) {
+    } catch {
       const chatId = chatDetails;
       obj.chatId = chatId;
       localStorage.setItem(`${agenticUrl}_EXTERNAL`, JSON.stringify(obj));
@@ -96,7 +96,7 @@ export const getLocalStorageChatDetails = (agenticUrl: string) => {
   if (!chatDetails) return {};
   try {
     return JSON.parse(chatDetails);
-  } catch (e) {
+  } catch {
     return {};
   }
 };
@@ -114,7 +114,7 @@ export const removeLocalStorageChatHistory = (agenticUrl: string) => {
     } else {
       localStorage.removeItem(`${agenticUrl}_EXTERNAL`);
     }
-  } catch (e) {
+  } catch {
     return;
   }
 };

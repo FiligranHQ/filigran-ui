@@ -45,7 +45,7 @@ export const Bubble = (props: BubbleProps) => {
   let ref;
   const toggleBot = () => {
     setButtonPosition({ left: props.left + 24 });
-    isBotOpened() ? closeBot() : openBot();
+    (isBotOpened() ? closeBot : openBot)();
   };
 
   onCleanup(() => {

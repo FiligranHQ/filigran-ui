@@ -1,4 +1,4 @@
-import { createContext, useContext, JSXElement, Show, For, createEffect, mergeProps } from 'solid-js';
+import { createContext, useContext, JSXElement, Show, createEffect, mergeProps } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { Dynamic } from 'solid-js/web';
 import './TreeView.css';
@@ -166,7 +166,9 @@ export const RichTreeView = (props: RichTreeViewProps) => {
 
   const selectItem = (itemId: string) => {
     setState('selectedItem', itemId);
-    props.onNodeSelect && props.onNodeSelect(itemId);
+    if (props.onNodeSelect) {
+      props.onNodeSelect(itemId);
+    }
   };
 
   const isExpanded = (itemId: string) => {

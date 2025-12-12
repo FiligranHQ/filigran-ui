@@ -46,7 +46,6 @@ type FilePreview = {
 };
 
 type messageType = 'apiMessage' | 'userMessage' | 'usermessagewaiting' | 'leadCaptureMessage';
-type ExecutionState = 'INPROGRESS' | 'FINISHED' | 'ERROR' | 'TERMINATED' | 'TIMEOUT' | 'STOPPED';
 
 export type IAgentReasoning = {
   agentName?: string;
@@ -217,148 +216,6 @@ const defaultBackgroundColor = '#ffffff';
 const defaultTextColor = '#303235';
 const defaultTitleBackgroundColor = '#3B81F6';
 
-/* FormInputView component - for displaying the form input */
-const FormInputView = (props: {
-  title: string;
-  description: string;
-  inputParams: any[];
-  onSubmit: (formData: object) => void;
-  parentBackgroundColor?: string;
-  backgroundColor?: string;
-  textColor?: string;
-  sendButtonColor?: string;
-  fontSize?: number;
-}) => {
-  const [formData, setFormData] = createSignal<Record<string, any>>({});
-
-  const handleInputChange = (name: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: Event) => {
-    e.preventDefault();
-    props.onSubmit(formData());
-  };
-
-  return (
-    <div
-      class="w-full h-full flex flex-col items-center justify-center px-4 py-8 rounded-lg"
-      style={{
-        'font-family': 'Poppins, sans-serif',
-        'font-size': props.fontSize ? `${props.fontSize}px` : '16px',
-        background: props.parentBackgroundColor || defaultBackgroundColor,
-        color: props.textColor || defaultTextColor,
-      }}
-    >
-      <div
-        class="w-full max-w-md bg-white shadow-lg rounded-lg overflow-hidden"
-        style={{
-          'font-family': 'Poppins, sans-serif',
-          'font-size': props.fontSize ? `${props.fontSize}px` : '16px',
-          background: props.backgroundColor || defaultBackgroundColor,
-          color: props.textColor || defaultTextColor,
-        }}
-      >
-        <div class="p-6">
-          <h2 class="text-xl font-bold mb-2">{props.title}</h2>
-          {props.description && (
-            <p class="text-gray-600 mb-6" style={{ color: props.textColor || defaultTextColor }}>
-              {props.description}
-            </p>
-          )}
-
-          <form onSubmit={handleSubmit} class="space-y-4">
-            <For each={props.inputParams}>
-              {(param) => (
-                <div class="space-y-2">
-                  <label class="block text-sm font-medium">{param.label}</label>
-
-                  {param.type === 'string' && (
-                    <input
-                      type="text"
-                      class="w-full px-3 py-2 rounded-md focus:outline-none"
-                      style={{
-                        border: '1px solid #9ca3af',
-                        'border-radius': '0.375rem',
-                      }}
-                      onFocus={(e) => (e.target.style.border = '1px solid #3b82f6')}
-                      onBlur={(e) => (e.target.style.border = '1px solid #9ca3af')}
-                      name={param.name}
-                      onInput={(e) => handleInputChange(param.name, e.target.value)}
-                      required
-                    />
-                  )}
-
-                  {param.type === 'number' && (
-                    <input
-                      type="number"
-                      class="w-full px-3 py-2 rounded-md focus:outline-none"
-                      style={{
-                        border: '1px solid #9ca3af',
-                        'border-radius': '0.375rem',
-                      }}
-                      onFocus={(e) => (e.target.style.border = '1px solid #3b82f6')}
-                      onBlur={(e) => (e.target.style.border = '1px solid #9ca3af')}
-                      name={param.name}
-                      onInput={(e) => handleInputChange(param.name, parseFloat(e.target.value))}
-                      required
-                    />
-                  )}
-
-                  {param.type === 'boolean' && (
-                    <div class="flex items-center">
-                      <input
-                        type="checkbox"
-                        class="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
-                        style={{
-                          border: '1px solid #9ca3af',
-                        }}
-                        name={param.name}
-                        onChange={(e) => handleInputChange(param.name, e.target.checked)}
-                      />
-                      <span class="ml-2">Yes</span>
-                    </div>
-                  )}
-
-                  {param.type === 'options' && (
-                    <select
-                      class="w-full px-3 py-2 rounded-md focus:outline-none"
-                      style={{
-                        border: '1px solid #9ca3af',
-                        'border-radius': '0.375rem',
-                      }}
-                      onFocus={(e) => (e.target.style.border = '1px solid #3b82f6')}
-                      onBlur={(e) => (e.target.style.border = '1px solid #9ca3af')}
-                      name={param.name}
-                      onChange={(e) => handleInputChange(param.name, e.target.value)}
-                      required
-                    >
-                      <option value="">Select an option</option>
-                      <For each={param.options}>{(option) => <option value={option.name}>{option.label}</option>}</For>
-                    </select>
-                  )}
-                </div>
-              )}
-            </For>
-
-            <div class="pt-4">
-              <button
-                type="submit"
-                class="w-full py-2 px-4 text-white font-semibold rounded-md focus:outline-none transition duration-300 ease-in-out"
-                style={{
-                  'background-color': props.sendButtonColor || '#3B81F6',
-                }}
-              >
-                Submit
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export const Bot = (botProps: BotProps & { class?: string }) => {
   // set a default value for showTitle if not set and merge with other props
   const props = mergeProps({ showTitle: true }, botProps);
@@ -407,21 +264,24 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
   onMount(() => {
     if (botProps?.observersConfig) {
       const { observeUserInput, observeLoading, observeMessages } = botProps.observersConfig;
-      typeof observeUserInput === 'function' &&
+      if (typeof observeUserInput === 'function') {
         // eslint-disable-next-line solid/reactivity
         createMemo(() => {
           observeUserInput(userInput());
         });
-      typeof observeLoading === 'function' &&
+      }
+      if (typeof observeLoading === 'function') {
         // eslint-disable-next-line solid/reactivity
         createMemo(() => {
           observeLoading(loading());
         });
-      typeof observeMessages === 'function' &&
+      }
+      if (typeof observeMessages === 'function') {
         // eslint-disable-next-line solid/reactivity
         createMemo(() => {
           observeMessages(messages());
         });
+      }
     }
 
     if (!bottomSpacer) return;
@@ -793,9 +653,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
       }
     }
 
-    let formData = {};
     if (typeof value === 'object') {
-      formData = value;
       value = Object.entries(value)
         .map(([key, value]) => `${key}: ${value}`)
         .join('\n');
@@ -1209,7 +1067,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                 </div>
                 <div class="w-full flex flex-row flex-wrap px-4 py-[10px] gap-2">
                   <For each={[...followUpPrompts()]}>
-                    {(prompt, index) => (
+                    {(prompt) => (
                       <FollowUpPromptBubble
                         prompt={prompt}
                         onPromptClick={() => followUpPromptClick(prompt)}

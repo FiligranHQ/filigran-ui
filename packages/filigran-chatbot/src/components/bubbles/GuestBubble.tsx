@@ -1,8 +1,7 @@
-import { For, Show } from 'solid-js';
+import { Show } from 'solid-js';
 import { Avatar } from '../avatars/Avatar';
 import { Marked } from '@ts-stack/markdown';
-import { FileUpload, MessageType } from '../Bot';
-import { AttachmentIcon } from '../icons';
+import { MessageType } from '../Bot';
 
 type Props = {
   message: MessageType;

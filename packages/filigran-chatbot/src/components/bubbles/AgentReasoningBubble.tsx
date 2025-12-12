@@ -1,7 +1,5 @@
-import { For, onMount } from 'solid-js';
+import { onMount } from 'solid-js';
 import { Marked } from '@ts-stack/markdown';
-import { FileUpload } from '../Bot';
-import { cloneDeep } from 'lodash';
 
 type Props = {
   agentName: string;

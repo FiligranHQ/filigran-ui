@@ -1,7 +1,7 @@
 import { createEffect, For, onMount, Show } from 'solid-js';
 import { Avatar } from '../avatars/Avatar';
 import { Marked } from '@ts-stack/markdown';
-import { FileUpload, IAction, MessageType } from '../Bot';
+import { IAction, MessageType } from '../Bot';
 import { AgentReasoningBubble } from './AgentReasoningBubble';
 import { TickIcon, XIcon } from '../icons';
 import { SourceBubble } from '../bubbles/SourceBubble';
@@ -67,7 +67,7 @@ export const BotBubble = (props: Props) => {
   const isValidURL = (url: string): URL | undefined => {
     try {
       return new URL(url);
-    } catch (err) {
+    } catch {
       return undefined;
     }
   };
