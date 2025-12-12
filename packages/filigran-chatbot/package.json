@@ -2,7 +2,7 @@
   "name": "filigran-chatbot",
   "description": "Filigran chatbot component",
   "author": "Filigran",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/FiligranHQ/filigran-ui.git"

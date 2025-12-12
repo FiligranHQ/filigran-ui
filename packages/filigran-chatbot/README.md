@@ -210,7 +210,9 @@ yarn dev
 
 ## License
 
-Source code in this repository is made available under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+This project is a fork of [FlowiseEmbedChat](https://github.com/FlowiseAI/FlowiseChatEmbed), originally licensed under the [MIT License](https://github.com/FlowiseAI/Flowise/blob/master/LICENSE.md).
+Original code remains under the MIT License.
+Modifications and additional code are licensed under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
 
 ## Release a new version
 
