@@ -11,6 +11,7 @@
   "type": "module",
   "scripts": {
     "build": "yarn workspaces foreach --all -t run build",
+    "build:filigran-chatbot": "yarn workspace filigran-chatbot run build",
     "build:filigran-email": "yarn workspace filigran-email run build",
     "build:filigran-icon": "yarn workspace filigran-icon run build",
     "build:filigran-ui": "yarn workspace filigran-ui run build",
