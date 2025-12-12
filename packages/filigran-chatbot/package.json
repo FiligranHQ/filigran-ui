@@ -18,7 +18,6 @@
     "lint-fix": "eslint --fix \"src/**/*.ts*\"",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
-    "start": "node server.js",
     "prepack": "yarn build"
   },
   "dependencies": {

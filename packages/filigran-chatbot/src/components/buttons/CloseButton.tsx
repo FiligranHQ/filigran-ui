@@ -1,7 +1,7 @@
 import { CloseIcon } from '@/components/icons/CloseIcon';
 import { JSX } from 'solid-js/jsx-runtime';
 
-export const CloseButton = (props: { disableIcon?: boolean } & JSX.ButtonHTMLAttributes<HTMLButtonElement>) => {
+export const CloseButton = (props: { color?: string, disableIcon?: boolean } & JSX.ButtonHTMLAttributes<HTMLButtonElement>) => {
   // Check if <filigran-fullchatbot> is present in the DOM
   const isFullChatbot = document.querySelector('filigran-fullchatbot') !== null;
   const paddingClass = isFullChatbot ? 'px-4' : 'px-0';
