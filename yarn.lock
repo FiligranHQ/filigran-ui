@@ -1913,6 +1913,7 @@ __metadata:
     postcss: "npm:8.5.6"
     prettier: "npm:3.7.4"
     rollup: "npm:4.53.3"
+    rollup-plugin-dts: "npm:6.3.0"
     rollup-plugin-livereload: "npm:2.0.5"
     rollup-plugin-postcss: "npm:4.0.2"
     rollup-plugin-serve: "npm:3.0.0"
@@ -9519,7 +9520,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:^0.30.17, magic-string@npm:^0.30.3":
+"magic-string@npm:^0.30.17, magic-string@npm:^0.30.21, magic-string@npm:^0.30.3":
   version: 0.30.21
   resolution: "magic-string@npm:0.30.21"
   dependencies:
@@ -12952,6 +12953,22 @@ __metadata:
   bin:
     rimraf: bin.js
   checksum: 10c0/9cb7757acb489bd83757ba1a274ab545eafd75598a9d817e0c3f8b164238dd90eba50d6b848bd4dcc5f3040912e882dc7ba71653e35af660d77b25c381d402e8
+  languageName: node
+  linkType: hard
+
+"rollup-plugin-dts@npm:6.3.0":
+  version: 6.3.0
+  resolution: "rollup-plugin-dts@npm:6.3.0"
+  dependencies:
+    "@babel/code-frame": "npm:^7.27.1"
+    magic-string: "npm:^0.30.21"
+  peerDependencies:
+    rollup: ^3.29.4 || ^4
+    typescript: ^4.5 || ^5.0
+  dependenciesMeta:
+    "@babel/code-frame":
+      optional: true
+  checksum: 10c0/7eae726f0a15651a4705d49771cc02d2c7fb35fe107ada03cdacade5ed8bf026af066f1fc8936dde2c07da269d03dd790110589cd3b0c7062ed3bedc0f3c75ee
   languageName: node
   linkType: hard
 

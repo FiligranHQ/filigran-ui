@@ -7,10 +7,14 @@
     "type": "git",
     "url": "git+https://github.com/FiligranHQ/filigran-ui.git"
   },
-  "version": "0.0.6",
+  "version": "1.0.1",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "dev": "NODE_ENV=development rollup --watch --config rollup.config.js",
     "build": "NODE_ENV=production rollup --config rollup.config.js",
@@ -55,6 +59,7 @@
     "postcss": "8.5.6",
     "prettier": "3.7.4",
     "rollup": "4.53.3",
+    "rollup-plugin-dts": "6.3.0",
     "rollup-plugin-livereload": "2.0.5",
     "rollup-plugin-postcss": "4.0.2",
     "rollup-plugin-serve": "3.0.0",

@@ -16,7 +16,7 @@ export const CloseButton = (props: { color?: string, disableIcon?: boolean } & J
       style={{ background: 'transparent', border: 'none' }}
       title="Close Chat"
     >
-      <CloseIcon color={props.color} class={'send-icon flex ' + (props.disableIcon ? 'hidden' : '')} />
+      <CloseIcon color={props.color} />
     </button>
   );
 };

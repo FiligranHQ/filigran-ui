@@ -37,7 +37,7 @@ export type UploadsConfig = {
 
 type FilePreviewData = string | ArrayBuffer;
 
-type FilePreview = {
+type FilePreviewItem = {
   data: FilePreviewData;
   mime: string;
   name: string;
@@ -71,7 +71,7 @@ export type IAction = {
   };
 };
 
-export type FileUpload = Omit<FilePreview, 'preview'>;
+export type FileUpload = Omit<FilePreviewItem, 'preview'>;
 
 export type MessageType = {
   messageId?: string;
@@ -244,7 +244,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
 
   // drag & drop file input
   // TODO: fix this type
-  const [previews, setPreviews] = createSignal<FilePreview[]>([]);
+  const [previews, setPreviews] = createSignal<FilePreviewItem[]>([]);
 
   // audio recording
   const [elapsedTime, setElapsedTime] = createSignal('00:00');
@@ -849,7 +849,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     reader.readAsDataURL(blob);
     reader.onloadend = () => {
       const base64data = reader.result as FilePreviewData;
-      const upload: FilePreview = {
+      const upload: FilePreviewItem = {
         data: base64data,
         preview: '../assets/wave-sound.jpg',
         type: 'audio',
@@ -860,7 +860,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     };
   };
 
-  const handleDeletePreview = (itemToDelete: FilePreview) => {
+  const handleDeletePreview = (itemToDelete: FilePreviewItem) => {
     if (itemToDelete.type === 'file') {
       URL.revokeObjectURL(itemToDelete.preview); // Clean up for file
     }
@@ -912,7 +912,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     }),
   );
 
-  const previewDisplay = (item: FilePreview) => {
+  const previewDisplay = (item: FilePreviewItem) => {
     if (item.mime.startsWith('image/')) {
       return (
         <button

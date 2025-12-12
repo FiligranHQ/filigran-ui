@@ -5,7 +5,7 @@ import json from '@rollup/plugin-json';
 import postcss from 'rollup-plugin-postcss';
 import autoprefixer from 'autoprefixer';
 import tailwindcss from 'tailwindcss';
-import typescript from '@rollup/plugin-typescript';
+import dts from 'rollup-plugin-dts';
 import { typescriptPaths } from 'rollup-plugin-typescript-paths';
 import commonjs from '@rollup/plugin-commonjs';
 import { uglify } from 'rollup-plugin-uglify';
@@ -60,19 +60,15 @@ const configs = [
     input: './src/web.ts',
     output: {
       inlineDynamicImports: true,
-      file: 'dist/web.js',
+      file: 'dist/index.js',
       format: 'es',
     },
   },
   {
     ...indexConfig,
-    input: './src/web.ts',
-    output: {
-      inlineDynamicImports: true,
-      file: 'dist/web.umd.js',
-      format: 'umd',
-      name: 'FlowiseEmbed',
-    },
+    input: 'src/index.ts',
+    output: [{ file: 'dist/index.d.ts', format: 'es' }],
+    plugins: [dts()],
   },
 ];
 
