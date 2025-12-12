@@ -47,9 +47,10 @@ You can assist by reviewing open issues, providing additional information, or su
 We maintain certain guidelines to ensure consistency across the codebase:
 - **Code formatting**: Use [Prettier](https://prettier.io/) and [ESLint](https://eslint.org/) for code linting and formatting.
 - **Commit messages**: Follow this format: `[project] Your message here (#issue-number)`. Projects can be:
-  - `filigran-ui`
-  - `filigran-icon`
-  - `filigran-website`
+  - `@filigran/chatbot`
+  - `@filigran/icon`
+  - `@filigran/ui`
+  - `@filigran/website`
   
 ## Code of Conduct
 

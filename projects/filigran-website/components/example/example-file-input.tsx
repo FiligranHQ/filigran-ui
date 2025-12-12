@@ -17,11 +17,11 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from 'filigran-ui/clients'
+} from '@filigran/ui/clients'
 import {z} from 'zod'
 import {zodResolver} from '@hookform/resolvers/zod'
 import {useForm} from 'react-hook-form'
-import {Button} from 'filigran-ui'
+import {Button} from '@filigran/ui'
 
 export const newFileSchema = z.object({
   file: z.custom<FileList>(),

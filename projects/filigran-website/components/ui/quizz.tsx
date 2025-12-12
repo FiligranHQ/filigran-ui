@@ -7,8 +7,8 @@ import {
   useState,
 } from 'react'
 import {cn} from '@/utils/utils'
-import {Button} from 'filigran-ui/servers'
-import {Checkbox} from 'filigran-ui'
+import {Button} from '@filigran/ui/servers'
+import {Checkbox} from '@filigran/ui'
 import {confettiBasic, confettiSideCannons} from '@/components/ui/confetti'
 
 enum ResponseEnum {

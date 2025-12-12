@@ -60,9 +60,9 @@ jobs:
             ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}-
       - name: Install dependencies
         run: yarn install --immutable
-      - name: Build filigran-icon
+      - name: Build @filigran/icon
         run: yarn build:filigran-icon
-      - name: Build filigran-ui
+      - name: Build @filigran/ui
         run: yarn build:filigran-ui
       - name: Build website with Next.js
         run: yarn build:filigran-website

@@ -2,7 +2,7 @@
 
 import {type EmblaCarouselType} from 'embla-carousel'
 import useEmblaCarousel, {type UseEmblaCarouselType} from 'embla-carousel-react'
-import {KeyboardArrowLeftIcon, KeyboardArrowRightIcon} from 'filigran-icon'
+import {KeyboardArrowLeftIcon, KeyboardArrowRightIcon} from '@filigran/icon'
 import * as React from 'react'
 import {
   type ComponentProps,

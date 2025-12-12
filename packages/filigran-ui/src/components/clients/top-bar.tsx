@@ -1,6 +1,6 @@
 'use client'
 
-import {IndividualIcon} from 'filigran-icon'
+import {IndividualIcon} from '@filigran/icon'
 import {cn} from '../../lib/utils'
 import {SearchInput} from './search-input'
 

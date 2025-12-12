@@ -1,15 +1,15 @@
 'use client'
 import {z} from 'zod'
 import React from 'react'
-import {Button} from 'filigran-ui/servers'
-import {JSONSchemaToZod} from 'filigran-ui/auto-form'
+import {Button} from '@filigran/ui/servers'
+import {JSONSchemaToZod} from '@filigran/ui/auto-form'
 import {
   AutoForm,
   FormControl,
   FormItem,
   FormLabel,
   MultiSelectFormField,
-} from 'filigran-ui'
+} from '@filigran/ui'
 import jsonTest from './test.json'
 
 export enum UserServiceOrderingEnum {

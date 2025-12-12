@@ -1,5 +1,5 @@
 'use client'
-import {ChannelIcon, HomeIcon, SettingsIcon} from 'filigran-icon'
+import {ChannelIcon, HomeIcon, SettingsIcon} from '@filigran/icon'
 import {cn} from '../../lib/utils'
 import {LinkMenu} from './link-menu'
 

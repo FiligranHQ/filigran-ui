@@ -1,4 +1,4 @@
-import FiligranUIPlugin from 'filigran-ui/plugin'
+import FiligranUIPlugin from '@filigran/ui/plugin'
 import type {Config} from 'tailwindcss'
 import tailwindcssAnimate from 'tailwindcss-animate';
 import tailwindcssTypography from '@tailwindcss/typography';

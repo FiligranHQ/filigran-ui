@@ -3,7 +3,7 @@ import {z} from 'zod'
 import {useForm} from 'react-hook-form'
 import {zodResolver} from '@hookform/resolvers/zod'
 import React, {useState} from 'react'
-import {Button} from 'filigran-ui/servers'
+import {Button} from '@filigran/ui/servers'
 import {
   Form,
   FormControl,
@@ -15,7 +15,7 @@ import {
   Tag,
   TagInput,
   toast,
-} from 'filigran-ui/clients'
+} from '@filigran/ui/clients'
 
 const FormSchema = z.object({
   topics: z.array(

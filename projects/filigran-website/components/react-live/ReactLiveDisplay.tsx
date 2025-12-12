@@ -3,8 +3,8 @@
 import {LiveProvider, LiveEditor, LiveError, LivePreview} from 'react-live'
 import {FunctionComponent} from 'react'
 import {tw} from 'twind'
-import * as FiligranUIComponent from 'filigran-ui'
-import * as FiligranIcon from 'filigran-icon'
+import * as FiligranUIComponent from '@filigran/ui'
+import * as FiligranIcon from '@filigran/icon'
 
 interface ReactLiveDisplayProps {
   scope?: any

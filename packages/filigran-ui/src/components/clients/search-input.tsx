@@ -1,4 +1,4 @@
-import {Group5Icon, SearchIcon} from 'filigran-icon'
+import {Group5Icon, SearchIcon} from '@filigran/icon'
 import {cn} from '../../lib/utils'
 
 export const SearchInput = () => (

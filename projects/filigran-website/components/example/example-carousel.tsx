@@ -8,8 +8,8 @@ import {
   CarouselItem,
   Dialog,
   DialogContent,
-} from 'filigran-ui/clients'
-import {AspectRatio} from 'filigran-ui/servers'
+} from '@filigran/ui/clients'
+import {AspectRatio} from '@filigran/ui/servers'
 import {useState} from 'react'
 
 export function ExampleCarousel() {

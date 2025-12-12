@@ -3,7 +3,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import * as React from 'react'
 
-import {CloseIcon} from 'filigran-icon'
+import {CloseIcon} from '@filigran/icon'
 import {cn} from '../../lib/utils'
 
 const Dialog = DialogPrimitive.Root

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import {getAllContents} from '@/utils/mdx.util'
-import {Card, Badge} from 'filigran-ui/servers'
+import {Card, Badge} from '@filigran/ui/servers'
 
 export default async function ComponentsPage() {
   let allContents = await getAllContents()

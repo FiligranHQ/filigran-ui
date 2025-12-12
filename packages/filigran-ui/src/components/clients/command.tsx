@@ -4,7 +4,7 @@ import {type DialogProps} from '@radix-ui/react-dialog'
 import {Command as CommandPrimitive} from 'cmdk'
 import * as React from 'react'
 
-import {SearchIcon} from 'filigran-icon'
+import {SearchIcon} from '@filigran/icon'
 import {cn} from '../../lib/utils'
 import {Dialog, DialogContent} from './dialog'
 

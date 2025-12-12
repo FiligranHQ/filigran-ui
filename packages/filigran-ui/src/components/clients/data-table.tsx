@@ -41,7 +41,7 @@ import {
   TableTuneIcon,
   UnfoldMoreIcon,
   VisibilityOffIcon,
-} from 'filigran-icon'
+} from '@filigran/icon'
 import {
   createContext,
   useCallback,

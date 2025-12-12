@@ -2,8 +2,8 @@
 
 import * as React from 'react'
 
-import {Combobox, ComboboxItem} from 'filigran-ui/clients'
-import {Button} from 'filigran-ui'
+import {Combobox, ComboboxItem} from '@filigran/ui/clients'
+import {Button} from '@filigran/ui'
 import ReactLiveDisplay from '@/components/react-live/ReactLiveDisplay'
 
 interface ComboboxInterfaceTest {

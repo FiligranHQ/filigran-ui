@@ -8,9 +8,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from 'filigran-ui/clients'
+} from '@filigran/ui/clients'
 import {MoonIcon, SunIcon} from 'lucide-react'
-import {Button} from 'filigran-ui/servers'
+import {Button} from '@filigran/ui/servers'
 
 export function ModeToggle() {
   const {setTheme} = useTheme()

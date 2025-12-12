@@ -10,8 +10,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from 'filigran-ui'
-import {MultiSelectFormField} from 'filigran-ui/clients'
+} from '@filigran/ui'
+import {MultiSelectFormField} from '@filigran/ui/clients'
 
 const frameworksList = [
   {

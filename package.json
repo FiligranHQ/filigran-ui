@@ -1,5 +1,5 @@
 {
-  "name": "filigran-commons",
+  "name": "@filigran/commons",
   "description": "Filigran commons packages",
   "author": "Filigran",
   "license": "Apache-2.0",
@@ -11,14 +11,15 @@
   "type": "module",
   "scripts": {
     "build": "yarn workspaces foreach --all -t run build",
-    "build:filigran-chatbot": "yarn workspace filigran-chatbot run build",
-    "build:filigran-email": "yarn workspace filigran-email run build",
-    "build:filigran-icon": "yarn workspace filigran-icon run build",
-    "build:filigran-ui": "yarn workspace filigran-ui run build",
-    "build:filigran-website": "yarn workspace filigran-website run build",
-    "dev": "yarn workspace filigran-website run dev",
-    "publish:filigran-icon": "yarn build:filigran-icon && yarn workspace filigran-icon publish --provenance --access public",
-    "publish:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace filigran-ui publish --provenance --access public"
+    "build:filigran-chatbot": "yarn workspace @filigran/chatbot run build",
+    "build:filigran-email": "yarn workspace @filigran/email run build",
+    "build:filigran-icon": "yarn workspace @filigran/icon run build",
+    "build:filigran-ui": "yarn workspace @filigran/ui run build",
+    "build:filigran-website": "yarn workspace @filigran/website run build",
+    "dev": "yarn workspace @filigran/website run dev",
+    "publish:filigran-chatbot": "yarn build:filigran-chatbot && yarn workspace @filigran/chatbot publish --provenance --access public",
+    "publish:filigran-icon": "yarn build:filigran-icon && yarn workspace @filigran/icon publish --provenance --access public",
+    "publish:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace @filigran/ui publish --provenance --access public"
   },
   "workspaces": [
     "packages/*",

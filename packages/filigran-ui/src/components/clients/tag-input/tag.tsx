@@ -1,4 +1,4 @@
-import {CloseIcon} from 'filigran-icon'
+import {CloseIcon} from '@filigran/icon'
 import React from 'react'
 import {
   type TagInputProps,

@@ -1,4 +1,4 @@
-import {KeyboardArrowDownIcon, KeyboardArrowUpIcon} from 'filigran-icon'
+import {KeyboardArrowDownIcon, KeyboardArrowUpIcon} from '@filigran/icon'
 import {type ReactNode} from 'react'
 import {cn} from '../../lib/utils'
 import {buttonVariants} from '../servers'

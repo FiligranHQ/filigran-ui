@@ -1,5 +1,5 @@
 'use client'
-import * as FiligranIcon from 'filigran-icon'
+import * as FiligranIcon from '@filigran/icon'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +10,7 @@ import {
   AlertDialogTrigger,
   Button,
   useToast,
-} from 'filigran-ui'
+} from '@filigran/ui'
 
 export const DisplayAllIcons = () => {
   const {toast} = useToast()
@@ -23,7 +23,7 @@ export const DisplayAllIcons = () => {
   }
   const onClickCopy = (icon: string, fullImport: boolean = false) => {
     const stringValueToCopy = fullImport
-      ? `import { ${icon} } from 'filigran-icon'`
+      ? `import { ${icon} } from '@filigran/icon'`
       : `\<${icon} className="h-4 w-4"\/>`
     navigator.clipboard.writeText(stringValueToCopy)
     toast({
@@ -54,7 +54,7 @@ export const DisplayAllIcons = () => {
             </AlertDialogHeader>
             <div>
               <div className="flex flex-row items-center align-middle">
-                <div className="rounded bg-gray-1000 p-s text-gray-50">{`import { ${icon} } from "filigran-icon"`}</div>{' '}
+                <div className="rounded bg-gray-1000 p-s text-gray-50">{`import { ${icon} } from "@filigran/icon"`}</div>{' '}
                 <Button
                   variant={'ghost'}
                   aria-label={'Copy value to clipboard'}

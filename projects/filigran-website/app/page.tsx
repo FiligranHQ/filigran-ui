@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import {Button, Card, Badge, Callout} from 'filigran-ui/servers'
-import {FiligranLoader} from 'filigran-icon'
+import {Button, Card, Badge, Callout} from '@filigran/ui/servers'
+import {FiligranLoader} from '@filigran/icon'
 export default async function Home() {
   return (
     <main className="mx-auto flex max-w-5xl flex-1 py-12">
@@ -142,7 +142,7 @@ export default async function Home() {
             Easily integrate our Design System into your projects
           </p>
           <div className="mx-auto max-w-lg rounded-md bg-muted p-4 text-left">
-            <code className="text-sm">npm install filigran-ui</code>
+            <code className="text-sm">npm install @filigran/ui</code>
           </div>
         </section>
       </div>

@@ -1,5 +1,5 @@
 import {Slot} from '@radix-ui/react-slot'
-import {ChevronIcon, MoreHorizIcon} from 'filigran-icon'
+import {ChevronIcon, MoreHorizIcon} from '@filigran/icon'
 import * as React from 'react'
 import {cn} from '../../lib/utils'
 

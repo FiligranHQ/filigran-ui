@@ -1,6 +1,6 @@
 'use client'
 
-import {CheckIndeterminateIcon, TaskIcon} from 'filigran-icon'
+import {CheckIndeterminateIcon, TaskIcon} from '@filigran/icon'
 import {
   Toast,
   ToastClose,

@@ -1,5 +1,5 @@
 import {cva, type VariantProps} from 'class-variance-authority'
-import {CheckIcon, CloseIcon, KeyboardArrowDownIcon} from 'filigran-icon'
+import {CheckIcon, CloseIcon, KeyboardArrowDownIcon} from '@filigran/icon'
 import * as React from 'react'
 import {useMemo} from 'react'
 import {

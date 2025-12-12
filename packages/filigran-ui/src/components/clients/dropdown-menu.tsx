@@ -1,7 +1,7 @@
 'use client'
 
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
-import {CheckIcon, ChevronIcon, CircleIcon} from 'filigran-icon'
+import {CheckIcon, ChevronIcon, CircleIcon} from '@filigran/icon'
 import * as React from 'react'
 import {cn} from '../../lib/utils'
 

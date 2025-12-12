@@ -1,7 +1,7 @@
 'use client'
 
 import * as AccordionPrimitive from '@radix-ui/react-accordion'
-import {KeyboardArrowDownIcon} from 'filigran-icon'
+import {KeyboardArrowDownIcon} from '@filigran/icon'
 import * as React from 'react'
 import {cn} from '../../lib/utils'
 

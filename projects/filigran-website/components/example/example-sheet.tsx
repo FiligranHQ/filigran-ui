@@ -21,8 +21,8 @@ import {
   toast,
   SheetFooter,
   SheetClose,
-} from 'filigran-ui/clients'
-import {Button, Input} from 'filigran-ui'
+} from '@filigran/ui/clients'
+import {Button, Input} from '@filigran/ui'
 import Link from 'next/link'
 import {cn} from '@/utils/utils'
 import {z} from 'zod'

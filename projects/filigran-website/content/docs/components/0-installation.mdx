@@ -11,13 +11,13 @@ This tutorial will guide you through the process of installing Filigran-UI and s
 First, add the Filigran-UI package to your project using npm or yarn:
 
 ```bash
-npm install filigran-ui
+npm install @filigran/ui
 ```
 
 or if you're using yarn:
 
 ```bash
-yarn add filigran-ui
+yarn add @filigran/ui
 ```
 
 ## 2. Global CSS Configuration
@@ -56,7 +56,7 @@ To use Filigran-UI's components, you need to import its CSS file. Add the follow
 Update index.tsx or index.js
 
 ```js
-import 'filigran-ui/index.css'
+import '@filigran/ui/index.css'
 ```
 
 This step ensures that all necessary styles for the components are loaded into your project.
@@ -66,7 +66,7 @@ This step ensures that all necessary styles for the components are loaded into y
 Now you can start using the Filigran-UI components in your React project. For example, to use a button component, simply import it and add it to your JSX:
 
 ```js
-import {Button} from 'filigran-ui'
+import {Button} from '@filigran/ui'
 
 function App() {
   return (
@@ -79,24 +79,24 @@ function App() {
 export default App
 ```
 
-The components come pre-styled, and even though you aren't using the full Tailwind CSS theme, they will render with the necessary styles via the filigran-ui/index.css file.
+The components come pre-styled, and even though you aren't using the full Tailwind CSS theme, they will render with the necessary styles via the @filigran/ui/index.css file.
 
 ## 5. Special Imports for Next.js or Server-Side Rendering (SSR)
 
 If you're working in a Next.js or SSR environment, Filigran-UI provides specific imports for components that are intended to be rendered on the server or client.
 
 Server-Side Rendering Components
-For components rendered on the server, import from "filigran-ui/servers":
+For components rendered on the server, import from "@filigran/ui/servers":
 
 ```js
-import {Button} from 'filigran-ui/servers'
+import {Button} from '@filigran/ui/servers'
 ```
 
 Client-Side Components
-For client-side interactive components (e.g., dropdowns or modals), import from "filigran-ui/clients":
+For client-side interactive components (e.g., dropdowns or modals), import from "@filigran/ui/clients":
 
 ```js
-import {Combobox} from 'filigran-ui/clients'
+import {Combobox} from '@filigran/ui/clients'
 ```
 
 This approach ensures proper handling of server and client rendering contexts in Next.js and other SSR frameworks.

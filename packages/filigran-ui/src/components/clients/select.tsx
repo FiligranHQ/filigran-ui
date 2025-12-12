@@ -7,7 +7,7 @@ import {
   CheckIcon,
   KeyboardArrowDownIcon,
   KeyboardArrowUpIcon,
-} from 'filigran-icon'
+} from '@filigran/icon'
 import {cn} from '../../lib/utils'
 
 const Select = SelectPrimitive.Root

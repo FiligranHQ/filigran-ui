@@ -1,5 +1,5 @@
 'use client'
-import {Button, useToast} from 'filigran-ui'
+import {Button, useToast} from '@filigran/ui'
 
 export function ExampleToast() {
   const {toast} = useToast()

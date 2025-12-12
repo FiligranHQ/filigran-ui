@@ -3,7 +3,7 @@
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox'
 import * as React from 'react'
 
-import {CheckBoldIcon, CheckIndeterminateSmallBoldIcon} from 'filigran-icon'
+import {CheckBoldIcon, CheckIndeterminateSmallBoldIcon} from '@filigran/icon'
 import {cn} from '../../lib/utils'
 
 const Checkbox = React.forwardRef<

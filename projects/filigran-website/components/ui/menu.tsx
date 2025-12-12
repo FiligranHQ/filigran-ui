@@ -8,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
   Button,
-} from 'filigran-ui'
+} from '@filigran/ui'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 

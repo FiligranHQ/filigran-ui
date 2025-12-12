@@ -50,7 +50,7 @@ jobs:
     needs: install
     strategy:
       matrix:
-        package: [filigran-icon, filigran-ui]
+        package: [filigran-chatbot, filigran-icon, filigran-ui]
       fail-fast: false
     steps:
       - name: Setup Node
@@ -98,12 +98,12 @@ jobs:
             .
             !.git
           key: workspace-${{ github.sha }}
-      - name: Restore filigran-icon build
+      - name: Restore @filigran/icon build
         uses: actions/cache/restore@v4
         with:
           path: packages/filigran-icon/dist
           key: build-filigran-icon-${{ github.sha }}
-      - name: Restore filigran-ui build
+      - name: Restore @filigran/ui build
         uses: actions/cache/restore@v4
         with:
           path: packages/filigran-ui/dist

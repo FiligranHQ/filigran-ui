@@ -1,6 +1,6 @@
 'use client'
 
-import {KeyboardArrowLeftIcon, KeyboardArrowRightIcon} from 'filigran-icon'
+import {KeyboardArrowLeftIcon, KeyboardArrowRightIcon} from '@filigran/icon'
 import * as React from 'react'
 import {DayPicker} from 'react-day-picker'
 import {cn} from '../../lib/utils'

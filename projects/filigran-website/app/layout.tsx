@@ -1,10 +1,10 @@
 import type {Metadata} from 'next'
-import 'filigran-ui/theme.css'
+import '@filigran/ui/theme.css'
 import './globals.css'
 import {ThemeProvider} from '@/components/providers'
 import {SiteHeader} from '@/components/site-header'
 import {geologica, ibmPlexSans} from '@/app/font'
-import {Toaster} from 'filigran-ui'
+import {Toaster} from '@filigran/ui'
 
 export const metadata: Metadata = {
   title: 'Filigran docs',

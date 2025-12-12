@@ -25,16 +25,16 @@
       "@/*": [
         "./*"
       ],
-      "filigran-ui": [
+      "@filigran/ui": [
         "../../packages/filigran-ui/src/index.ts"
       ],
-      "filigran-ui/plugin": [
+      "@filigran/ui/plugin": [
         "../../packages/filigran-ui/src/plugin.ts"
       ],
-      "filigran-ui/clients": [
+      "@filigran/ui/clients": [
         "../../packages/filigran-ui/src/components/clients/index.ts"
       ],
-      "filigran-ui/servers": [
+      "@filigran/ui/servers": [
         "../../packages/filigran-ui/src/components/servers/index.ts"
       ]
     },

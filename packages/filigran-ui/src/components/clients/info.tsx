@@ -1,6 +1,6 @@
 'use client'
 
-import {CheckIndeterminateIcon} from 'filigran-icon'
+import {CheckIndeterminateIcon} from '@filigran/icon'
 import {cn} from '../../lib/utils'
 
 export const Info = () => (

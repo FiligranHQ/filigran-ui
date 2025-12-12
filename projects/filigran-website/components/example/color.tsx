@@ -2,7 +2,7 @@
 import * as React from 'react'
 import ColorBox from '@/components/colorBox'
 import {useState} from 'react'
-import {Button} from 'filigran-ui'
+import {Button} from '@filigran/ui'
 import {HomeIcon} from 'lucide-react'
 
 export function Colors() {

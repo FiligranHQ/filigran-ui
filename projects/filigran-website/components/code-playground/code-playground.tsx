@@ -17,8 +17,8 @@ export const CodePlayground: FunctionComponent<CodePlaygroundProps> = ({
       template="react-ts"
       customSetup={{
         dependencies: {
-          'filigran-ui': 'latest',
-          'filigran-icon': 'latest',
+          '@filigran/ui': 'latest',
+          '@filigran/icon': 'latest',
           'lucide-react': '0.399.0',
           zod: 'latest',
         },

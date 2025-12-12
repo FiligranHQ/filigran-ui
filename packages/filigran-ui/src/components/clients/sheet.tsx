@@ -2,7 +2,7 @@
 
 import * as SheetPrimitive from '@radix-ui/react-dialog'
 import {cva, type VariantProps} from 'class-variance-authority'
-import {CloseIcon} from 'filigran-icon'
+import {CloseIcon} from '@filigran/icon'
 import * as React from 'react'
 import {cn} from '../../lib/utils'
 import {Button} from '../servers'

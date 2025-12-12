@@ -5,7 +5,7 @@ export const indexCode = `
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import "filigran-ui/index.css";
+import "@filigran/ui/index.css";
 import "./styles.css";
 const rootElement = document.getElementById("root");
 const root = ReactDOM.createRoot(rootElement);
@@ -34,7 +34,7 @@ root.render(
 `.trim()
 
 export const defaultApp = `
-import { Button } from "filigran-ui";
+import { Button } from "@filigran/ui";
 
 export default function App() {
   return (

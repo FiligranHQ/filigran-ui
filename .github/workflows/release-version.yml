@@ -14,12 +14,13 @@ on:
       package:
         description: 'Package to release'
         required: true
-        default: 'both'
+        default: 'all'
         type: choice
         options:
-          - filigran-ui
-          - filigran-icon
-          - both
+          - @filigran/chatbot
+          - @filigran/icon
+          - @filigran/ui
+          - all
 env:
   ORGANIZATION: 'FiligranHQ'
   PROJECT_NUMBER: 30
@@ -63,24 +64,33 @@ jobs:
         run: yarn install --immutable
       - name: Get current versions
         run: |
-          if [[ "${{ github.event.inputs.package }}" == "filigran-ui" ]] || [[ "${{ github.event.inputs.package }}" == "both" ]]; then
-            echo "FILIGRAN_UI_CURRENT_VERSION=$(node -p "require('./packages/filigran-ui/package.json').version")" >> $GITHUB_ENV
+          if [[ "${{ github.event.inputs.package }}" == "@filigran/chatbot" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
+            echo "FILIGRAN_CHATBOT_CURRENT_VERSION=$(node -p "require('./packages/filigran-chatbot/package.json').version")" >> $GITHUB_ENV
           fi
-          if [[ "${{ github.event.inputs.package }}" == "filigran-icon" ]] || [[ "${{ github.event.inputs.package }}" == "both" ]]; then
+          if [[ "${{ github.event.inputs.package }}" == "@filigran/icon" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
             echo "FILIGRAN_ICON_CURRENT_VERSION=$(node -p "require('./packages/filigran-icon/package.json').version")" >> $GITHUB_ENV
           fi
-      - name: Update version for Filigran-ui
-        if: github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both'
-        working-directory: ./packages/filigran-ui
+          if [[ "${{ github.event.inputs.package }}" == "@filigran/ui" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
+            echo "FILIGRAN_UI_CURRENT_VERSION=$(node -p "require('./packages/filigran-ui/package.json').version")" >> $GITHUB_ENV
+          fi
+      - name: Update version for @filigran/chatbot
+        if: github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all'
+        working-directory: ./packages/filigran-chatbot
         run: |
           yarn version ${{ github.event.inputs.version_type }}
-          echo "FILIGRAN_UI_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-      - name: Update version for Filigran-icon
-        if: github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both'
+          echo "FILIGRAN_CHATBOT_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+      - name: Update version for @filigran/icon
+        if: github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all'
         working-directory: ./packages/filigran-icon
         run: |
           yarn version ${{ github.event.inputs.version_type }}
           echo "FILIGRAN_ICON_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+      - name: Update version for @filigran/ui
+        if: github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all'
+        working-directory: ./packages/filigran-ui
+        run: |
+          yarn version ${{ github.event.inputs.version_type }}
+          echo "FILIGRAN_UI_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
       - name: Collect commits and issues for changelog
         id: changelog
         run: |
@@ -96,8 +106,8 @@ jobs:
           
           # Get commits since last tag for each package
           if [ -n "$FILIGRAN_UI_VERSION" ]; then
-            echo "Processing filigran-ui commits..."
-            LAST_UI_TAG=$(git tag -l "filigran-ui-v*" | sort -V | tail -n 1)
+            echo "Processing @filigran/ui commits..."
+            LAST_UI_TAG=$(git tag -l "@filigran/ui-v*" | sort -V | tail -n 1)
             if [ -z "$LAST_UI_TAG" ]; then
               LAST_UI_TAG=$(git rev-list --max-parents=0 HEAD)
             fi
@@ -122,8 +132,8 @@ jobs:
           fi
           
           if [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            echo "Processing filigran-icon commits..."
-            LAST_ICON_TAG=$(git tag -l "filigran-icon-v*" | sort -V | tail -n 1)
+            echo "Processing @filigran/icon commits..."
+            LAST_ICON_TAG=$(git tag -l "@filigran/icon-v*" | sort -V | tail -n 1)
             if [ -z "$LAST_ICON_TAG" ]; then
               LAST_ICON_TAG=$(git rev-list --max-parents=0 HEAD)
             fi
@@ -164,11 +174,11 @@ jobs:
           COMMIT_MSG=""
           
           if [ -n "$FILIGRAN_UI_VERSION" ] && [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            COMMIT_MSG="chore: bump filigran-ui to v$FILIGRAN_UI_VERSION and filigran-icon to v$FILIGRAN_ICON_VERSION"
+            COMMIT_MSG="chore: bump @filigran/ui to v$FILIGRAN_UI_VERSION and @filigran/icon to v$FILIGRAN_ICON_VERSION"
           elif [ -n "$FILIGRAN_UI_VERSION" ]; then
-            COMMIT_MSG="chore: bump filigran-ui to v$FILIGRAN_UI_VERSION"
+            COMMIT_MSG="chore: bump @filigran/ui to v$FILIGRAN_UI_VERSION"
           elif [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            COMMIT_MSG="chore: bump filigran-icon to v$FILIGRAN_ICON_VERSION"
+            COMMIT_MSG="chore: bump @filigran/icon to v$FILIGRAN_ICON_VERSION"
           else
             echo "No version changes to commit"
             exit 0
@@ -178,81 +188,96 @@ jobs:
           git push
       - name: Create Git tags
         run: |
-          if [ -n "$FILIGRAN_UI_VERSION" ]; then
-            git tag "filigran-ui-v$FILIGRAN_UI_VERSION"
-            echo "Created tag: filigran-ui-v$FILIGRAN_UI_VERSION"
+          if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
+            git tag "@filigran/chatbot-$FILIGRAN_CHATBOT_VERSION"
+            echo "Created tag: @filigran/chatbot-$FILIGRAN_CHATBOT_VERSION"
           fi
           if [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            git tag "filigran-icon-v$FILIGRAN_ICON_VERSION"
-            echo "Created tag: filigran-icon-v$FILIGRAN_ICON_VERSION"
+            git tag "@filigran/icon-v$FILIGRAN_ICON_VERSION"
+            echo "Created tag: @filigran/icon-v$FILIGRAN_ICON_VERSION"
+          fi
+          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+            git tag "@filigran/ui-v$FILIGRAN_UI_VERSION"
+            echo "Created tag: @filigran/ui-v$FILIGRAN_UI_VERSION"
           fi
           git push --tags
       - name: Build packages
         run: |
+          if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
+            echo "Building @filigran/chatbot..."
+            yarn workspace @filigran/chatbot run build
+          fi
           if [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            echo "Building filigran-icon..."
-            yarn workspace filigran-icon run build
+            echo "Building @filigran/icon..."
+            yarn workspace @filigran/icon run build
           fi
           if [ -n "$FILIGRAN_UI_VERSION" ]; then
-            echo "Building filigran-ui..."
-            yarn workspace filigran-ui run build
+            echo "Building @filigran/ui..."
+            yarn workspace @filigran/ui run build
           fi
-      - name: Publish Filigran-icon to NPM
-        if: (github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both') && env.FILIGRAN_ICON_VERSION != ''
+      - name: Publish @filigran/chatbot to NPM
+        if: (github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all') && env.FILIGRAN_ICON_VERSION != ''
+        working-directory: ./packages/filigran-chatbot
+        run: yarn npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish @filigran/icon to NPM
+        if: (github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all') && env.FILIGRAN_ICON_VERSION != ''
         working-directory: ./packages/filigran-icon
         run: yarn npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Publish Filigran-ui to NPM
-        if: (github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both') && env.FILIGRAN_UI_VERSION != ''
+      - name: Publish @filigran/ui to NPM
+        if: (github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all') && env.FILIGRAN_UI_VERSION != ''
         working-directory: ./packages/filigran-ui
         run: yarn npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Create GitHub Release for Filigran-ui
-        if: (github.event.inputs.package == 'filigran-ui' || github.event.inputs.package == 'both') && env.FILIGRAN_UI_VERSION != ''
+      - name: Create GitHub Release for @filigran/icon
+        if: (github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all') && env.FILIGRAN_ICON_VERSION != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: filigran-ui-v${{ env.FILIGRAN_UI_VERSION }}
-          name: Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
-          body: |
-            ## Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
-            
-            ### Installation
-            ```bash
-            npm install @filigran/filigran-ui@${{ env.FILIGRAN_UI_VERSION }}
-            # or
-            yarn add @filigran/filigran-ui@${{ env.FILIGRAN_UI_VERSION }}
-            ```
-            
-            ${{ steps.changelog.outputs.changelog }}
-            
-            ### Issues Closed
-            ${{ steps.changelog.outputs.ui_issues }}
-          draft: false
-          prerelease: false
-      - name: Create GitHub Release for Filigran-icon
-        if: (github.event.inputs.package == 'filigran-icon' || github.event.inputs.package == 'both') && env.FILIGRAN_ICON_VERSION != ''
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: filigran-icon-v${{ env.FILIGRAN_ICON_VERSION }}
+          tag_name: @filigran/icon-v${{ env.FILIGRAN_ICON_VERSION }}
           name: Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
           body: |
             ## Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
             
             ### Installation
             ```bash
-            npm install @filigran/filigran-icon@${{ env.FILIGRAN_ICON_VERSION }}
+            npm install @filigran/icon@${{ env.FILIGRAN_ICON_VERSION }}
             # or
-            yarn add @filigran/filigran-icon@${{ env.FILIGRAN_ICON_VERSION }}
+            yarn add @filigran/icon@${{ env.FILIGRAN_ICON_VERSION }}
             ```
             
             ${{ steps.changelog.outputs.changelog }}
             
             ### Issues Closed
             ${{ steps.changelog.outputs.icon_issues }}
+          draft: false
+          prerelease: false
+      - name: Create GitHub Release for @filigran/ui
+        if: (github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all') && env.FILIGRAN_UI_VERSION != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: @filigran/ui-v${{ env.FILIGRAN_UI_VERSION }}
+          name: Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
+          body: |
+            ## Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
+            
+            ### Installation
+            ```bash
+            npm install @filigran/ui@${{ env.FILIGRAN_UI_VERSION }}
+            # or
+            yarn add @filigran/ui@${{ env.FILIGRAN_UI_VERSION }}
+            ```
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### Issues Closed
+            ${{ steps.changelog.outputs.ui_issues }}
           draft: false
           prerelease: false
       - name: Update project status
@@ -461,7 +486,7 @@ jobs:
               if (!issue) continue;
               try {
                 const issueNumber = parseInt(issue);
-                const releaseMessage = `🎉 This issue has been resolved and released in filigran-ui v${uiVersion}`;
+                const releaseMessage = `🎉 This issue has been resolved and released in @filigran/ui v${uiVersion}`;
             
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
@@ -488,7 +513,7 @@ jobs:
               if (!issue || uiIssues.includes(issue)) continue; // Skip duplicates
               try {
                 const issueNumber = parseInt(issue);
-                const releaseMessage = `🎉 This issue has been resolved and released in filigran-icon v${iconVersion}`;
+                const releaseMessage = `🎉 This issue has been resolved and released in @filigran/icon v${iconVersion}`;
             
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
@@ -522,7 +547,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ -n "$UI_ISSUES_TO_CLOSE" ] && [ -n "$FILIGRAN_UI_VERSION" ]; then
-            echo "### Closed Issues (Filigran-UI)" >> $GITHUB_STEP_SUMMARY
+            echo "### Closed Issues (@filigran/ui)" >> $GITHUB_STEP_SUMMARY
             for issue in $UI_ISSUES_TO_CLOSE; do
               echo "- #$issue" >> $GITHUB_STEP_SUMMARY
             done
@@ -530,7 +555,7 @@ jobs:
           fi
           
           if [ -n "$ICON_ISSUES_TO_CLOSE" ] && [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            echo "### Closed Issues (Filigran-Icon)" >> $GITHUB_STEP_SUMMARY
+            echo "### Closed Issues (@filigran/icon)" >> $GITHUB_STEP_SUMMARY
             for issue in $ICON_ISSUES_TO_CLOSE; do
               echo "- #$issue" >> $GITHUB_STEP_SUMMARY
             done

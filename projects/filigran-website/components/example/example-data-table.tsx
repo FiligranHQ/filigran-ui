@@ -17,12 +17,12 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from 'filigran-ui/clients'
+} from '@filigran/ui/clients'
 import {useEffect, useMemo, useState} from 'react'
-import {Button, Input} from 'filigran-ui'
+import {Button, Input} from '@filigran/ui'
 import {makeData, Person} from '@/utils/makeData'
 import {useLocalStorage} from 'usehooks-ts'
-import {MoreVertIcon} from 'filigran-icon'
+import {MoreVertIcon} from '@filigran/icon'
 
 const HighlightSearchTerm = ({inputSearch, text}: {inputSearch: string, text: string}) => {
   if (!inputSearch) {

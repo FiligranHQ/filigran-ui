@@ -1,5 +1,5 @@
 'use client'
-import {ReadMoreIcon} from 'filigran-icon'
+import {ReadMoreIcon} from '@filigran/icon'
 import {
   createContext,
   useContext,

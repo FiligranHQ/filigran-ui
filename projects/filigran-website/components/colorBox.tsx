@@ -1,6 +1,6 @@
 'use client'
 import * as React from 'react'
-import {useToast} from 'filigran-ui'
+import {useToast} from '@filigran/ui'
 
 interface ColorBoxProps {
   colorName: string
