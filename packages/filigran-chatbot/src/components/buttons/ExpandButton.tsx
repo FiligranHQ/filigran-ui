@@ -1,4 +1,4 @@
-import { ExpandIcon, ReduceIcon } from '@/components/icons';
+import { ExpandIcon, ReduceIcon } from '../icons';
 import { JSX } from 'solid-js/jsx-runtime';
 
 const ExpandButton = (

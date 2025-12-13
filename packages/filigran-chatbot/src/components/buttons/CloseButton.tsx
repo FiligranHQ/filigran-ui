@@ -1,4 +1,4 @@
-import { CloseIcon } from '@/components/icons/CloseIcon';
+import { CloseIcon } from '../icons';
 import { JSX } from 'solid-js/jsx-runtime';
 
 export const CloseButton = (props: { color?: string, disableIcon?: boolean } & JSX.ButtonHTMLAttributes<HTMLButtonElement>) => {

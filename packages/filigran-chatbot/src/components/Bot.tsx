@@ -1,26 +1,26 @@
 import { createEffect, createMemo, createSignal, For, mergeProps, on, onMount, Show } from 'solid-js';
 import { v4 as uuidv4 } from 'uuid';
-import { IncomingInput, isStreamAvailableQuery } from '@/queries/sendMessageQuery';
+import { IncomingInput, isStreamAvailableQuery } from '../queries/sendMessageQuery';
 import { TextInput } from './inputs/textInput';
 import { GuestBubble } from './bubbles/GuestBubble';
 import { BotBubble } from './bubbles/BotBubble';
 import { LoadingBubble } from './bubbles/LoadingBubble';
 import { StarterPromptBubble } from './bubbles/StarterPromptBubble';
-import { BotMessageTheme, DateTimeToggleTheme, DisclaimerPopUpTheme, FooterTheme, TextInputTheme, UserMessageTheme } from '@/features/bubble/types';
+import { BotMessageTheme, DateTimeToggleTheme, DisclaimerPopUpTheme, FooterTheme, TextInputTheme, UserMessageTheme } from '../features/bubble/types';
 import { Badge } from './Badge';
-import { DisclaimerPopup, Popup } from '@/features/popup';
-import { Avatar } from '@/components/avatars/Avatar';
-import { DeleteButton, SendButton } from '@/components/buttons/SendButton';
-import ExpandButton from '@/components/buttons/ExpandButton';
-import { FilePreview } from '@/components/inputs/textInput/components/FilePreview';
+import { DisclaimerPopup, Popup } from '../features/popup';
+import { Avatar } from './avatars/Avatar';
+import { DeleteButton, SendButton } from './buttons/SendButton';
+import ExpandButton from './buttons/ExpandButton';
+import { FilePreview } from './inputs/textInput';
 import { CircleDotIcon, SparklesIcon, TrashIcon } from './icons';
 import { CancelButton } from './buttons/CancelButton';
-import { cancelAudioRecording, startAudioRecording, stopAudioRecording } from '@/utils/audioRecording';
-import { getCookie, getLocalStorageChatDetails, removeLocalStorageChatHistory, setCookie, setLocalStorageChatDetails } from '@/utils';
+import { cancelAudioRecording, startAudioRecording, stopAudioRecording } from '../utils/audioRecording';
+import { getCookie, getLocalStorageChatDetails, removeLocalStorageChatHistory, setCookie, setLocalStorageChatDetails } from '../utils';
 import { cloneDeep } from 'lodash';
-import { FollowUpPromptBubble } from '@/components/bubbles/FollowUpPromptBubble';
+import { FollowUpPromptBubble } from './bubbles/FollowUpPromptBubble';
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source';
-import { CloseButton } from '@/components/buttons/CloseButton';
+import { CloseButton } from './buttons/CloseButton';
 
 type IUploadConstraits = {
   fileTypes: string[];

@@ -1,4 +1,4 @@
-import { isMobile } from '@/utils/isMobileSignal';
+import { isMobile } from '../../utils/isMobileSignal';
 
 export const DefaultAvatar = () => {
   return (

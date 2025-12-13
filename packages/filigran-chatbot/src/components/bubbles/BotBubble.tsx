@@ -5,7 +5,7 @@ import { IAction, MessageType } from '../Bot';
 import { AgentReasoningBubble } from './AgentReasoningBubble';
 import { TickIcon, XIcon } from '../icons';
 import { SourceBubble } from '../bubbles/SourceBubble';
-import { DateTimeToggleTheme } from '@/features/bubble/types';
+import { DateTimeToggleTheme } from '../../features/bubble/types';
 import { WorkflowTreeView } from '../treeview/WorkflowTreeView';
 
 type Props = {

@@ -1,10 +1,10 @@
 import { ShortTextInput } from './ShortTextInput';
-import { isMobile } from '@/utils/isMobileSignal';
+import { isMobile } from '../../../../utils/isMobileSignal';
 import { createEffect, createSignal, onMount, Show } from 'solid-js';
-import { SendButton } from '@/components/buttons/SendButton';
-import { UploadsConfig } from '@/components/Bot';
-import { RecordAudioButton } from '@/components/buttons/RecordAudioButton';
-import { ChatInputHistory } from '@/utils/chatInputHistory';
+import { SendButton } from '../../../buttons/SendButton';
+import { UploadsConfig } from '../../../Bot';
+import { RecordAudioButton } from '../../../buttons/RecordAudioButton';
+import { ChatInputHistory } from '../../../../utils/chatInputHistory';
 
 type TextInputProps = {
   placeholder?: string;

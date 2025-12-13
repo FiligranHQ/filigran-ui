@@ -1,4 +1,4 @@
-import { FooterTheme } from '@/features/bubble/types';
+import { FooterTheme } from '../features/bubble/types';
 import { Show, onCleanup, onMount } from 'solid-js';
 
 type Props = {

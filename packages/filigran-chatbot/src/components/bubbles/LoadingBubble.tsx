@@ -1,4 +1,4 @@
-import { TypingBubble } from '@/components';
+import { TypingBubble } from '../TypingBubble';
 
 const defaultBackgroundColor = '#f7f8ff';
 const defaultTextColor = '#303235';
