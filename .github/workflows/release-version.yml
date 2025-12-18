@@ -22,9 +22,11 @@ on:
           - '@filigran/icon'
           - '@filigran/ui'
           - all
+
 env:
   ORGANIZATION: 'FiligranHQ'
   PROJECT_NUMBER: 30
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -50,13 +52,10 @@ jobs:
         with:
           node-version: '23'
           registry-url: 'https://registry.npmjs.org'
-
       - name: Enable Corepack
         run: corepack enable
-
       - name: Setup Yarn
         run: corepack prepare yarn@4.10.3 --activate
-
       - name: Configure Git
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -217,7 +216,7 @@ jobs:
             yarn workspace @filigran/ui run build
           fi
       - name: Publish @filigran/chatbot to NPM
-        if: (github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all') && env.FILIGRAN_ICON_VERSION != ''
+        if: (github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all') && env.FILIGRAN_CHATBOT_VERSION != ''
         working-directory: ./packages/filigran-chatbot
         run: yarn npm publish --access public
         env:
@@ -241,8 +240,8 @@ jobs:
         if: (github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all') && env.FILIGRAN_ICON_VERSION != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: @filigran/icon-v${{ env.FILIGRAN_ICON_VERSION }}
-          name: Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
+          tag_name: '@filigran/icon-v${{ env.FILIGRAN_ICON_VERSION }}'
+          name: 'Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}'
           body: |
             ## Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}
             
@@ -263,8 +262,8 @@ jobs:
         if: (github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all') && env.FILIGRAN_UI_VERSION != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: @filigran/ui-v${{ env.FILIGRAN_UI_VERSION }}
-          name: Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
+          tag_name: '@filigran/ui-v${{ env.FILIGRAN_UI_VERSION }}'
+          name: 'Filigran UI v${{ env.FILIGRAN_UI_VERSION }}'
           body: |
             ## Filigran UI v${{ env.FILIGRAN_UI_VERSION }}
             
