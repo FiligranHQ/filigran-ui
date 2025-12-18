@@ -25,7 +25,7 @@ const getIllustrationName = async (components) => {
     {headers: {'X-Figma-Token': FIGMA_API_TOKEN}}
   );
   const {images} = await response.json();
-  await Promise.all(
+  return Promise.all(
     components.filter(({id}) => images[id]).map(async ({id, name}) => {
         const svgResponse = await fetch(images[id]);
         const svg = await svgResponse.text();
@@ -57,7 +57,7 @@ const run = async () => {
   );
   const data = await response.json();
   const components = getComponentsFromNode(data);
-  const illustrations = getIllustrationName(components);
+  const illustrations = await getIllustrationName(components);
   createFiles(illustrations);
 }
 
