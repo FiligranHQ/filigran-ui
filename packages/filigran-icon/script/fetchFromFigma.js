@@ -23,7 +23,7 @@ const getIllustrationName = async (components) => {
   const response = await fetch(
     `https://api.figma.com/v1/images/${FIGMA_FILE_ID}?ids=${ids.join()}&format=svg`,
     {headers: {'X-Figma-Token': FIGMA_API_TOKEN}}
-  );
+  ).catch(console.error);
   const {images} = await response.json();
   return Promise.all(
     components.filter(({id}) => images[id]).map(async ({id, name}) => {
@@ -54,7 +54,7 @@ const run = async () => {
   const response = await fetch(
     `https://api.figma.com/v1/files/${FIGMA_FILE_ID}/nodes?ids=${FIGMA_NODE_ID}`,
     {headers: {'X-FIGMA-TOKEN': FIGMA_API_TOKEN}}
-  );
+  ).catch(console.error);
   const data = await response.json();
   const components = getComponentsFromNode(data);
   const illustrations = await getIllustrationName(components);

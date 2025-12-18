@@ -65,6 +65,7 @@ export { default as HomeIcon } from "./Home";
 export { default as IncidentIcon } from "./Incident";
 export { default as IndicatorIcon } from "./Indicator";
 export { default as IndividualIcon } from "./Individual";
+export { default as InfoIcon } from "./Info";
 export { default as InfrastructureIcon } from "./Infrastructure";
 export { default as IntrusionSetIcon } from "./IntrusionSet";
 export { default as KeyboardArrowDownIcon } from "./KeyboardArrowDown";
