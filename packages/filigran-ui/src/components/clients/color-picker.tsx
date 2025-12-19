@@ -1,7 +1,7 @@
 'use client'
 
 import {forwardRef, useMemo, useState} from 'react'
-import {SketchPicker} from 'react-color'
+import ReactColor from 'react-color';
 import {cn} from '../../lib/utils'
 import {Button, type ButtonProps, Input} from '../servers'
 import {Popover, PopoverContent, PopoverTrigger} from './popover'
@@ -60,7 +60,7 @@ const ColorPicker = forwardRef<
           </PopoverTrigger>
         </div>
         <PopoverContent className="w-full">
-          <SketchPicker
+          <ReactColor.SketchPicker
             color={parsedValue}
             onChangeComplete={(v: {hex: string}) => onChange(v.hex)}
           />
