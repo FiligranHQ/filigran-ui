@@ -20,6 +20,7 @@ title: Datatable
 | **onClickRow**   | _(row: Row\<TData\>) => void_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | -       | Action function triggered when the user clicks on a row.                                             |
 | **onResetTable** | _() => void_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | -       | Reset localStorage used for preferences (order table, number of rows...).                            |
 | **toolbar**      | _ReactNode_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | -       | Put anything in this toolbar : button, text, select...                                               |
+| **selection**    | _\{createDefaultSelectionColumn?: boolean, totalSelectableCount?: number, handlers?: DataTableSelectionHandlers, defaultSelectionHeaderActions?: (props: \{selectionState: SelectionState; \}) => ReactNode, selectionHeader?: ReactNode; \}_                                                                                                                                                                                                                                                                                            | -       | Activate and changes the default display or behavior of the table selection                          |
 
 ### Playground
 
@@ -128,6 +129,21 @@ Everything possible for declaring columns :
           columnPinning: {
             left: ['select']
           } //Force left column on the left, can not be pinned.
+        }}
+        selection={{
+          createDefaultSelectionColumn: true,
+          totalSelectableCount: totalSelectable,
+          defaultSelectionHeaderActions: ({ selectionState }) => (
+            <>
+              <Button
+                variant="ghost-destructive"
+                size="icon"
+                className="border"
+                onClick={() => console.log(selectionState)}>
+                <Trash className="size-4" />
+              </Button>
+            </>
+          ),
         }}
         onClickRow={(row) => console.log(row)} // Action on click
       />`}

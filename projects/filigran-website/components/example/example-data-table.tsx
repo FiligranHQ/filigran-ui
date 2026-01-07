@@ -88,7 +88,6 @@ export function ExampleDataTable() {
 
   const columns = useMemo<ColumnDefWithOptionsHeader<Person, unknown>[]>(
     () => [
-      createDefaultSelectionColumn<Person>(),
       {
         id: 'firstName',
         accessorKey: 'firstName',
@@ -244,6 +243,7 @@ export function ExampleDataTable() {
           },
         }}
         selection={{
+          createDefaultSelectionColumn: true,
           totalSelectableCount: totalSelectable,
           defaultSelectionHeaderActions: ({ selectionState }) => (
             <>

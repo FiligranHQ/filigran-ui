@@ -34,7 +34,7 @@ import {
 } from '@tanstack/react-table'
 import {
   ArrowNextIcon,
-  ArrowPreviousIcon,
+  ArrowPreviousIcon, CloseIcon,
   DragIndicatorIcon,
   KeyboardArrowDownIcon,
   KeyboardArrowUpIcon, MoreVertIcon,
@@ -75,7 +75,6 @@ import {
   TableHeader,
   TableRow,
 } from './table'
-import { X } from 'lucide-react';
 import {Checkbox} from './checkbox'
 
 
@@ -639,7 +638,7 @@ const DefaultSelectionHeader =
           className="h-5 w-5"
           onClick={selectionHandlers.clearSelection}
           title="Clear selection">
-          <X className="h-3 w-3" />
+          <CloseIcon className="h-2 w-2"/>
         </Button>
       </div>
     </div>
@@ -696,6 +695,7 @@ export function createDefaultSelectionColumn<TData>(
 }
 
 export interface DataTableSelectionConfig<TData> {
+  createDefaultSelectionColumn?: boolean;
   totalSelectableCount?: number;
   handlers?: DataTableSelectionHandlers<TData>;
   defaultSelectionHeaderActions?: (props: {
@@ -720,6 +720,8 @@ function GenericDataTable<TData extends {id: string}, TValue>(
   }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
+  if (selection?.createDefaultSelectionColumn) columns.unshift(createDefaultSelectionColumn());
+
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
     columns.map((c) => c.id!)
   )
