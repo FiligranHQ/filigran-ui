@@ -12,7 +12,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger, SelectionState,
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -22,8 +22,7 @@ import {useEffect, useMemo, useState} from 'react'
 import {Button, Input} from '@filigran/ui'
 import {makeData, Person} from '@/utils/makeData'
 import {useLocalStorage} from 'usehooks-ts'
-import {MoreVertIcon} from '@filigran/icon'
-import {Trash} from 'lucide-react'
+import {MoreVertIcon, DeleteIcon} from '@filigran/icon'
 
 const HighlightSearchTerm = ({inputSearch, text}: {inputSearch: string, text: string}) => {
   if (!inputSearch) {
@@ -82,8 +81,14 @@ export function ExampleDataTable() {
     Columns: 'Colonnes',
     'Reset table': 'Reinitialiser',
   }
-  const selectionHook = useRowSelection<Person>();
-  const { selectAll, selectedIds, excludedIds } = selectionHook.selection;
+
+  const [selection, setSelection] = useState<SelectionState>({
+    selectAll: false,
+    selectedIds: new Set<string>(),
+    excludedIds: new Set<string>(),
+  });
+
+  const {selectAll, selectedIds, excludedIds}  = selection;
   const totalSelectable = data.filter(person => person.age > 18).length;
 
   const columns = useMemo<ColumnDefWithOptionsHeader<Person, unknown>[]>(
@@ -242,20 +247,21 @@ export function ExampleDataTable() {
             right: ['actions'],
           },
         }}
-        selection={{
-          createDefaultSelectionColumn: true,
+        selectionOptions={{
           totalSelectableCount: totalSelectable,
-          defaultSelectionHeaderActions: ({ selectionState }) => (
-            <>
-              <Button
-                variant="ghost-destructive"
-                size="icon"
-                className="border"
-                onClick={() => console.log(selectionState)}>
-                <Trash className="size-4" />
-              </Button>
-            </>
-          ),
+          selectionState: {state: selection, onSelectionChange: setSelection},
+          selectionHeader: {
+            actions: ({selectionState}) => (
+              <>
+                <Button
+                  variant="ghost-destructive"
+                  size="icon"
+                  onClick={() => console.log(selectionState)}>
+                  <DeleteIcon className="size-4" />
+                </Button>
+              </>
+            ),
+          }
         }}
         onClickRow={(row) => console.log(row)}
       />

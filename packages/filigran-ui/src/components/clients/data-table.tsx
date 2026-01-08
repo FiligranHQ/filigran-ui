@@ -49,7 +49,7 @@ import {
   useImperativeHandle,
   useMemo,
   useState,
-  type ReactNode,
+  type ReactNode, type SetStateAction, type Dispatch,
 } from 'react'
 import {cn, fixedForwardRef} from '../../lib/utils'
 import {Button, Skeleton} from '../servers'
@@ -93,7 +93,7 @@ interface DataTableProps<TData extends {id: string}, TValue> {
   i18nKey?: Partial<DatatableI18nKey>
   onResetTable?: () => void
   sticky?: boolean
-  selection?: DataTableSelectionConfig<TData>
+  selectionOptions?: DataTableSelectionConfig<TData>
 }
 
 interface DatatableI18nKey {
@@ -489,14 +489,13 @@ const LoadingRow = <TData,>({table}: {table: TableType<TData>}) => {
   )
 }
 
-interface SelectionState {
+export interface SelectionState {
   selectAll: boolean;
   selectedIds: Set<string>;
   excludedIds: Set<string>;
 }
 
 export interface DataTableSelectionHandlers<TData> {
-  selection: SelectionState;
   isRowSelected: (row: Row<TData>) => boolean;
   toggleRow: (row: Row<TData>) => void;
   toggleSelectAll: () => void;
@@ -506,12 +505,7 @@ export interface DataTableSelectionHandlers<TData> {
   isSomeSelected: (table: TableType<TData>) => boolean;
 }
 
-export function useRowSelection<TData>(): DataTableSelectionHandlers<TData> {
-  const [selection, setSelection] = useState<SelectionState>({
-    selectAll: false,
-    selectedIds: new Set<string>(),
-    excludedIds: new Set<string>(),
-  });
+export function useRowSelection<TData>(selection: SelectionState, setSelection: Dispatch<SetStateAction<SelectionState>>): DataTableSelectionHandlers<TData> {
 
   const isRowSelected = useCallback(
     (row: Row<TData>): boolean => {
@@ -594,7 +588,6 @@ export function useRowSelection<TData>(): DataTableSelectionHandlers<TData> {
   );
 
   return {
-    selection,
     isRowSelected,
     toggleRow,
     toggleSelectAll,
@@ -610,10 +603,11 @@ interface SelectionHeaderProps<TData> {
   actions?: (props: {
     selectionState: SelectionState;
   }) => ReactNode;
+  selectionState: SelectionState
 }
 
 const DefaultSelectionHeader =
-  <TData,>({totalSelectableCount, actions}: SelectionHeaderProps<TData>)=> {
+  <TData,>({totalSelectableCount, actions, selectionState}: SelectionHeaderProps<TData>)=> {
   const {table, selectionHandlers} = useContext(TableContext);
 
   if (! selectionHandlers) return null;
@@ -646,7 +640,7 @@ const DefaultSelectionHeader =
     <div className="pr-0">
       <div className="flex items-center justify-end gap-1 px-l">
         {actions({
-          selectionState: selectionHandlers.selection
+          selectionState
         })}
       </div>
     </div>}
@@ -695,13 +689,29 @@ export function createDefaultSelectionColumn<TData>(
 }
 
 export interface DataTableSelectionConfig<TData> {
-  createDefaultSelectionColumn?: boolean;
+  createSelectionColumn?: boolean;
   totalSelectableCount?: number;
-  handlers?: DataTableSelectionHandlers<TData>;
-  defaultSelectionHeaderActions?: (props: {
-    selectionState: SelectionState;
-  }) => ReactNode;
-  selectionHeader?: ReactNode;
+  selectionState?: {
+    state: SelectionState
+    onSelectionChange: Dispatch<SetStateAction<SelectionState>>;
+  };
+  handlers?: {
+    isRowSelected?: (row: Row<TData>) => boolean;
+    toggleRow?: (row: Row<TData>) => void;
+    toggleSelectAll?: () => void;
+    getSelectionCount?: (table: TableType<TData>, totalCount?: number) => number;
+    clearSelection?: () => void;
+    isAllSelected?: (table: TableType<TData>) => boolean;
+    isSomeSelected?: (table: TableType<TData>) => boolean;
+  }
+  selectionHeader?: {
+    custom?: (props: {
+      selectionState: SelectionState;
+    }) => ReactNode;
+    actions?: (props: {
+      selectionState: SelectionState;
+    }) => ReactNode;
+  }
 }
 
 function GenericDataTable<TData extends {id: string}, TValue>(
@@ -716,11 +726,11 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     i18nKey,
     onResetTable,
     sticky = false,
-    selection,
+    selectionOptions,
   }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
-  if (selection?.createDefaultSelectionColumn) columns.unshift(createDefaultSelectionColumn());
+  if (selectionOptions?.createSelectionColumn !== false) columns.unshift(createDefaultSelectionColumn());
 
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
     columns.map((c) => c.id!)
@@ -765,12 +775,28 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     useSensor(KeyboardSensor, {})
   )
   const id = useId()
-  const defaultSelectionHandlers = useRowSelection();
-  const selectionHandlers = selection?.handlers ? selection.handlers : defaultSelectionHandlers;
+  const [selection, setSelection] = useState<SelectionState>({
+    selectAll: false,
+    selectedIds: new Set<string>(),
+    excludedIds: new Set<string>(),
+  });
+  const selectionState = selectionOptions?.selectionState?.state ?? selection;
+  const defaultSelectionHandlers = useRowSelection(
+    selectionState,
+    selectionOptions?.selectionState?.onSelectionChange ?? setSelection,
+  );
 
-  const defaultSelectionHeader = <DefaultSelectionHeader totalSelectableCount={selection?.totalSelectableCount} actions={selection?.defaultSelectionHeaderActions}/>;
+  const selectionHandlers = {
+    ...defaultSelectionHandlers,
+    ...selectionOptions?.handlers,
+  }
+
+  const defaultSelectionHeader = <DefaultSelectionHeader
+    totalSelectableCount={selectionOptions?.totalSelectableCount}
+    actions={selectionOptions?.selectionHeader?.actions}
+    selectionState={selectionState} />;
   return (
-    <TableContext.Provider value={{table, t_i18n, onResetTable, selectionHandlers}}>
+    <TableContext.Provider value={{table, t_i18n, onResetTable, selectionHandlers: selectionHandlers}}>
       {toolbar ? <>{toolbar}</> : <DefaultToolbar />}
       <DndContext
         id={id}
@@ -778,7 +804,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
         modifiers={[restrictToHorizontalAxis]}
         onDragEnd={handleDragEnd}
         sensors={sensors}>
-        {selection && (selection.selectionHeader ? <>{selection.selectionHeader}</> : <>{defaultSelectionHeader}</>)}
+        {selectionOptions && (selectionOptions.selectionHeader?.custom ? <>{selectionOptions.selectionHeader.custom}</> : <>{defaultSelectionHeader}</>)}
         {/* do not remove twp, the class is used to isolate preflight style */}
         <Table
           style={{width: table.getCenterTotalSize()}}
