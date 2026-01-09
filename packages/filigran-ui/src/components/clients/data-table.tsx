@@ -34,12 +34,11 @@ import {
 } from '@tanstack/react-table'
 import {
   ArrowNextIcon,
-  ArrowPreviousIcon,
+  ArrowPreviousIcon, CloseIcon,
   DragIndicatorIcon,
   KeyboardArrowDownIcon,
   KeyboardArrowUpIcon, MoreVertIcon,
   TableTuneIcon,
-  UnfoldMoreIcon,
   VisibilityOffIcon,
 } from '@filigran/icon'
 import {
@@ -50,7 +49,7 @@ import {
   useImperativeHandle,
   useMemo,
   useState,
-  type ReactNode,
+  type ReactNode, type SetStateAction, type Dispatch,
 } from 'react'
 import {cn, fixedForwardRef} from '../../lib/utils'
 import {Button, Skeleton} from '../servers'
@@ -76,6 +75,7 @@ import {
   TableHeader,
   TableRow,
 } from './table'
+import {Checkbox} from './checkbox'
 
 
 type ColumnDefWithOptionsHeader<TData, TValue> = ColumnDef<TData, TValue> & {
@@ -93,6 +93,7 @@ interface DataTableProps<TData extends {id: string}, TValue> {
   i18nKey?: Partial<DatatableI18nKey>
   onResetTable?: () => void
   sticky?: boolean
+  selectionOptions?: DataTableSelectionConfig<TData>
 }
 
 interface DatatableI18nKey {
@@ -126,12 +127,14 @@ interface TableContextProps<TData> {
   table: TableType<TData>
   t_i18n: (key: string) => string
   onResetTable?: () => void
+  selectionHandlers?: DataTableSelectionHandlers<TData>;
 }
 
 const TableContext = createContext<TableContextProps<any>>({
   table: {} as TableType<any>,
   t_i18n: (key) => key,
   onResetTable: () => {},
+  selectionHandlers: undefined
 })
 
 function getTransformString({x, y}: Transform) {
@@ -392,7 +395,7 @@ const DragAlongCell = <TData,>({
   cell: Cell<TData, unknown>
   isLoading?: boolean
 }) => {
-  const {isDragging, setNodeRef, transform} = useSortable({
+  const { isDragging, setNodeRef, transform } = useSortable({
     id: cell.column.id,
   } as Arguments)
   return (
@@ -486,6 +489,231 @@ const LoadingRow = <TData,>({table}: {table: TableType<TData>}) => {
   )
 }
 
+export interface SelectionState {
+  selectAll: boolean;
+  selectedIds: Set<string>;
+  excludedIds: Set<string>;
+}
+
+export interface DataTableSelectionHandlers<TData> {
+  isRowSelected: (row: Row<TData>) => boolean;
+  toggleRow: (row: Row<TData>) => void;
+  toggleSelectAll: () => void;
+  getSelectionCount: (table: TableType<TData>, totalCount?: number) => number;
+  clearSelection: () => void;
+  isAllSelected: (table: TableType<TData>) => boolean;
+  isSomeSelected: (table: TableType<TData>) => boolean;
+}
+
+export function useRowSelection<TData>(selection: SelectionState, setSelection: Dispatch<SetStateAction<SelectionState>>): DataTableSelectionHandlers<TData> {
+
+  const isRowSelected = useCallback(
+    (row: Row<TData>): boolean => {
+      if (!row.getCanSelect()) return false;
+      return selection.selectAll
+        ? !selection.excludedIds.has(row.id)
+        : selection.selectedIds.has(row.id);
+    },
+    [selection.selectAll, selection.excludedIds, selection.selectedIds]
+  );
+
+  const toggleRow = useCallback((row: Row<TData>): void => {
+    if (!row.getCanSelect()) return;
+    setSelection((prev) => {
+      const key = prev.selectAll ? 'excludedIds' : 'selectedIds';
+      const newSet = new Set(prev[key]);
+      newSet.has(row.id) ? newSet.delete(row.id) : newSet.add(row.id);
+      return { ...prev, [key]: newSet };
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback((): void => {
+    setSelection((prev) => ({
+      selectAll: !prev.selectAll,
+      selectedIds: new Set<string>(),
+      excludedIds: new Set<string>(),
+    }));
+  }, []);
+
+  const getSelectionCount = useCallback(
+    (table: TableType<TData>, totalCount?: number): number => {
+      const selectableRows = table.getRowModel().rows.filter(r => r.getCanSelect());
+      const selectableCount = totalCount ?? selectableRows.length;
+      if (selection.selectAll) {
+        return selectableCount - selection.excludedIds.size;
+      }
+      return selection.selectedIds.size;
+    },
+    [selection.selectAll, selection.excludedIds.size, selection.selectedIds.size]
+  );
+
+  const clearSelection = useCallback((): void => {
+    setSelection({
+      selectAll: false,
+      selectedIds: new Set<string>(),
+      excludedIds: new Set<string>(),
+    });
+  }, []);
+
+  const isAllSelected = useCallback(
+    (table: TableType<TData>): boolean => {
+      const selectableRows = table.getRowModel().rows.filter(r => r.getCanSelect());
+      const selectableCount = selectableRows.length;
+
+      if (selectableCount === 0) return false;
+
+      if (selection.selectAll) {
+        return selection.excludedIds.size === 0;
+      }
+      return selection.selectedIds.size === selectableCount;
+    },
+    [selection.selectAll, selection.excludedIds.size, selection.selectedIds.size]
+  );
+
+  const isSomeSelected = useCallback(
+    (table: TableType<TData>): boolean => {
+      const selectableRows = table.getRowModel().rows.filter(r => r.getCanSelect());
+      const selectableCount = selectableRows.length;
+
+      if (selectableCount === 0) return false;
+
+      if (selection.selectAll) {
+        // Some selected if we have exclusions but not all are excluded
+        return selection.excludedIds.size > 0 && selection.excludedIds.size < selectableCount;
+      }
+      // Some selected if we have selections but not all are selected
+      return selection.selectedIds.size > 0 && selection.selectedIds.size < selectableCount;
+    },
+    [selection.selectAll, selection.excludedIds.size, selection.selectedIds.size]
+  );
+
+  return {
+    isRowSelected,
+    toggleRow,
+    toggleSelectAll,
+    getSelectionCount,
+    clearSelection,
+    isAllSelected,
+    isSomeSelected,
+  };
+}
+
+interface SelectionHeaderProps<TData> {
+  totalSelectableCount?: number;
+  actions?: (props: {
+    selectionState: SelectionState;
+  }) => ReactNode;
+  selectionState: SelectionState
+}
+
+const DefaultSelectionHeader =
+  <TData,>({totalSelectableCount, actions, selectionState}: SelectionHeaderProps<TData>)=> {
+  const {table, selectionHandlers} = useContext(TableContext);
+
+  if (! selectionHandlers) return null;
+
+  const selectedCount = selectionHandlers.getSelectionCount(table, totalSelectableCount) || 0;
+  return ( <div
+    className={cn(
+      'flex justify-between items-center w-full bg-primary/10 hover:bg-primary/10 pl-4',
+      'transition-all duration-200 ease-in-out',
+      selectedCount > 0
+        ? 'py-3 h-12'
+        : 'h-0 overflow-hidden'
+    )}>
+    <div>
+      <div className="flex items-center gap-2">
+                <span className="text-sm font-normal lowercase">
+                  {`${selectedCount} selected`}
+                </span>
+        <Button
+          variant="ghost-primary"
+          size="icon"
+          className="h-5 w-5"
+          onClick={selectionHandlers.clearSelection}
+          title="Clear selection">
+          <CloseIcon className="h-2 w-2"/>
+        </Button>
+      </div>
+    </div>
+    { actions &&
+    <div className="pr-0">
+      <div className="flex items-center justify-end gap-1 px-l">
+        {actions({
+          selectionState
+        })}
+      </div>
+    </div>}
+  </div>);
+}
+
+
+export function createDefaultSelectionColumn<TData>(
+): ColumnDefWithOptionsHeader<TData, unknown> {
+  return {
+    id: 'select',
+    size: 40,
+    header: ({ table }) => {
+      const {selectionHandlers} = useContext(TableContext);
+      if (! selectionHandlers) return null;
+      return (
+        <Checkbox
+          className="flex"
+          checked={
+            selectionHandlers.isAllSelected(table)
+              ? true
+              : selectionHandlers.isSomeSelected(table)
+                ? 'indeterminate'
+                : false
+          }
+          onCheckedChange={() => selectionHandlers.toggleSelectAll()}
+          aria-label="Select all"
+        />
+    )},
+    cell: ({ row }) => {
+      const {selectionHandlers} = useContext(TableContext);
+      if (!selectionHandlers) return null;
+      return (
+      <Checkbox
+        className="flex"
+        checked={selectionHandlers.isRowSelected(row)}
+        onClick={(e) => e.stopPropagation()}
+        onCheckedChange={() => selectionHandlers.toggleRow(row)}
+        aria-label="Select row"
+      />
+    )},
+    enableSorting: false,
+    enableHiding: false,
+    enableResizing: false,
+  };
+}
+
+export interface DataTableSelectionConfig<TData> {
+  createSelectionColumn?: boolean;
+  totalSelectableCount?: number;
+  selectionState?: {
+    state: SelectionState
+    onSelectionChange: Dispatch<SetStateAction<SelectionState>>;
+  };
+  handlers?: {
+    isRowSelected?: (row: Row<TData>) => boolean;
+    toggleRow?: (row: Row<TData>) => void;
+    toggleSelectAll?: () => void;
+    getSelectionCount?: (table: TableType<TData>, totalCount?: number) => number;
+    clearSelection?: () => void;
+    isAllSelected?: (table: TableType<TData>) => boolean;
+    isSomeSelected?: (table: TableType<TData>) => boolean;
+  }
+  selectionHeader?: {
+    custom?: (props: {
+      selectionState: SelectionState;
+    }) => ReactNode;
+    actions?: (props: {
+      selectionState: SelectionState;
+    }) => ReactNode;
+  }
+}
+
 function GenericDataTable<TData extends {id: string}, TValue>(
   {
     columns,
@@ -498,9 +726,12 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     i18nKey,
     onResetTable,
     sticky = false,
+    selectionOptions,
   }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
+  if (selectionOptions?.createSelectionColumn !== false) columns.unshift(createDefaultSelectionColumn());
+
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
     columns.map((c) => c.id!)
   )
@@ -544,8 +775,28 @@ function GenericDataTable<TData extends {id: string}, TValue>(
     useSensor(KeyboardSensor, {})
   )
   const id = useId()
+  const [selection, setSelection] = useState<SelectionState>({
+    selectAll: false,
+    selectedIds: new Set<string>(),
+    excludedIds: new Set<string>(),
+  });
+  const selectionState = selectionOptions?.selectionState?.state ?? selection;
+  const defaultSelectionHandlers = useRowSelection(
+    selectionState,
+    selectionOptions?.selectionState?.onSelectionChange ?? setSelection,
+  );
+
+  const selectionHandlers = {
+    ...defaultSelectionHandlers,
+    ...selectionOptions?.handlers,
+  }
+
+  const defaultSelectionHeader = <DefaultSelectionHeader
+    totalSelectableCount={selectionOptions?.totalSelectableCount}
+    actions={selectionOptions?.selectionHeader?.actions}
+    selectionState={selectionState} />;
   return (
-    <TableContext.Provider value={{table, t_i18n, onResetTable}}>
+    <TableContext.Provider value={{table, t_i18n, onResetTable, selectionHandlers: selectionHandlers}}>
       {toolbar ? <>{toolbar}</> : <DefaultToolbar />}
       <DndContext
         id={id}
@@ -553,6 +804,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
         modifiers={[restrictToHorizontalAxis]}
         onDragEnd={handleDragEnd}
         sensors={sensors}>
+        {selectionOptions && (selectionOptions.selectionHeader?.custom ? <>{selectionOptions.selectionHeader.custom}</> : <>{defaultSelectionHeader}</>)}
         {/* do not remove twp, the class is used to isolate preflight style */}
         <Table
           style={{width: table.getCenterTotalSize()}}

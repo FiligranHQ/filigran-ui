@@ -5,24 +5,24 @@ import {
   PaginationState,
 } from '@tanstack/react-table'
 import {
-  Checkbox, ColumnDefWithOptionsHeader,
+  Checkbox, ColumnDefWithOptionsHeader, createDefaultSelectionColumn,
   DataTable,
   DatatableI18nKey,
   DataTableOptionsHeader,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger, SelectionState,
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
+  TooltipTrigger, useRowSelection,
 } from '@filigran/ui/clients'
 import {useEffect, useMemo, useState} from 'react'
 import {Button, Input} from '@filigran/ui'
 import {makeData, Person} from '@/utils/makeData'
 import {useLocalStorage} from 'usehooks-ts'
-import {MoreVertIcon} from '@filigran/icon'
+import {MoreVertIcon, DeleteIcon} from '@filigran/icon'
 
 const HighlightSearchTerm = ({inputSearch, text}: {inputSearch: string, text: string}) => {
   if (!inputSearch) {
@@ -81,39 +81,18 @@ export function ExampleDataTable() {
     Columns: 'Colonnes',
     'Reset table': 'Reinitialiser',
   }
+
+  const [selection, setSelection] = useState<SelectionState>({
+    selectAll: false,
+    selectedIds: new Set<string>(),
+    excludedIds: new Set<string>(),
+  });
+
+  const {selectAll, selectedIds, excludedIds}  = selection;
+  const totalSelectable = data.filter(person => person.age > 18).length;
+
   const columns = useMemo<ColumnDefWithOptionsHeader<Person, unknown>[]>(
     () => [
-      {
-        id: 'select',
-        size: 40,
-        header: ({table}) => (
-          <Checkbox
-            className="flex"
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && 'indeterminate')
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-          />
-        ),
-        cell: ({row}) => (
-          <Checkbox
-            className="flex"
-            checked={row.getIsSelected()}
-            onClick={(e) => e.stopPropagation()}
-            onCheckedChange={(value) => {
-              row.toggleSelected(!!value)
-            }}
-            aria-label="Select row"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-        enableResizing: false,
-      },
       {
         id: 'firstName',
         accessorKey: 'firstName',
@@ -268,12 +247,32 @@ export function ExampleDataTable() {
             right: ['actions'],
           },
         }}
+        selectionOptions={{
+          totalSelectableCount: totalSelectable,
+          selectionState: {state: selection, onSelectionChange: setSelection},
+          selectionHeader: {
+            actions: ({selectionState}) => (
+              <>
+                <Button
+                  variant="ghost-destructive"
+                  size="icon"
+                  onClick={() => console.log(selectionState)}>
+                  <DeleteIcon className="size-4" />
+                </Button>
+              </>
+            ),
+          }
+        }}
         onClickRow={(row) => console.log(row)}
       />
 
       <div className="container mx-auto py-10">
         <div>Selected</div>
-        {JSON.stringify(rowSelection, null, 20)}
+        {JSON.stringify({
+          selectAll,
+          selectedIds: Array.from(selectedIds),
+          excludedIds: Array.from(excludedIds),
+        }, null, 2)}
       </div>
     </div>
   )
