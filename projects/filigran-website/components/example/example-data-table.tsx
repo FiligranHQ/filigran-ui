@@ -243,7 +243,6 @@ export function ExampleDataTable() {
           pagination,
           columnOrder,
           columnPinning: {
-            left: ['select'],
             right: ['actions'],
           },
         }}

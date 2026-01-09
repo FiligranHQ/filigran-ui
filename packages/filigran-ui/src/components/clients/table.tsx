@@ -8,7 +8,7 @@ const Table = React.forwardRef<HTMLTableElement, TableProps>(
   ({className, sticky, ...props}, ref) => (
     <div
       className={cn(
-        'relative min-w-full twp mt-m sm:mt-l overflow-auto',
+        'relative min-w-full overflow-auto',
         sticky && 'h-full'
       )}>
       <table

@@ -618,7 +618,7 @@ const DefaultSelectionHeader =
       'flex justify-between items-center w-full bg-primary/10 hover:bg-primary/10 pl-4',
       'transition-all duration-200 ease-in-out',
       selectedCount > 0
-        ? 'py-3 h-12'
+        ? 'py-3 h-12 mt-4 mb-s'
         : 'h-0 overflow-hidden'
     )}>
     <div>
@@ -730,7 +730,20 @@ function GenericDataTable<TData extends {id: string}, TValue>(
   }: DataTableProps<TData, TValue>,
   ref?: any
 ) {
-  if (selectionOptions?.createSelectionColumn !== false) columns.unshift(createDefaultSelectionColumn());
+  if (selectionOptions && selectionOptions?.createSelectionColumn !== false) {
+    columns.unshift(createDefaultSelectionColumn());
+    if (!tableState) {
+      tableState = {};
+    }
+    if (!tableState.columnPinning) {
+      tableState.columnPinning = {};
+    }
+    const left = tableState.columnPinning.left ?? [];
+    tableState.columnPinning.left = [
+      'select',
+      ...left.filter((c) => c !== 'select'),
+    ];
+  }
 
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
     columns.map((c) => c.id!)
@@ -804,8 +817,9 @@ function GenericDataTable<TData extends {id: string}, TValue>(
         modifiers={[restrictToHorizontalAxis]}
         onDragEnd={handleDragEnd}
         sensors={sensors}>
-        {selectionOptions && (selectionOptions.selectionHeader?.custom ? <>{selectionOptions.selectionHeader.custom}</> : <>{defaultSelectionHeader}</>)}
         {/* do not remove twp, the class is used to isolate preflight style */}
+        <div className="twp mt-m sm:mt-l">
+        {selectionOptions && (selectionOptions.selectionHeader?.custom ? <>{selectionOptions.selectionHeader.custom}</> : <>{defaultSelectionHeader}</>)}
         <Table
           style={{width: table.getCenterTotalSize()}}
           sticky={sticky}>
@@ -858,6 +872,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
               ))}
           </TableBody>
         </Table>
+        </div>
       </DndContext>
     </TableContext.Provider>
   )
