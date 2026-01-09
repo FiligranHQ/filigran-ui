@@ -672,7 +672,7 @@ export function createDefaultSelectionColumn<TData>(
     )},
     cell: ({ row }) => {
       const {selectionHandlers} = useContext(TableContext);
-      if (! selectionHandlers) return null;
+      if (!selectionHandlers) return null;
       return (
       <Checkbox
         className="flex"
