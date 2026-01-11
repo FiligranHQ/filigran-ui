@@ -1998,7 +1998,7 @@ __metadata:
     react-day-picker: "npm:9.13.0"
     react-dom: "npm:19.2.3"
     react-easy-sort: "npm:1.8.0"
-    react-hook-form: "npm:7.68.0"
+    react-hook-form: "npm:7.70.0"
     rimraf: "npm:6.1.2"
     tailwind-merge: "npm:3.4.0"
     tailwindcss: "npm:3.4.18"
@@ -2052,7 +2052,7 @@ __metadata:
     prettier-plugin-tailwindcss: "npm:0.7.2"
     react: "npm:19.2.3"
     react-dom: "npm:19.2.3"
-    react-hook-form: "npm:7.68.0"
+    react-hook-form: "npm:7.70.0"
     react-live: "npm:4.1.8"
     react-remove-scroll: "npm:2.7.2"
     rehype-slug: "npm:6.0.0"
@@ -12563,12 +12563,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-hook-form@npm:7.68.0":
-  version: 7.68.0
-  resolution: "react-hook-form@npm:7.68.0"
+"react-hook-form@npm:7.70.0":
+  version: 7.70.0
+  resolution: "react-hook-form@npm:7.70.0"
   peerDependencies:
     react: ^16.8.0 || ^17 || ^18 || ^19
-  checksum: 10c0/5fb500fe60077185ab6de32a2371d05bf75ae335ef62993f0359dbb42bb0c95e0c28d4f7d70c4382995486c82715295c87fc44f2ced5de1ae353aa1f23398f47
+  checksum: 10c0/009c9c86b9ddb4f68964a121693fedcf61d656bc30052b217d4c87002ee26d6c5540cabd193abca4eb290775fdcd3c0a06b3b96fd54d9fead0c0d268a1760a5e
   languageName: node
   linkType: hard
 
