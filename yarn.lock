@@ -1961,7 +1961,6 @@ __metadata:
     "@dnd-kit/core": "npm:6.3.1"
     "@dnd-kit/modifiers": "npm:9.0.0"
     "@dnd-kit/sortable": "npm:10.0.0"
-    "@hookform/resolvers": "npm:5.2.2"
     "@radix-ui/react-accordion": "npm:1.2.12"
     "@radix-ui/react-alert-dialog": "npm:1.1.15"
     "@radix-ui/react-aspect-ratio": "npm:1.1.8"
@@ -1998,7 +1997,6 @@ __metadata:
     react-day-picker: "npm:9.13.0"
     react-dom: "npm:19.2.3"
     react-easy-sort: "npm:1.8.0"
-    react-hook-form: "npm:7.68.0"
     rimraf: "npm:6.1.2"
     tailwind-merge: "npm:3.4.0"
     tailwindcss: "npm:3.4.18"
@@ -2007,12 +2005,14 @@ __metadata:
     terser: "npm:5.44.1"
     tsup: "npm:8.5.1"
     typescript: "npm:5.9.3"
-    zod: "npm:4.2.1"
   peerDependencies:
     "@filigran/icon": ^0.21.2
+    "@hookform/resolvers": ^5.0.0
     "@types/react": ^16.8 || ^17.0 || ^18.0 || ^19.0
     react: ^16.8 || ^17.0 || ^18.0 || ^19.0
     react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0
+    react-hook-form: ^7.68.0
+    zod: ^4.1.13
   languageName: unknown
   linkType: soft
 
@@ -2024,6 +2024,7 @@ __metadata:
     "@codesandbox/sandpack-themes": "npm:2.0.21"
     "@faker-js/faker": "npm:10.1.0"
     "@floating-ui/react-dom": "npm:2.1.6"
+    "@hookform/resolvers": "npm:5.2.2"
     "@jsdevtools/rehype-toc": "npm:3.0.2"
     "@radix-ui/react-accordion": "npm:1.2.12"
     "@radix-ui/react-dropdown-menu": "npm:2.1.16"
@@ -2052,7 +2053,7 @@ __metadata:
     prettier-plugin-tailwindcss: "npm:0.7.2"
     react: "npm:19.2.3"
     react-dom: "npm:19.2.3"
-    react-hook-form: "npm:7.68.0"
+    react-hook-form: "npm:^7.70.0"
     react-live: "npm:4.1.8"
     react-remove-scroll: "npm:2.7.2"
     rehype-slug: "npm:6.0.0"
@@ -2064,6 +2065,7 @@ __metadata:
     twind: "npm:0.16.19"
     typescript: "npm:5.9.3"
     usehooks-ts: "npm:3.1.1"
+    zod: "npm:4.2.1"
   languageName: unknown
   linkType: soft
 
@@ -12563,12 +12565,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-hook-form@npm:7.68.0":
-  version: 7.68.0
-  resolution: "react-hook-form@npm:7.68.0"
+"react-hook-form@npm:^7.70.0":
+  version: 7.70.0
+  resolution: "react-hook-form@npm:7.70.0"
   peerDependencies:
     react: ^16.8.0 || ^17 || ^18 || ^19
-  checksum: 10c0/5fb500fe60077185ab6de32a2371d05bf75ae335ef62993f0359dbb42bb0c95e0c28d4f7d70c4382995486c82715295c87fc44f2ced5de1ae353aa1f23398f47
+  checksum: 10c0/009c9c86b9ddb4f68964a121693fedcf61d656bc30052b217d4c87002ee26d6c5540cabd193abca4eb290775fdcd3c0a06b3b96fd54d9fead0c0d268a1760a5e
   languageName: node
   linkType: hard
 
