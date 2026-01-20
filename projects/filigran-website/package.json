@@ -19,7 +19,7 @@
   "dependencies": {
     "@codesandbox/sandpack-react": "2.20.0",
     "@codesandbox/sandpack-themes": "2.0.21",
-    "@faker-js/faker": "10.1.0",
+    "@faker-js/faker": "10.2.0",
     "@floating-ui/react-dom": "2.1.6",
     "@hookform/resolvers": "5.2.2",
     "@jsdevtools/rehype-toc": "3.0.2",
