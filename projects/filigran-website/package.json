@@ -48,7 +48,7 @@
     "tailwindcss-animate": "1.0.7",
     "twind": "0.16.19",
     "usehooks-ts": "3.1.1",
-    "zod": "4.2.1"
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "@svgr/webpack": "8.1.0",
