@@ -1,13 +1,13 @@
 name: Test Build Packages
 on:
   push:
-    branches: ["main"]
+    branches: [main]
   pull_request:
-    branches: ["main"]
+    branches: [main]
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 concurrency:
-  group: "test-build-${{ github.ref }}"
+  group: 'test-build-${{ github.ref }}'
   cancel-in-progress: true
 jobs:
   install:
@@ -18,11 +18,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: "23"
+          node-version: '24'
+          cache: yarn
       - name: Enable Corepack
-        run: corepack enable
-      - name: Setup Yarn
-        run: corepack prepare yarn@4.10.3 --activate
+        run: npm install -g corepack
       - name: Restore cache
         uses: actions/cache@v4
         with:
@@ -56,11 +55,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: "23"
+          node-version: '24'
+          cache: yarn
       - name: Enable Corepack
-        run: corepack enable
-      - name: Setup Yarn
-        run: corepack prepare yarn@4.10.3 --activate
+        run: npm install -g corepack
       - name: Restore workspace
         uses: actions/cache/restore@v4
         with:
@@ -86,11 +84,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: "23"
+          node-version: '24'
+          cache: yarn
       - name: Enable Corepack
-        run: corepack enable
-      - name: Setup Yarn
-        run: corepack prepare yarn@4.10.3 --activate
+        run: npm install -g corepack
       - name: Restore workspace
         uses: actions/cache/restore@v4
         with:
