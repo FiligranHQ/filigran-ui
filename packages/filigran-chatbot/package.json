@@ -18,6 +18,7 @@
   "scripts": {
     "dev": "NODE_ENV=development rollup --watch --config rollup.config.js",
     "build": "NODE_ENV=production rollup --config rollup.config.js",
+    "check-ts": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts*\"",
     "lint-fix": "eslint --fix \"src/**/*.ts*\"",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
@@ -45,7 +46,6 @@
     "@tailwindcss/typography": "0.5.19",
     "@types/lodash": "4.17.21",
     "@types/node": "24.10.1",
-    "@types/uuid": "11.0.0",
     "@typescript-eslint/eslint-plugin": "8.50.0",
     "@typescript-eslint/parser": "8.50.0",
     "autoprefixer": "10.4.23",

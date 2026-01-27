@@ -1897,7 +1897,6 @@ __metadata:
     "@ts-stack/markdown": "npm:1.5.0"
     "@types/lodash": "npm:4.17.21"
     "@types/node": "npm:24.10.1"
-    "@types/uuid": "npm:11.0.0"
     "@typescript-eslint/eslint-plugin": "npm:8.50.0"
     "@typescript-eslint/parser": "npm:8.50.0"
     autoprefixer: "npm:10.4.23"
@@ -4570,15 +4569,6 @@ __metadata:
   version: 2.0.11
   resolution: "@types/unist@npm:2.0.11"
   checksum: 10c0/24dcdf25a168f453bb70298145eb043cfdbb82472db0bc0b56d6d51cd2e484b9ed8271d4ac93000a80da568f2402e9339723db262d0869e2bf13bc58e081768d
-  languageName: node
-  linkType: hard
-
-"@types/uuid@npm:11.0.0":
-  version: 11.0.0
-  resolution: "@types/uuid@npm:11.0.0"
-  dependencies:
-    uuid: "npm:*"
-  checksum: 10c0/6ebf1448d8fdc78d348a8a84389b74083f2f58bed75a5a6cf3be8419d33dcf757735c8b2de746b066ff8ef07f4384d02549774dc84195ffa46b24745471e9d8e
   languageName: node
   linkType: hard
 
@@ -15038,7 +15028,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:*, uuid@npm:13.0.0":
+"uuid@npm:13.0.0":
   version: 13.0.0
   resolution: "uuid@npm:13.0.0"
   bin:
