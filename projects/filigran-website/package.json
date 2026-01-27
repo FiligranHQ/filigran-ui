@@ -43,7 +43,7 @@
     "react-remove-scroll": "2.7.2",
     "rehype-slug": "6.0.0",
     "remark-gfm": "4.0.1",
-    "styled-components": "6.1.19",
+    "styled-components": "6.3.8",
     "tailwind-merge": "3.4.0",
     "tailwindcss-animate": "1.0.7",
     "twind": "0.16.19",
