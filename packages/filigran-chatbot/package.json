@@ -30,7 +30,7 @@
     "device-detector-js": "3.0.3",
     "lodash": "4.17.23",
     "solid-element": "1.9.1",
-    "solid-js": "1.9.10",
+    "solid-js": "1.9.11",
     "uuid": "13.0.0"
   },
   "devDependencies": {
