@@ -14,7 +14,7 @@
     "build": "maizzle build production"
   },
   "dependencies": {
-    "@maizzle/framework": "5.3.1",
+    "@maizzle/framework": "5.4.0",
     "tailwindcss-preset-email": "1.4.1"
   }
 }
