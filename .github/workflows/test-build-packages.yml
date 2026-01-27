@@ -22,7 +22,7 @@ jobs:
       - name: Enable Corepack
         run: npm install -g corepack
       - name: Restore cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             .next/cache
@@ -36,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
       - name: Cache workspace
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             .
@@ -58,7 +58,7 @@ jobs:
       - name: Enable Corepack
         run: npm install -g corepack
       - name: Restore workspace
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             .
@@ -67,7 +67,7 @@ jobs:
       - name: Build ${{ matrix.package }}
         run: yarn build:${{ matrix.package }}
       - name: Cache ${{ matrix.package }} build
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: packages/${{ matrix.package }}/dist
           key: build-${{ matrix.package }}-${{ github.sha }}
@@ -86,19 +86,19 @@ jobs:
       - name: Enable Corepack
         run: npm install -g corepack
       - name: Restore workspace
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             .
             !.git
           key: workspace-${{ github.sha }}
       - name: Restore @filigran/icon build
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: packages/filigran-icon/dist
           key: build-filigran-icon-${{ github.sha }}
       - name: Restore @filigran/ui build
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: packages/filigran-ui/dist
           key: build-filigran-ui-${{ github.sha }}
