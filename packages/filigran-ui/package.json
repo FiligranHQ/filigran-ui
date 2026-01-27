@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git+https://github.com/FiligranHQ/filigran-ui.git"
   },
-  "version": "0.44.2",
+  "version": "0.44.3",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
