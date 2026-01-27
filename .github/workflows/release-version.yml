@@ -44,18 +44,12 @@ jobs:
           owner: ${{ github.repository_owner }}
       - name: Checkout code
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '23'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: '24'
       - name: Enable Corepack
-        run: corepack enable
-      - name: Setup Yarn
-        run: corepack prepare yarn@4.10.3 --activate
+        run: npm install -g corepack
       - name: Configure Git
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
