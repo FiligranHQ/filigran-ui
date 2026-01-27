@@ -28,7 +28,7 @@
     "@microsoft/fetch-event-source": "2.0.1",
     "@ts-stack/markdown": "1.5.0",
     "device-detector-js": "3.0.3",
-    "lodash": "4.17.21",
+    "lodash": "4.17.23",
     "solid-element": "1.9.1",
     "solid-js": "1.9.10",
     "uuid": "13.0.0"
