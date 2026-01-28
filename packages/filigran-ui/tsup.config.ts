@@ -3,7 +3,7 @@ import {promises as fsPromises} from 'fs'
 import * as path from 'path'
 import {defineConfig} from 'tsup'
 
-function readFilesRecursively(directory: string) {
+const readFilesRecursively = (directory: string) => {
   const files: string[] = []
 
   function read(directory: string) {
@@ -25,7 +25,7 @@ function readFilesRecursively(directory: string) {
   return files
 }
 
-async function addDirectivesToChunkFiles(distPath = 'dist'): Promise<void> {
+const addDirectivesToChunkFiles = async (distPath = 'dist'): Promise<void> => {
   try {
     const files = readFilesRecursively(distPath)
 
@@ -58,7 +58,7 @@ async function addDirectivesToChunkFiles(distPath = 'dist'): Promise<void> {
   }
 }
 
-async function copyFile(sourceRelativePath, destinationRelativePath) {
+const copyFile = async (sourceRelativePath: string, destinationRelativePath: string)=> {
   // Resolve the absolute paths based on the current working directory
   const srcFilePath = path.resolve(sourceRelativePath)
   const distFilePath = path.resolve(destinationRelativePath)

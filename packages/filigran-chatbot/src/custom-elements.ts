@@ -3,6 +3,7 @@ import type { Ref } from 'react';
 
 // @ts-expect-error needed for React
 declare module 'react/jsx-runtime' {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace JSX {
     interface IntrinsicElements {
       "filigran-chatbot": Omit<BubbleProps, 'ref'> & {

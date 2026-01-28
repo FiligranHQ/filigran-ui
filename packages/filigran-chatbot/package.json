@@ -46,16 +46,14 @@
     "@tailwindcss/typography": "0.5.19",
     "@types/lodash": "4.17.23",
     "@types/node": "24.10.9",
-    "@typescript-eslint/eslint-plugin": "8.53.1",
-    "@typescript-eslint/parser": "8.53.1",
     "autoprefixer": "10.4.23",
     "babel-plugin-lodash": "3.3.4",
     "babel-preset-solid": "1.9.10",
     "eslint": "9.39.2",
     "eslint-config-next": "15.5.9",
     "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-prettier": "5.5.5",
     "eslint-plugin-solid": "0.14.5",
+    "jiti": "2.6.1",
     "postcss": "8.5.6",
     "prettier": "3.8.1",
     "react": "19.2.3",
@@ -67,6 +65,7 @@
     "rollup-plugin-typescript-paths": "1.5.0",
     "rollup-plugin-uglify": "6.0.4",
     "tailwindcss": "3.4.19",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.53.1"
   }
 }

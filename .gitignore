@@ -19,6 +19,7 @@ node_modules/
 build/
 dist/
 out/
+tsconfig.tsbuildinfo
 
 # Log files
 *.log
