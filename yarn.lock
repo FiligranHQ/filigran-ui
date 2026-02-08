@@ -1959,7 +1959,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@filigran/email@workspace:packages/filigran-email"
   dependencies:
-    "@maizzle/framework": "npm:5.4.0"
+    "@maizzle/framework": "npm:5.4.1"
     tailwindcss-preset-email: "npm:1.4.1"
   languageName: unknown
   linkType: soft
@@ -2554,9 +2554,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@maizzle/framework@npm:5.4.0":
-  version: 5.4.0
-  resolution: "@maizzle/framework@npm:5.4.0"
+"@maizzle/framework@npm:5.4.1":
+  version: 5.4.1
+  resolution: "@maizzle/framework@npm:5.4.1"
   dependencies:
     "@maizzle/cli": "npm:^2.0.0"
     cheerio: "npm:1.0.0"
@@ -2605,7 +2605,7 @@ __metadata:
     ws: "npm:^8.18.0"
   bin:
     maizzle: bin/maizzle
-  checksum: 10c0/1bbd65114c2a959dfa1f12d9ae91a9611054211abcb956f1e23dc4c86e99b997533cda01d97ad83528f64645d93cbf52134ee197b538c7b5705168b13841841d
+  checksum: 10c0/ea2726d38857677e95261d703cfc966e24569f0da6fc1346df6c3b6cf81fd49adf9482edb4147cb559c633db130fe4c506c1555bea4841ed3be416ce1ba2b29e
   languageName: node
   linkType: hard
 
