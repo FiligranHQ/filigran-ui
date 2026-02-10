@@ -20,7 +20,7 @@
   "dependencies": {
     "@codesandbox/sandpack-react": "2.20.0",
     "@codesandbox/sandpack-themes": "2.0.21",
-    "@faker-js/faker": "10.2.0",
+    "@faker-js/faker": "10.3.0",
     "@hookform/resolvers": "5.2.2",
     "canvas-confetti": "1.9.4",
     "clsx": "2.1.1",
