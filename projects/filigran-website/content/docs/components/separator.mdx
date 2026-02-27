@@ -13,6 +13,8 @@ title: Separator
     <Separator orientation="vertical" />
     <div>After the vertical separator</div>
   </div>
+
+  <Separator label="My little label" className="my-4" />
 </div>
 
 ## How to use this separator
@@ -23,6 +25,7 @@ title: Separator
 | --------------- | ----------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **orientation** | _enum ("horizontal" \| "vertical")_ | "horizontal" | Change the default rendered element for the one passed as a child, merging their props and behavior.                                                                                 |
 | **decorative**  | _boolean_                           | true         | Whether or not the component is purely decorative. When true, accessibility-related attributes are updated so that that the rendered element is removed from the accessibility tree. |
+| **label**       | _string_                            | ""           | Adds a label inside the separator                                                                                                                                                    |
 
 ### Playground
 
@@ -44,5 +47,8 @@ Import \{Separator\} from '@filigran/ui'
     <Separator orientation="vertical" />
     <div>After the vertical separator</div>
   </div>
+
+    <Separator label="My little label" className="my-4" />
+
 </div>`}
 />
