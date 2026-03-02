@@ -59,7 +59,7 @@ jobs:
       - name: Get current versions
         run: |
           if [[ "${{ github.event.inputs.package }}" == "@filigran/chatbot" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
-            echo "FILIGRAN_CHATBOT_CURRENT_VERSION=$(node -p "require('./packages/filigran-chatbot/package.json').version")" >> $GITHUB_ENV
+            echo "FILIGRAN_CHATBOT_CURRENT_VERSION=$(node -p "require('./packages/filigran-chatbotv2/package.json').version")" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.package }}" == "@filigran/icon" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
             echo "FILIGRAN_ICON_CURRENT_VERSION=$(node -p "require('./packages/filigran-icon/package.json').version")" >> $GITHUB_ENV
@@ -69,7 +69,7 @@ jobs:
           fi
       - name: Update version for @filigran/chatbot
         if: github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all'
-        working-directory: ./packages/filigran-chatbot
+        working-directory: ./packages/filigran-chatbotv2
         run: |
           yarn version ${{ github.event.inputs.version_type }}
           echo "FILIGRAN_CHATBOT_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
@@ -211,7 +211,7 @@ jobs:
           fi
       - name: Publish @filigran/chatbot to NPM
         if: (github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all') && env.FILIGRAN_CHATBOT_VERSION != ''
-        working-directory: ./packages/filigran-chatbot
+        working-directory: ./packages/filigran-chatbotv2
         run: yarn npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -272,6 +272,21 @@ jobs:
             
             ### Issues Closed
             ${{ steps.changelog.outputs.ui_issues }}
+          draft: false
+          prerelease: false
+      - name: Create GitHub Release for @filigran/chatbot
+        if: (github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all') && env.FILIGRAN_CHATBOT_VERSION != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: '@filigran/chatbot-v${{ env.FILIGRAN_CHATBOT_VERSION }}'
+          name: 'Filigran Chatbot v${{ env.FILIGRAN_CHATBOT_VERSION }}'
+          body: |
+            ## Filigran Chatbot v${{ env.FILIGRAN_CHATBOT_VERSION }}
+            
+            ### Installation
+            ```bash
+            yarn add @filigran/chatbot@${{ env.FILIGRAN_CHATBOT_VERSION }}
+            ```
           draft: false
           prerelease: false
       - name: Update project status
