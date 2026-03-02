@@ -133,7 +133,9 @@
   --yellow-900: 41 91% 12%;
 }
 
-.dark {
+.dark,
+body[data-theme="dark"],
+body[data-theme="Dark"] {
   --background: 220 56% 6%;
   --foreground: var(--gray-100);
   --tw-prose-body: var(--gray-400);
@@ -179,7 +181,9 @@
   border: 0.25rem solid hsl(240 11% 96%);
   background: #7a7c85b3;
 }
-.dark {
+.dark,
+body[data-theme="dark"],
+body[data-theme="Dark"] {
   ::-webkit-scrollbar-thumb {
     border-radius: 100vh;
     border: 0.25rem solid hsl(230 100% 2.35%);
