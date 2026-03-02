@@ -1,13 +1,15 @@
-import { type FunctionComponent, useEffect, useRef, useState } from 'react';
-import type { AgentStatusState, ChatFile, ChatMessage, ChatPanelProps, XtmAgent } from '../types';
+import { type FunctionComponent, useEffect, useState } from 'react';
+import type { ChatMessage, ChatPanelProps } from '../types';
 import { hexAlpha, identity } from '../utils';
+import { useChat } from '../hooks/useChat';
+import { useAgents } from '../hooks/useAgents';
+import { useSidebarResize } from '../hooks/useSidebarResize';
 import { DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
 import { ChatWelcome } from './ChatWelcome';
 
-const SIDEBAR_WIDTH = 400;
 const FLOATING_WIDTH = 380;
 const FLOATING_HEIGHT = 560;
 
@@ -17,9 +19,6 @@ const DEFAULT_SUGGESTIONS = [
   'How do I configure detection rules?',
   'Summarize my recent findings',
 ];
-
-const STORAGE_KEY = 'filigranChatConversationId';
-const STORAGE_AGENT_KEY = 'filigranChatAgentSlug';
 
 export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   mode,
@@ -33,21 +32,40 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   accentColor = '#7b5cff',
   logoIcon,
   promptSuggestions = DEFAULT_SUGGESTIONS,
+  resizable = false,
+  onWidthChange,
+  onResizeStart,
+  onResizeEnd,
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [agentStatus, setAgentStatus] = useState<AgentStatusState | null>(null);
-  const [conversationId, setConversationId] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY));
-  const [agents, setAgents] = useState<XtmAgent[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState<XtmAgent | null>(null);
-  const [agentMenuOpen, setAgentMenuOpen] = useState(false);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
-  const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
 
-  const historyLoadedRef = useRef(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const hasUsedToolsRef = useRef(false);
+  const { agents, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({ apiBaseUrl });
+
+  const {
+    messages,
+    inputValue,
+    setInputValue,
+    isLoading,
+    agentStatus,
+    attachedFiles,
+    conversationId,
+    historyLoadedRef,
+    handleFileAdd,
+    handlePaste,
+    handleSendMessage,
+    handleNewChat,
+    handleStopGenerating,
+    setAttachedFiles,
+    setMessages,
+  } = useChat({ apiBaseUrl, agentSlug: selectedAgent?.slug, t });
+
+  const { sidebarWidth, handleResizeStart, defaultWidth } = useSidebarResize({
+    mode,
+    resizable,
+    onWidthChange,
+    onResizeStart,
+    onResizeEnd,
+  });
 
   const resolvedLogo = logoIcon ?? <DefaultLogoIcon size={24} />;
   const firstName = user.firstName;
@@ -61,20 +79,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     '--chat-accent-dark': accentColor,
   } as React.CSSProperties;
 
-  useEffect(() => {
-    fetch(`${apiBaseUrl}/chat/agents`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data: XtmAgent[]) => {
-        setAgents(data);
-        if (data.length > 0 && !selectedAgent) {
-          const savedSlug = localStorage.getItem(STORAGE_AGENT_KEY);
-          const match = savedSlug ? data.find((a) => a.slug === savedSlug) : null;
-          setSelectedAgent(match || data[0]);
-        }
-      })
-      .catch(() => {});
-  }, [apiBaseUrl]);
-
+  // Load conversation history when agent is selected
   useEffect(() => {
     if (!conversationId || historyLoadedRef.current || !selectedAgent) return;
     historyLoadedRef.current = true;
@@ -98,205 +103,13 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         setMessages(restored);
       })
       .catch(() => {});
-  }, [conversationId, selectedAgent, apiBaseUrl]);
+  }, [conversationId, selectedAgent, apiBaseUrl, historyLoadedRef, setMessages]);
 
-  const handleFileAdd = (fileList: FileList | null) => {
-    if (!fileList) return;
-    const newFiles: ChatFile[] = [];
-    Array.from(fileList).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        newFiles.push({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          dataUrl: reader.result as string,
-        });
-        if (newFiles.length === fileList.length) {
-          setAttachedFiles((prev) => [...prev, ...newFiles]);
-        }
-      };
-      reader.readAsDataURL(file);
+  const onSwitchAgent = (agent: typeof selectedAgent) => {
+    if (!agent) return;
+    handleSwitchAgent(agent, () => {
+      handleNewChat();
     });
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const { files } = e.clipboardData;
-    if (files.length > 0) {
-      e.preventDefault();
-      handleFileAdd(files);
-    }
-  };
-
-  const handleSendMessage = async () => {
-    if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return;
-    const content = inputValue.trim();
-
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content,
-      timestamp: new Date(),
-      files: attachedFiles.length > 0 ? [...attachedFiles] : undefined,
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setInputValue('');
-    setAttachedFiles([]);
-    setIsLoading(true);
-    setAgentStatus({ status: 'thinking' });
-    hasUsedToolsRef.current = false;
-
-    const assistantId = crypto.randomUUID();
-    setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
-
-    try {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      const res = await fetch(`${apiBaseUrl}/chat/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content,
-          conversation_id: conversationId,
-          agent_slug: selectedAgent?.slug,
-        }),
-        signal: controller.signal,
-      });
-
-      if (!res.ok || !res.body) {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, content: t('Unable to connect. Please check the configuration.') } : m)),
-        );
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let accumulated = '';
-      let doneReceived = false;
-
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        // eslint-disable-next-line no-await-in-loop
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const evt = JSON.parse(line.slice(6));
-            if (evt.type === 'error') {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId ? { ...m, content: evt.content || t('Unable to connect. Please check the configuration.') } : m,
-                ),
-              );
-              return;
-            }
-            if (evt.type === 'status') {
-              const st = evt.status as string;
-              if (st === 'tool_done' || st === 'wind_down') {
-                // skip transient internal events
-              } else if (st === 'streaming') {
-                setAgentStatus({ status: 'streaming' });
-              } else if (st === 'tool_start') {
-                hasUsedToolsRef.current = true;
-                setAgentStatus({ status: 'tool_start', tools: evt.tools });
-              } else if (st === 'thinking' && hasUsedToolsRef.current) {
-                setAgentStatus({ status: 'analyzing' });
-              } else {
-                setAgentStatus({ status: st, tools: evt.tools });
-              }
-            } else if (evt.type === 'stream') {
-              accumulated += evt.content;
-              setAgentStatus({ status: 'streaming' });
-              setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)));
-            } else if (evt.type === 'done') {
-              doneReceived = true;
-              if (evt.conversation_id) {
-                setConversationId(evt.conversation_id);
-                localStorage.setItem(STORAGE_KEY, evt.conversation_id);
-              }
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? {
-                        ...m,
-                        content: evt.content,
-                        toolNames: evt.tool_names,
-                        toolCallCount: evt.tool_call_count,
-                        iterations: evt.iterations,
-                      }
-                    : m,
-                ),
-              );
-            }
-          } catch {
-            /* skip malformed SSE */
-          }
-        }
-      }
-      if (accumulated && !doneReceived) {
-        setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated || 'No response.' } : m)));
-      }
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, content: t('Sorry, an error occurred. Please try again.') } : m)),
-      );
-    } finally {
-      abortControllerRef.current = null;
-      setIsLoading(false);
-      setAgentStatus(null);
-      hasUsedToolsRef.current = false;
-    }
-  };
-
-  const handleNewChat = () => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    setMessages([]);
-    setInputValue('');
-    setConversationId(null);
-    setAttachedFiles([]);
-    setIsLoading(false);
-    setAgentStatus(null);
-    hasUsedToolsRef.current = false;
-    localStorage.removeItem(STORAGE_KEY);
-    historyLoadedRef.current = false;
-  };
-
-  const handleSwitchAgent = (agent: XtmAgent) => {
-    if (agent.id === selectedAgent?.id) {
-      setAgentMenuOpen(false);
-      return;
-    }
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    setSelectedAgent(agent);
-    if (agent.slug) localStorage.setItem(STORAGE_AGENT_KEY, agent.slug);
-    setAgentMenuOpen(false);
-    setMessages([]);
-    setInputValue('');
-    setConversationId(null);
-    setAttachedFiles([]);
-    setIsLoading(false);
-    setAgentStatus(null);
-    hasUsedToolsRef.current = false;
-    localStorage.removeItem(STORAGE_KEY);
-    historyLoadedRef.current = false;
-  };
-
-  const handleStopGenerating = () => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    setIsLoading(false);
-    setAgentStatus(null);
-    hasUsedToolsRef.current = false;
-    setMessages((prev) => prev.filter((m) => !(m.role === 'assistant' && !m.content)));
   };
 
   const containerClasses = (() => {
@@ -315,7 +128,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   const containerStyle: React.CSSProperties = {
     ...cssVars,
     ...(mode === 'sidebar'
-      ? { top: topOffset, width: SIDEBAR_WIDTH }
+      ? { top: topOffset, width: resizable ? sidebarWidth : defaultWidth }
       : mode === 'floating'
         ? { width: FLOATING_WIDTH, height: FLOATING_HEIGHT }
         : { top: topOffset }),
@@ -323,6 +136,14 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
 
   return (
     <div className={containerClasses} style={containerStyle}>
+      {mode === 'sidebar' && resizable && (
+        <div
+          onMouseDown={handleResizeStart}
+          className="absolute top-0 -left-1 bottom-0 w-2 cursor-col-resize z-10 group"
+        >
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 bottom-0 w-0.5 rounded bg-[var(--chat-accent)] opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100" />
+        </div>
+      )}
       <ChatHeader
         mode={mode}
         agentName={agentName}
@@ -331,7 +152,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         agentMenuOpen={agentMenuOpen}
         onAgentMenuToggle={() => setAgentMenuOpen((p) => !p)}
         onAgentMenuClose={() => setAgentMenuOpen(false)}
-        onSwitchAgent={handleSwitchAgent}
+        onSwitchAgent={onSwitchAgent}
         modeMenuOpen={modeMenuOpen}
         onModeMenuToggle={() => setModeMenuOpen((p) => !p)}
         onModeMenuClose={() => setModeMenuOpen(false)}

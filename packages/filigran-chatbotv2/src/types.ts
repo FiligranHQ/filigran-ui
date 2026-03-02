@@ -12,6 +12,14 @@ export interface ChatPanelProps {
   accentColor?: string;
   logoIcon?: React.ReactNode;
   promptSuggestions?: string[];
+  /** Enable resizable sidebar (drag to resize). Only applies when mode is 'sidebar'. */
+  resizable?: boolean;
+  /** Callback when sidebar width changes during resize. */
+  onWidthChange?: (width: number) => void;
+  /** Callback when resize drag starts. */
+  onResizeStart?: () => void;
+  /** Callback when resize drag ends. */
+  onResizeEnd?: () => void;
 }
 
 export interface ChatToggleButtonProps {
