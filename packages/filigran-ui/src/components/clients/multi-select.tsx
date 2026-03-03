@@ -70,7 +70,6 @@ const MultiSelectFormField = React.forwardRef<
       defaultValue,
       onValueChange,
       onInputChange,
-      disabled,
       placeholder,
       noResultString = 'No results found',
       ...props
