@@ -7,7 +7,6 @@
  * CSS custom properties are set inline via the accentColor prop.
  */
 
-/* Hide scrollbar in messages area */
 .filigran-chat-scrollable::-webkit-scrollbar {
   display: none;
 }
@@ -16,7 +15,6 @@
   scrollbar-width: none;
 }
 
-/* Typing dot animation */
 @keyframes chat-dot {
   0%,
   80%,
