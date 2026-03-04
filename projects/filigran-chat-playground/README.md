@@ -24,7 +24,7 @@ The playground runs at `http://localhost:5173` by default.
 
 The playground expects a chat API at `/api/xtmone`. For local development, you'll need to either:
 
-1. Run a mock server that implements the [API contract](../../packages/filigran-chatbotv2/README.md#api-contract)
+1. Run a mock server that implements the [API contract](../../packages/filigran-chatbot/README.md#api-contract)
 2. Configure Vite to proxy requests to a real backend
 
 ### Vite Proxy Example

@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@filigran/chatbot': path.resolve(__dirname, '../../packages/filigran-chatbotv2/src/index.ts'),
+      '@filigran/chatbot': path.resolve(__dirname, '../../packages/filigran-chatbot/src/index.ts'),
     },
   },
   server: {

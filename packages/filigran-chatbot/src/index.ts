@@ -1,4 +1,4 @@
-import './custom-elements';
+import './assets/index.css';
 
-export type { BotProps } from './components/Bot';
-export type { BubbleProps } from './features/bubble/components/Bubble';
+export { ChatPanel, ChatToggleButton } from './components';
+export type { ChatMode, ChatPanelProps, ChatToggleButtonProps, ChatMessage, ChatFile, XtmAgent } from './types';

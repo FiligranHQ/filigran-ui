@@ -3,7 +3,7 @@ module.exports = {
   content: [
     './index.html',
     './src/**/*.{ts,tsx}',
-    '../../packages/filigran-chatbotv2/src/**/*.{ts,tsx}',
+    '../../packages/filigran-chatbot/src/**/*.{ts,tsx}',
   ],
   darkMode: 'class',
   theme: {

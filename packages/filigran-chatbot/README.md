@@ -1,215 +1,325 @@
-<!-- markdownlint-disable MD030 -->
+# @filigran/chatbot
 
-# Filigran Chatbot
+Filigran chat panel — a standalone React + Tailwind chatbot component with SSE streaming, multi-agent support, and full markdown rendering.
 
-> 🪧 Most of the code from this repository is taken from [FlowiseEmbedChat](https://github.com/FlowiseAI/FlowiseChatEmbed).
->
-> The chatbot interface and logic is kept, but we remove ties to flowise in favor of an agnostic approach, to be able to connect custom agentic server.
+## Features
 
-![Flowise](https://github.com/FlowiseAI/FlowiseChatEmbed/blob/main/images/ChatEmbed.gif?raw=true)
+- 🔄 **SSE Message Streaming** — Real-time response streaming with status indicators
+- 🤖 **Multi-Agent Support** — Switch between different AI agents
+- 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
+- 📝 **Full Markdown** — Tables, code blocks with copy button, lists, blockquotes
+- 🎨 **Customizable Theme** — Accent color and logo customization
+- 📱 **3 Display Modes** — Floating, sidebar (resizable), and fullscreen
+- 💾 **Persistence** — Conversation and sidebar width saved to localStorage
+- 🛠️ **Tool Tracking** — Visual indicators for AI tool usage
 
-Install:
+## Installation
 
 ```bash
-yarn install
+yarn add @filigran/chatbot
 ```
 
-Dev:
+## Quick Start
+
+```tsx
+import { useState } from 'react';
+import { ChatPanel, ChatToggleButton } from '@filigran/chatbot';
+import '@filigran/chatbot/styles.css';
+
+function App() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [mode, setMode] = useState<'floating' | 'sidebar' | 'fullscreen'>('floating');
+
+  return (
+    <>
+      <ChatToggleButton
+        isOpen={isOpen}
+        onToggle={() => setIsOpen(!isOpen)}
+        label="Ask Assistant"
+        accentColor="#7b5cff"
+      />
+      {isOpen && (
+        <ChatPanel
+          mode={mode}
+          onClose={() => setIsOpen(false)}
+          onModeChange={setMode}
+          apiBaseUrl="/api/assistant"
+          user={{ firstName: 'John' }}
+        />
+      )}
+    </>
+  );
+}
+```
+
+## Components
+
+### `ChatPanel`
+
+The main chat interface component.
+
+```tsx
+import { ChatPanel } from '@filigran/chatbot';
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `mode` | `'floating' \| 'sidebar' \| 'fullscreen'` | **required** | Display mode |
+| `onClose` | `() => void` | **required** | Called when close button is clicked |
+| `onModeChange` | `(mode: ChatMode) => void` | **required** | Called when user switches display mode |
+| `apiBaseUrl` | `string` | **required** | Base URL for chat API endpoints |
+| `user` | `{ firstName: string }` | **required** | Current user info |
+| `topOffset` | `number` | `0` | Top offset in pixels (for sidebar/fullscreen with fixed headers) |
+| `agentDashboardUrl` | `string` | — | URL for "Browse agents" / "Create agent" links |
+| `t` | `(key: string) => string` | identity | Translation function for i18n |
+| `accentColor` | `string` | `'#7b5cff'` | Primary accent color (hex) |
+| `logoIcon` | `React.ReactNode` | default icon | Custom logo/icon for the assistant |
+| `promptSuggestions` | `string[]` | default list | Prompt suggestions shown on welcome screen |
+| `resizable` | `boolean` | `false` | Enable drag-to-resize for sidebar mode |
+| `onWidthChange` | `(width: number) => void` | — | Called when sidebar width changes during resize |
+| `onResizeStart` | `() => void` | — | Called when resize drag starts |
+| `onResizeEnd` | `() => void` | — | Called when resize drag ends |
+
+#### Resizable Sidebar Example
+
+```tsx
+function App() {
+  const [sidebarWidth, setSidebarWidth] = useState(400);
+  const [isResizing, setIsResizing] = useState(false);
+
+  return (
+    <div style={{ marginRight: sidebarWidth }}>
+      <MainContent />
+      <ChatPanel
+        mode="sidebar"
+        resizable={true}
+        onWidthChange={setSidebarWidth}
+        onResizeStart={() => setIsResizing(true)}
+        onResizeEnd={() => setIsResizing(false)}
+        // ... other props
+      />
+    </div>
+  );
+}
+```
+
+The sidebar width is persisted to `localStorage` under the key `filigranChatSidebarWidth`.
+
+### `ChatToggleButton`
+
+A floating action button to toggle the chat panel.
+
+```tsx
+import { ChatToggleButton } from '@filigran/chatbot';
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `isOpen` | `boolean` | **required** | Whether the chat panel is open |
+| `onToggle` | `() => void` | **required** | Called when button is clicked |
+| `label` | `string` | `'Chat'` | Tooltip/aria label |
+| `accentColor` | `string` | `'#7b5cff'` | Button background color |
+| `icon` | `React.ReactNode` | default icon | Custom icon |
+
+## API Contract
+
+The component expects your backend to implement these endpoints:
+
+### `GET {apiBaseUrl}/chat/agents`
+
+Returns available AI agents.
+
+```json
+[
+  {
+    "id": "agent-1",
+    "name": "General Assistant",
+    "slug": "general",
+    "icon": null,
+    "description": "A helpful general-purpose assistant"
+  }
+]
+```
+
+### `POST {apiBaseUrl}/chat/sessions`
+
+Restores conversation history.
+
+**Request:**
+```json
+{
+  "conversation_id": "uuid-here",
+  "agent_slug": "general"
+}
+```
+
+**Response:**
+```json
+{
+  "messages": [
+    { "role": "user", "content": "Hello" },
+    { "role": "assistant", "content": "Hi! How can I help?" }
+  ]
+}
+```
+
+### `POST {apiBaseUrl}/chat/messages`
+
+Sends a message and streams the response via SSE.
+
+**Request:**
+```json
+{
+  "content": "What is the weather?",
+  "conversation_id": "uuid-or-null",
+  "agent_slug": "general"
+}
+```
+
+**Response:** Server-Sent Events stream with these event types:
+
+```
+data: {"type": "status", "status": "thinking"}
+data: {"type": "status", "status": "tool_start", "tools": ["search_web"]}
+data: {"type": "status", "status": "analyzing"}
+data: {"type": "status", "status": "streaming"}
+data: {"type": "stream", "content": "The weather "}
+data: {"type": "stream", "content": "today is sunny."}
+data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1}
+```
+
+**Status values:**
+- `thinking` — Agent is processing
+- `tool_start` — Agent is using tools (with `tools` array)
+- `analyzing` — Agent is analyzing tool results
+- `composing` — Agent is composing the response
+- `streaming` — Content is being streamed
+
+**Error event:**
+```
+data: {"type": "error", "content": "Something went wrong"}
+```
+
+## Customization
+
+### Custom Logo
+
+```tsx
+import { MyLogo } from './icons';
+
+<ChatPanel
+  logoIcon={<MyLogo size={24} />}
+  // ...
+/>
+```
+
+### Custom Accent Color
+
+```tsx
+<ChatPanel
+  accentColor="#00bcd4"
+  // ...
+/>
+```
+
+### Custom Prompt Suggestions
+
+```tsx
+<ChatPanel
+  promptSuggestions={[
+    'Help me write a report',
+    'Analyze this data',
+    'Summarize recent activity',
+  ]}
+  // ...
+/>
+```
+
+### Internationalization
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function App() {
+  const { t } = useTranslation();
+  
+  return (
+    <ChatPanel
+      t={t}
+      // ...
+    />
+  );
+}
+```
+
+**Translation keys used:**
+- `'Thinking...'`
+- `'Using tools…'`
+- `'Analyzing results…'`
+- `'Composing answer…'`
+- `'Ask a question...'`
+- `'Stop generating'`
+- `'New chat'`
+- `'Switch view'`
+- `'Close'`
+- `'Switch to another agent'`
+- `'Browse agents'`
+- `'Create agent'`
+- `'Reasoning details'`
+- `'tool call'` / `'tool calls'`
+- `'Uses AI. Verify results.'`
+- `'How can I help you, '`
+- `'Suggestions'`
+- `'Floating'`
+- `'Sidebar'`
+- `'Full screen'`
+
+## Styling
+
+Import the CSS file to apply default styles:
+
+```tsx
+import '@filigran/chatbot/styles.css';
+```
+
+The component uses Tailwind CSS classes and CSS custom properties for theming. The accent color is applied via `--chat-accent` CSS variable.
+
+## Peer Dependencies
+
+- `react` >= 18
+- `react-dom` >= 18
+- `react-markdown` >= 10
+- `remark-gfm` >= 4
+
+---
+
+## Development
+
+To develop locally:
 
 ```bash
+cd packages/filigran-chatbot
 yarn dev
 ```
 
-A development server will be running on http://localhost:5678 automatically. Update `public/index.html` to connect to your server:
-
-```html
-<!-- public/index.html -->
-<script type="module">
-  import Chatbot from 'https://localhost:5678/web.js'; // Switch between './web.js' or 'https://localhost:5678/web.js'
-  Chatbot.init({
-    agenticUrl: 'https://your-agentic-service-url/endpoint', // Add your endpoint
-  });
-</script>
-```
-
-Build:
+To build:
 
 ```bash
 yarn build
 ```
 
-## Configuration
-
-You can also customize chatbot with different configuration
-
-```html
-<script type="module">
-  import Chatbot from 'https://localhost:5678/web.js'; // Switch between './web.js' or 'https://localhost:5678/web.js'
-  Chatbot.init({
-    agenticUrl: 'https://your-agentic-service-url/endpoint', // Add your endpoint
-    chatflowConfig: {
-      some: "variable" // this will be send in request header
-    },
-    observersConfig: {
-      // (optional) Allows you to execute code in parent based upon signal observations within the chatbot.
-      // The userinput field submitted to bot ("" when reset by bot)
-      observeUserInput: (userInput) => {
-        console.log({ userInput });
-      },
-      // The bot message stack has changed
-      observeMessages: (messages) => {
-        console.log({ messages });
-      },
-      // The bot loading signal changed
-      observeLoading: (loading) => {
-        console.log({ loading });
-      },
-    },
-    theme: {
-      button: {
-        backgroundColor: '#3B81F6',
-        right: 20,
-        bottom: 20,
-        size: 48, // small | medium | large | number
-        dragAndDrop: true,
-        iconColor: 'white',
-        customIconSrc: 'https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/google-messages.svg',
-        autoWindowOpen: {
-          autoOpen: true, //parameter to control automatic window opening
-          openDelay: 2, // Optional parameter for delay time in seconds
-          autoOpenOnMobile: false, //parameter to control automatic window opening in mobile
-        },
-      },
-      tooltip: {
-        showTooltip: true,
-        tooltipMessage: 'Hi There 👋!',
-        tooltipBackgroundColor: 'black',
-        tooltipTextColor: 'white',
-        tooltipFontSize: 16,
-      },
-      disclaimer: {
-        title: 'Disclaimer',
-        message: 'By using this chatbot, you agree to the <a target="_blank" href="https://your-url/terms">Terms & Condition</a>',
-        textColor: 'black',
-        buttonColor: '#3b82f6',
-        buttonText: 'Start Chatting',
-        buttonTextColor: 'white',
-        blurredBackgroundColor: 'rgba(0, 0, 0, 0.4)', //The color of the blurred background that overlays the chat interface
-        backgroundColor: 'white',
-        denyButtonText: 'Cancel',
-        denyButtonBgColor: '#ef4444',
-      },
-      form: {
-        backgroundColor: 'white',
-        textColor: 'black',
-      }
-      customCSS: ``, // Add custom CSS styles. Use !important to override default styles
-      chatWindow: {
-        showTitle: true,
-        showAgentMessages: true,
-        title: 'Chat Bot',
-        titleAvatarSrc: 'https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/google-messages.svg',
-        titleBackgroundColor: '#3B81F6',
-        titleTextColor: '#ffffff',
-        welcomeMessage: 'Hello! This is custom welcome message',
-        errorMessage: 'This is a custom error message',
-        backgroundColor: '#ffffff',
-        backgroundImage: 'enter image path or link', // If set, this will overlap the background color of the chat window.
-        height: 700,
-        width: 400,
-        fontSize: 16,
-        starterPrompts: ['What is a bot?', 'Who are you?'], // It overrides the starter prompts set by the chat flow passed
-        starterPromptFontSize: 15,
-        clearChatOnReload: false, // If set to true, the chat will be cleared when the page reloads
-        sourceDocsTitle: 'Sources:',
-        renderHTML: true,
-        botMessage: {
-          backgroundColor: '#f7f8ff',
-          textColor: '#303235',
-          showAvatar: true,
-          avatarSrc: 'https://raw.githubusercontent.com/zahidkhawaja/langchain-chat-nextjs/main/public/parroticon.png',
-        },
-        userMessage: {
-          backgroundColor: '#3B81F6',
-          textColor: '#ffffff',
-          showAvatar: true,
-          avatarSrc: 'https://raw.githubusercontent.com/zahidkhawaja/langchain-chat-nextjs/main/public/usericon.png',
-        },
-        textInput: {
-          placeholder: 'Type your question',
-          backgroundColor: '#ffffff',
-          textColor: '#303235',
-          sendButtonColor: '#3B81F6',
-          maxChars: 50,
-          maxCharsWarningMessage: 'You exceeded the characters limit. Please input less than 50 characters.',
-          autoFocus: true, // If not used, autofocus is disabled on mobile and enabled on desktop. true enables it on both, false disables it on both.
-          sendMessageSound: true,
-          // sendSoundLocation: "send_message.mp3", // If this is not used, the default sound effect will be played if sendSoundMessage is true.
-          receiveMessageSound: true,
-          // receiveSoundLocation: "receive_message.mp3", // If this is not used, the default sound effect will be played if receiveSoundMessage is true.
-        },
-        feedback: {
-          color: '#303235',
-        },
-        dateTimeToggle: {
-          date: true,
-          time: true,
-        },
-        footer: {
-          textColor: '#303235',
-          text: 'Powered by',
-          company: 'Filigran',
-          companyLink: 'https://filigran.io',
-        },
-      },
-    },
-  });
-</script>
-```
-
-## Development Mode (For Local Testing)
-
-1. Configure your environment variables (see above)
-
-2. Start the proxy server:
+To publish:
 
 ```bash
-yarn start
-# Server will be available at:
-# - Local:  http://localhost:3001
+yarn publish --access public
 ```
 
-3. Update the test page configuration:
-
-- Open `public/index.html` in your code editor
-- Modify the `agenticUrl`:
-
-```html
-<!-- public/index.html -->
-<script type="module">
-  import Chatbot from './web.js';
-  Chatbot.init({
-    agenticUrl: 'https://your-agentic-service-url/endpoint', // Add your endpoint
-  });
-</script>
-```
-
-4. Open a new terminal and start the development server:
+Or from the monorepo root:
 
 ```bash
-yarn dev
-# This will serve the test page on http://localhost:5678 automatically
+yarn publish:filigran-chatbot
 ```
-
-5. Test the chatbot:
-
-- Navigate to http://localhost:5678
-- The chatbot should now be visible and functional
-
-**Note:** The development URL (http://localhost:5678) is automatically added to allowed domains in development mode. You don't need to add it manually.
-
-## License
-
-This project is a fork of [FlowiseEmbedChat](https://github.com/FlowiseAI/FlowiseChatEmbed), originally licensed under the [MIT License](https://github.com/FlowiseAI/Flowise/blob/master/LICENSE.md).
-Original code remains under the MIT License.
-Modifications and additional code are licensed under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
