@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import type { AgentStatusState, ApiEndpoints, BackendType, ChatFile, ChatMessage } from '../types';
+import type { ParsedAction, ProtocolContext } from './protocols';
+import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
 
 const STORAGE_KEY = 'filigranChatConversationId';
 const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
@@ -29,6 +31,40 @@ interface UseChatReturn {
   setAttachedFiles: React.Dispatch<React.SetStateAction<ChatFile[]>>;
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   setConversationId: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
+function getParser(backendType: BackendType): (evt: Record<string, unknown>, ctx: ProtocolContext) => ParsedAction {
+  switch (backendType) {
+    case 'legacy':
+      return parseLegacyEvent;
+    case 'ag-ui':
+      return parseAgUiEvent;
+    default:
+      return parseRestEvent;
+  }
+}
+
+function buildRequestBody(
+  backendType: BackendType,
+  content: string,
+  opts: { legacyChatId: string | null; conversationId: string | null; agentSlug: string | null | undefined },
+): Record<string, unknown> {
+  switch (backendType) {
+    case 'legacy':
+      return { question: content, chatId: opts.legacyChatId ?? undefined, streaming: true };
+    case 'ag-ui':
+      return {
+        threadId: opts.conversationId ?? crypto.randomUUID(),
+        runId: crypto.randomUUID(),
+        messages: [{ id: crypto.randomUUID(), role: 'user', content }],
+        tools: [],
+        context: [],
+        state: {},
+        forwardedProps: opts.agentSlug ? { agentSlug: opts.agentSlug } : {},
+      };
+    default:
+      return { content, conversation_id: opts.conversationId, agent_slug: opts.agentSlug };
+  }
 }
 
 export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentSlug, t }: UseChatOptions): UseChatReturn {
@@ -112,10 +148,7 @@ export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentS
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      // Build request body based on backend type
-      const requestBody = isLegacy
-        ? { question: content, chatId: legacyChatId ?? undefined, streaming: true }
-        : { content, conversation_id: conversationId, agent_slug: agentSlug };
+      const requestBody = buildRequestBody(backendType, content, { legacyChatId, conversationId, agentSlug });
 
       const res = await fetch(getMessagesUrl(), {
         method: 'POST',
@@ -131,12 +164,14 @@ export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentS
         return;
       }
 
+      const parseEvent = getParser(backendType);
+      const ctx: ProtocolContext = { hasUsedTools: false, activeNodeId: '' };
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulated = '';
       let doneReceived = false;
-      let activeNodeId = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -149,103 +184,64 @@ export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentS
           if (!line.startsWith('data:')) continue;
           const jsonStr = line.startsWith('data: ') ? line.slice(6) : line.slice(5);
           try {
-            const evt = JSON.parse(jsonStr);
+            const evt = JSON.parse(jsonStr) as Record<string, unknown>;
+            const parsed: ParsedAction = parseEvent(evt, ctx);
 
-            if (isLegacy) {
-              // --- Legacy (Flowise) SSE protocol ---
-              const eventType = evt.event as string | undefined;
-              if (eventType === 'nextAgentFlow') {
-                const nodeId = evt.data?.nodeId;
-                if (evt.data?.status === 'INPROGRESS' && nodeId) {
-                  activeNodeId = nodeId;
-                }
-              } else if (eventType === 'start') {
-                // no-op: assistant message already created
-              } else if (eventType === 'token') {
-                const tokenData = (evt.data ?? '').replace(/<br\s*\/?>/g, '\n');
-                accumulated += tokenData;
+            // Sync ref → context for cross-event tracking
+            ctx.hasUsedTools = ctx.hasUsedTools || hasUsedToolsRef.current;
+
+            switch (parsed.action) {
+              case 'status':
+                if (parsed.status === 'tool_start') hasUsedToolsRef.current = true;
+                setAgentStatus({ status: parsed.status, tools: parsed.tools });
+                break;
+
+              case 'stream':
+                accumulated += parsed.content;
                 setAgentStatus({ status: 'streaming' });
                 setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)));
-              } else if (eventType === 'agentReasoning') {
-                const reasoning = evt.data;
-                if (reasoning?.usedTools?.length) {
-                  hasUsedToolsRef.current = true;
-                  setAgentStatus({ status: 'tool_start', tools: reasoning.usedTools.map((tool: { tool: string }) => tool.tool) });
-                } else if (hasUsedToolsRef.current) {
-                  setAgentStatus({ status: 'analyzing' });
-                } else {
-                  setAgentStatus({ status: 'thinking' });
-                }
-              } else if (eventType === 'usedTools') {
-                hasUsedToolsRef.current = true;
-                const toolNames = Array.isArray(evt.data) ? evt.data.map((tool: { tool: string }) => tool.tool) : [];
-                setAgentStatus({ status: 'tool_start', tools: toolNames });
-              } else if (eventType === 'metadata') {
-                const chatId = evt.data?.chatId;
-                if (chatId) {
-                  setLegacyChatId(chatId);
-                  localStorage.setItem(LEGACY_CHAT_ID_KEY, chatId);
-                }
-              } else if (eventType === 'error') {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: evt.data || t('Unable to connect. Please check the configuration.') } : m,
-                  ),
-                );
-                return;
-              } else if (eventType === 'end') {
+                break;
+
+              case 'done':
                 doneReceived = true;
-                setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)));
-              }
-            } else {
-              // --- REST (XTM One) SSE protocol ---
-              if (evt.type === 'error') {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: evt.content || t('Unable to connect. Please check the configuration.') } : m,
-                  ),
-                );
-                return;
-              }
-              if (evt.type === 'status') {
-                const st = evt.status as string;
-                if (st === 'tool_done' || st === 'wind_down') {
-                  // skip transient internal events
-                } else if (st === 'streaming') {
-                  setAgentStatus({ status: 'streaming' });
-                } else if (st === 'tool_start') {
-                  hasUsedToolsRef.current = true;
-                  setAgentStatus({ status: 'tool_start', tools: evt.tools });
-                } else if (st === 'thinking' && hasUsedToolsRef.current) {
-                  setAgentStatus({ status: 'analyzing' });
-                } else {
-                  setAgentStatus({ status: st, tools: evt.tools });
-                }
-              } else if (evt.type === 'stream') {
-                accumulated += evt.content;
-                setAgentStatus({ status: 'streaming' });
-                setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)));
-              } else if (evt.type === 'done') {
-                doneReceived = true;
-                if (evt.conversation_id) {
-                  setConversationId(evt.conversation_id);
-                  localStorage.setItem(STORAGE_KEY, evt.conversation_id);
+                if (parsed.conversationId) {
+                  setConversationId(parsed.conversationId);
+                  localStorage.setItem(STORAGE_KEY, parsed.conversationId);
                 }
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantId
                       ? {
                           ...m,
-                          content: evt.content,
-                          toolNames: evt.tool_names,
-                          toolCallCount: evt.tool_call_count,
-                          iterations: evt.iterations,
+                          content: parsed.content || accumulated,
+                          toolNames: parsed.toolNames,
+                          toolCallCount: parsed.toolCallCount,
+                          iterations: parsed.iterations,
                         }
                       : m,
                   ),
                 );
-              }
+                break;
+
+              case 'error':
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId ? { ...m, content: parsed.content || t('Unable to connect. Please check the configuration.') } : m,
+                  ),
+                );
+                return;
+
+              case 'set_chat_id':
+                setLegacyChatId(parsed.chatId);
+                localStorage.setItem(LEGACY_CHAT_ID_KEY, parsed.chatId);
+                break;
+
+              case 'noop':
+                break;
             }
+
+            // Keep ref in sync with context
+            hasUsedToolsRef.current = ctx.hasUsedTools;
           } catch {
             /* skip malformed SSE */
           }

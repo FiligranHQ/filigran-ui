@@ -120,8 +120,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
 
   // Load conversation history when agent is selected
   useEffect(() => {
-    // Skip session history if disabled, using single endpoint mode, or legacy backend
-    if (apiEndpoints?.sessions === null || apiEndpoints?.singleEndpoint || backendType === 'legacy') return;
+    // Skip session history if disabled, using single endpoint mode, or non-REST backend
+    if (apiEndpoints?.sessions === null || apiEndpoints?.singleEndpoint || backendType === 'legacy' || backendType === 'ag-ui') return;
     if (!conversationId || historyLoadedRef.current || !selectedAgent) return;
     historyLoadedRef.current = true;
     const sessionsUrl = `${apiBaseUrl}${apiEndpoints?.sessions ?? '/chat/sessions'}`;

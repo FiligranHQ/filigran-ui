@@ -1,5 +1,5 @@
 export type ChatMode = 'sidebar' | 'floating' | 'fullscreen';
-export type BackendType = 'legacy' | 'rest';
+export type BackendType = 'legacy' | 'rest' | 'ag-ui';
 
 /**
  * Custom API endpoint configuration.
@@ -49,6 +49,7 @@ export interface ChatPanelProps {
    * Backend protocol to use.
    * - 'rest': XTM One Chat API (default)
    * - 'legacy': Single POST endpoint with Flowise-style SSE events
+   * - 'ag-ui': AG-UI protocol (https://github.com/ag-ui-protocol/ag-ui)
    */
   backendType?: BackendType;
 }
