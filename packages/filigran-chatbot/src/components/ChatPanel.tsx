@@ -26,6 +26,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   onModeChange,
   topOffset = 0,
   apiBaseUrl,
+  apiEndpoints,
   agentDashboardUrl,
   user,
   t = identity,
@@ -36,10 +37,12 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   onWidthChange,
   onResizeStart,
   onResizeEnd,
+  pushContentSelector,
+  backendType = 'rest',
 }) => {
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
-  const { agents, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({ apiBaseUrl });
+  const { agents, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({ apiBaseUrl, apiEndpoints, backendType });
 
   const {
     messages,
@@ -57,15 +60,51 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     handleStopGenerating,
     setAttachedFiles,
     setMessages,
-  } = useChat({ apiBaseUrl, agentSlug: selectedAgent?.slug, t });
+  } = useChat({ apiBaseUrl, apiEndpoints, backendType, agentSlug: selectedAgent?.slug, t });
 
-  const { sidebarWidth, handleResizeStart, defaultWidth } = useSidebarResize({
+  const { sidebarWidth, handleResizeStart, defaultWidth, isResizing } = useSidebarResize({
     mode,
     resizable,
     onWidthChange,
     onResizeStart,
     onResizeEnd,
   });
+
+  // Push content when sidebar mode is active using CSS variable
+  useEffect(() => {
+    const width = mode === 'sidebar' ? (resizable ? sidebarWidth : defaultWidth) : 0;
+    
+    // Set CSS variable on :root for any component to use
+    document.documentElement.style.setProperty('--chatbot-sidebar-width', `${width}px`);
+    document.documentElement.style.setProperty(
+      '--chatbot-transition',
+      isResizing ? 'none' : 'all 225ms cubic-bezier(0.4, 0, 0.2, 1)'
+    );
+
+    // Also apply to pushContentSelector if provided (for simple cases)
+    if (pushContentSelector) {
+      const contentElement = document.querySelector<HTMLElement>(pushContentSelector);
+      if (contentElement) {
+        const originalPaddingRight = contentElement.style.paddingRight;
+        const originalTransition = contentElement.style.transition;
+        
+        contentElement.style.paddingRight = width > 0 ? `${width}px` : '';
+        contentElement.style.transition = isResizing 
+          ? 'none' 
+          : 'padding-right 225ms cubic-bezier(0.4, 0, 0.2, 1)';
+
+        return () => {
+          contentElement.style.paddingRight = originalPaddingRight;
+          contentElement.style.transition = originalTransition;
+          document.documentElement.style.setProperty('--chatbot-sidebar-width', '0px');
+        };
+      }
+    }
+
+    return () => {
+      document.documentElement.style.setProperty('--chatbot-sidebar-width', '0px');
+    };
+  }, [pushContentSelector, mode, sidebarWidth, defaultWidth, resizable, isResizing]);
 
   const resolvedLogo = logoIcon ?? <DefaultLogoIcon size={24} />;
   const firstName = user.firstName;
@@ -81,9 +120,12 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
 
   // Load conversation history when agent is selected
   useEffect(() => {
+    // Skip session history if disabled, using single endpoint mode, or legacy backend
+    if (apiEndpoints?.sessions === null || apiEndpoints?.singleEndpoint || backendType === 'legacy') return;
     if (!conversationId || historyLoadedRef.current || !selectedAgent) return;
     historyLoadedRef.current = true;
-    fetch(`${apiBaseUrl}/chat/sessions`, {
+    const sessionsUrl = `${apiBaseUrl}${apiEndpoints?.sessions ?? '/chat/sessions'}`;
+    fetch(sessionsUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -103,7 +145,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         setMessages(restored);
       })
       .catch(() => {});
-  }, [conversationId, selectedAgent, apiBaseUrl, historyLoadedRef, setMessages]);
+  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, historyLoadedRef, setMessages]);
 
   const onSwitchAgent = (agent: typeof selectedAgent) => {
     if (!agent) return;

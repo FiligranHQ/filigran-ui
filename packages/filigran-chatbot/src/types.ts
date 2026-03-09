@@ -1,4 +1,21 @@
 export type ChatMode = 'sidebar' | 'floating' | 'fullscreen';
+export type BackendType = 'legacy' | 'rest';
+
+/**
+ * Custom API endpoint configuration.
+ * When using single endpoint mode (like OpenCTI's /chatbot), set singleEndpoint to true
+ * and the component will POST everything to apiBaseUrl directly.
+ */
+export interface ApiEndpoints {
+  /** If true, all requests go to apiBaseUrl as POST. Default false uses REST-style endpoints. */
+  singleEndpoint?: boolean;
+  /** Path for sending messages. Default: '/chat/messages' */
+  messages?: string;
+  /** Path for fetching agents. Default: '/chat/agents'. Set to null to disable. */
+  agents?: string | null;
+  /** Path for fetching session history. Default: '/chat/sessions'. Set to null to disable. */
+  sessions?: string | null;
+}
 
 export interface ChatPanelProps {
   mode: ChatMode;
@@ -6,6 +23,8 @@ export interface ChatPanelProps {
   onModeChange: (mode: ChatMode) => void;
   topOffset?: number;
   apiBaseUrl: string;
+  /** Custom API endpoint configuration. */
+  apiEndpoints?: ApiEndpoints;
   agentDashboardUrl?: string;
   user: { firstName: string };
   t?: (key: string) => string;
@@ -20,6 +39,18 @@ export interface ChatPanelProps {
   onResizeStart?: () => void;
   /** Callback when resize drag ends. */
   onResizeEnd?: () => void;
+  /** 
+   * CSS selector for the main content element that should be pushed when sidebar is open.
+   * When set, the component will automatically apply margin-right to push the content.
+   * Example: '#main-content' or '.app-content'
+   */
+  pushContentSelector?: string;
+  /**
+   * Backend protocol to use.
+   * - 'rest': XTM One Chat API (default)
+   * - 'legacy': Single POST endpoint with Flowise-style SSE events
+   */
+  backendType?: BackendType;
 }
 
 export interface ChatToggleButtonProps {

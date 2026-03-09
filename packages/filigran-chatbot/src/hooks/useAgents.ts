@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { XtmAgent } from '../types';
+import type { ApiEndpoints, BackendType, XtmAgent } from '../types';
 
 const STORAGE_AGENT_KEY = 'filigranChatAgentSlug';
 
 interface UseAgentsOptions {
   apiBaseUrl: string;
+  apiEndpoints?: ApiEndpoints;
+  backendType?: BackendType;
 }
 
 interface UseAgentsReturn {
@@ -16,13 +18,18 @@ interface UseAgentsReturn {
   handleSwitchAgent: (agent: XtmAgent, onSwitch?: () => void) => void;
 }
 
-export function useAgents({ apiBaseUrl }: UseAgentsOptions): UseAgentsReturn {
+export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest' }: UseAgentsOptions): UseAgentsReturn {
   const [agents, setAgents] = useState<XtmAgent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<XtmAgent | null>(null);
   const [agentMenuOpen, setAgentMenuOpen] = useState(false);
 
   useEffect(() => {
-    fetch(`${apiBaseUrl}/chat/agents`)
+    // Skip agents fetch if disabled, using single endpoint mode, or legacy backend
+    if (apiEndpoints?.agents === null || apiEndpoints?.singleEndpoint || backendType === 'legacy') {
+      return;
+    }
+    const agentsUrl = `${apiBaseUrl}${apiEndpoints?.agents ?? '/chat/agents'}`;
+    fetch(agentsUrl)
       .then((res) => (res.ok ? res.json() : []))
       .then((data: XtmAgent[]) => {
         setAgents(data);
@@ -33,7 +40,7 @@ export function useAgents({ apiBaseUrl }: UseAgentsOptions): UseAgentsReturn {
         }
       })
       .catch(() => {});
-  }, [apiBaseUrl]);
+  }, [apiBaseUrl, apiEndpoints]);
 
   const handleSwitchAgent = (agent: XtmAgent, onSwitch?: () => void) => {
     if (agent.id === selectedAgent?.id) {

@@ -17,6 +17,7 @@ interface UseSidebarResizeReturn {
   sidebarWidth: number;
   handleResizeStart: (e: React.MouseEvent) => void;
   defaultWidth: number;
+  isResizing: boolean;
 }
 
 export function useSidebarResize({
@@ -35,6 +36,7 @@ export function useSidebarResize({
     }
     return SIDEBAR_WIDTH;
   });
+  const [isResizing, setIsResizing] = useState(false);
 
   const isResizingRef = useRef(false);
   const sidebarWidthRef = useRef(sidebarWidth);
@@ -69,6 +71,7 @@ export function useSidebarResize({
     const handleMouseUp = () => {
       if (!isResizingRef.current) return;
       isResizingRef.current = false;
+      setIsResizing(false);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidthRef.current));
@@ -99,6 +102,7 @@ export function useSidebarResize({
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
     isResizingRef.current = true;
+    setIsResizing(true);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     onResizeStart?.();
@@ -108,5 +112,6 @@ export function useSidebarResize({
     sidebarWidth,
     handleResizeStart,
     defaultWidth: SIDEBAR_WIDTH,
+    isResizing,
   };
 }

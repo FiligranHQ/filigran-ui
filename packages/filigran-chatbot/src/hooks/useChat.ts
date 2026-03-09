@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react';
-import type { AgentStatusState, ChatFile, ChatMessage } from '../types';
+import type { AgentStatusState, ApiEndpoints, BackendType, ChatFile, ChatMessage } from '../types';
 
 const STORAGE_KEY = 'filigranChatConversationId';
+const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
 
 interface UseChatOptions {
   apiBaseUrl: string;
+  apiEndpoints?: ApiEndpoints;
+  backendType?: BackendType;
   agentSlug: string | null | undefined;
   t: (key: string) => string;
 }
@@ -28,7 +31,8 @@ interface UseChatReturn {
   setConversationId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-export function useChat({ apiBaseUrl, agentSlug, t }: UseChatOptions): UseChatReturn {
+export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentSlug, t }: UseChatOptions): UseChatReturn {
+  const isLegacy = backendType === 'legacy';
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -38,10 +42,22 @@ export function useChat({ apiBaseUrl, agentSlug, t }: UseChatOptions): UseChatRe
     return localStorage.getItem(STORAGE_KEY);
   });
   const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
+  const [legacyChatId, setLegacyChatId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(LEGACY_CHAT_ID_KEY);
+  });
 
   const historyLoadedRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const hasUsedToolsRef = useRef(false);
+
+  // Determine message endpoint URL
+  const getMessagesUrl = () => {
+    if (isLegacy || apiEndpoints?.singleEndpoint) {
+      return apiBaseUrl; // POST directly to base URL
+    }
+    return `${apiBaseUrl}${apiEndpoints?.messages ?? '/chat/messages'}`;
+  };
 
   const handleFileAdd = (fileList: FileList | null) => {
     if (!fileList) return;
@@ -95,14 +111,16 @@ export function useChat({ apiBaseUrl, agentSlug, t }: UseChatOptions): UseChatRe
     try {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      const res = await fetch(`${apiBaseUrl}/chat/messages`, {
+
+      // Build request body based on backend type
+      const requestBody = isLegacy
+        ? { question: content, chatId: legacyChatId ?? undefined, streaming: true }
+        : { content, conversation_id: conversationId, agent_slug: agentSlug };
+
+      const res = await fetch(getMessagesUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content,
-          conversation_id: conversationId,
-          agent_slug: agentSlug,
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
 
@@ -118,6 +136,7 @@ export function useChat({ apiBaseUrl, agentSlug, t }: UseChatOptions): UseChatRe
       let buffer = '';
       let accumulated = '';
       let doneReceived = false;
+      let activeNodeId = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -125,55 +144,107 @@ export function useChat({ apiBaseUrl, agentSlug, t }: UseChatOptions): UseChatRe
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
+        for (const rawLine of lines) {
+          const line = rawLine.replace(/\r$/, '');
+          if (!line.startsWith('data:')) continue;
+          const jsonStr = line.startsWith('data: ') ? line.slice(6) : line.slice(5);
           try {
-            const evt = JSON.parse(line.slice(6));
-            if (evt.type === 'error') {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId ? { ...m, content: evt.content || t('Unable to connect. Please check the configuration.') } : m,
-                ),
-              );
-              return;
-            }
-            if (evt.type === 'status') {
-              const st = evt.status as string;
-              if (st === 'tool_done' || st === 'wind_down') {
-                // skip transient internal events
-              } else if (st === 'streaming') {
+            const evt = JSON.parse(jsonStr);
+
+            if (isLegacy) {
+              // --- Legacy (Flowise) SSE protocol ---
+              const eventType = evt.event as string | undefined;
+              if (eventType === 'nextAgentFlow') {
+                const nodeId = evt.data?.nodeId;
+                if (evt.data?.status === 'INPROGRESS' && nodeId) {
+                  activeNodeId = nodeId;
+                }
+              } else if (eventType === 'start') {
+                // no-op: assistant message already created
+              } else if (eventType === 'token') {
+                const tokenData = (evt.data ?? '').replace(/<br\s*\/?>/g, '\n');
+                accumulated += tokenData;
                 setAgentStatus({ status: 'streaming' });
-              } else if (st === 'tool_start') {
+                setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)));
+              } else if (eventType === 'agentReasoning') {
+                const reasoning = evt.data;
+                if (reasoning?.usedTools?.length) {
+                  hasUsedToolsRef.current = true;
+                  setAgentStatus({ status: 'tool_start', tools: reasoning.usedTools.map((tool: { tool: string }) => tool.tool) });
+                } else if (hasUsedToolsRef.current) {
+                  setAgentStatus({ status: 'analyzing' });
+                } else {
+                  setAgentStatus({ status: 'thinking' });
+                }
+              } else if (eventType === 'usedTools') {
                 hasUsedToolsRef.current = true;
-                setAgentStatus({ status: 'tool_start', tools: evt.tools });
-              } else if (st === 'thinking' && hasUsedToolsRef.current) {
-                setAgentStatus({ status: 'analyzing' });
-              } else {
-                setAgentStatus({ status: st, tools: evt.tools });
+                const toolNames = Array.isArray(evt.data) ? evt.data.map((tool: { tool: string }) => tool.tool) : [];
+                setAgentStatus({ status: 'tool_start', tools: toolNames });
+              } else if (eventType === 'metadata') {
+                const chatId = evt.data?.chatId;
+                if (chatId) {
+                  setLegacyChatId(chatId);
+                  localStorage.setItem(LEGACY_CHAT_ID_KEY, chatId);
+                }
+              } else if (eventType === 'error') {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId ? { ...m, content: evt.data || t('Unable to connect. Please check the configuration.') } : m,
+                  ),
+                );
+                return;
+              } else if (eventType === 'end') {
+                doneReceived = true;
+                setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)));
               }
-            } else if (evt.type === 'stream') {
-              accumulated += evt.content;
-              setAgentStatus({ status: 'streaming' });
-              setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)));
-            } else if (evt.type === 'done') {
-              doneReceived = true;
-              if (evt.conversation_id) {
-                setConversationId(evt.conversation_id);
-                localStorage.setItem(STORAGE_KEY, evt.conversation_id);
+            } else {
+              // --- REST (XTM One) SSE protocol ---
+              if (evt.type === 'error') {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId ? { ...m, content: evt.content || t('Unable to connect. Please check the configuration.') } : m,
+                  ),
+                );
+                return;
               }
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? {
-                        ...m,
-                        content: evt.content,
-                        toolNames: evt.tool_names,
-                        toolCallCount: evt.tool_call_count,
-                        iterations: evt.iterations,
-                      }
-                    : m,
-                ),
-              );
+              if (evt.type === 'status') {
+                const st = evt.status as string;
+                if (st === 'tool_done' || st === 'wind_down') {
+                  // skip transient internal events
+                } else if (st === 'streaming') {
+                  setAgentStatus({ status: 'streaming' });
+                } else if (st === 'tool_start') {
+                  hasUsedToolsRef.current = true;
+                  setAgentStatus({ status: 'tool_start', tools: evt.tools });
+                } else if (st === 'thinking' && hasUsedToolsRef.current) {
+                  setAgentStatus({ status: 'analyzing' });
+                } else {
+                  setAgentStatus({ status: st, tools: evt.tools });
+                }
+              } else if (evt.type === 'stream') {
+                accumulated += evt.content;
+                setAgentStatus({ status: 'streaming' });
+                setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)));
+              } else if (evt.type === 'done') {
+                doneReceived = true;
+                if (evt.conversation_id) {
+                  setConversationId(evt.conversation_id);
+                  localStorage.setItem(STORAGE_KEY, evt.conversation_id);
+                }
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? {
+                          ...m,
+                          content: evt.content,
+                          toolNames: evt.tool_names,
+                          toolCallCount: evt.tool_call_count,
+                          iterations: evt.iterations,
+                        }
+                      : m,
+                  ),
+                );
+              }
             }
           } catch {
             /* skip malformed SSE */
@@ -201,13 +272,18 @@ export function useChat({ apiBaseUrl, agentSlug, t }: UseChatOptions): UseChatRe
     abortControllerRef.current = null;
     setMessages([]);
     setInputValue('');
-    setConversationId(null);
     setAttachedFiles([]);
     setIsLoading(false);
     setAgentStatus(null);
     hasUsedToolsRef.current = false;
-    localStorage.removeItem(STORAGE_KEY);
     historyLoadedRef.current = false;
+    if (isLegacy) {
+      setLegacyChatId(null);
+      localStorage.removeItem(LEGACY_CHAT_ID_KEY);
+    } else {
+      setConversationId(null);
+      localStorage.removeItem(STORAGE_KEY);
+    }
   };
 
   const handleStopGenerating = () => {
