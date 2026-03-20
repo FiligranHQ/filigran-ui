@@ -1,9 +1,13 @@
-export const customizeTOCUtil = (toc: any) => {
+export const customizeTOCUtil = (toc: {children?: unknown[]}) => {
   try {
     const {children} = toc
-    const childrenOfChildren = children?.[0]?.children
+    const childrenOfChildren = (
+      children?.[0] as {children?: unknown[]} | undefined
+    )?.children
     if (!children?.length || !childrenOfChildren?.length) return null
-  } catch (e) {}
+  } catch {
+    return null
+  }
   return {
     type: 'element',
     tagName: 'nav',

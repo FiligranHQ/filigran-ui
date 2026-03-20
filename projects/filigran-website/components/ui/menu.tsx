@@ -25,11 +25,11 @@ interface MenuItemProps {
 }
 
 const MenuItem: FunctionComponent<MenuItemProps> = ({
-                                                      menu,
-                                                      basePath,
-                                                      currentPath,
-                                                      level = 0,
-                                                    }) => {
+  menu,
+  basePath,
+  currentPath,
+  level = 0,
+}) => {
   const hasChildren = menu.content && menu.content.length > 0
   const isActive = menu.slug && currentPath === menu.slug
   const isParentActive = menu.slug && currentPath.startsWith(menu.slug)
@@ -39,22 +39,28 @@ const MenuItem: FunctionComponent<MenuItemProps> = ({
 
   if (hasChildren) {
     // Check if any child is active to auto-open the accordion
-    const hasActiveChild = menu.content.some(child =>
-      child.slug && (currentPath === child.slug || currentPath.startsWith(child.slug + '/'))
+    const hasActiveChild = menu.content.some(
+      (child) =>
+        child.slug &&
+        (currentPath === child.slug || currentPath.startsWith(child.slug + '/'))
     )
 
     return (
       <Accordion
         type="single"
-        defaultValue={hasActiveChild || isParentActive ? `item-${menu.title}` : undefined}
+        defaultValue={
+          hasActiveChild || isParentActive ? `item-${menu.title}` : undefined
+        }
         collapsible>
-        <AccordionItem value={`item-${menu.title}`} className="border-none">
+        <AccordionItem
+          value={`item-${menu.title}`}
+          className="border-none">
           <AccordionTrigger
             className={cn(
               'h-9 justify-between px-4 py-2 hover:bg-hover hover:no-underline',
               indentClass,
               (isParentActive || hasActiveChild) &&
-              'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
+                'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
             )}>
             {menu.title}
           </AccordionTrigger>
@@ -65,10 +71,10 @@ const MenuItem: FunctionComponent<MenuItemProps> = ({
                 className={cn(
                   'h-9 w-full justify-start rounded-none normal-case',
                   `pl-${Math.min((level + 1) * 4, 12)}`,
-                  isActive && 'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
+                  isActive &&
+                    'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
                 )}
-                asChild>
-              </Button>
+                asChild></Button>
             )}
             {menu.content.map((childMenu) => (
               <MenuItem
@@ -100,9 +106,9 @@ const MenuItem: FunctionComponent<MenuItemProps> = ({
 }
 
 export const Menu: FunctionComponent<MenuProps> = ({
-                                                     contentMenu,
-                                                     basePath = 'docs',
-                                                   }) => {
+  contentMenu,
+  basePath = 'docs',
+}) => {
   const currentPath = usePathname().replace(`/${basePath}/`, '')
 
   return (

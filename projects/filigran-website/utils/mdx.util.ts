@@ -44,7 +44,7 @@ async function getMDXMenu(
   }
   for (const file of fs.readdirSync(dir)) {
     if (path.extname(file) === '.mdx' || path.extname(file) === '.md') {
-      let {metadata} = await readMDXFile(path.join(dir, file))
+      const {metadata} = await readMDXFile(path.join(dir, file))
       if (file === 'index.mdx') {
         data.title = metadata.frontmatter.title as string
       } else {

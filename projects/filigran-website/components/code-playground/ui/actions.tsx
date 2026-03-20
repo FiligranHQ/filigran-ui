@@ -1,7 +1,6 @@
 'use client'
 import {FunctionComponent, useEffect, useState} from 'react'
 import {
-  RefreshIcon,
   useSandpack,
   useSandpackNavigation,
 } from '@codesandbox/sandpack-react'

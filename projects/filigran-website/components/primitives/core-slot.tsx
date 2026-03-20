@@ -1,5 +1,5 @@
-import { Children, cloneElement, forwardRef, isValidElement } from 'react'
-import type { HTMLAttributes, ReactElement, ReactNode } from 'react'
+import {Children, cloneElement, forwardRef, isValidElement} from 'react'
+import type {HTMLAttributes, ReactElement, ReactNode} from 'react'
 
 import {composeRefs} from './use-compose-refs'
 
@@ -81,22 +81,20 @@ Slot.displayName = 'Slot'
 /*                       SLOT CLONE                           */
 /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-const SlotClone = forwardRef<any, SlotCloneProps>(
-  (props, forwardedRef) => {
-    const {children, ...slotProps} = props
+const SlotClone = forwardRef<any, SlotCloneProps>((props, forwardedRef) => {
+  const {children, ...slotProps} = props
 
-    if (isValidElement<ReactElement>(children)) {
-      return cloneElement<AnyProps>(children, {
-        ...mergeProps(slotProps, children.props),
-        ref: forwardedRef
-          ? composeRefs(forwardedRef, (children as any).ref)
-          : (children as any).ref,
-      })
-    }
-
-    return Children.count(children) > 1 ? Children.only(null) : null
+  if (isValidElement<ReactElement>(children)) {
+    return cloneElement<AnyProps>(children, {
+      ...mergeProps(slotProps, children.props),
+      ref: forwardedRef
+        ? composeRefs(forwardedRef, (children as any).ref)
+        : (children as any).ref,
+    })
   }
-)
+
+  return Children.count(children) > 1 ? Children.only(null) : null
+})
 
 SlotClone.displayName = 'SlotClone'
 

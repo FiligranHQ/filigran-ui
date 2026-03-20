@@ -3,7 +3,6 @@ import React from 'react'
 import remarkGfm from 'remark-gfm'
 import ReactLiveDisplay from '@/components/react-live/ReactLiveDisplay'
 import rehypeSlug from 'rehype-slug'
-import * as FiligranUIComponent from '@filigran/ui'
 import * as FiligranIcon from '@filigran/icon'
 import * as LucidIcon from 'lucide-react'
 import {DisplayAllIcons} from '@/components/display-all-icons'
@@ -20,7 +19,7 @@ import {
   QuizzQuestionChoice,
 } from '@/components/ui/quizz'
 import {ExampleLoader} from '@/components/example/example-loader'
-import { AutoFormTest } from './autoform/autoform-test';
+import {AutoFormTest} from './autoform/autoform-test'
 import {CodePlayground} from '@/components/code-playground/code-playground'
 import {CodePlaygroundTest} from '@/components/code-playground/code-playground-test'
 import {PlaygroundTest} from '@/components/code-playground/playground-test'
@@ -37,7 +36,6 @@ const options = {
 
 const components = {
   ...LucidIcon,
-  ...FiligranUIComponent,
   ...FiligranIcon,
   AutoFormTest: AutoFormTest,
   CodePlayground: CodePlayground,

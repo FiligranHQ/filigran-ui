@@ -2,18 +2,18 @@
 
 import * as React from 'react'
 
-import {Combobox, ComboboxItem} from '@filigran/ui/clients'
+import {Combobox} from '@filigran/ui/clients'
 import {Button} from '@filigran/ui'
-import ReactLiveDisplay from '@/components/react-live/ReactLiveDisplay'
 
 interface ComboboxInterfaceTest {
-  id: number,
-  testValue: string,
+  id: number
+  testValue: string
   testLabel: string
 }
 export function ExampleCombobox() {
-  const [selectedValue, setSelectedValue] = React.useState<{id: number, value: string, label: string} | undefined>(undefined)
-
+  const [selectedValue, setSelectedValue] = React.useState<
+    {id: number; value: string; label: string} | undefined
+  >(undefined)
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -24,8 +24,9 @@ export function ExampleCombobox() {
     console.log('input value: ', value)
   }
 
-
-  const [selectedValue2, setSelectedValue2] = React.useState<ComboboxInterfaceTest | undefined>(undefined)
+  const [selectedValue2, setSelectedValue2] = React.useState<
+    ComboboxInterfaceTest | undefined
+  >(undefined)
 
   const setInputValue2 = (value: string) => {
     console.log('input value: ', value)
@@ -42,17 +43,15 @@ export function ExampleCombobox() {
       <form onSubmit={handleSubmit}>
         <Combobox
           className="w-[200px]"
-          dataTab={
-            [
-              {id: 1, value: 'abcd', label: 'Abcd'},
-              {
-                id: 2,
-                value: 'acde',
-                label: 'Acde',
-              },
-              {id: 3, value: 'acef', label: 'Acef'},
-            ]
-          }
+          dataTab={[
+            {id: 1, value: 'abcd', label: 'Abcd'},
+            {
+              id: 2,
+              value: 'acde',
+              label: 'Acde',
+            },
+            {id: 3, value: 'acef', label: 'Acef'},
+          ]}
           order={'Choose a value'}
           placeholder={'Choose a value'}
           emptyCommand={'Not found'}
@@ -67,20 +66,20 @@ export function ExampleCombobox() {
         </Button>
       </form>
 
-      <form onSubmit={handleSubmit2} className="pt-s">
+      <form
+        onSubmit={handleSubmit2}
+        className="pt-s">
         <Combobox
           className="w-[200px]"
-          dataTab={
-            [
-              {id: 1, testLabel: 'abcd', testValue: 'Abcd'},
-              {
-                id: 2,
-                testValue: 'acde',
-                testLabel: 'Acde',
-              },
-              {id: 3, testValue: 'acef', testLabel: 'Acef'},
-            ]
-          }
+          dataTab={[
+            {id: 1, testLabel: 'abcd', testValue: 'Abcd'},
+            {
+              id: 2,
+              testValue: 'acde',
+              testLabel: 'Acde',
+            },
+            {id: 3, testValue: 'acef', testLabel: 'Acef'},
+          ]}
           order={'Choose a value'}
           placeholder={'Choose a value'}
           emptyCommand={'Not found'}
@@ -96,8 +95,6 @@ export function ExampleCombobox() {
           Submit
         </Button>
       </form>
-
-
     </>
   )
 }
