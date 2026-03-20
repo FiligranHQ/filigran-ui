@@ -18,7 +18,9 @@ export function ExampleCarousel() {
   return (
     <>
       <h2>With lightbox</h2>
-      <Carousel className="w-1/4" displayDots={4}>
+      <Carousel
+        className="w-1/4"
+        displayDots={4}>
         {[
           `/francesco-ungaro.jpg`,
           '/the-chaffins.jpg',
@@ -115,7 +117,7 @@ export function ExampleCarousel() {
           `/francesco-ungaro.jpg`,
           '/the-chaffins.jpg',
           '/nathan-gordon.jpg',
-        ].map((img, index) => {
+        ].map((img) => {
           return (
             <CarouselItem key={img}>
               <AspectRatio ratio={16 / 9}>

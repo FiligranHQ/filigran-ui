@@ -3,6 +3,6 @@ const postcssConfig = {
     tailwindcss: {},
     autoprefixer: {},
   },
-};
+}
 
-export default postcssConfig;
+export default postcssConfig

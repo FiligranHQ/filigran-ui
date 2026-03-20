@@ -58,7 +58,6 @@ const internalClassed = <
   // eslint-disable-next-line react/display-name
   const Comp = forwardRef(
     ({as, className: cName, ...props}: any, forwardedRef: any) => {
-      // eslint-disable-next-line no-nested-ternary
       const Component = isClassed
         ? elementType
         : typeof elementType === 'object'
@@ -86,7 +85,7 @@ const internalClassed = <
 
       const merged = useMemo(
         () => merger(className, variantClassNames, cName),
-        [className, cName, variantClassNames]
+        [ cName, variantClassNames]
       )
 
       return (

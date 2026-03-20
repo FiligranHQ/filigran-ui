@@ -5,26 +5,34 @@ import {
   PaginationState,
 } from '@tanstack/react-table'
 import {
-  Checkbox, ColumnDefWithOptionsHeader, createDefaultSelectionColumn,
+  Checkbox,
+  ColumnDefWithOptionsHeader,
   DataTable,
   DatatableI18nKey,
   DataTableOptionsHeader,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger, SelectionState,
+  DropdownMenuTrigger,
+  SelectionState,
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger, useRowSelection,
+  TooltipTrigger,
 } from '@filigran/ui/clients'
-import {useEffect, useMemo, useState} from 'react'
+import { useMemo, useState} from 'react'
 import {Button, Input} from '@filigran/ui'
 import {makeData, Person} from '@/utils/makeData'
 import {useLocalStorage} from 'usehooks-ts'
 import {MoreVertIcon, DeleteIcon} from '@filigran/icon'
 
-const HighlightSearchTerm = ({inputSearch, text}: {inputSearch: string, text: string}) => {
+const HighlightSearchTerm = ({
+  inputSearch,
+  text,
+}: {
+  inputSearch: string
+  text: string
+}) => {
   if (!inputSearch) {
     return <span>{text}</span>
   }
@@ -34,39 +42,30 @@ const HighlightSearchTerm = ({inputSearch, text}: {inputSearch: string, text: st
 
   return (
     <span>
-        {parts.map((part, index) =>
-          part.toLowerCase() === inputSearch.toLowerCase() ? (
-            <span
-              key={index}
-              className={'bg-red text-white'}>
-              {part}
-            </span>
-          ) : (
-            part
-          )
-        )}
-      </span>
+      {parts.map((part, index) =>
+        part.toLowerCase() === inputSearch.toLowerCase() ? (
+          <span
+            key={index}
+            className={'bg-red text-white'}>
+            {part}
+          </span>
+        ) : (
+          part
+        )
+      )}
+    </span>
   )
 }
 
 export function ExampleDataTable() {
   const [rowSelection, setRowSelection] = useState({})
   const [inputSearch, setInputSearch] = useState('')
-  const [data, setData] = useState(() => makeData(500, 'person'))
+  const [data] = useState(() => makeData(500, 'person'))
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 50,
   })
   const [isCheckedI18n, setIsCheckedI18n] = useState(false)
-  const [loading, setLoading] = useState(true)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 360)
-    setLoading(true)
-    // Cleanup the timer when the component unmounts
-    return () => clearTimeout(timer)
-  }, [pagination])
 
   const frenchI18nKey: Partial<DatatableI18nKey> = {
     'Rows per page': 'Lignes par page',
@@ -86,10 +85,10 @@ export function ExampleDataTable() {
     selectAll: false,
     selectedIds: new Set<string>(),
     excludedIds: new Set<string>(),
-  });
+  })
 
-  const {selectAll, selectedIds, excludedIds}  = selection;
-  const totalSelectable = data.filter(person => person.age > 18).length;
+  const {selectAll, selectedIds, excludedIds} = selection
+  const totalSelectable = data.filter((person) => person.age > 18).length
 
   const columns = useMemo<ColumnDefWithOptionsHeader<Person, unknown>[]>(
     () => [
@@ -99,7 +98,10 @@ export function ExampleDataTable() {
         enableHiding: true,
         enableSorting: false,
         cell: (info) => (
-          <HighlightSearchTerm inputSearch={inputSearch} text={info.getValue() as string} />
+          <HighlightSearchTerm
+            inputSearch={inputSearch}
+            text={info.getValue() as string}
+          />
         ),
         header: 'First name',
       },
@@ -108,7 +110,10 @@ export function ExampleDataTable() {
         accessorKey: 'lastName',
         enableHiding: false,
         cell: (info) => (
-          <HighlightSearchTerm inputSearch={inputSearch} text={info.getValue() as string} />
+          <HighlightSearchTerm
+            inputSearch={inputSearch}
+            text={info.getValue() as string}
+          />
         ),
         optionsHeader: (header) => (
           <DataTableOptionsHeader
@@ -227,7 +232,6 @@ export function ExampleDataTable() {
       <DataTable
         data={data}
         columns={columns}
-        isLoading={loading}
         i18nKey={isCheckedI18n ? frenchI18nKey : {}}
         tableOptions={{
           onRowSelectionChange: setRowSelection,
@@ -260,18 +264,22 @@ export function ExampleDataTable() {
                 </Button>
               </>
             ),
-          }
+          },
         }}
         onClickRow={(row) => console.log(row)}
       />
 
       <div className="container mx-auto py-10">
         <div>Selected</div>
-        {JSON.stringify({
-          selectAll,
-          selectedIds: Array.from(selectedIds),
-          excludedIds: Array.from(excludedIds),
-        }, null, 2)}
+        {JSON.stringify(
+          {
+            selectAll,
+            selectedIds: Array.from(selectedIds),
+            excludedIds: Array.from(excludedIds),
+          },
+          null,
+          2
+        )}
       </div>
     </div>
   )

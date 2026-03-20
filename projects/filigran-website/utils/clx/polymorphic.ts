@@ -13,8 +13,10 @@ type ForwardRefExoticComponent<E, OwnProps> = React.ForwardRefExoticComponent<
     }
   >
 >
-export interface ForwardRefComponent<IntrinsicElementString, OwnProps = {}>
-  extends ForwardRefExoticComponent<IntrinsicElementString, OwnProps> {
+export interface ForwardRefComponent<
+  IntrinsicElementString,
+  OwnProps = {},
+> extends ForwardRefExoticComponent<IntrinsicElementString, OwnProps> {
   <As = IntrinsicElementString>(
     props: As extends ''
       ? {
@@ -29,7 +31,7 @@ export interface ForwardRefComponent<IntrinsicElementString, OwnProps = {}>
           >
         : As extends keyof React.JSX.IntrinsicElements
           ? Merge<
-            React.JSX.IntrinsicElements[As],
+              React.JSX.IntrinsicElements[As],
               OwnProps & {
                 as: As
               }

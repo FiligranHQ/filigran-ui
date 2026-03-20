@@ -67,12 +67,15 @@ const newPerson = (): Person => {
   }
 }
 
-export function makeData<T extends 'person' | 'report'>(nbItems: number, type: T ) :
-  T extends 'person' ? Person[] : Report[] {
-
+export function makeData<T extends 'person' | 'report'>(
+  nbItems: number,
+  type: T
+): T extends 'person' ? Person[] : Report[] {
   const makeDataLevel = (): Person[] | Report[] => {
-    return range(nbItems).map(() => (type === 'person' ? newPerson() : newReport())) as Person[] | Report[];
-  };
+    return range(nbItems).map(() =>
+      type === 'person' ? newPerson() : newReport()
+    ) as Person[] | Report[]
+  }
 
-  return makeDataLevel() as any;
+  return makeDataLevel() as T extends 'person' ? Person[] : Report[]
 }
