@@ -165,20 +165,25 @@ jobs:
         run: |
           git add .
           
-          COMMIT_MSG=""
+          PARTS=""
+          if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
+            PARTS="@filigran/chatbot to v$FILIGRAN_CHATBOT_VERSION"
+          fi
+          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+            [ -n "$PARTS" ] && PARTS="$PARTS, "
+            PARTS="${PARTS}@filigran/ui to v$FILIGRAN_UI_VERSION"
+          fi
+          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            [ -n "$PARTS" ] && PARTS="$PARTS, "
+            PARTS="${PARTS}@filigran/icon to v$FILIGRAN_ICON_VERSION"
+          fi
           
-          if [ -n "$FILIGRAN_UI_VERSION" ] && [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            COMMIT_MSG="chore: bump @filigran/ui to v$FILIGRAN_UI_VERSION and @filigran/icon to v$FILIGRAN_ICON_VERSION"
-          elif [ -n "$FILIGRAN_UI_VERSION" ]; then
-            COMMIT_MSG="chore: bump @filigran/ui to v$FILIGRAN_UI_VERSION"
-          elif [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            COMMIT_MSG="chore: bump @filigran/icon to v$FILIGRAN_ICON_VERSION"
-          else
+          if [ -z "$PARTS" ]; then
             echo "No version changes to commit"
             exit 0
           fi
           
-          git commit -m "$COMMIT_MSG"
+          git commit -m "chore: bump $PARTS"
           git push
       - name: Create Git tags
         run: |
