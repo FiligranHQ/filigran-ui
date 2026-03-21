@@ -10,7 +10,7 @@ export const ChatToggleButton: FunctionComponent<ChatToggleButtonProps> = ({ isO
     <button
       type="button"
       onClick={onToggle}
-      className="inline-flex items-center gap-1.5 px-3 py-[3px] text-[0.8125rem] font-medium whitespace-nowrap rounded-md border transition-colors"
+      className="filigran-chatbot inline-flex items-center gap-1.5 px-3 py-[3px] text-[0.8125rem] font-medium whitespace-nowrap rounded-md border transition-colors"
       style={{
         borderColor: isOpen ? accentColor : hexAlpha(accentColor, 0.5),
         color: accentColor,

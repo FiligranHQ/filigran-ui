@@ -60,6 +60,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     handleStopGenerating,
     setAttachedFiles,
     setMessages,
+    setConversationId,
   } = useChat({ apiBaseUrl, apiEndpoints, backendType, agentSlug: selectedAgent?.slug, t });
 
   const { sidebarWidth, handleResizeStart, defaultWidth, isResizing } = useSidebarResize({
@@ -125,6 +126,12 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     if (!conversationId || historyLoadedRef.current || !selectedAgent) return;
     historyLoadedRef.current = true;
     const sessionsUrl = `${apiBaseUrl}${apiEndpoints?.sessions ?? '/chat/sessions'}`;
+
+    const clearStaleConversation = () => {
+      setConversationId(null);
+      localStorage.removeItem('filigranChatConversationId');
+    };
+
     fetch(sessionsUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -133,7 +140,13 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         agent_slug: selectedAgent.slug,
       }),
     })
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (!res.ok) {
+          clearStaleConversation();
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
         if (!data?.messages?.length) return;
         const restored: ChatMessage[] = data.messages.map((m: { role: string; content: string }, i: number) => ({
@@ -144,8 +157,10 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         }));
         setMessages(restored);
       })
-      .catch(() => {});
-  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, historyLoadedRef, setMessages]);
+      .catch(() => {
+        clearStaleConversation();
+      });
+  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, historyLoadedRef, setMessages, setConversationId]);
 
   const onSwitchAgent = (agent: typeof selectedAgent) => {
     if (!agent) return;
@@ -155,15 +170,16 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   };
 
   const containerClasses = (() => {
+    const base = 'filigran-chatbot';
     switch (mode) {
       case 'sidebar':
-        return 'fixed right-0 bottom-0 flex flex-col bg-white dark:bg-[#1e1e2e] border-l border-gray-200 dark:border-white/10 z-[1200]';
+        return `${base} fixed right-0 bottom-0 flex flex-col bg-white dark:bg-[#1e1e2e] border-l border-gray-200 dark:border-white/10 z-[1200]`;
       case 'floating':
-        return 'fixed bottom-5 right-5 flex flex-col bg-white dark:bg-[#1e1e2e] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border border-gray-200 dark:border-white/10';
+        return `${base} fixed bottom-5 right-5 flex flex-col bg-white dark:bg-[#1e1e2e] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border border-gray-200 dark:border-white/10`;
       case 'fullscreen':
-        return 'fixed right-0 bottom-0 left-0 flex flex-col bg-gray-50 dark:bg-[#161622] z-[1400]';
+        return `${base} fixed right-0 bottom-0 left-0 flex flex-col bg-gray-50 dark:bg-[#161622] z-[1400]`;
       default:
-        return '';
+        return base;
     }
   })();
 

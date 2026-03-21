@@ -11,9 +11,19 @@ interface DropdownProps {
   children: React.ReactNode;
 }
 
+function isDarkMode(el: HTMLElement | null): boolean {
+  let node = el;
+  while (node) {
+    if (node.classList.contains('dark')) return true;
+    node = node.parentElement;
+  }
+  return document.documentElement.classList.contains('dark');
+}
+
 export const Dropdown = ({ open, onClose, anchorRef, placement = 'bottom-start', width = 280, children }: DropdownProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const dark = open && isDarkMode(anchorRef.current);
 
   const stableOnClose = useCallback(() => onClose(), [onClose]);
   useClickOutside(panelRef, stableOnClose, open);
@@ -28,12 +38,14 @@ export const Dropdown = ({ open, onClose, anchorRef, placement = 'bottom-start',
   if (!open) return null;
 
   return createPortal(
-    <div
-      ref={panelRef}
-      className="fixed z-[10000] rounded-[10px] overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-[#2a2a3e] shadow-xl"
-      style={{ top: pos.top, left: pos.left, width }}
-    >
-      {children}
+    <div className={dark ? 'dark' : ''}>
+      <div
+        ref={panelRef}
+        className="fixed z-[10000] rounded-[10px] overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-[#2a2a3e] shadow-xl"
+        style={{ top: pos.top, left: pos.left, width }}
+      >
+        {children}
+      </div>
     </div>,
     document.body,
   );

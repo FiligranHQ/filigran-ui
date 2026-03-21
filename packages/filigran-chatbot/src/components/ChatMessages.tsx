@@ -40,7 +40,7 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
           <div key={msg.id} className={`flex flex-col ${isAssistant ? 'items-start' : 'items-end'}`}>
             {isAssistant && (
               <div className="flex items-center gap-1.5 mb-1">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
                   <span className="text-[var(--chat-accent)] [&>svg]:w-3 [&>svg]:h-3">{logoIcon}</span>
                 </div>
                 <span className="font-semibold text-xs text-gray-900 dark:text-white">{agentName}</span>
@@ -71,7 +71,7 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
               {isAssistant ? <MarkdownMessage content={msg.content} /> : msg.content}
               {isAssistant && isEmpty && !isLoading && <span className="text-[0.8125rem] text-gray-400 dark:text-white/40 italic">...</span>}
               {isAssistant && !isEmpty && isLoading && (
-                <span className="inline-block w-1.5 h-3.5 bg-[var(--chat-accent)]/70 rounded-[1px] ml-0.5 animate-pulse align-text-bottom" />
+                <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-sm ml-0.5 animate-pulse align-text-bottom" />
               )}
             </div>
 

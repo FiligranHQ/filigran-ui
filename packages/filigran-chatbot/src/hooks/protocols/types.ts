@@ -3,7 +3,7 @@
  * The SSE read loop is protocol-agnostic — only the JSON-to-action mapping differs.
  */
 export type ParsedAction =
-  | { action: 'status'; status: string; tools?: string[] }
+  | { action: 'status'; status: string; tools?: string[]; thinkingContent?: string }
   | { action: 'stream'; content: string }
   | { action: 'done'; content: string; conversationId?: string; toolNames?: string[]; toolCallCount?: number; iterations?: number }
   | { action: 'error'; content: string }

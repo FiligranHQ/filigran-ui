@@ -58,5 +58,8 @@ module.exports = {
       },
     },
   },
+  corePlugins: {
+    preflight: false,
+  },
   plugins: [require('@tailwindcss/typography')],
 };

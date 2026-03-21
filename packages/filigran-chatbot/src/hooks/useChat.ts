@@ -193,7 +193,7 @@ export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentS
             switch (parsed.action) {
               case 'status':
                 if (parsed.status === 'tool_start') hasUsedToolsRef.current = true;
-                setAgentStatus({ status: parsed.status, tools: parsed.tools });
+                setAgentStatus({ status: parsed.status, tools: parsed.tools, thinkingContent: parsed.thinkingContent });
                 break;
 
               case 'stream':

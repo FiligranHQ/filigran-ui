@@ -3,9 +3,21 @@
 @tailwind utilities;
 
 /*
- * Filigran Chat — global styles
- * CSS custom properties are set inline via the accentColor prop.
+ * Filigran Chat — scoped styles
+ * Preflight is disabled in tailwind.config to avoid leaking global resets
+ * (border-style: solid on *) into the host application.
+ * We apply the necessary base styles scoped to our container instead.
  */
+
+.filigran-chatbot,
+.filigran-chatbot *,
+.filigran-chatbot *::before,
+.filigran-chatbot *::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: currentColor;
+}
 
 .filigran-chat-scrollable::-webkit-scrollbar {
   display: none;
@@ -25,5 +37,30 @@
   40% {
     opacity: 1;
     transform: scale(1.15);
+  }
+}
+
+@keyframes reasoningGlow {
+  0%,
+  100% {
+    border-color: var(--chat-accent, hsl(197 100% 53%));
+    border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 15%, transparent);
+    box-shadow: inset 2px 0 8px -4px color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 8%, transparent);
+  }
+  50% {
+    border-color: var(--chat-accent, hsl(197 100% 53%));
+    border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 35%, transparent);
+    box-shadow: inset 2px 0 12px -4px color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 18%, transparent);
+  }
+}
+
+@keyframes chat-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

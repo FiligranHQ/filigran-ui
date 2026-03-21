@@ -25,7 +25,7 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
     if (st === 'thinking' && ctx.hasUsedTools) {
       return { action: 'status', status: 'analyzing' };
     }
-    return { action: 'status', status: st, tools: evt.tools as string[] | undefined };
+    return { action: 'status', status: st, tools: evt.tools as string[] | undefined, thinkingContent: evt.thinking_content as string | undefined };
   }
 
   if (type === 'stream') {

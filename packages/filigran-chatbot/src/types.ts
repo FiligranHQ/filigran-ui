@@ -76,6 +76,7 @@ export interface ChatMessage {
 export interface AgentStatusState {
   status: string;
   tools?: string[];
+  thinkingContent?: string;
 }
 
 export interface ChatFile {
