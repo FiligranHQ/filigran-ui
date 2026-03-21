@@ -73,9 +73,9 @@ export const ChatHeader = ({
         onClick={onAgentMenuToggle}
         className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
       >
-        <span className="text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
+        <span className="flex items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
         {agentName}
-        <ChevronDownIcon size={16} className="text-gray-400 dark:text-white/40" />
+        <ChevronDownIcon size={16} className="text-gray-400 dark:text-white/30" />
       </button>
 
       <Dropdown open={agentMenuOpen} onClose={onAgentMenuClose} anchorRef={agentAnchorRef} width={280}>
@@ -107,7 +107,7 @@ export const ChatHeader = ({
             </button>
           ))}
         </div>
-        <hr className="border-gray-200 dark:border-white/10" />
+        <div className="h-px bg-gray-200 dark:bg-white/10 mx-2" />
         <div>
           {agentDashboardUrl && (
             <button
@@ -144,9 +144,9 @@ export const ChatHeader = ({
         <button
           type="button"
           onClick={onNewChat}
-          className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 mr-0.5 text-gray-600 dark:text-white/70 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
         >
-          <EditIcon size={20} />
+          <EditIcon size={18} />
         </button>
       </Tooltip>
 
@@ -155,9 +155,9 @@ export const ChatHeader = ({
           ref={modeAnchorRef}
           type="button"
           onClick={onModeMenuToggle}
-          className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 mr-0.5 text-gray-600 dark:text-white/70 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
         >
-          <CurrentModeIcon size={20} />
+          <CurrentModeIcon size={18} />
         </button>
       </Tooltip>
 
@@ -187,9 +187,9 @@ export const ChatHeader = ({
         <button
           type="button"
           onClick={onClose}
-          className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-white/70 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
         >
-          <CloseIcon size={20} />
+          <CloseIcon size={18} />
         </button>
       </Tooltip>
     </div>

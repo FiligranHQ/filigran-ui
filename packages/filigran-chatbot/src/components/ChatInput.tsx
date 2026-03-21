@@ -74,7 +74,7 @@ export const ChatInput = ({ inputValue, onInputChange, onSend, onStop, isLoading
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="p-1 rounded-lg text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10 mr-1 transition-colors"
+          className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10 mr-0.5 transition-colors"
         >
           <AttachFileIcon size={18} />
         </button>
@@ -86,7 +86,7 @@ export const ChatInput = ({ inputValue, onInputChange, onSend, onStop, isLoading
           onKeyDown={handleKeyDown}
           onPaste={onPaste}
           rows={1}
-          className="flex-1 bg-transparent border-none outline-none resize-none text-[0.8125rem] py-1.5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30"
+          className="flex-1 bg-transparent border-none outline-none resize-none text-[0.8125rem] py-1.5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 filigran-chat-scrollable"
           style={{ maxHeight: 120 }}
         />
         <Tooltip title={isLoading ? t('Stop generating') : ''}>

@@ -12,6 +12,7 @@ import { ChatWelcome } from './ChatWelcome';
 
 const FLOATING_WIDTH = 380;
 const FLOATING_HEIGHT = 560;
+const SIDEBAR_GAP = 6;
 
 const DEFAULT_SUGGESTIONS = [
   'Help me create a new simulation scenario',
@@ -74,9 +75,10 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   // Push content when sidebar mode is active using CSS variable
   useEffect(() => {
     const width = mode === 'sidebar' ? (resizable ? sidebarWidth : defaultWidth) : 0;
+    const pushWidth = width > 0 ? width + SIDEBAR_GAP : 0;
     
     // Set CSS variable on :root for any component to use
-    document.documentElement.style.setProperty('--chatbot-sidebar-width', `${width}px`);
+    document.documentElement.style.setProperty('--chatbot-sidebar-width', `${pushWidth}px`);
     document.documentElement.style.setProperty(
       '--chatbot-transition',
       isResizing ? 'none' : 'all 225ms cubic-bezier(0.4, 0, 0.2, 1)'
@@ -89,7 +91,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         const originalPaddingRight = contentElement.style.paddingRight;
         const originalTransition = contentElement.style.transition;
         
-        contentElement.style.paddingRight = width > 0 ? `${width}px` : '';
+        contentElement.style.paddingRight = pushWidth > 0 ? `${pushWidth}px` : '';
         contentElement.style.transition = isResizing 
           ? 'none' 
           : 'padding-right 225ms cubic-bezier(0.4, 0, 0.2, 1)';

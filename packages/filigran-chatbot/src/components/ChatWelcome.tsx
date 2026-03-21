@@ -22,7 +22,7 @@ export const ChatWelcome = ({ firstName, logoIcon, promptSuggestions, onPromptCl
           key={prompt}
           type="button"
           onClick={() => onPromptClick(prompt)}
-          className="w-full text-left text-[0.8125rem] text-gray-800 dark:text-white py-1.5 px-3 mb-1 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent hover:bg-[var(--chat-accent)]/5 hover:border-[var(--chat-accent)]/25 transition-colors"
+          className="w-full text-left text-[0.8125rem] text-gray-800 dark:text-white py-1.5 px-3 mb-1 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)]"
         >
           {t(prompt)}
         </button>

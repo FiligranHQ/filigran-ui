@@ -9,22 +9,59 @@
  * We apply the necessary base styles scoped to our container instead.
  */
 
-.filigran-chatbot,
-.filigran-chatbot *,
-.filigran-chatbot *::before,
-.filigran-chatbot *::after {
+/*
+ * Scoped preflight: replicate Tailwind's base resets ONLY inside the chatbot.
+ * Uses :where() for zero specificity so Tailwind utilities always win.
+ */
+:where(.filigran-chatbot),
+:where(.filigran-chatbot) *,
+:where(.filigran-chatbot) *::before,
+:where(.filigran-chatbot) *::after {
   box-sizing: border-box;
   border-width: 0;
   border-style: solid;
   border-color: currentColor;
 }
 
-.filigran-chat-scrollable::-webkit-scrollbar {
-  display: none;
+:where(.filigran-chatbot) button,
+:where(.filigran-chatbot) input,
+:where(.filigran-chatbot) textarea {
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  margin: 0;
 }
+
+:where(.filigran-chatbot) button:not(:disabled) {
+  cursor: pointer;
+}
+
 .filigran-chat-scrollable {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+.dark .filigran-chat-scrollable {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.filigran-chat-scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+.filigran-chat-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+.filigran-chat-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+.dark .filigran-chat-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+.filigran-chat-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+.dark .filigran-chat-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 @keyframes chat-dot {

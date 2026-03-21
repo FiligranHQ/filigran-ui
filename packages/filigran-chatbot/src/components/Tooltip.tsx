@@ -6,13 +6,13 @@ interface TooltipProps {
   children: React.ReactElement;
 }
 
-function isDarkMode(el: HTMLElement | null): boolean {
+function findChatbotRoot(el: HTMLElement | null): HTMLElement {
   let node = el;
   while (node) {
-    if (node.classList.contains('dark')) return true;
+    if (node.classList.contains('filigran-chatbot')) return node;
     node = node.parentElement;
   }
-  return document.documentElement.classList.contains('dark');
+  return document.body;
 }
 
 export const Tooltip = ({ title, children }: TooltipProps) => {
@@ -21,8 +21,6 @@ export const Tooltip = ({ title, children }: TooltipProps) => {
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
   if (!title) return children;
-
-  const dark = show && isDarkMode(ref.current);
 
   const handleEnter = () => {
     if (!ref.current) return;
@@ -44,16 +42,14 @@ export const Tooltip = ({ title, children }: TooltipProps) => {
       {children}
       {show &&
         createPortal(
-          <span className={dark ? 'dark' : ''}>
-            <span
-              className="pointer-events-none fixed z-[10001] -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 dark:bg-gray-100 px-2 py-1 text-xs text-white dark:text-gray-900 shadow-lg"
-              style={{ top: pos.top, left: pos.left }}
-              role="tooltip"
-            >
-              {title}
-            </span>
+          <span
+            className="pointer-events-none fixed z-[10001] -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 dark:bg-gray-100 px-2 py-1 text-xs text-white dark:text-gray-900 shadow-lg"
+            style={{ top: pos.top, left: pos.left }}
+            role="tooltip"
+          >
+            {title}
           </span>,
-          document.body,
+          findChatbotRoot(ref.current),
         )}
     </span>
   );
