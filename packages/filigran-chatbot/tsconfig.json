@@ -1,18 +1,17 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./base.json",
-    "include": ["**/*.ts", "**/*.tsx"],
-    "exclude": ["dist", "node_modules"],
-    "compilerOptions": {
-        "resolveJsonModule": true,
-        "baseUrl": ".",
-        "jsx": "preserve",
-        "jsxImportSource": "solid-js",
-        "module": "ESNext",
-        "target": "ESNext",
-        "declaration": true,
-        "declarationMap": true,
-        "outDir": "dist",
-        "emitDeclarationOnly": true
-    }
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["dist", "node_modules"],
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "target": "ESNext",
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "emitDeclarationOnly": true
+  }
 }

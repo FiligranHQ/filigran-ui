@@ -1,19 +1,20 @@
 {
   "name": "@filigran/chatbot",
-  "description": "Filigran chatbot component",
+  "description": "Filigran chat panel — React + Tailwind standalone chatbot component",
   "author": "Filigran",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/FiligranHQ/filigran-ui.git"
   },
-  "version": "1.1.1",
+  "version": "2.0.0",
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./styles.css": "./dist/styles.css"
   },
   "scripts": {
     "dev": "NODE_ENV=development rollup --watch --config rollup.config.js",
@@ -25,47 +26,39 @@
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
     "prepack": "yarn build"
   },
-  "dependencies": {
-    "@microsoft/fetch-event-source": "2.0.1",
-    "@ts-stack/markdown": "1.5.0",
-    "device-detector-js": "3.0.3",
-    "lodash": "4.17.23",
-    "solid-element": "1.9.1",
-    "solid-js": "1.9.11",
-    "uuid": "13.0.0"
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18",
+    "react-markdown": ">=10",
+    "remark-gfm": ">=4"
   },
   "devDependencies": {
-    "@babel/core": "7.28.6",
-    "@babel/preset-typescript": "7.28.5",
-    "@rollup/plugin-babel": "6.1.0",
     "@rollup/plugin-commonjs": "29.0.0",
     "@rollup/plugin-json": "6.1.0",
     "@rollup/plugin-node-resolve": "16.0.3",
     "@rollup/plugin-terser": "0.4.4",
     "@rollup/plugin-typescript": "12.3.0",
     "@tailwindcss/typography": "0.5.19",
-    "@types/lodash": "4.17.23",
-    "@types/node": "24.10.9",
-    "autoprefixer": "10.4.23",
-    "babel-plugin-lodash": "3.3.4",
-    "babel-preset-solid": "1.9.10",
+    "@types/node": "22.19.1",
+    "@types/react": "19.2.13",
+    "@types/react-dom": "19.2.3",
+    "autoprefixer": "10.4.27",
     "eslint": "9.39.2",
-    "eslint-config-next": "15.5.9",
     "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-solid": "0.14.5",
-    "jiti": "2.6.1",
     "postcss": "8.5.6",
     "prettier": "3.8.1",
-    "react": "19.2.3",
-    "rollup": "4.56.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "rollup": "4.59.0",
     "rollup-plugin-dts": "6.3.0",
     "rollup-plugin-livereload": "2.0.5",
     "rollup-plugin-postcss": "4.0.2",
     "rollup-plugin-serve": "3.0.0",
     "rollup-plugin-typescript-paths": "1.5.0",
-    "rollup-plugin-uglify": "6.0.4",
     "tailwindcss": "3.4.19",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.53.1"
+    "typescript-eslint": "8.56.1"
   }
 }

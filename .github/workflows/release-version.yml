@@ -274,6 +274,21 @@ jobs:
             ${{ steps.changelog.outputs.ui_issues }}
           draft: false
           prerelease: false
+      - name: Create GitHub Release for @filigran/chatbot
+        if: (github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all') && env.FILIGRAN_CHATBOT_VERSION != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: '@filigran/chatbot-v${{ env.FILIGRAN_CHATBOT_VERSION }}'
+          name: 'Filigran Chatbot v${{ env.FILIGRAN_CHATBOT_VERSION }}'
+          body: |
+            ## Filigran Chatbot v${{ env.FILIGRAN_CHATBOT_VERSION }}
+            
+            ### Installation
+            ```bash
+            yarn add @filigran/chatbot@${{ env.FILIGRAN_CHATBOT_VERSION }}
+            ```
+          draft: false
+          prerelease: false
       - name: Update project status
         if: (env.FILIGRAN_UI_VERSION != '' && steps.changelog.outputs.ui_issues != '') || (env.FILIGRAN_ICON_VERSION != '' && steps.changelog.outputs.icon_issues != '')
         uses: actions/github-script@v8
