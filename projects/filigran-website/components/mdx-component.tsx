@@ -3,6 +3,7 @@ import React from 'react'
 import remarkGfm from 'remark-gfm'
 import ReactLiveDisplay from '@/components/react-live/ReactLiveDisplay'
 import rehypeSlug from 'rehype-slug'
+import * as FiligranComponent from '@filigran/ui'
 import * as FiligranIcon from '@filigran/icon'
 import * as LucidIcon from 'lucide-react'
 import {DisplayAllIcons} from '@/components/display-all-icons'
@@ -37,6 +38,7 @@ const options = {
 const components = {
   ...LucidIcon,
   ...FiligranIcon,
+  ...FiligranComponent,
   AutoFormTest: AutoFormTest,
   CodePlayground: CodePlayground,
   CodePlaygroundTest: CodePlaygroundTest,
