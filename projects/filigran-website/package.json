@@ -22,11 +22,10 @@
     "@codesandbox/sandpack-themes": "2.0.21",
     "@faker-js/faker": "10.3.0",
     "@hookform/resolvers": "5.2.2",
-    "canvas-confetti": "1.9.4",
     "clsx": "2.1.1",
     "lucide-react": "0.563.0",
     "next": "16.2.1",
-    "next-mdx-remote": "5.0.0",
+    "next-mdx-remote": "6.0.0",
     "next-themes": "0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -42,13 +41,12 @@
   "devDependencies": {
     "@svgr/webpack": "8.1.0",
     "@tailwindcss/typography": "0.5.19",
-    "@types/canvas-confetti": "1.9.0",
     "@types/node": "24.10.9",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "autoprefixer": "10.4.23",
     "eslint": "9.39.2",
-    "eslint-config-next": "16.1.7",
+    "eslint-config-next": "16.2.1",
     "jiti": "2.6.1",
     "postcss": "8.5.6",
     "prettier": "3.8.1",
@@ -69,9 +67,5 @@
     "plugins": [
       "prettier-plugin-tailwindcss"
     ]
-  },
-  "resolutions": {
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3"
   }
 }

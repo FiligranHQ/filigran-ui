@@ -14,11 +14,6 @@ import {ExampleToast} from '@/components/example/example-toast'
 import {ExampleSheet} from '@/components/example/example-sheet'
 import {ExampleTagInput} from '@/components/example/example-tag-input'
 import {Colors} from '@/components/example/color'
-import {
-  Quizz,
-  QuizzExplanation,
-  QuizzQuestionChoice,
-} from '@/components/ui/quizz'
 import {ExampleLoader} from '@/components/example/example-loader'
 import {AutoFormTest} from './autoform/autoform-test'
 import {CodePlayground} from '@/components/code-playground/code-playground'
@@ -56,9 +51,6 @@ const components = {
   ExampleTagInput: ExampleTagInput,
   ExampleLoader: ExampleLoader,
   Colors: Colors,
-  Quizz: Quizz,
-  QuizzQuestionChoice: QuizzQuestionChoice,
-  QuizzExplanation: QuizzExplanation,
 }
 
 export async function CustomMDX(props: any) {
