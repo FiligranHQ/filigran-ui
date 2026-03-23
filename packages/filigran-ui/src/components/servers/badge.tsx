@@ -11,7 +11,7 @@ const badgeVariants = cva(
         secondary: 'text-secondary',
         warning: 'text-orange',
         destructive: 'text-destructive',
-        outline: ' bg-transparent',
+        outline: 'bg-transparent',
       },
       size: {
         default: 'px-s h-6 text-xs',

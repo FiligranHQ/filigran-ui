@@ -30,7 +30,7 @@ export const LinkMenu = ({
         asChild && 'txt-sub-content',
         currentPath && 'bg-primary/10 shadow-[inset_2px_0px] shadow-primary'
       )}>
-      <span className="flex w-8 flex-shrink-0 justify-center size-4">
+      <span className="flex w-8 shrink-0 justify-center size-4">
         {children}
       </span>
       <span className={cn(open ? 'ml-2' : 'sr-only')}>{text}</span>

@@ -1,12 +1,8 @@
-import {
-  isolateInsideOfContainer,
-  scopedPreflightStyles,
-} from 'tailwindcss-scoped-preflight'
 import tailwindcssAnimate from 'tailwindcss-animate';
 import FiligranUIPlugin from './src/plugin'
 
 const config = {
-    darkMode: ['class'],
+    darkMode: 'class',
     content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -14,15 +10,7 @@ const config = {
     './src/**/*.{ts,tsx}',
   ],
   prefix: '',
-  plugins: [
-    tailwindcssAnimate,
-    FiligranUIPlugin(),
-    scopedPreflightStyles({
-      isolationStrategy: isolateInsideOfContainer('.twp', {
-        except: '.no-twp', // optional, to exclude some elements under .twp from being preflighted, like external markup
-      }),
-    }),
-  ],
+  plugins: [tailwindcssAnimate, FiligranUIPlugin()],
 }
 
 export default config
