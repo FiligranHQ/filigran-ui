@@ -84,9 +84,9 @@
     "tailwindcss-animate": "1.0.7"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "4.2.2",
     "@types/react-color": "^2",
     "@types/react-dom": "19.2.3",
-    "autoprefixer": "10.4.23",
     "postcss": "8.5.6",
     "prettier": "3.8.1",
     "prettier-plugin-organize-imports": "4.3.0",
@@ -95,8 +95,7 @@
     "react-dom": "19.2.3",
     "react-hook-form": "7.71.1",
     "rimraf": "6.1.2",
-    "tailwindcss": "3.4.19",
-    "tailwindcss-scoped-preflight": "3.5.7",
+    "tailwindcss": "4.2.2",
     "terser": "5.46.0",
     "tsup": "8.5.1",
     "typescript": "5.9.3"

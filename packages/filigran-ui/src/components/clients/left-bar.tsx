@@ -6,10 +6,10 @@ import {LinkMenu} from './link-menu'
 export const LeftBar = ({open = true}) => (
   <aside
     className={cn(
-      'mobile:hidden z-20 sticky flex-shrink-0 top-0 left-0 flex flex-col overflow-y-auto overflow-x-hidden bg-page-background duration-300 ease-in-out',
+      'mobile:hidden z-20 sticky shrink-0 top-0 left-0 flex flex-col overflow-y-auto overflow-x-hidden bg-page-background duration-300 ease-in-out',
       open ? 'w-48' : 'w-14'
     )}>
-    <div className="flex z-10 flex-shrink-0 sticky top-0 h-14 border-border-light border-b bg-page-background dark:bg-background items-center px-m">
+    <div className="flex z-10 shrink-0 sticky top-0 h-14 border-border-light border-b bg-page-background dark:bg-background items-center px-m">
       <div className={cn('mx-m py-l')}>
         <svg
           viewBox="0 0 161 41"
@@ -58,7 +58,7 @@ export const LeftBar = ({open = true}) => (
       </div>
     </div>
     <div className="border-r flex-1 flex-col flex justify-between">
-      <nav className="flex-1 flex-shrink-0 pt-s">
+      <nav className="flex-1 shrink-0 pt-s">
         <ul
           style={{listStyleType: 'none'}}
           className="space-y-s p-0 m-0">

@@ -1,9 +1,7 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
 * {
-  @apply border-border;
   font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
 }
 h1,

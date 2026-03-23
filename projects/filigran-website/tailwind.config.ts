@@ -4,7 +4,7 @@ import tailwindcssAnimate from 'tailwindcss-animate'
 import tailwindcssTypography from '@tailwindcss/typography'
 
 const config: Config = {
-  darkMode: ['class'],
+   darkMode: 'class',
   content: [
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
