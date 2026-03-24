@@ -14,6 +14,11 @@ interface UseChatOptions {
   t: (key: string) => string;
 }
 
+export interface TransferredAgent {
+  id: string;
+  name: string;
+}
+
 interface UseChatReturn {
   messages: ChatMessage[];
   inputValue: string;
@@ -22,6 +27,7 @@ interface UseChatReturn {
   agentStatus: AgentStatusState | null;
   attachedFiles: ChatFile[];
   conversationId: string | null;
+  transferredAgent: TransferredAgent | null;
   historyLoadedRef: React.MutableRefObject<boolean>;
   handleFileAdd: (fileList: FileList | null) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
@@ -78,6 +84,7 @@ export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentS
     return localStorage.getItem(STORAGE_KEY);
   });
   const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
+  const [transferredAgent, setTransferredAgent] = useState<TransferredAgent | null>(null);
   const [legacyChatId, setLegacyChatId] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem(LEGACY_CHAT_ID_KEY);
@@ -220,6 +227,9 @@ export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentS
                   setConversationId(parsed.conversationId);
                   localStorage.setItem(STORAGE_KEY, parsed.conversationId);
                 }
+                if (parsed.transferAgentId && parsed.transferAgentName) {
+                  setTransferredAgent({ id: parsed.transferAgentId, name: parsed.transferAgentName });
+                }
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantId
@@ -283,6 +293,7 @@ export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentS
     setAttachedFiles([]);
     setIsLoading(false);
     setAgentStatus(null);
+    setTransferredAgent(null);
     hasUsedToolsRef.current = false;
     historyLoadedRef.current = false;
     if (isLegacy) {
@@ -311,6 +322,7 @@ export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentS
     agentStatus,
     attachedFiles,
     conversationId,
+    transferredAgent,
     historyLoadedRef,
     handleFileAdd,
     handlePaste,

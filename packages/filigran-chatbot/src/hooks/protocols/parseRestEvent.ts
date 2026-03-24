@@ -43,6 +43,8 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       toolNames: evt.tool_names as string[] | undefined,
       toolCallCount: evt.tool_call_count as number | undefined,
       iterations: evt.iterations as number | undefined,
+      transferAgentId: evt.transfer_agent_id as string | undefined,
+      transferAgentName: evt.transfer_agent_name as string | undefined,
     };
   }
 
