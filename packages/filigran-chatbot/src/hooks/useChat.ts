@@ -200,7 +200,11 @@ export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentS
                     thinkingContent: (prev?.thinkingContent ?? '') + (parsed.thinkingContent ?? ''),
                   }));
                 } else {
-                  setAgentStatus({ status: parsed.status, tools: parsed.tools });
+                  setAgentStatus((prev) => ({
+                    status: parsed.status,
+                    tools: parsed.tools,
+                    thinkingContent: prev?.thinkingContent,
+                  }));
                 }
                 break;
 
