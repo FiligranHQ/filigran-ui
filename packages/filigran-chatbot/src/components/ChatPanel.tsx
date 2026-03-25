@@ -53,6 +53,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     agentStatus,
     attachedFiles,
     conversationId,
+    transferredAgent,
     historyLoadedRef,
     handleFileAdd,
     handlePaste,
@@ -111,7 +112,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
 
   const resolvedLogo = logoIcon ?? <DefaultLogoIcon size={24} />;
   const firstName = user.firstName;
-  const agentName = selectedAgent?.name || 'Assistant';
+  const agentName = transferredAgent?.name || selectedAgent?.name || 'Assistant';
 
   const cssVars = {
     '--chat-accent': accentColor,
@@ -209,6 +210,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         agentName={agentName}
         agents={agents}
         selectedAgent={selectedAgent}
+        transferredFrom={transferredAgent ? selectedAgent?.name : undefined}
         agentMenuOpen={agentMenuOpen}
         onAgentMenuToggle={() => setAgentMenuOpen((p) => !p)}
         onAgentMenuClose={() => setAgentMenuOpen(false)}
