@@ -1931,7 +1931,7 @@ __metadata:
     react-dom: "npm:19.2.3"
     react-markdown: "npm:10.1.0"
     remark-gfm: "npm:4.0.0"
-    tailwindcss: "npm:3.4.19"
+    tailwindcss: "npm:4.2.2"
     typescript: "npm:5.9.3"
     vite: "npm:7.3.1"
   languageName: unknown
@@ -1965,7 +1965,7 @@ __metadata:
     rollup-plugin-postcss: "npm:4.0.2"
     rollup-plugin-serve: "npm:3.0.0"
     rollup-plugin-typescript-paths: "npm:1.5.0"
-    tailwindcss: "npm:3.4.19"
+    tailwindcss: "npm:4.2.2"
     typescript: "npm:5.9.3"
     typescript-eslint: "npm:8.56.1"
   peerDependencies:
@@ -14540,7 +14540,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwindcss@npm:3.4.19, tailwindcss@npm:^3.4.16":
+"tailwindcss@npm:4.2.2":
+  version: 4.2.2
+  resolution: "tailwindcss@npm:4.2.2"
+  checksum: 10c0/6eae8a125c35d504ba6c518d26ec64fba694ff4a9ab9b9cd9883050128e0b7afdf491388c472d9bed2624664c1c7d4a133d19b653151a6b52e6ce6953168a857
+  languageName: node
+  linkType: hard
+
+"tailwindcss@npm:^3.4.16":
   version: 3.4.19
   resolution: "tailwindcss@npm:3.4.19"
   dependencies:
@@ -14570,13 +14577,6 @@ __metadata:
     tailwind: lib/cli.js
     tailwindcss: lib/cli.js
   checksum: 10c0/e1063daccb9e5a508b357ec73b0011354204b2366b56496d6f0cc822733a55a0551502cb85856a2257ef9b676d0026616daaaa176d391f3216df57fbd693c581
-  languageName: node
-  linkType: hard
-
-"tailwindcss@npm:4.2.2":
-  version: 4.2.2
-  resolution: "tailwindcss@npm:4.2.2"
-  checksum: 10c0/6eae8a125c35d504ba6c518d26ec64fba694ff4a9ab9b9cd9883050128e0b7afdf491388c472d9bed2624664c1c7d4a133d19b653151a6b52e6ce6953168a857
   languageName: node
   linkType: hard
 
