@@ -274,7 +274,7 @@ const MultiSelectFormField = React.forwardRef<
                       </Tooltip>
                     )}
                   </div>
-                  <div className="flex items-center flex-shrink-0">
+                  <div className="flex items-center shrink-0">
                     <button
                       type="button"
                       className="flex items-center justify-center"
@@ -311,7 +311,7 @@ const MultiSelectFormField = React.forwardRef<
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-[300px] p-0 drop-shadow-sm"
+            className="w-[300px] p-0 drop-shadow-xs"
             align="start"
             onEscapeKeyDown={() => setIsPopoverOpen(false)}>
             <Command onChange={handleSearchInputChange}>
@@ -336,11 +336,11 @@ const MultiSelectFormField = React.forwardRef<
                         }}
                         className="cursor-pointer">
                         {isSelected ? (
-                          <div className="mr-2 flex h-4 w-4 min-w-4 items-center justify-center rounded-sm border border-primary bg-primary text-primary-foreground">
+                          <div className="mr-2 flex h-4 w-4 min-w-4 items-center justify-center rounded-xs border border-primary bg-primary text-primary-foreground">
                             <CheckIcon className="h-4 w-4" />
                           </div>
                         ) : (
-                          <div className="mr-2 flex h-4 w-4 min-w-4 items-center justify-center rounded-sm border border-primary opacity-50"></div>
+                          <div className="mr-2 flex h-4 w-4 min-w-4 items-center justify-center rounded-xs border border-primary opacity-50"></div>
                         )}
                         <span>{String(option[keyLabel])}</span>
                       </CommandItem>

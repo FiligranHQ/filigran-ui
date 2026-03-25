@@ -34,7 +34,6 @@ const zFileList = z.custom<FileList>(
 )
 const convertJson = JSONSchemaToZod.convert(jsonTest)
 
-const fileListCheck = (file: FileList | undefined) => file && file.length > 0
 
 const intlTranslations = {
   en: {

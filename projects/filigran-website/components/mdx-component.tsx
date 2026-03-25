@@ -3,7 +3,7 @@ import React from 'react'
 import remarkGfm from 'remark-gfm'
 import ReactLiveDisplay from '@/components/react-live/ReactLiveDisplay'
 import rehypeSlug from 'rehype-slug'
-import * as FiligranUIComponent from '@filigran/ui'
+import * as FiligranComponent from '@filigran/ui'
 import * as FiligranIcon from '@filigran/icon'
 import * as LucidIcon from 'lucide-react'
 import {DisplayAllIcons} from '@/components/display-all-icons'
@@ -14,13 +14,8 @@ import {ExampleToast} from '@/components/example/example-toast'
 import {ExampleSheet} from '@/components/example/example-sheet'
 import {ExampleTagInput} from '@/components/example/example-tag-input'
 import {Colors} from '@/components/example/color'
-import {
-  Quizz,
-  QuizzExplanation,
-  QuizzQuestionChoice,
-} from '@/components/ui/quizz'
 import {ExampleLoader} from '@/components/example/example-loader'
-import { AutoFormTest } from './autoform/autoform-test';
+import {AutoFormTest} from './autoform/autoform-test'
 import {CodePlayground} from '@/components/code-playground/code-playground'
 import {CodePlaygroundTest} from '@/components/code-playground/code-playground-test'
 import {PlaygroundTest} from '@/components/code-playground/playground-test'
@@ -37,8 +32,8 @@ const options = {
 
 const components = {
   ...LucidIcon,
-  ...FiligranUIComponent,
   ...FiligranIcon,
+  ...FiligranComponent,
   AutoFormTest: AutoFormTest,
   CodePlayground: CodePlayground,
   CodePlaygroundTest: CodePlaygroundTest,
@@ -56,9 +51,6 @@ const components = {
   ExampleTagInput: ExampleTagInput,
   ExampleLoader: ExampleLoader,
   Colors: Colors,
-  Quizz: Quizz,
-  QuizzQuestionChoice: QuizzQuestionChoice,
-  QuizzExplanation: QuizzExplanation,
 }
 
 export async function CustomMDX(props: any) {

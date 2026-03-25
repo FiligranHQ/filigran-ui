@@ -288,7 +288,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
                       role="option"
                       aria-selected={isSelected}
                       className={cn(
-                        'aria-selected:bg-accent aria-selected:text-accent-foreground hover:bg-accent relative flex cursor-pointer select-none items-center rounded-sm text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+                        'aria-selected:bg-accent aria-selected:text-accent-foreground hover:bg-accent relative flex cursor-pointer select-none items-center rounded-xs text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
                         isSelected && 'bg-accent text-accent-foreground',
                         classStyleProps?.commandItem
                       )}
@@ -297,7 +297,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
                       <div className="flex w-full items-center gap-2 hover:bg-gray-200 dark:hover:bg-blue-900 p-xs">
                         <div
                           className={cn(
-                            'mr-1/2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
+                            'mr-1/2 flex h-4 w-4 items-center justify-center rounded-xs border border-primary',
                             tags.some((tag) => tag.text === option.text)
                               ? 'bg-primary text-primary-foreground'
                               : 'opacity-50 [&_svg]:invisible'

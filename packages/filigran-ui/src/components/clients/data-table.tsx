@@ -422,7 +422,7 @@ const DataTableHeadBarOptions = () => {
   const pageSize = table.getState().pagination.pageSize
   return (
     <>
-      <div className="flex-0 flex-shrink-0 box-border flex h-9 items-center rounded border border-border-light">
+      <div className="flex-0 shrink-0 box-border flex h-9 items-center rounded border border-border-light">
         <Button
           variant="ghost"
           size="icon"

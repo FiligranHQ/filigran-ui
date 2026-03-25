@@ -1,6 +1,6 @@
 import plugin from 'tailwindcss/plugin'
 
-const FiligranUIPlugin = () => {
+const FiligranUIPlugin = (): any => {
   return plugin(
     ({addUtilities, addComponents}) => {
       addUtilities({

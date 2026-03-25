@@ -98,6 +98,13 @@ export default defineConfig(() => {
     minify: 'terser',
     minifyWhitespace: true,
     target: 'es2022',
+    external: [
+      'react',
+      'react-dom',
+      'react-hook-form',
+      'zod',
+      '@hookform/resolvers',
+    ],
     onSuccess: async () => {
       await addDirectivesToChunkFiles()
       await copyFile('src/theme.css', 'dist/theme.css')

@@ -25,6 +25,7 @@ jobs:
       contents: write
       packages: write
       issues: write
+      id-token: write
     steps:
       - uses: actions/create-github-app-token@v2
         id: app-token
@@ -67,8 +68,7 @@ jobs:
         working-directory: ./packages/filigran-ui
         run: |
           yarn version ${{ github.event.inputs.version_type }}
-          echo "FILIGRAN_UI_VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_ENV
-
+          echo "FILIGRAN_UI_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
       - name: Collect commits and issues for changelog
         id: changelog
         run: |

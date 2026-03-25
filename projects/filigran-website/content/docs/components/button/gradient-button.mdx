@@ -14,8 +14,7 @@ Displays a button with an animated gradient border and optional gradient text.
 
 <GradientButton
   gradientFrom="#ec4899"
-  gradientTo="#8b5cf6"
->
+  gradientTo="#8b5cf6">
   Custom Colors
 </GradientButton>
 
@@ -27,17 +26,18 @@ The GradientButton component is a specialized button with an animated gradient b
 
 ### Props
 
-| Name             | Type      | Default                      | Description                                                                                           |
-| ---------------- | --------- | ---------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **gradientFrom** | _string_  | `hsl(var(--blue-default))`           | The starting color of the gradient. Accepts any valid CSS color (hex, rgb, hsl, CSS variables)       |
-| **gradientTo**   | _string_  | `hsl(var(--turquoise-300))`  | The ending color of the gradient. Accepts any valid CSS color (hex, rgb, hsl, CSS variables)         |
-| **gradientBg**   | _string_  | `hsl(var(--background))`     | The background color inside the button. Typically matches your theme background                       |
-| **textGradient** | _boolean_ | `true`                       | When true, applies the gradient effect to the text. When false, text uses normal foreground color    |
-| **size**         | _enum_    | `"default"`                  | Inherited from Button: "default" \| "sm" \| "lg" \| "icon" \| "icon-rounded"                         |
+| Name             | Type      | Default                     | Description                                                                                       |
+| ---------------- | --------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
+| **gradientFrom** | _string_  | `hsl(var(--blue-default))`  | The starting color of the gradient. Accepts any valid CSS color (hex, rgb, hsl, CSS variables)    |
+| **gradientTo**   | _string_  | `hsl(var(--turquoise-300))` | The ending color of the gradient. Accepts any valid CSS color (hex, rgb, hsl, CSS variables)      |
+| **gradientBg**   | _string_  | `hsl(var(--background))`    | The background color inside the button. Typically matches your theme background                   |
+| **textGradient** | _boolean_ | `true`                      | When true, applies the gradient effect to the text. When false, text uses normal foreground color |
+| **size**         | _enum_    | `"default"`                 | Inherited from Button: "default" \| "sm" \| "lg" \| "icon" \| "icon-rounded"                      |
 
 **gradientFrom & gradientTo**: These props control the gradient colors used for both the border and the text (if textGradient is enabled). The gradient animates on hover by reversing the color direction.
 
 **Color formats supported:**
+
 - **Hex**: `"#3b82f6"`
 - **RGB**: `"rgb(59, 130, 246)"`
 - **HSL**: `"hsl(217, 91%, 60%)"`
@@ -137,5 +137,6 @@ Import \{GradientButton\} from '@filigran/ui'
           </div>
         </div>
       </div>
+
 `}
 />

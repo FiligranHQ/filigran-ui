@@ -8,7 +8,11 @@ export async function generateStaticParams() {
     slug: slug.split('/'),
   }))
 }
-export default async function Blog({params}: {params: Promise<{slug: string[]}>}) {
+export default async function Blog({
+  params,
+}: {
+  params: Promise<{slug: string[]}>
+}) {
   const slug = (await params).slug.join('/')
   const allContents = await getAllContents()
   const content = allContents.find((post) => post.slug === slug)

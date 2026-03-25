@@ -3,55 +3,64 @@ import {getAllContents} from '@/utils/mdx.util'
 import {Card, Badge} from '@filigran/ui/servers'
 
 export default async function ComponentsPage() {
-  let allContents = await getAllContents()
+  const allContents = await getAllContents()
 
   // Group components by category
   const categories = {
-    'Core': ['button', 'badge', 'card', 'callout'],
-    'Forms': ['input', 'checkbox', 'select', 'radio', 'textarea', 'switch'],
-    'Navigation': ['link', 'breadcrumb', 'pagination', 'tabs'],
-    'Feedback': ['alert', 'progress', 'toast', 'spinner'],
-    'Layout': ['container', 'grid', 'box', 'divider'],
-    'Data Display': ['table', 'list', 'tooltip', 'avatar']
-  };
+    Core: ['button', 'badge', 'card', 'callout'],
+    Forms: ['input', 'checkbox', 'select', 'radio', 'textarea', 'switch'],
+    Navigation: ['link', 'breadcrumb', 'pagination', 'tabs'],
+    Feedback: ['alert', 'progress', 'toast', 'spinner'],
+    Layout: ['container', 'grid', 'box', 'divider'],
+    'Data Display': ['table', 'list', 'tooltip', 'avatar'],
+  }
 
   // Function to determine component category
   const getComponentCategory = (slug: string): string => {
     for (const [category, components] of Object.entries(categories)) {
-      if (components.some(comp => slug.includes(comp))) {
-        return category;
+      if (components.some((comp) => slug.includes(comp))) {
+        return category
       }
     }
-    return 'Other';
-  };
+    return 'Other'
+  }
 
   // Group contents by category
-  const contentsByCategory: Record<string, Array<typeof allContents[number] & { description?: string }>> = {};
-  allContents.forEach(content => {
-    const category: string = getComponentCategory(content.slug);
+  const contentsByCategory: Record<
+    string,
+    Array<(typeof allContents)[number] & {description?: string}>
+  > = {}
+  allContents.forEach((content) => {
+    const category: string = getComponentCategory(content.slug)
     if (!contentsByCategory[category]) {
-      contentsByCategory[category] = [];
+      contentsByCategory[category] = []
     }
-    contentsByCategory[category].push(content);
-  });
-
+    contentsByCategory[category].push(content)
+  })
 
   return (
     <div className="container mx-auto max-w-6xl py-12">
       <div className="mb-12 text-center">
-        <h1 className="mb-4 text-4xl font-bold tracking-tight">Component Library</h1>
+        <h1 className="mb-4 text-4xl font-bold tracking-tight">
+          Component Library
+        </h1>
         <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
-          Explore our comprehensive collection of UI components designed for building
-          modern and accessible user interfaces.
+          Explore our comprehensive collection of UI components designed for
+          building modern and accessible user interfaces.
         </p>
       </div>
 
       {Object.entries(contentsByCategory).map(([category, contents]) => (
-        <div key={category} className="mb-12">
+        <div
+          key={category}
+          className="mb-12">
           <div className="mb-6 flex items-center">
-            <h2 className="txt-title font-semibold">{category}</h2>
-            <Badge variant="outline" className="ml-3">
-              {contents.length} {contents.length === 1 ? 'component' : 'components'}
+            <h2 className="font-semibold txt-title">{category}</h2>
+            <Badge
+              variant="outline"
+              className="ml-3">
+              {contents.length}{' '}
+              {contents.length === 1 ? 'component' : 'components'}
             </Badge>
           </div>
 
@@ -65,10 +74,12 @@ export default async function ComponentsPage() {
                   <div className="flex flex-col justify-between space-y-4">
                     <div>
                       <h3 className="mb-2 text-xl font-medium capitalize">
-                        {content.slug.split('/').pop()?.replace(/-/g, ' ') || content.slug}
+                        {content.slug.split('/').pop()?.replace(/-/g, ' ') ||
+                          content.slug}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {(content as any).description || `Documentation and examples for the ${content.slug.split('/').pop()?.replace(/-/g, ' ') || content.slug} component.`}
+                        {(content as any).description ||
+                          `Documentation and examples for the ${content.slug.split('/').pop()?.replace(/-/g, ' ') || content.slug} component.`}
                       </p>
                     </div>
                     <div className="flex items-center text-sm text-primary">
