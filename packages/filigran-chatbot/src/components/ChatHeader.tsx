@@ -20,6 +20,7 @@ interface ChatHeaderProps {
   agentName: string;
   agents: XtmAgent[];
   selectedAgent: XtmAgent | null;
+  transferredFrom?: string;
   agentMenuOpen: boolean;
   onAgentMenuToggle: () => void;
   onAgentMenuClose: () => void;
@@ -46,6 +47,7 @@ export const ChatHeader = ({
   agentName,
   agents,
   selectedAgent,
+  transferredFrom,
   agentMenuOpen,
   onAgentMenuToggle,
   onAgentMenuClose,
@@ -74,7 +76,14 @@ export const ChatHeader = ({
         className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
       >
         <span className="flex items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
-        {agentName}
+        <span className="flex flex-col items-start leading-tight">
+          <span>{agentName}</span>
+          {transferredFrom && (
+            <span className="text-[0.6rem] font-normal text-gray-400 dark:text-white/30">
+              {t('Transferred from')} {transferredFrom}
+            </span>
+          )}
+        </span>
         <ChevronDownIcon size={16} className="text-gray-400 dark:text-white/30" />
       </button>
 
