@@ -57,7 +57,36 @@ const ExampleFileInput = () => {
                     <FormControl>
                       <FileInput
                         {...field}
-                        allowedTypes={'image/png, applicatiion/pdf'}
+                        allowedTypes={'image/png, application/pdf'}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )
+              }}
+            />
+            <Button type="submit">Submit</Button>
+          </form>
+        </Form>
+      </div>
+      <div>
+        <h2>File input with hidden file name</h2>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-l">
+            <FormField
+              control={form.control}
+              name="file"
+              render={({field}) => {
+                return (
+                  <FormItem>
+                    <FormLabel>File</FormLabel>
+                    <FormControl>
+                      <FileInput
+                        {...field}
+                        isFileNameHidden
+                        allowedTypes={'image/png, application/pdf'}
                       />
                     </FormControl>
                     <FormMessage />
@@ -86,7 +115,7 @@ const ExampleFileInput = () => {
                       <FormControl>
                         <FileInput
                           {...field}
-                          allowedTypes={'image/png, applicatiion/pdf'}
+                          allowedTypes={'image/png, application/pdf'}
                         />
                       </FormControl>
                       <FormMessage />
@@ -115,7 +144,7 @@ const ExampleFileInput = () => {
                       <FormLabel>File</FormLabel>
                       <FormControl>
                         <FileInput
-                          allowedTypes={'image/png, applicatiion/pdf'}
+                          allowedTypes={'image/png, application/pdf'}
                           multiple
                           {...field}
                         />
@@ -158,7 +187,7 @@ const ExampleFileInput = () => {
                           <FormLabel>File</FormLabel>
                           <FormControl>
                             <FileInput
-                              allowedTypes={'image/png, applicatiion/pdf'}
+                              allowedTypes={'image/png, application/pdf'}
                               multiple
                               {...field}
                             />

@@ -19,6 +19,7 @@ interface FileInputProps
   allowedTypes?: string
   value?: unknown
   name: string
+  isFileNameHidden?: boolean
 }
 
 interface InputText {
@@ -70,7 +71,7 @@ const FileInputDropZone: FunctionComponent<{
 }
 
 function GenericFileInput(
-  {texts, hidden = false, allowedTypes, className, ...props}: FileInputProps,
+  {texts, hidden = false, allowedTypes, className, isFileNameHidden = false, ...props}: FileInputProps,
   ref?: any
 ) {
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -142,11 +143,13 @@ function GenericFileInput(
         disabled={props.disabled}>
         {t.selectFile}
       </Button>
-      <span className="p-s">
-        {arraySelectedFile
-          ? arraySelectedFile.map((file: File) => file.name).join(', ')
-          : t.noFile}
-      </span>
+      {!isFileNameHidden && (
+        <span className="p-s">
+          {arraySelectedFile
+            ? arraySelectedFile.map((file: File) => file.name).join(', ')
+            : t.noFile}
+        </span>
+      )}
       <div
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
