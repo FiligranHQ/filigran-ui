@@ -772,7 +772,7 @@ export function Colors() {
             contrastRatio && (
               <div className="ml-0 flex flex-col">
                 <div
-                  className={`flex w-80 flex-col rounded border p-xl ${selectedColor1?.colorBackground}`}
+                  className={`flex w-80 flex-col rounded border border-border p-xl ${selectedColor1?.colorBackground}`}
                   style={{color: '#' + selectedColor2?.colorValue}}>
                   <div>Example text</div>
                   <div className="text-lg">Example text</div>

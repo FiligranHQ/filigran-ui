@@ -93,7 +93,7 @@ const LoginPage = React.forwardRef<HTMLDivElement, LoginPageProps>(
         ))}
 
         {!hasProviders && (
-          <div className="rounded-lg border bg-card p-4 text-center text-sm text-card-foreground shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-4 text-center text-sm text-card-foreground shadow-sm">
             {labels?.noProviderMessage ??
               'No authentication provider available'}
           </div>
@@ -106,7 +106,7 @@ const LoginPage = React.forwardRef<HTMLDivElement, LoginPageProps>(
         )}
 
         {consentOk && hasCredentialsForm && (
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
             <LoginForm
               onSubmit={onSubmit}
               onForgotPassword={onForgotPassword}

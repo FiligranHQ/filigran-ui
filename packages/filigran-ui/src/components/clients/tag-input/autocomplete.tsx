@@ -210,7 +210,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
         onOpenChange={handleOpenChange}
         modal={usePortal}>
         <div
-          className="relative flex h-full items-center rounded border bg-transparent pr-3"
+          className="relative flex h-full items-center rounded border border-border bg-transparent pr-3"
           ref={triggerContainerRef}>
           {childrenWithProps}
           <PopoverTrigger

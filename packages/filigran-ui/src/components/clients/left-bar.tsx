@@ -57,7 +57,7 @@ export const LeftBar = ({open = true}) => (
         </svg>
       </div>
     </div>
-    <div className="border-r flex-1 flex-col flex justify-between">
+    <div className="border-r border-r-border flex-1 flex-col flex justify-between">
       <nav className="flex-1 shrink-0 pt-s">
         <ul
           style={{listStyleType: 'none'}}
