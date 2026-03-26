@@ -1,0 +1,171 @@
+---
+title: Login
+---
+
+# Login
+
+A complete login page component inspired by OpenCTI, featuring a two-column layout with a decorative aside panel, credentials form, SSO provider buttons, consent message, and alert banners.
+
+## Full Login Page
+
+<ExampleLoginPage />
+
+## Login Page with Consent Message
+
+When a `consentMessage` is provided, the form and SSO buttons are hidden until the user accepts.
+
+<ExampleLoginPageWithConsent />
+
+---
+
+## Sub-Components
+
+The login system is composed of several sub-components that can be used independently or together via `LoginPage`.
+
+### LoginLayout
+
+A two-column layout: centered content on the left, decorative aside panel on the right. The aside panel is hidden on mobile.
+
+<ExampleLoginLayout />
+
+#### LoginLayout Props
+
+| Name             | Type                 | Default   | Description                                                                 |
+| ---------------- | -------------------- | --------- | --------------------------------------------------------------------------- |
+| **aside**        | _LoginAsideConfig_   | -         | Configuration for the decorative aside panel (see below).                   |
+| **logo**         | _ReactNode_          | -         | Logo element displayed above the content area.                              |
+| **asideContent** | _ReactNode_          | -         | Custom content to render inside the aside panel.                            |
+| **children**     | _ReactNode_          | -         | Main content (forms, alerts, etc.) rendered in the left panel.              |
+
+#### LoginAsideConfig
+
+| Name              | Type                                                 | Default     | Description                                          |
+| ----------------- | ---------------------------------------------------- | ----------- | ---------------------------------------------------- |
+| **variant**       | _enum ("color" \| "gradient" \| "image" \| "default")_ | "default"   | Type of aside background.                            |
+| **color**         | _string_                                             | -           | Background color (when variant is "color").           |
+| **gradientStart** | _string_                                             | -           | Gradient start color (when variant is "gradient").    |
+| **gradientEnd**   | _string_                                             | -           | Gradient end color (when variant is "gradient").      |
+| **image**         | _string_                                             | -           | Background image URL (when variant is "image").       |
+
+> **Default background**: When no `aside` config is provided (or variant is `"default"`), the aside uses the OpenCTI gradient — dark mode: `#050A14 → #0C1728`, light mode: `#EAEAED → #FEFEFF`. This adapts automatically with the theme.
+
+---
+
+### LoginForm
+
+A credentials form with email and password fields, powered by `react-hook-form` + `Zod` validation. Submission is handled entirely via the `onSubmit` callback — no network dependency.
+
+<ExampleLoginForm />
+
+#### LoginForm Props
+
+| Name                  | Type                                                        | Default              | Description                                            |
+| --------------------- | ----------------------------------------------------------- | -------------------- | ------------------------------------------------------ |
+| **onSubmit**          | _(values: \{email: string, password: string\}) => void \| Promise\<void\>_ | -         | Called when the form is submitted with valid values.    |
+| **onForgotPassword**  | _() => void_                                                | -                    | Called when "I forgot my password" is clicked.          |
+| **error**             | _string_                                                    | -                    | Server-side error message to display below the fields. |
+| **labels**            | _LoginLabels_                                               | -                    | Custom labels for i18n (see below).                    |
+| **disabled**          | _boolean_                                                   | false                | Disables all form inputs and the submit button.        |
+
+---
+
+### LoginAlert
+
+Styled alert banners for displaying messages (errors, warnings, info, success).
+
+<ExampleLoginAlert />
+
+#### LoginAlert Props
+
+| Name        | Type                                                    | Default | Description                     |
+| ----------- | ------------------------------------------------------- | ------- | ------------------------------- |
+| **variant** | _enum ("error" \| "warning" \| "info" \| "success")_   | "error" | The alert style variant.        |
+| **children**| _ReactNode_                                             | -       | Alert message content.          |
+
+---
+
+### LoginConsent
+
+A consent message with a checkbox that must be accepted before login options are shown.
+
+<ExampleLoginConsent />
+
+#### LoginConsent Props
+
+| Name               | Type                          | Default                                              | Description                                  |
+| ------------------ | ----------------------------- | ---------------------------------------------------- | -------------------------------------------- |
+| **message**        | _string_                      | -                                                    | The consent message to display.              |
+| **checked**        | _boolean_                     | -                                                    | Whether the checkbox is checked.             |
+| **onCheckedChange**| _(checked: boolean) => void_  | -                                                    | Called when the checkbox state changes.       |
+| **confirmText**    | _string_                      | "I have read and comply with the above statement"    | Custom text for the checkbox label.          |
+
+---
+
+### LoginSSOGroup & LoginSSOButton
+
+Buttons for external SSO authentication providers.
+
+<ExampleLoginSSOGroup />
+
+#### SSOProvider Type
+
+| Name            | Type        | Description                                      |
+| --------------- | ----------- | ------------------------------------------------ |
+| **name**        | _string_    | Display name of the provider.                    |
+| **provider**    | _string_    | Unique identifier for the provider.              |
+| **href**        | _string_    | URL to redirect to for SSO authentication.       |
+| **icon**        | _ReactNode_ | Optional icon to display in the button.          |
+| **buttonLabel** | _string_    | Optional custom label (overrides name).          |
+
+#### LoginSSOGroup Props
+
+| Name                | Type                                   | Default | Description                                     |
+| ------------------- | -------------------------------------- | ------- | ----------------------------------------------- |
+| **providers**       | _SSOProvider[]_                        | -       | Array of SSO providers to display.              |
+| **onProviderClick** | _(provider: SSOProvider) => void_      | -       | Called when a provider button is clicked.        |
+
+---
+
+### LoginLabels (i18n)
+
+All text labels can be customized via the `labels` prop for internationalization.
+
+| Name                   | Type     | Default                                              |
+| ---------------------- | -------- | ---------------------------------------------------- |
+| **emailLabel**         | _string_ | "Login"                                              |
+| **passwordLabel**      | _string_ | "Password"                                           |
+| **signInLabel**        | _string_ | "Sign in"                                            |
+| **forgotPasswordLabel**| _string_ | "I forgot my password"                               |
+| **consentConfirmText** | _string_ | "I have read and comply with the above statement"    |
+| **noProviderMessage**  | _string_ | "No authentication provider available"               |
+
+---
+
+## LoginPage (Orchestrator)
+
+The top-level component that composes all sub-components together.
+
+### LoginPage Props
+
+| Name                  | Type                                                        | Default | Description                                                 |
+| --------------------- | ----------------------------------------------------------- | ------- | ----------------------------------------------------------- |
+| **onSubmit**          | _(values: \{email: string, password: string\}) => void \| Promise\<void\>_ | -  | Form submission callback.                                   |
+| **providers**         | _SSOProvider[]_                                             | []      | SSO providers to display.                                   |
+| **hasCredentialsForm**| _boolean_                                                   | true    | Whether to show the email/password form.                    |
+| **consentMessage**    | _string_                                                    | -       | If provided, gates login behind a consent checkbox.         |
+| **loginMessage**      | _string_                                                    | -       | Optional message displayed above the form.                  |
+| **logo**              | _ReactNode_                                                 | -       | Logo element.                                               |
+| **aside**             | _LoginAsideConfig_                                          | -       | Aside panel configuration.                                  |
+| **asideContent**      | _ReactNode_                                                 | -       | Custom aside panel content.                                 |
+| **onForgotPassword**  | _() => void_                                                | -       | Forgot password callback.                                   |
+| **onSSOClick**        | _(provider: SSOProvider) => void_                           | -       | SSO button click callback.                                  |
+| **error**             | _string_                                                    | -       | Server error message for the form.                          |
+| **alerts**            | _Array\<\{variant, message, key?\}\>_                       | -       | Array of alert banners to display.                          |
+| **labels**            | _LoginLabels_                                               | -       | Custom labels for i18n.                                     |
+| **disabled**          | _boolean_                                                   | false   | Disables all interactive elements.                          |
+
+### Import
+
+_Import from @filigran/ui :_
+
+Import \{LoginPage, LoginLayout, LoginForm, LoginAlert, LoginConsent, LoginSSOButton, LoginSSOGroup\} from '@filigran/ui/clients'
