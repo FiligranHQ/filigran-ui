@@ -1,9 +1,10 @@
-@source "@filigran/ui"
 @import "tailwindcss";
+@source "@filigran/ui";
 @config "../tailwind.config.ts";
 
 @layer base {
   * {
+    border-color: hsl(var(--border));
     font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
   }
   h1,
