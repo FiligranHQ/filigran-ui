@@ -22,6 +22,15 @@ import {PlaygroundTest} from '@/components/code-playground/playground-test'
 import {ContentWithLeftColumnFixed} from '@/components/ui/content-with-left-column-fixed'
 import ExampleFileInput from '@/components/example/example-file-input'
 import {ExampleCarousel} from '@/components/example/example-carousel'
+import {
+  ExampleLoginPage,
+  ExampleLoginPageWithConsent,
+  ExampleLoginAlert,
+  ExampleLoginForm,
+  ExampleLoginConsent,
+  ExampleLoginSSOGroup,
+  ExampleLoginLayout,
+} from '@/components/example/example-login'
 
 const options = {
   mdxOptions: {
@@ -50,6 +59,13 @@ const components = {
   ExampleFileInput: ExampleFileInput,
   ExampleTagInput: ExampleTagInput,
   ExampleLoader: ExampleLoader,
+  ExampleLoginPage: ExampleLoginPage,
+  ExampleLoginPageWithConsent: ExampleLoginPageWithConsent,
+  ExampleLoginAlert: ExampleLoginAlert,
+  ExampleLoginForm: ExampleLoginForm,
+  ExampleLoginConsent: ExampleLoginConsent,
+  ExampleLoginSSOGroup: ExampleLoginSSOGroup,
+  ExampleLoginLayout: ExampleLoginLayout,
   Colors: Colors,
 }
 
