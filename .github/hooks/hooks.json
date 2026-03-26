@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": ".github/hooks/scripts/post-tool-lint.sh",
+        "powershell": ".github/hooks/scripts/post-tool-lint.ps1",
+        "cwd": ".",
+        "timeoutSec": 120
+      }
+    ]
+  }
+}
