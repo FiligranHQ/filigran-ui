@@ -217,7 +217,7 @@ export function useChat({ apiBaseUrl, apiEndpoints, backendType = 'rest', agentS
 
               case 'stream':
                 accumulated += parsed.content;
-                setAgentStatus({ status: 'streaming' });
+                setAgentStatus((prev) => ({ status: 'streaming', thinkingContent: prev?.thinkingContent }));
                 setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)));
                 break;
 

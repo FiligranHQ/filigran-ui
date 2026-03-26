@@ -112,7 +112,7 @@ function stripMarkdown(text: string): string {
     .trim();
 }
 
-function ThinkingTextBubble({ content }: { content: string }) {
+export function ThinkingTextBubble({ content }: { content: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const cleaned = stripMarkdown(content);
 
