@@ -156,7 +156,7 @@ export default function AutoFormArray({
                 />
               ) : (
                 // For non-object types, you might want to render a different component
-                <div className="p-4 border rounded">
+                <div className="p-4 border border-border rounded">
                   <span className="text-sm text-muted-foreground">
                     Array item {index + 1}
                   </span>

@@ -103,7 +103,7 @@ export const ExampleLoginForm = () => {
   const [error, setError] = useState<string | undefined>()
 
   return (
-    <div className="not-prose mx-auto max-w-md rounded-lg border bg-card p-6">
+    <div className="not-prose mx-auto max-w-md rounded-lg border border-border bg-card p-6">
       <LoginForm
         onSubmit={(values) => {
           setError(undefined)
@@ -157,7 +157,7 @@ export const ExampleLoginLayout = () => {
         logo={
           <span className="text-xl font-semibold">My App</span>
         }>
-        <div className="rounded-lg border bg-card p-6 text-center text-card-foreground">
+        <div className="rounded-lg border border-border bg-card p-6 text-center text-card-foreground">
           <p>Your login content goes here</p>
         </div>
       </LoginLayout>

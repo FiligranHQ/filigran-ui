@@ -108,7 +108,7 @@ export default async function ComponentsPage() {
       ))}
 
       {allContents.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-border border-dashed p-12 text-center">
           <h3 className="mb-2 text-xl font-medium">No components found</h3>
           <p className="text-muted-foreground">
             It looks like there are no component documentations available yet.
