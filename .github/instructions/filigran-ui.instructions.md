@@ -72,6 +72,12 @@ export {MyComponent, myComponentVariants}
 - Barrel files (`clients/index.ts`, `servers/index.ts`) use `export * from './component-name'`
 - After creating a new component, add it to the appropriate barrel file
 
+## Documentation
+
+- **Every new component must be documented** in the website (`projects/filigran-website/`)
+- Create an MDX page at `content/docs/components/{component-name}.mdx` with: example, description, props table, and import instructions
+- For interactive examples needing state/hooks, create a wrapper in `components/example/example-{name}.tsx` and register it in `components/mdx-component.tsx`
+
 ## Build
 
 - Build tool: **tsup** (ESM + CJS, target ES2022, terser minification)

@@ -62,3 +62,4 @@ yarn dev                  # Start website dev server
 - Do NOT use `npm` or `pnpm` — this project uses Yarn 4 exclusively
 - No testing framework exists yet — do not assume tests can be run
 - The website is statically exported — no SSR, no API routes
+- **Every new `@filigran/ui` component must be documented** in the website (`projects/filigran-website/content/docs/components/`)
