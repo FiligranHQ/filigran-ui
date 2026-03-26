@@ -14,7 +14,6 @@
     "tar": "7.5.9",
     "serialize-javascript": "7.0.3",
     "@isaacs/brace-expansion": "5.0.1",
-    "ajv": "8.18.0",
     "postcss-svgo": "7.1.0",
     "svgo": "4.0.0"
   },
