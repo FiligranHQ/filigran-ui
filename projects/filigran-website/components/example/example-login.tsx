@@ -48,7 +48,7 @@ export const ExampleLoginPage = () => {
   }
 
   return (
-    <div className="not-prose h-[500px] overflow-hidden rounded-lg border">
+    <div className="not-prose h-[500px] overflow-hidden rounded-lg border border-border">
       <LoginPage
         onSubmit={handleSubmit}
         providers={ssoProviders}
@@ -67,7 +67,7 @@ export const ExampleLoginPage = () => {
 
 export const ExampleLoginPageWithConsent = () => {
   return (
-    <div className="not-prose h-[500px] overflow-hidden rounded-lg border">
+    <div className="not-prose h-[500px] overflow-hidden rounded-lg border border-border">
       <LoginPage
         onSubmit={(values) => alert(JSON.stringify(values))}
         providers={ssoProviders}
@@ -152,7 +152,7 @@ export const ExampleLoginSSOGroup = () => {
 
 export const ExampleLoginLayout = () => {
   return (
-    <div className="not-prose h-[500px] overflow-hidden rounded-lg border">
+    <div className="not-prose h-[500px] overflow-hidden rounded-lg border border-border">
       <LoginLayout
         logo={
           <span className="text-xl font-semibold">My App</span>
