@@ -22,11 +22,11 @@
   --hover-background: var(--gray-150);
   --menu-active: 207, 52%, 21%;
 
-  --primary: var(--darkblue-600);
+  --primary: var(--darkblue-700);
   --primary-foreground: var(--light-100);
-  --secondary: var(--green-800);
+  --secondary: var(--turquoise-600);
   --secondary-foreground: var(--light-100);
-  --destructive: var(--red-default);
+  --destructive: var(--red-500);
   --destructive-foreground: var(--light-100);
 
   --card: 0 0% 100%;
@@ -131,6 +131,86 @@
   --yellow-700: 44 91% 28%;
   --yellow-800: 42 90% 18%;
   --yellow-900: 41 91% 12%;
+
+  --purple-default: var(--purple-500);
+  --purple-100: 262 85% 92%;
+  --purple-200: 261 85% 87%;
+  --purple-300: 262 100% 76%;
+  --purple-400: 262 90% 65%;
+  --purple-500: 262 78% 47%;
+  --purple-600: 262 80% 38%;
+  --purple-700: 261 79% 31%;
+  --purple-800: 262 80% 20%;
+  --purple-900: 262 80% 12%;
+
+  --ai-main: 262 78% 47%;
+  --ai-light: 261 85% 87%;
+  --ai-dark: 261 79% 31%;
+  --ai-background: rgba(221, 225, 254, 0.94);
+
+  --ee-main: 167 100% 37%;
+  --ee-background: rgba(0, 189, 148, 0.2);
+  --ee-light-background: rgba(0, 189, 148, 0.08);
+
+  --severity-critical: 0 84% 58%;
+  --severity-high: 27 88% 48%;
+  --severity-medium: 47 76% 51%;
+  --severity-low: 132 77% 38%;
+  --severity-info: 212 80% 42%;
+  --severity-none: 0 0% 26%;
+  --severity-default: 233 94% 93%;
+
+  --alert-info-primary: 197 100% 31%;
+  --alert-info-secondary: 195 75% 52%;
+  --alert-success-primary: 149 71% 38%;
+  --alert-success-secondary: 149 65% 57%;
+  --alert-success-tertiary: 143 81% 27%;
+  --alert-alert-primary: 43 88% 59%;
+  --alert-alert-secondary: 43 89% 69%;
+  --alert-warning-primary: 27 88% 48%;
+  --alert-warning-secondary: 29 89% 76%;
+  --alert-error-primary: 4 87% 58%;
+  --alert-error-secondary: 5 89% 76%;
+
+  --ds-bg-main: 240 19% 94%;
+  --ds-bg-1: 0 0% 97%;
+  --ds-bg-2: 0 0% 100%;
+  --ds-bg-3: 0 0% 89%;
+  --ds-bg-4: 233 94% 93%;
+  --ds-bg-disabled: 0 0% 87%;
+
+  --ds-border-main: 0 0% 82%;
+  --ds-border-1: 0 0% 76%;
+  --ds-border-2: 0 1% 60%;
+
+  --ds-primary-light: 232 100% 73%;
+  --ds-primary-dark: 233 100% 13%;
+  --ds-secondary-main: 167 100% 37%;
+  --ds-secondary-light: 164 73% 68%;
+  --ds-secondary-dark: 167 86% 27%;
+  --ds-destructive-light: 5 89% 76%;
+  --ds-destructive-dark: 5 92% 28%;
+
+  --text-tertiary: 240 0% 45%;
+  --text-light: 231 5% 30%;
+  --text-disabled: 219 11% 48%;
+
+  --gradient-background: linear-gradient(100.35deg, #ECECF2 0%, #F7F7F7 100%);
+  --gradient-ia: linear-gradient(90deg, #3C108C 0.67%, #5E1AD5 100.67%);
+  --gradient-focus: linear-gradient(90deg, #0015A8 -3.68%, #00BD94 106.62%);
+
+  --entity-analyse: 93 50% 46%;
+  --entity-cases: 291 95% 75%;
+  --entity-events: 340 92% 70%;
+  --entity-observations: 14 100% 63%;
+  --entity-threats: 36 100% 50%;
+  --entity-arsenal: 45 92% 49%;
+  --entity-techniques: 66 70% 61%;
+  --entity-victimology: 265 100% 77%;
+  --entity-locations: 187 95% 39%;
+  --entity-observables: 180 100% 76%;
+  --entity-relationships: 0 0% 38%;
+  --entity-restricted: 0 0% 26%;
 }
 
 .dark,
@@ -139,10 +219,12 @@ body[data-theme="Dark"] {
   --background: 220 56% 6%;
   --foreground: var(--gray-100);
   --tw-prose-body: var(--gray-400);
-  --primary: var(--blue-default);
+  --primary: 196.75 100% 52.94%;
   --primary-foreground: var(--dark-100);
   --secondary: var(--turquoise-default);
   --secondary-foreground: var(--dark-100);
+  --destructive: var(--red-400);
+  --destructive-foreground: var(--light-100);
   --muted: 247 50% 12.9%;
   --muted-foreground: var(--gray-300);
   --popover: 247 45% 5.59%;
@@ -168,6 +250,51 @@ body[data-theme="Dark"] {
   --border-focus: var(--blue-600);
 
   --hover-background: hsla(0, 0%, 100%, 0.1);
+
+  --ai-main: 262 100% 76%;
+  --ai-light: 261 85% 87%;
+  --ai-dark: 262 78% 47%;
+  --ai-background: rgba(28, 47, 73, 0.94);
+
+  --ee-main: 155 100% 47%;
+  --ee-background: rgba(0, 241, 141, 0.2);
+  --ee-light-background: rgba(0, 241, 141, 0.08);
+
+  --severity-default: 215 45% 20%;
+
+  --alert-info-primary: 197 100% 65%;
+  --alert-info-secondary: 195 100% 20%;
+  --alert-success-primary: 123 76% 38%;
+  --alert-success-secondary: 122 79% 17%;
+  --alert-success-tertiary: 151 90% 72%;
+  --alert-alert-secondary: 42 89% 18%;
+  --alert-warning-secondary: 27 92% 28%;
+  --alert-error-secondary: 5 92% 28%;
+
+  --ds-bg-main: 220 56% 6%;
+  --ds-bg-1: 218 50% 9%;
+  --ds-bg-2: 217 53% 11%;
+  --ds-bg-3: 216 32% 21%;
+  --ds-bg-4: 215 45% 20%;
+  --ds-bg-disabled: 221 13% 24%;
+
+  --ds-border-main: 221 25% 22%;
+  --ds-border-1: 220 10% 29%;
+  --ds-border-2: 222 35% 17%;
+
+  --ds-primary-light: 195 100% 85%;
+  --ds-primary-dark: 195 100% 30%;
+  --ds-secondary-main: 167 100% 47%;
+  --ds-secondary-light: 164 100% 87%;
+  --ds-secondary-dark: 167 100% 29%;
+
+  --text-tertiary: 236 6% 55%;
+  --text-light: 231 5% 70%;
+  --text-disabled: 219 15% 53%;
+
+  --gradient-background: linear-gradient(100.35deg, #070D19 0%, #08101D 100%);
+  --gradient-ia: linear-gradient(90deg, #D6C2FA 0.67%, #B286FF 100.67%);
+  --gradient-focus: linear-gradient(90deg, #0FBCFF -3.68%, #00F1BD 106.62%);
 }
 
 ::-webkit-scrollbar {

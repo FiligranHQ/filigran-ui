@@ -15,7 +15,7 @@ h6 {
 }
 body {
   @apply bg-background text-foreground;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   line-height: 1.52;
   letter-spacing: 0.0035rem;
 }
