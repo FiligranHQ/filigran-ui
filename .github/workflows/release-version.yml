@@ -15,7 +15,7 @@ on:
       package:
         description: 'Package to release'
         required: true
-        default: 'all'
+        default: '@filigran/ui'
         type: choice
         options:
           - '@filigran/chatbot'
