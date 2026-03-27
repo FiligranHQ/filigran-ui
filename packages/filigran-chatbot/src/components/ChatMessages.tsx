@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AgentStatusState, ChatMessage } from '../types';
 import { FileIcon, InfoIcon } from './icons';
-import { ChatThinking } from './ChatThinking';
+import { ChatThinking, ThinkingTextBubble } from './ChatThinking';
 import { MarkdownMessage } from './MarkdownMessage';
 
 interface ChatMessagesProps {
@@ -45,6 +45,10 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
                 </div>
                 <span className="font-semibold text-xs text-gray-900 dark:text-white">{agentName}</span>
               </div>
+            )}
+
+            {isAssistant && !isEmpty && isLoading && agentStatus?.thinkingContent && (
+              <ThinkingTextBubble content={agentStatus.thinkingContent} />
             )}
 
             {msg.files && msg.files.length > 0 && (
