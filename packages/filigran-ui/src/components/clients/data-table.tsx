@@ -165,7 +165,7 @@ const DataTableSelectColumnVisibility = <TData,>() => {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-none"
+          className="h-9 w-9 rounded-none shrink-0"
           aria-label={t_i18n('Manage columns visibility')}>
           <TableTuneIcon className="h-[1.125rem] w-[1.125rem]" />
         </Button>
@@ -422,7 +422,7 @@ const DataTableHeadBarOptions = () => {
   const pageSize = table.getState().pagination.pageSize
   return (
     <>
-      <div className="flex-0 shrink-0 box-border flex h-9 items-center rounded border border-border-light">
+      <div className="shrink-0 box-border inline-flex h-9 items-center rounded border border-border-light">
         <Button
           variant="ghost"
           size="icon"
@@ -432,7 +432,7 @@ const DataTableHeadBarOptions = () => {
           aria-label={t_i18n('Go to previous page')}>
           <ArrowPreviousIcon className="size-3" />
         </Button>
-        <div className="px-s leading-none text-text-secondary txt-sub-content">
+        <div className="px-s leading-none text-text-secondary txt-sub-content ">
           <span className="text-foreground">
             {table.getRowCount() > 0 ? pageIndex * pageSize + 1 : 0}
             {' - '}
