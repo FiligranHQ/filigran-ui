@@ -19,9 +19,9 @@ or if you're using yarn:
 ```bash
 yarn add @filigran/ui
 ```
-## 2. Configure Tailwind CSS v4
+## 2. Configure Tailwind CSS v4 (CSS-first)
 
-Tailwind CSS v4 uses the `@tailwindcss/postcss` plugin and CSS-first directives.
+Tailwind CSS v4 uses the `@tailwindcss/postcss` plugin and CSS-first directives directly in your global CSS.
 
 ### `postcss.config.js`
 
@@ -33,42 +33,42 @@ export default {
 }
 ```
 
-### `tailwind.config.js`
-
-```js
-import FiligranUIPlugin from '@filigran/ui/plugin'
-import tailwindcssAnimate from 'tailwindcss-animate'
-
-export default {
-  darkMode: ['class'],
-  content: [
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
-    './node_modules/@filigran/ui/dist/**/*.{js,ts,jsx,tsx}',
-  ],
-  plugins: [tailwindcssAnimate, FiligranUIPlugin()],
-}
-```
-
 ### `app/globals.css` (or your global stylesheet)
 
 ```css
 @import "tailwindcss";
-@config "../tailwind.config.js";
+@import "@filigran/ui/theme.css";
+
+/* Keep dark mode class-driven */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Include classes coming from Filigran UI */
+@source "@filigran/ui";
+
+/* Default border color with Filigran theme tokens */
+@layer utilities {
+  .border,
+  .border-x,
+  .border-y,
+  .border-t,
+  .border-r,
+  .border-b,
+  .border-l {
+    border-color: hsl(var(--border));
+  }
+}
+
+/* Optional plugins */
+@plugin "tailwindcss-animate";
 ```
 
-This configuration allows your project to pick up all the styles and classes provided by Filigran-UI, while maintaining compatibility with Tailwind.
+This configuration allows your project to pick up all the styles and classes provided by Filigran-UI, while staying fully CSS-first in Tailwind v4.
 
-## 3. Import Filigran-UI Theme Styles
+## 3. Theme Import Note
 
-To ensure that your project applies the Filigran-UI theme correctly, import the Filigran-UI theme CSS in your app entry (for Next.js App Router: `app/layout.tsx`).
+No additional theme import is needed in `app/layout.tsx` because `@filigran/ui/theme.css` is already imported in `app/globals.css`.
 
-```tsx
-import '@filigran/ui/theme.css'
-```
-
-##4. Using Filigran-UI Components
+## 4. Using Filigran-UI Components
 Now that Filigran-UI is set up, you can start using the components in your React project alongside Tailwind CSS utilities. Here’s how to use a button component:
 
 ```tsx

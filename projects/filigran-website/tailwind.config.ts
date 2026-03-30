@@ -1,18 +1,6 @@
-import FiligranUIPlugin from '@filigran/ui/plugin'
-import type {Config} from 'tailwindcss'
-import tailwindcssAnimate from 'tailwindcss-animate'
-import tailwindcssTypography from '@tailwindcss/typography'
-
-const config: Config = {
-   darkMode: 'class',
-  content: [
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './content/**/*.{ts,tsx,mdx}',
-    '../../packages/filigran-ui/src/components/**/*.{ts,tsx}',
-  ],
-  plugins: [tailwindcssAnimate, FiligranUIPlugin(), tailwindcssTypography],
-  prefix: '',
+// CSS-first Tailwind v4 setup lives in app/globals.css.
+const config = {
+  // Kept for tooling compatibility (e.g. shadcn/ui config lookup).
 }
 
 export default config

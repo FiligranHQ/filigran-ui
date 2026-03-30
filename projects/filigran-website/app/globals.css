@@ -1,6 +1,15 @@
 @import "tailwindcss";
-@source "@filigran/ui";
-@config "../tailwind.config.ts";
+@layer utilities {
+  .border,
+  .border-x,
+  .border-y,
+  .border-t,
+  .border-r,
+  .border-b,
+  .border-l {
+    border-color: hsl(var(--border));
+  }
+}
 
 @layer base {
   * {
@@ -18,3 +27,18 @@
     @apply bg-background text-foreground;
   }
 }
+@import '@filigran/ui/index.css';
+@import '@filigran/ui/theme.css';
+/* Keep dark mode class-driven in Tailwind v4 CSS-first mode. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source "./**/*.{ts,tsx,mdx}";
+@source "../components/**/*.{ts,tsx,mdx}";
+@source "../content/**/*.{ts,tsx,mdx}";
+@source "../../../packages/filigran-ui/src";
+
+
+@plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
+
+
