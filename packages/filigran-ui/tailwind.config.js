@@ -1,16 +1,4 @@
-import tailwindcssAnimate from 'tailwindcss-animate';
-import FiligranUIPlugin from './src/plugin'
-
-const config = {
-    darkMode: 'class',
-    content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
-  ],
-  prefix: '',
-  plugins: [tailwindcssAnimate, FiligranUIPlugin()],
-}
+// CSS-first Tailwind v4 setup lives in src/globals.css and src/theme.css.
+const config = {}
 
 export default config

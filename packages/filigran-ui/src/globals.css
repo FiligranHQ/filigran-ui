@@ -1,22 +1,26 @@
 @import "tailwindcss";
-@config "../tailwind.config.js";
 
-* {
-  font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
-}
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-geologica), system-ui, sans-serif;
-}
-body {
-  @apply bg-background text-foreground;
-  font-size: 0.9rem;
-  line-height: 1.52;
-  letter-spacing: 0.0035rem;
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-geologica), system-ui, sans-serif;
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-size: 0.9rem;
+    line-height: 1.52;
+    letter-spacing: 0.0035rem;
+  }
 }
 
 ol {
