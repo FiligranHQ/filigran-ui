@@ -63,6 +63,10 @@ const run = async () => {
     {headers: {'X-FIGMA-TOKEN': FIGMA_API_TOKEN}}
   ).catch(console.error);
   const data = await response.json();
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Figma API error: ${response.status} - ${text}`);
+  }
   const components = getComponentsFromNode(data);
   const illustrations = await getIllustrationName(components);
   createFiles(illustrations);
