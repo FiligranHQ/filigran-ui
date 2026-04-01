@@ -10,7 +10,14 @@ const replaceSvg = (svgContent) => {
 }
 
 const createFiles = (illustrations) => {
+  const seen = new Set();
   illustrations.forEach(obj => {
+    if (seen.has(obj.name)) {
+      console.warn(`Duplicate ignored: ${obj.name}`);
+      return;
+    }
+
+    seen.add(obj.name);
     const fileName = `${obj.name}.svg`; // File name based on object's name
     const filePath = `./assets/${fileName}`; // Path where file will be saved
     writeFileSync(filePath, obj.svg); // Write SVG content to the file
