@@ -98,7 +98,7 @@
     "tailwindcss": "4.2.2",
     "terser": "5.46.1",
     "tsup": "8.5.1",
-    "typescript": "5.9.3"
+    "typescript": "6.0.2"
   },
   "peerDependencies": {
     "@filigran/icon": "^0.22.6",
