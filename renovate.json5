@@ -41,6 +41,6 @@
     "schedule": ["* 5 * * 0"],
     "rebaseWhen": "always",
     "automerge": false,
-    "enabled": true
+    "enabled": false
   }
 }
