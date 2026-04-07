@@ -2052,7 +2052,7 @@ __metadata:
     remark-gfm: "npm:4.0.1"
     tailwind-merge: "npm:3.5.0"
     tailwindcss: "npm:4.2.2"
-    tailwindcss-animate: "npm:1.0.7"
+    tw-animate-css: "npm:1.4.0"
     twind: "npm:0.16.19"
     typescript: "npm:5.9.3"
     usehooks-ts: "npm:3.1.1"
@@ -14403,6 +14403,13 @@ __metadata:
     tsup: dist/cli-default.js
     tsup-node: dist/cli-node.js
   checksum: 10c0/86b0a5ee5533cf5363431ffaf6a244d06fbc80e3a739f216a121a336b28e663d521bae1d3b2d9ba7d479cb4b5f7dcb5e0722e169d3daf664c78f0d68676fa06a
+  languageName: node
+  linkType: hard
+
+"tw-animate-css@npm:1.4.0":
+  version: 1.4.0
+  resolution: "tw-animate-css@npm:1.4.0"
+  checksum: 10c0/6cfbc19ccc73883ec80ef1f9147f43e736cb01ee99c8172968b37eb81b720523d30e38b1a96aef92db3c586d864204db5510b51744ddacbbf0ad8e3c7fb56ec7
   languageName: node
   linkType: hard
 

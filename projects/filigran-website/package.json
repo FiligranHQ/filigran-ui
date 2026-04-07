@@ -33,7 +33,7 @@
     "rehype-slug": "6.0.0",
     "remark-gfm": "4.0.1",
     "tailwind-merge": "3.5.0",
-    "tailwindcss-animate": "1.0.7",
+    "tw-animate-css": "1.4.0",
     "twind": "0.16.19",
     "usehooks-ts": "3.1.1",
     "zod": "4.3.6"
