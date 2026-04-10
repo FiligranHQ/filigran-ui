@@ -10,14 +10,53 @@ const Switch = React.forwardRef<
 >(({className, ...props}, ref) => (
   <SwitchPrimitives.Root
     className={cn(
-      'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input',
+      'group peer inline-flex h-4 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors',
+
+      // OFF
+      'bg-gray/50',
+
+      // ON
+      'data-[state=checked]:bg-primary/50',
+
+      // disabled
+      'data-[disabled]:cursor-not-allowed',
+      'data-[disabled]:bg-gray-300',
+
       className
     )}
     {...props}
-    ref={ref}>
+    ref={ref}
+  >
     <SwitchPrimitives.Thumb
       className={cn(
-        'pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0'
+        'pointer-events-none block h-5 w-5 rounded-full shadow-md transition-all',
+
+        'translate-x-0 data-[state=checked]:translate-x-6',
+
+        'bg-gray',
+
+        'data-[state=checked]:bg-primary',
+
+        // disabled
+        'group-data-[disabled]:!bg-gray-500',
+
+        // halo
+        'before:absolute before:inset-0 before:rounded-full before:scale-0 before:opacity-0 before:transition-all',
+        'before:bg-primary/20',
+        'group-focus-visible:before:scale-[2.5]',
+        'group-focus-visible:before:opacity-100',
+
+        'after:absolute after:inset-0 after:rounded-full',
+        'after:scale-0 after:opacity-0',
+        'after:bg-primary/30',
+        'after:transition-all',
+        'group-active:after:scale-[2.5]',
+        'group-active:after:opacity-100',
+
+        'group-hover:before:scale-[2]',
+        'group-hover:before:opacity-100',
+        'group-hover:before:scale-[2]',
+        'group-hover:before:opacity-100',
       )}
     />
   </SwitchPrimitives.Root>
