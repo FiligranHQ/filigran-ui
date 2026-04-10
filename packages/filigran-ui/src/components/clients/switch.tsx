@@ -20,7 +20,7 @@ const Switch = React.forwardRef<
 
       // disabled
       'data-[disabled]:cursor-not-allowed',
-      'data-[disabled]:bg-gray-300',
+      'data-[disabled]:opacity-50',
 
       className
     )}
@@ -38,7 +38,6 @@ const Switch = React.forwardRef<
         'data-[state=checked]:bg-primary',
 
         // disabled
-        'group-data-[disabled]:!bg-gray-500',
 
         // halo
         'before:absolute before:inset-0 before:rounded-full before:scale-0 before:opacity-0 before:transition-all',
