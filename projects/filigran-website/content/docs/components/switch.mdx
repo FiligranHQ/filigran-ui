@@ -1,0 +1,59 @@
+---
+title: Switch
+---
+
+# Switch example
+
+Displays a switch that can be clicked.
+
+
+         <div className="flex items-center gap-m">
+              <Switch id="notifications" checked={showFinished} onCheckedChange={onShowFinishedChange}/>
+              <label htmlFor="notifications" className="cursor-pointer">
+                This is a free switch!
+              </label>
+        </div>
+        <div className="flex items-center gap-m">
+                      <Switch id="notifications" checked onCheckedChange={onShowFinishedChange}/>
+                      <label htmlFor="notifications" className="cursor-pointer">
+                        This is a free switch checked!
+                      </label>
+                </div>
+       <div className="flex items-center gap-m">
+              <Switch id="notifications2"  disabled checked onCheckedChange={onShowFinishedChange}/>
+              <label htmlFor="notifications2" className="cursor-pointer">
+                This is a disabled checked switch!
+              </label>
+        </div>
+       <div className="flex items-center gap-m">
+              <Switch id="notifications3"  disabled onCheckedChange={onShowFinishedChange}/>
+              <label htmlFor="notifications3" className="cursor-pointer">
+                This is a disabled switch!
+              </label>
+        </div>
+
+## How to use this accordion
+
+### Props :
+
+| Name              | Type                                | Default  | Description                                                                                                                                  |
+| ----------------- | ----------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **asChild**       | _boolean_                           | false    | Change the default rendered element for the one passed as a child, merging their props and behavior.                                         |
+| **checked**       | _boolean_                           | false    | When when checked is true, displays with the primary color and translate the thumb to the right.                                                         |
+| **onCheckedChange**| _() => void_                       | _        | Function called on click.                                                         |
+| **disabled**      | _boolean_                           | false    | When true, prevents the user from interacting with the accordion and all its items.                                                          |
+
+### Playground
+
+Import from @filigran/ui :
+
+Import \{Switch\} from '@filigran/ui'
+
+<ReactLiveDisplay
+  codeExample={`
+
+  <Switch
+          checked={isChecked}
+          onCheckedChange={onCheckChange}
+        />`}
+/>
