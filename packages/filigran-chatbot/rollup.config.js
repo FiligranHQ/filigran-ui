@@ -2,8 +2,7 @@ import resolve from '@rollup/plugin-node-resolve';
 import terser from '@rollup/plugin-terser';
 import json from '@rollup/plugin-json';
 import postcss from 'rollup-plugin-postcss';
-import autoprefixer from 'autoprefixer';
-import tailwindcss from 'tailwindcss';
+import tailwindcssPostcss from '@tailwindcss/postcss';
 import typescript from '@rollup/plugin-typescript';
 import commonjs from '@rollup/plugin-commonjs';
 import dts from 'rollup-plugin-dts';
@@ -15,13 +14,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const extensions = ['.ts', '.tsx'];
 
-const external = [
-  'react',
-  'react-dom',
-  'react/jsx-runtime',
-  'react-markdown',
-  'remark-gfm',
-];
+const external = ['react', 'react-dom', 'react/jsx-runtime', 'react-markdown', 'remark-gfm'];
 
 const indexConfig = {
   external,
@@ -35,7 +28,7 @@ const indexConfig = {
       declarationMap: false,
     }),
     postcss({
-      plugins: [autoprefixer(), tailwindcss()],
+      plugins: [tailwindcssPostcss()],
       extract: 'styles.css',
       modules: false,
       autoModules: false,
