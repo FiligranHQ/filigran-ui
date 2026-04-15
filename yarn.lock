@@ -1983,7 +1983,7 @@ __metadata:
     "@radix-ui/react-tooltip": "npm:1.2.8"
     "@tailwindcss/postcss": "npm:4.2.2"
     "@tanstack/react-table": "npm:8.21.3"
-    "@types/react-color": "npm:^2"
+    "@types/react-color": "npm:^3.0.0"
     "@types/react-dom": "npm:19.2.3"
     class-variance-authority: "npm:0.7.1"
     clsx: "npm:2.1.1"
@@ -4801,14 +4801,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-color@npm:^2":
-  version: 2.17.12
-  resolution: "@types/react-color@npm:2.17.12"
+"@types/react-color@npm:^3.0.0":
+  version: 3.0.13
+  resolution: "@types/react-color@npm:3.0.13"
   dependencies:
     "@types/reactcss": "npm:*"
   peerDependencies:
     "@types/react": "*"
-  checksum: 10c0/05bff66fcd214c32891b742758485868d4464df7c753e42e0be15b29f2ba01f25ae95dc89adcd320e470e67658e7900e529887ee248daea3268a0f9e13f0bc93
+  checksum: 10c0/a26a2a628dc98d2186743a52e18fc1a4622ba9ec69989be1e51614084fd90a52c139ea6689aa9706fcea94356d277c87d69f11a5c1f66c19b45e6b0132db40bb
   languageName: node
   linkType: hard
 
