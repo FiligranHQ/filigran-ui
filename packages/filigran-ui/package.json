@@ -85,7 +85,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.2.2",
-    "@types/react-color": "^2",
+    "@types/react-color": "^3.0.0",
     "@types/react-dom": "19.2.3",
     "postcss": "8.5.8",
     "prettier": "3.8.1",
