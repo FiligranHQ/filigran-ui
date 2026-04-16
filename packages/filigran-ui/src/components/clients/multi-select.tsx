@@ -319,7 +319,11 @@ const MultiSelectFormField = React.forwardRef<
                 placeholder="Search..."
                 onKeyDown={handleInputKeyDown}
               />
-              <CommandList>
+              <CommandList
+                onWheel={(e) => {
+                  e.currentTarget.scrollTop += e.deltaY;
+                  e.stopPropagation();
+                }}>
                 <CommandEmpty>{noResultString}</CommandEmpty>
                 <CommandGroup>
                   {options.map((option) => {
