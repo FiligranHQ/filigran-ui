@@ -77,13 +77,10 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   useEffect(() => {
     const width = mode === 'sidebar' ? (resizable ? sidebarWidth : defaultWidth) : 0;
     const pushWidth = width > 0 ? width + SIDEBAR_GAP : 0;
-    
+
     // Set CSS variable on :root for any component to use
     document.documentElement.style.setProperty('--chatbot-sidebar-width', `${pushWidth}px`);
-    document.documentElement.style.setProperty(
-      '--chatbot-transition',
-      isResizing ? 'none' : 'all 225ms cubic-bezier(0.4, 0, 0.2, 1)'
-    );
+    document.documentElement.style.setProperty('--chatbot-transition', isResizing ? 'none' : 'all 225ms cubic-bezier(0.4, 0, 0.2, 1)');
 
     // Also apply to pushContentSelector if provided (for simple cases)
     if (pushContentSelector) {
@@ -91,11 +88,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
       if (contentElement) {
         const originalPaddingRight = contentElement.style.paddingRight;
         const originalTransition = contentElement.style.transition;
-        
+
         contentElement.style.paddingRight = pushWidth > 0 ? `${pushWidth}px` : '';
-        contentElement.style.transition = isResizing 
-          ? 'none' 
-          : 'padding-right 225ms cubic-bezier(0.4, 0, 0.2, 1)';
+        contentElement.style.transition = isResizing ? 'none' : 'padding-right 225ms cubic-bezier(0.4, 0, 0.2, 1)';
 
         return () => {
           contentElement.style.paddingRight = originalPaddingRight;
@@ -198,11 +193,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   return (
     <div className={containerClasses} style={containerStyle}>
       {mode === 'sidebar' && resizable && (
-        <div
-          onMouseDown={handleResizeStart}
-          className="absolute top-0 -left-1 bottom-0 w-2 cursor-col-resize z-10 group"
-        >
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 bottom-0 w-0.5 rounded bg-[var(--chat-accent)] opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100" />
+        <div onMouseDown={handleResizeStart} className="absolute top-0 -left-1 bottom-0 w-2 cursor-col-resize z-10 group">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 bottom-0 w-0.5 rounded-sm bg-[var(--chat-accent)] opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100" />
         </div>
       )}
       <ChatHeader

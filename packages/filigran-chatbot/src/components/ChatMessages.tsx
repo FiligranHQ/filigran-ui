@@ -47,9 +47,7 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
               </div>
             )}
 
-            {isAssistant && !isEmpty && isLoading && agentStatus?.thinkingContent && (
-              <ThinkingTextBubble content={agentStatus.thinkingContent} />
-            )}
+            {isAssistant && !isEmpty && isLoading && agentStatus?.thinkingContent && <ThinkingTextBubble content={agentStatus.thinkingContent} />}
 
             {msg.files && msg.files.length > 0 && (
               <div className="flex gap-1.5 flex-wrap mb-1.5">
@@ -75,7 +73,7 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
               {isAssistant ? <MarkdownMessage content={msg.content} /> : msg.content}
               {isAssistant && isEmpty && !isLoading && <span className="text-[0.8125rem] text-gray-400 dark:text-white/40 italic">...</span>}
               {isAssistant && !isEmpty && isLoading && (
-                <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-sm ml-0.5 animate-pulse align-text-bottom" />
+                <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-xs ml-0.5 animate-pulse align-text-bottom" />
               )}
             </div>
 

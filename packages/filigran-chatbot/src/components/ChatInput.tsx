@@ -17,7 +17,19 @@ interface ChatInputProps {
   mode?: ChatMode;
 }
 
-export const ChatInput = ({ inputValue, onInputChange, onSend, onStop, isLoading, attachedFiles, onFileAdd, onFileRemove, onPaste, t, mode }: ChatInputProps) => {
+export const ChatInput = ({
+  inputValue,
+  onInputChange,
+  onSend,
+  onStop,
+  isLoading,
+  attachedFiles,
+  onFileAdd,
+  onFileRemove,
+  onPaste,
+  t,
+  mode,
+}: ChatInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -86,7 +98,7 @@ export const ChatInput = ({ inputValue, onInputChange, onSend, onStop, isLoading
           onKeyDown={handleKeyDown}
           onPaste={onPaste}
           rows={1}
-          className="flex-1 bg-transparent border-none outline-none resize-none text-[0.8125rem] py-1.5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 filigran-chat-scrollable"
+          className="flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 filigran-chat-scrollable"
           style={{ maxHeight: 120 }}
         />
         <Tooltip title={isLoading ? t('Stop generating') : ''}>
