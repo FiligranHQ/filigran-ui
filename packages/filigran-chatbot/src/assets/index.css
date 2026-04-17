@@ -1,6 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@variant dark (.dark &);
 
 /*
  * Filigran Chat — scoped styles
@@ -13,28 +15,31 @@
  * Scoped preflight: replicate Tailwind's base resets ONLY inside the chatbot.
  * Uses :where() for zero specificity so Tailwind utilities always win.
  */
-:where(.filigran-chatbot),
-:where(.filigran-chatbot) *,
-:where(.filigran-chatbot) *::before,
-:where(.filigran-chatbot) *::after {
-  box-sizing: border-box;
-  border-width: 0;
-  border-style: solid;
-  border-color: currentColor;
-}
 
-:where(.filigran-chatbot) button,
-:where(.filigran-chatbot) input,
-:where(.filigran-chatbot) textarea {
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  padding: 0;
-  margin: 0;
-}
+@layer base {
+  :where(.filigran-chatbot),
+  :where(.filigran-chatbot) *,
+  :where(.filigran-chatbot) *::before,
+  :where(.filigran-chatbot) *::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: currentColor;
+  }
 
-:where(.filigran-chatbot) button:not(:disabled) {
-  cursor: pointer;
+  :where(.filigran-chatbot) button,
+  :where(.filigran-chatbot) input,
+  :where(.filigran-chatbot) textarea {
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    padding: 0;
+    margin: 0;
+  }
+
+  :where(.filigran-chatbot) button:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 .filigran-chat-scrollable {

@@ -20,9 +20,7 @@ export const MarkdownMessage = ({ content }: MarkdownMessageProps) => {
     <Markdown
       remarkPlugins={[remarkGfm]}
       components={{
-        p: ({ children }) => (
-          <p className="mb-3 last:mb-0 leading-7 break-words text-[0.8125rem] text-gray-900 dark:text-white/90">{children}</p>
-        ),
+        p: ({ children }) => <p className="mb-3 last:mb-0 leading-7 break-words text-[0.8125rem] text-gray-900 dark:text-white/90">{children}</p>,
         code: ({ className, children }) => {
           const match = /language-(\w+)/.exec(className || '');
           const codeStr = String(children).replace(/\n$/, '');
@@ -34,7 +32,7 @@ export const MarkdownMessage = ({ content }: MarkdownMessageProps) => {
                   <button
                     type="button"
                     onClick={() => handleCopyCode(codeStr)}
-                    className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                    className="p-0.5 rounded-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
                   >
                     {copiedBlock === codeStr ? (
                       <CheckIcon size={14} className="text-green-500" />
@@ -50,18 +48,14 @@ export const MarkdownMessage = ({ content }: MarkdownMessageProps) => {
             );
           }
           return (
-            <code className="bg-gray-100 dark:bg-white/[0.08] px-1.5 py-0.5 rounded font-mono text-xs text-[var(--chat-accent)]">{children}</code>
+            <code className="bg-gray-100 dark:bg-white/[0.08] px-1.5 py-0.5 rounded-sm font-mono text-xs text-[var(--chat-accent)]">{children}</code>
           );
         },
         ul: ({ children }) => (
-          <ul className="pl-5 mb-3 text-[0.8125rem] text-gray-900 dark:text-white/90 [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">
-            {children}
-          </ul>
+          <ul className="pl-5 mb-3 text-[0.8125rem] text-gray-900 dark:text-white/90 [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">{children}</ul>
         ),
         ol: ({ children }) => (
-          <ol className="pl-5 mb-3 text-[0.8125rem] text-gray-900 dark:text-white/90 [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">
-            {children}
-          </ol>
+          <ol className="pl-5 mb-3 text-[0.8125rem] text-gray-900 dark:text-white/90 [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">{children}</ol>
         ),
         blockquote: ({ children }) => (
           <blockquote className="my-3 border-l-2 border-[var(--chat-accent)]/30 bg-[var(--chat-accent)]/[0.03] pl-4 pr-3 py-2 rounded-r-md italic text-gray-500 dark:text-white/60">
