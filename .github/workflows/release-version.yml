@@ -237,7 +237,7 @@ jobs:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create GitHub Release for @filigran/icon
         if: (github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all') && env.FILIGRAN_ICON_VERSION != ''
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: '@filigran/icon-v${{ env.FILIGRAN_ICON_VERSION }}'
           name: 'Filigran Icon v${{ env.FILIGRAN_ICON_VERSION }}'
@@ -259,7 +259,7 @@ jobs:
           prerelease: false
       - name: Create GitHub Release for @filigran/ui
         if: (github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all') && env.FILIGRAN_UI_VERSION != ''
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: '@filigran/ui-v${{ env.FILIGRAN_UI_VERSION }}'
           name: 'Filigran UI v${{ env.FILIGRAN_UI_VERSION }}'
@@ -281,7 +281,7 @@ jobs:
           prerelease: false
       - name: Create GitHub Release for @filigran/chatbot
         if: (github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all') && env.FILIGRAN_CHATBOT_VERSION != ''
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: '@filigran/chatbot-v${{ env.FILIGRAN_CHATBOT_VERSION }}'
           name: 'Filigran Chatbot v${{ env.FILIGRAN_CHATBOT_VERSION }}'
