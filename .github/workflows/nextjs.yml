@@ -65,7 +65,7 @@ jobs:
       - name: Build website with Next.js
         run: yarn build:filigran-website
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./projects/filigran-website/out
   # Deployment job
