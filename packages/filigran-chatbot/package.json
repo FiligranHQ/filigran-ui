@@ -58,6 +58,7 @@
     "rollup-plugin-serve": "3.0.0",
     "rollup-plugin-typescript-paths": "1.5.0",
     "tailwindcss": "4.2.2",
+    "tailwindcss-scoped-preflight": "4.0.1",
     "typescript": "5.9.3",
     "typescript-eslint": "8.58.0"
   }

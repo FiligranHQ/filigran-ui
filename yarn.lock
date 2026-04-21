@@ -1920,6 +1920,7 @@ __metadata:
     rollup-plugin-serve: "npm:3.0.0"
     rollup-plugin-typescript-paths: "npm:1.5.0"
     tailwindcss: "npm:4.2.2"
+    tailwindcss-scoped-preflight: "npm:4.0.1"
     typescript: "npm:5.9.3"
     typescript-eslint: "npm:8.58.0"
   peerDependencies:
@@ -14145,6 +14146,16 @@ __metadata:
   peerDependencies:
     tailwindcss: ">=3.4.17"
   checksum: 10c0/29d1ef78868bdc1935115345b8723398d3c72d988d36ea404e938f4c6b3e81e8ba06a26e97a27c36777223872df4c5773ee20ec66ddb923f0b31c564b6a5b222
+  languageName: node
+  linkType: hard
+
+"tailwindcss-scoped-preflight@npm:4.0.1":
+  version: 4.0.1
+  resolution: "tailwindcss-scoped-preflight@npm:4.0.1"
+  peerDependencies:
+    postcss: ^8
+    tailwindcss: ^4
+  checksum: 10c0/2c0507cfbfb355b51d8c65f9a1e8deae926fdaecef6ec84ecdfb0aaa2f579c39c60905fbb8ad5ff84b791df29a8783961a2281d9d761ae5c243821c545fd6fdc
   languageName: node
   linkType: hard
 

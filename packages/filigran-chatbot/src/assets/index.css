@@ -2,6 +2,12 @@
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
+@plugin "tailwindcss-scoped-preflight" {
+  isolationStrategy: inside;
+  selector: .filigran-chatbot;
+  except: .no-filigran-chatbot;
+}
+
 @variant dark (.dark &);
 
 /*
