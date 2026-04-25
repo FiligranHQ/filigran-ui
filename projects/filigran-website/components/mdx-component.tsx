@@ -13,6 +13,7 @@ import {ExampleCombobox} from '@/components/example/example-combobox'
 import {ExampleToast} from '@/components/example/example-toast'
 import {ExampleSheet} from '@/components/example/example-sheet'
 import {ExampleTagInput} from '@/components/example/example-tag-input'
+import {ExampleTreeSelect} from '@/components/example/example-tree-select'
 import {Colors} from '@/components/example/color'
 import {ExampleLoader} from '@/components/example/example-loader'
 import {AutoFormTest} from './autoform/autoform-test'
@@ -59,6 +60,7 @@ const components = {
   ExampleSheet: ExampleSheet,
   ExampleFileInput: ExampleFileInput,
   ExampleTagInput: ExampleTagInput,
+  ExampleTreeSelect: ExampleTreeSelect,
   ExampleLoader: ExampleLoader,
   ExampleLoginPage: ExampleLoginPage,
   ExampleLoginPageWithConsent: ExampleLoginPageWithConsent,

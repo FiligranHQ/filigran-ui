@@ -1,0 +1,81 @@
+---
+title: Tree Select
+---
+
+# Tree Select Example
+
+<ExampleTreeSelect />
+
+## How to use this component
+
+A hierarchical multi-select component that displays options in a tree structure with parent/child relationships. Supports search, expand/collapse, and multi-selection with badges.
+
+### Props
+
+| Name                     | Type                                           | Default            | Description                                                        |
+| ----------------------   | ---------------------------------------------- | ------------------ | ------------------------------------------------------------------ |
+| **options** \*           | _TreeSelectOption[]_                           | -                  | The hierarchical options to display in the tree.                   |
+| **selectedGroupIds** \*  | _string[]_                                     | -                  | IDs of the selected parent groups.                                 |
+| **selectedChildIds** \*  | _string[]_                                     | -                  | IDs of the selected children.                                     |
+| **onSelectionChange** \* | _(groupIds: string[], childIds: string[]) => void_ | -              | Callback fired when selection changes.                             |
+| **placeholder**          | _string_                                       | "Select..."        | Text displayed when nothing is selected.                           |
+| **searchPlaceholder**    | _string_                                       | "Search..."        | Placeholder text for the search input.                             |
+| **emptyMessage**         | _string_                                       | "No results found."| Text displayed when search yields no results.                      |
+| **disabled**             | _boolean_                                      | false              | Whether the user can interact with the component.                  |
+| **className**            | _string_                                       | -                  | Additional CSS classes for the trigger button.                     |
+
+### TreeSelectOption type
+
+```ts
+type TreeSelectChild = {
+  id: string
+  text: string
+}
+
+type TreeSelectOption = {
+  id: string
+  text: string
+  children?: TreeSelectChild[]
+}
+```
+
+### Playground
+
+_Import from @filigran/ui :_
+
+```ts
+import {TreeSelect} from '@filigran/ui/clients'
+```
+
+> **Note:** This playground shows the component structure. Since TreeSelect is a controlled component requiring `useState`, the interactive example above demonstrates full functionality.
+
+<ReactLiveDisplay
+  displayError={false}
+  codeExample={`
+    <TreeSelect
+      options={[
+        {
+          id: 'fruits',
+          text: 'Fruits',
+          children: [
+            { id: 'apple', text: 'Apple' },
+            { id: 'banana', text: 'Banana' },
+          ],
+        },
+        {
+          id: 'vegetables',
+          text: 'Vegetables',
+          children: [
+            { id: 'carrot', text: 'Carrot' },
+            { id: 'broccoli', text: 'Broccoli' },
+          ],
+        },
+      ]}
+      selectedGroupIds={[]}
+      selectedChildIds={[]}
+      onSelectionChange={(groupIds, childIds) =>
+        console.log('Selected:', groupIds, childIds)
+      }
+      placeholder="Select items..."
+    />`}
+/>
