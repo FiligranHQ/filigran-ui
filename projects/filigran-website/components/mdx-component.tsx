@@ -37,6 +37,7 @@ const options = {
     remarkPlugins: [remarkGfm],
     rehypePlugins: [rehypeSlug],
   },
+  blockJS: false,
 }
 
 const components = {
