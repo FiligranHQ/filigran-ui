@@ -8,25 +8,25 @@ Displays a switch that can be clicked.
 
 
          <div className="flex items-center gap-m">
-              <Switch id="notifications" checked={showFinished} onCheckedChange={onShowFinishedChange}/>
+              <Switch id="notifications" />
               <label htmlFor="notifications" className="cursor-pointer">
                 This is a free switch!
               </label>
         </div>
         <div className="flex items-center gap-m">
-                      <Switch id="notifications" checked onCheckedChange={onShowFinishedChange}/>
-                      <label htmlFor="notifications" className="cursor-pointer">
+                      <Switch id="notifications-checked" checked />
+                      <label htmlFor="notifications-checked" className="cursor-pointer">
                         This is a free switch checked!
                       </label>
                 </div>
        <div className="flex items-center gap-m">
-              <Switch id="notifications2"  disabled checked onCheckedChange={onShowFinishedChange}/>
+              <Switch id="notifications2" disabled checked />
               <label htmlFor="notifications2" className="cursor-pointer">
                 This is a disabled checked switch!
               </label>
         </div>
        <div className="flex items-center gap-m">
-              <Switch id="notifications3"  disabled onCheckedChange={onShowFinishedChange}/>
+              <Switch id="notifications3" disabled />
               <label htmlFor="notifications3" className="cursor-pointer">
                 This is a disabled switch!
               </label>
