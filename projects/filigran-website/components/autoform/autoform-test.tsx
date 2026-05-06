@@ -179,6 +179,9 @@ export const AutoFormTest = () => {
             // Booleans use a checkbox by default, you can use a switch instead
             fieldType: 'switch',
           },
+          color: {
+            fieldType: 'radio',
+          },
           document: {
             label: 'Add a file',
             fieldType: 'file',

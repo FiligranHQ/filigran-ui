@@ -1,5 +1,11 @@
-import {FormControl, FormItem, FormLabel, FormMessage} from '../../clients'
-import {RadioGroup, RadioGroupItem} from '../../clients/radio-group'
+import {
+  FormControl,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  RadioGroup,
+  RadioGroupItem,
+} from '../../clients'
 import AutoFormLabel from '../common/label'
 import AutoFormTooltip from '../common/tooltip'
 import type {AutoFormInputComponentProps} from '../types'
@@ -18,14 +24,20 @@ export default function AutoFormRadioGroup({
 
   if (baseSchema) {
     const def = (baseSchema as any)._def
+    const enumValues = def.entries ?? def.values
+    const isEnumType =
+      def.type === 'enum' ||
+      def.type === 'nativeEnum' ||
+      def.typeName === 'enum' ||
+      def.typeName === 'nativeEnum'
 
-    if (def.typeName === 'enum' && def.values) {
-      const baseValues = def.values
-
-      if (!Array.isArray(baseValues)) {
-        values = Object.entries(baseValues).map(([key, value]) => key)
+    if (isEnumType && enumValues) {
+      if (Array.isArray(enumValues)) {
+        values = enumValues
       } else {
-        values = baseValues
+        values = Object.values(enumValues)
+          .filter((value) => typeof value === 'string')
+          .filter((value, index, array) => array.indexOf(value) === index)
       }
     }
   }
@@ -41,15 +53,16 @@ export default function AutoFormRadioGroup({
           <RadioGroup
             onValueChange={field.onChange}
             defaultValue={field.value}
+            className="flex flex-wrap items-center gap-x-6 gap-y-2"
             {...fieldProps}>
             {values?.map((value: any) => (
               <FormItem
                 key={value}
-                className="mb-2 flex items-center gap-3 space-y-0">
+                className="flex flex-row items-center gap-3 space-y-0">
                 <FormControl>
                   <RadioGroupItem value={value} />
                 </FormControl>
-                <FormLabel className="font-normal">{value}</FormLabel>
+                <FormLabel className="cursor-pointer font-normal">{value}</FormLabel>
               </FormItem>
             ))}
           </RadioGroup>
