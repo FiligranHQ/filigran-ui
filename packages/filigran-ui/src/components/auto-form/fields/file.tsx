@@ -8,7 +8,11 @@ export default function AutoFormFile({
   fieldConfigItem,
   fieldProps,
 }: AutoFormInputComponentProps) {
-  const {showLabel: _showLabel, ...fieldPropsWithoutShowLabel} = fieldProps
+  const {
+    showLabel: _showLabel,
+    required: _required,
+    ...fieldPropsWithoutShowLabel
+  } = fieldProps
   const showLabel = _showLabel === undefined ? true : _showLabel
 
   return (
