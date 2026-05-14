@@ -7,6 +7,7 @@ interface UseAgentsOptions {
   apiBaseUrl: string;
   apiEndpoints?: ApiEndpoints;
   backendType?: BackendType;
+  requestHeaders?: Record<string, string>;
 }
 
 interface UseAgentsReturn {
@@ -18,7 +19,7 @@ interface UseAgentsReturn {
   handleSwitchAgent: (agent: XtmAgent, onSwitch?: () => void) => void;
 }
 
-export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest' }: UseAgentsOptions): UseAgentsReturn {
+export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requestHeaders }: UseAgentsOptions): UseAgentsReturn {
   const [agents, setAgents] = useState<XtmAgent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<XtmAgent | null>(null);
   const [agentMenuOpen, setAgentMenuOpen] = useState(false);
@@ -29,7 +30,7 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest' }: Us
       return;
     }
     const agentsUrl = `${apiBaseUrl}${apiEndpoints?.agents ?? '/chat/agents'}`;
-    fetch(agentsUrl)
+    fetch(agentsUrl, { headers: requestHeaders })
       .then((res) => (res.ok ? res.json() : []))
       .then((data: XtmAgent[]) => {
         setAgents(data);
@@ -40,7 +41,7 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest' }: Us
         }
       })
       .catch(() => {});
-  }, [apiBaseUrl, apiEndpoints]);
+  }, [apiBaseUrl, apiEndpoints, backendType, requestHeaders]);
 
   const handleSwitchAgent = (agent: XtmAgent, onSwitch?: () => void) => {
     if (agent.id === selectedAgent?.id) {

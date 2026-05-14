@@ -34,16 +34,22 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   accentColor = '#7b5cff',
   logoIcon,
   promptSuggestions = DEFAULT_SUGGESTIONS,
+  draftBorderColor,
   resizable = false,
   onWidthChange,
   onResizeStart,
   onResizeEnd,
+  disableFileManagement = false,
+  onRelativeLinkClick,
+  maxFileCount,
+  maxTotalSize,
+  requestHeaders,
   pushContentSelector,
   backendType = 'rest',
 }) => {
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
-  const { agents, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({ apiBaseUrl, apiEndpoints, backendType });
+  const { agents, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({ apiBaseUrl, apiEndpoints, backendType, requestHeaders });
 
   const {
     messages,
@@ -63,7 +69,16 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     setAttachedFiles,
     setMessages,
     setConversationId,
-  } = useChat({ apiBaseUrl, apiEndpoints, backendType, agentSlug: selectedAgent?.slug, t });
+  } = useChat({
+    apiBaseUrl,
+    apiEndpoints,
+    backendType,
+    agentSlug: selectedAgent?.slug,
+    requestHeaders,
+    t,
+    maxFileCount,
+    maxTotalSize,
+  });
 
   const { sidebarWidth, handleResizeStart, defaultWidth, isResizing } = useSidebarResize({
     mode,
@@ -132,7 +147,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
 
     fetch(sessionsUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
       body: JSON.stringify({
         conversation_id: conversationId,
         agent_slug: selectedAgent.slug,
@@ -158,7 +173,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
       .catch(() => {
         clearStaleConversation();
       });
-  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, historyLoadedRef, setMessages, setConversationId]);
+  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, historyLoadedRef, requestHeaders, setMessages, setConversationId]);
 
   const onSwitchAgent = (agent: typeof selectedAgent) => {
     if (!agent) return;
@@ -220,7 +235,15 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
       {messages.length === 0 ? (
         <ChatWelcome firstName={firstName} logoIcon={resolvedLogo} promptSuggestions={promptSuggestions} onPromptClick={setInputValue} t={t} />
       ) : (
-        <ChatMessages messages={messages} isLoading={isLoading} agentStatus={agentStatus} agentName={agentName} logoIcon={resolvedLogo} t={t} />
+        <ChatMessages
+          messages={messages}
+          isLoading={isLoading}
+          agentStatus={agentStatus}
+          agentName={agentName}
+          logoIcon={resolvedLogo}
+          onRelativeLinkClick={onRelativeLinkClick}
+          t={t}
+        />
       )}
       <ChatInput
         inputValue={inputValue}
@@ -228,12 +251,13 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         onSend={handleSendMessage}
         onStop={handleStopGenerating}
         isLoading={isLoading}
-        attachedFiles={attachedFiles}
-        onFileAdd={handleFileAdd}
-        onFileRemove={(i) => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
-        onPaste={handlePaste}
+        attachedFiles={disableFileManagement ? [] : attachedFiles}
+        onFileAdd={disableFileManagement ? undefined : handleFileAdd}
+        onFileRemove={disableFileManagement ? undefined : (i) => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
+        onPaste={disableFileManagement ? undefined : handlePaste}
         t={t}
         mode={mode}
+        separatorColor={draftBorderColor}
       />
     </div>
   );
