@@ -10,10 +10,11 @@ interface ChatMessagesProps {
   agentStatus: AgentStatusState | null;
   agentName: string;
   logoIcon: React.ReactNode;
+  onRelativeLinkClick?: (href: string) => void;
   t: (key: string) => string;
 }
 
-export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logoIcon, t }: ChatMessagesProps) => {
+export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logoIcon, onRelativeLinkClick, t }: ChatMessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [toolDetailMsgId, setToolDetailMsgId] = useState<string | null>(null);
 
@@ -70,7 +71,7 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
                   : 'px-3.5 py-2 rounded-[14px_14px_4px_14px] bg-[var(--chat-accent-dark)] text-white text-[0.8125rem] leading-6'
               }`}
             >
-              {isAssistant ? <MarkdownMessage content={msg.content} /> : msg.content}
+              {isAssistant ? <MarkdownMessage content={msg.content} onRelativeLinkClick={onRelativeLinkClick} /> : msg.content}
               {isAssistant && isEmpty && !isLoading && <span className="text-[0.8125rem] text-gray-400 dark:text-white/40 italic">...</span>}
               {isAssistant && !isEmpty && isLoading && (
                 <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-xs ml-0.5 animate-pulse align-text-bottom" />

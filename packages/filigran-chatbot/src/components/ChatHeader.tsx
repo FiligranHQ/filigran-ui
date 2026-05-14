@@ -69,23 +69,23 @@ export const ChatHeader = ({
 
   return (
     <div className={`flex items-center px-3 py-2 min-h-[48px] border-b border-gray-200 dark:border-white/10 bg-gradient-to-br from-[var(--chat-accent-dark)]/[0.13] to-[var(--chat-accent)]/[0.07] ${mode === 'floating' ? 'rounded-t-xl' : ''}`}>
-      <button
-        ref={agentAnchorRef}
-        type="button"
-        onClick={onAgentMenuToggle}
-        className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-      >
-        <span className="flex items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
-        <span className="flex flex-col items-start leading-tight">
+      <div className="min-w-0">
+        <button
+          ref={agentAnchorRef}
+          type="button"
+          onClick={onAgentMenuToggle}
+          className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+        >
+          <span className="flex items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
           <span>{agentName}</span>
-          {transferredFrom && (
-            <span className="text-[0.6rem] font-normal text-gray-400 dark:text-white/30">
-              {t('Transferred from')} {transferredFrom}
-            </span>
-          )}
-        </span>
-        <ChevronDownIcon size={16} className="text-gray-400 dark:text-white/30" />
-      </button>
+          <ChevronDownIcon size={16} className="text-gray-400 dark:text-white/30" />
+        </button>
+        {transferredFrom && (
+          <div className="pl-10 pr-2 text-[0.6rem] font-normal text-gray-400 dark:text-white/30">
+            {t('Transferred from')} {transferredFrom}
+          </div>
+        )}
+      </div>
 
       <Dropdown open={agentMenuOpen} onClose={onAgentMenuClose} anchorRef={agentAnchorRef} width={280}>
         <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase text-gray-400 dark:text-white/40">

@@ -5,9 +5,17 @@ import { CheckIcon, CopyIcon } from './icons';
 
 interface MarkdownMessageProps {
   content: string;
+  onRelativeLinkClick?: (href: string) => void;
 }
 
-export const MarkdownMessage = ({ content }: MarkdownMessageProps) => {
+const isRelativeHref = (href?: string) => {
+  if (!href) return false;
+  if (href.startsWith('//')) return false;
+  const hasAbsoluteScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(href);
+  return !hasAbsoluteScheme;
+};
+
+export const MarkdownMessage = ({ content, onRelativeLinkClick }: MarkdownMessageProps) => {
   const [copiedBlock, setCopiedBlock] = useState<string | null>(null);
 
   const handleCopyCode = (code: string) => {
@@ -62,16 +70,26 @@ export const MarkdownMessage = ({ content }: MarkdownMessageProps) => {
             {children}
           </blockquote>
         ),
-        a: ({ href, children }) => (
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[var(--chat-accent)] underline underline-offset-2 hover:brightness-125"
-          >
-            {children}
-          </a>
-        ),
+        a: ({ href, children }) => {
+          const openInNewTab = !isRelativeHref(href);
+          const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+            if (!href || !isRelativeHref(href) || !onRelativeLinkClick) return;
+            event.preventDefault();
+            onRelativeLinkClick(href);
+          };
+
+          return (
+            <a
+              href={href}
+              onClick={handleClick}
+              target={openInNewTab ? '_blank' : undefined}
+              rel={openInNewTab ? 'noopener noreferrer' : undefined}
+              className="text-[var(--chat-accent)] underline underline-offset-2 hover:brightness-125"
+            >
+              {children}
+            </a>
+          );
+        },
         h1: ({ children }) => <h1 className="mt-4 first:mt-0 mb-2 font-bold text-base text-gray-900 dark:text-white">{children}</h1>,
         h2: ({ children }) => <h2 className="mt-3 first:mt-0 mb-2 font-bold text-[0.9rem] text-gray-900 dark:text-white">{children}</h2>,
         h3: ({ children }) => <h3 className="mt-3 first:mt-0 mb-1.5 font-semibold text-[0.85rem] text-gray-900 dark:text-white">{children}</h3>,

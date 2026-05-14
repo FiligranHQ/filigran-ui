@@ -15,6 +15,8 @@ export interface ApiEndpoints {
   agents?: string | null;
   /** Path for fetching session history. Default: '/chat/sessions'. Set to null to disable. */
   sessions?: string | null;
+  /** Path for uploading files. Default: '/chat/upload'. Set to null to disable file uploads. */
+  upload?: string | null;
 }
 
 export interface ChatPanelProps {
@@ -31,6 +33,10 @@ export interface ChatPanelProps {
   accentColor?: string;
   logoIcon?: React.ReactNode;
   promptSuggestions?: string[];
+  /** Optional text shown as a small chip in the chat header (e.g. draft context). */
+  draftLabel?: string;
+  /** Optional color used for the chat header bottom border in draft context. */
+  draftBorderColor?: string;
   /** Enable resizable sidebar (drag to resize). Only applies when mode is 'sidebar'. */
   resizable?: boolean;
   /** Callback when sidebar width changes during resize. */
@@ -39,7 +45,17 @@ export interface ChatPanelProps {
   onResizeStart?: () => void;
   /** Callback when resize drag ends. */
   onResizeEnd?: () => void;
-  /** 
+  /** Disable file attachment and file paste management in the chat input. */
+  disableFileManagement?: boolean;
+  /** Called when a relative markdown link is clicked in assistant messages. */
+  onRelativeLinkClick?: (href: string) => void;
+  /** Maximum number of files attachable in one chat context. Default: 10. */
+  maxFileCount?: number;
+  /** Maximum total size in bytes for attached files. Default: 50 * 1024 * 1024 (50 MB). */
+  maxTotalSize?: number;
+  /** Additional HTTP headers added to chatbot API requests (messages, sessions, agents, uploads). */
+  requestHeaders?: Record<string, string>;
+  /**
    * CSS selector for the main content element that should be pushed when sidebar is open.
    * When set, the component will automatically apply margin-right to push the content.
    * Example: '#main-content' or '.app-content'
@@ -84,6 +100,11 @@ export interface ChatFile {
   type: string;
   size: number;
   dataUrl?: string;
+  rawFile?: File;
+  /** Server-side file ID returned after upload. */
+  fileId?: string;
+  /** Upload status: 'pending' while uploading, 'done' when uploaded, 'error' on failure. */
+  uploadStatus?: 'pending' | 'done' | 'error';
 }
 
 export interface XtmAgent {
