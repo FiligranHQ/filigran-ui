@@ -11,7 +11,7 @@ interface MarkdownRendererProps {
 
 const MarkdownRenderer = ({
   source,
-  colorMode = 'light',
+  colorMode = 'dark',
   className,
 }: MarkdownRendererProps) => (
   <div

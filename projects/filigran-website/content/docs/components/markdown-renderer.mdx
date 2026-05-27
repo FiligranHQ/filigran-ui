@@ -6,28 +6,28 @@ title: MarkdownRenderer
 
 This component supports both `light` and `dark` color modes via the `colorMode` prop. Consumers should pass it synchronized with their own theme.
 
-## Light mode
-
-<MarkdownRenderer
-  colorMode="light"
-  source={`# Hello from MarkdownRenderer
-
-  This component renders **GitHub Flavored Markdown**, including:
-
-  | Feature       | Supported |
-  |---------------|-----------|
-  | Bold / italic | ✓         |
-  | Tables (GFM)  | ✓         |
-  | Strikethrough | ✓         |
-
-  ~~No more silent rendering bugs.~~ GFM is now native.
-`}
-/>
-
 ## Dark mode
 
 <MarkdownRenderer
   colorMode="dark"
+  source={`# Hello from MarkdownRenderer
+
+    This component renders **GitHub Flavored Markdown**, including:
+
+    | Feature       | Supported |
+    |---------------|-----------|
+    | Bold / italic | ✓         |
+    | Tables (GFM)  | ✓         |
+    | Strikethrough | ✓         |
+
+    ~~No more silent rendering bugs.~~ GFM is now native.
+`}
+/>
+
+## Light mode
+
+<MarkdownRenderer
+  colorMode="light"
   source={`# Hello from MarkdownRenderer
 
   This component renders **GitHub Flavored Markdown**, including:
