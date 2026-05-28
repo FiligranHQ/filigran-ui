@@ -342,9 +342,7 @@ export function useChat({
       abortControllerRef.current = controller;
 
       // Collect file_ids from already-uploaded files (uploaded eagerly on selection)
-      const fileIds = (userMsg.files ?? [])
-        .filter((f) => f.uploadStatus === 'done' && f.fileId)
-        .map((f) => f.fileId!);
+      const fileIds = (userMsg.files ?? []).filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
 
       // Step 1: Send the message (with file_ids if files were uploaded)
       // Use conversationIdRef to get the latest value (may have been set by eager upload)
@@ -475,9 +473,7 @@ export function useChat({
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, content: t('Sorry, an error occurred. Please try again.') } : m)),
-      );
+      setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: t('Sorry, an error occurred. Please try again.') } : m)));
     } finally {
       abortControllerRef.current = null;
       setIsLoading(false);

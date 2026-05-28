@@ -20,13 +20,7 @@ interface UseSidebarResizeReturn {
   isResizing: boolean;
 }
 
-export function useSidebarResize({
-  mode,
-  resizable,
-  onWidthChange,
-  onResizeStart,
-  onResizeEnd,
-}: UseSidebarResizeOptions): UseSidebarResizeReturn {
+export function useSidebarResize({ mode, resizable, onWidthChange, onResizeStart, onResizeEnd }: UseSidebarResizeOptions): UseSidebarResizeReturn {
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     if (typeof window === 'undefined') return SIDEBAR_WIDTH;
     const stored = localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);

@@ -32,20 +32,9 @@ function App() {
 
   return (
     <>
-      <ChatToggleButton
-        isOpen={isOpen}
-        onToggle={() => setIsOpen(!isOpen)}
-        label="Ask Assistant"
-        accentColor="#7b5cff"
-      />
+      <ChatToggleButton isOpen={isOpen} onToggle={() => setIsOpen(!isOpen)} label="Ask Assistant" accentColor="#7b5cff" />
       {isOpen && (
-        <ChatPanel
-          mode={mode}
-          onClose={() => setIsOpen(false)}
-          onModeChange={setMode}
-          apiBaseUrl="/api/assistant"
-          user={{ firstName: 'John' }}
-        />
+        <ChatPanel mode={mode} onClose={() => setIsOpen(false)} onModeChange={setMode} apiBaseUrl="/api/assistant" user={{ firstName: 'John' }} />
       )}
     </>
   );
@@ -64,23 +53,23 @@ import { ChatPanel } from '@filigran/chatbot';
 
 #### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `mode` | `'floating' \| 'sidebar' \| 'fullscreen'` | **required** | Display mode |
-| `onClose` | `() => void` | **required** | Called when close button is clicked |
-| `onModeChange` | `(mode: ChatMode) => void` | **required** | Called when user switches display mode |
-| `apiBaseUrl` | `string` | **required** | Base URL for chat API endpoints |
-| `user` | `{ firstName: string }` | **required** | Current user info |
-| `topOffset` | `number` | `0` | Top offset in pixels (for sidebar/fullscreen with fixed headers) |
-| `agentDashboardUrl` | `string` | — | URL for "Browse agents" / "Create agent" links |
-| `t` | `(key: string) => string` | identity | Translation function for i18n |
-| `accentColor` | `string` | `'#7b5cff'` | Primary accent color (hex) |
-| `logoIcon` | `React.ReactNode` | default icon | Custom logo/icon for the assistant |
-| `promptSuggestions` | `string[]` | default list | Prompt suggestions shown on welcome screen |
-| `resizable` | `boolean` | `false` | Enable drag-to-resize for sidebar mode |
-| `onWidthChange` | `(width: number) => void` | — | Called when sidebar width changes during resize |
-| `onResizeStart` | `() => void` | — | Called when resize drag starts |
-| `onResizeEnd` | `() => void` | — | Called when resize drag ends |
+| Prop                | Type                                      | Default      | Description                                                      |
+| ------------------- | ----------------------------------------- | ------------ | ---------------------------------------------------------------- |
+| `mode`              | `'floating' \| 'sidebar' \| 'fullscreen'` | **required** | Display mode                                                     |
+| `onClose`           | `() => void`                              | **required** | Called when close button is clicked                              |
+| `onModeChange`      | `(mode: ChatMode) => void`                | **required** | Called when user switches display mode                           |
+| `apiBaseUrl`        | `string`                                  | **required** | Base URL for chat API endpoints                                  |
+| `user`              | `{ firstName: string }`                   | **required** | Current user info                                                |
+| `topOffset`         | `number`                                  | `0`          | Top offset in pixels (for sidebar/fullscreen with fixed headers) |
+| `agentDashboardUrl` | `string`                                  | —            | URL for "Browse agents" / "Create agent" links                   |
+| `t`                 | `(key: string) => string`                 | identity     | Translation function for i18n                                    |
+| `accentColor`       | `string`                                  | `'#7b5cff'`  | Primary accent color (hex)                                       |
+| `logoIcon`          | `React.ReactNode`                         | default icon | Custom logo/icon for the assistant                               |
+| `promptSuggestions` | `string[]`                                | default list | Prompt suggestions shown on welcome screen                       |
+| `resizable`         | `boolean`                                 | `false`      | Enable drag-to-resize for sidebar mode                           |
+| `onWidthChange`     | `(width: number) => void`                 | —            | Called when sidebar width changes during resize                  |
+| `onResizeStart`     | `() => void`                              | —            | Called when resize drag starts                                   |
+| `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
 
 #### Resizable Sidebar Example
 
@@ -117,13 +106,13 @@ import { ChatToggleButton } from '@filigran/chatbot';
 
 #### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `isOpen` | `boolean` | **required** | Whether the chat panel is open |
-| `onToggle` | `() => void` | **required** | Called when button is clicked |
-| `label` | `string` | `'Chat'` | Tooltip/aria label |
-| `accentColor` | `string` | `'#7b5cff'` | Button background color |
-| `icon` | `React.ReactNode` | default icon | Custom icon |
+| Prop          | Type              | Default      | Description                    |
+| ------------- | ----------------- | ------------ | ------------------------------ |
+| `isOpen`      | `boolean`         | **required** | Whether the chat panel is open |
+| `onToggle`    | `() => void`      | **required** | Called when button is clicked  |
+| `label`       | `string`          | `'Chat'`     | Tooltip/aria label             |
+| `accentColor` | `string`          | `'#7b5cff'`  | Button background color        |
+| `icon`        | `React.ReactNode` | default icon | Custom icon                    |
 
 ## API Contract
 
@@ -150,6 +139,7 @@ Returns available AI agents.
 Restores conversation history.
 
 **Request:**
+
 ```json
 {
   "conversation_id": "uuid-here",
@@ -158,6 +148,7 @@ Restores conversation history.
 ```
 
 **Response:**
+
 ```json
 {
   "messages": [
@@ -172,6 +163,7 @@ Restores conversation history.
 Sends a message and streams the response via SSE.
 
 **Request:**
+
 ```json
 {
   "content": "What is the weather?",
@@ -193,6 +185,7 @@ data: {"type": "done", "content": "The weather today is sunny.", "conversation_i
 ```
 
 **Status values:**
+
 - `thinking` — Agent is processing
 - `tool_start` — Agent is using tools (with `tools` array)
 - `analyzing` — Agent is analyzing tool results
@@ -200,6 +193,7 @@ data: {"type": "done", "content": "The weather today is sunny.", "conversation_i
 - `streaming` — Content is being streamed
 
 **Error event:**
+
 ```
 data: {"type": "error", "content": "Something went wrong"}
 ```
@@ -214,7 +208,7 @@ import { MyLogo } from './icons';
 <ChatPanel
   logoIcon={<MyLogo size={24} />}
   // ...
-/>
+/>;
 ```
 
 ### Custom Accent Color
@@ -230,11 +224,7 @@ import { MyLogo } from './icons';
 
 ```tsx
 <ChatPanel
-  promptSuggestions={[
-    'Help me write a report',
-    'Analyze this data',
-    'Summarize recent activity',
-  ]}
+  promptSuggestions={['Help me write a report', 'Analyze this data', 'Summarize recent activity']}
   // ...
 />
 ```
@@ -246,7 +236,7 @@ import { useTranslation } from 'react-i18next';
 
 function App() {
   const { t } = useTranslation();
-  
+
   return (
     <ChatPanel
       t={t}
@@ -257,6 +247,7 @@ function App() {
 ```
 
 **Translation keys used:**
+
 - `'Thinking...'`
 - `'Using tools…'`
 - `'Analyzing results…'`

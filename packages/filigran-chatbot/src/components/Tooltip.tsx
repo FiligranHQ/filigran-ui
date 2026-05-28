@@ -33,12 +33,7 @@ export const Tooltip = ({ title, children }: TooltipProps) => {
   };
 
   return (
-    <span
-      ref={ref}
-      className="inline-flex"
-      onMouseEnter={handleEnter}
-      onMouseLeave={() => setShow(false)}
-    >
+    <span ref={ref} className="inline-flex" onMouseEnter={handleEnter} onMouseLeave={() => setShow(false)}>
       {children}
       {show &&
         createPortal(
