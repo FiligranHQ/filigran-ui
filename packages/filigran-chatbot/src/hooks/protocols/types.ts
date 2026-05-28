@@ -5,7 +5,16 @@
 export type ParsedAction =
   | { action: 'status'; status: string; tools?: string[]; thinkingContent?: string }
   | { action: 'stream'; content: string }
-  | { action: 'done'; content: string; conversationId?: string; toolNames?: string[]; toolCallCount?: number; iterations?: number; transferAgentId?: string; transferAgentName?: string }
+  | {
+      action: 'done';
+      content: string;
+      conversationId?: string;
+      toolNames?: string[];
+      toolCallCount?: number;
+      iterations?: number;
+      transferAgentId?: string;
+      transferAgentName?: string;
+    }
   | { action: 'error'; content: string }
   | { action: 'set_chat_id'; chatId: string }
   | { action: 'noop' };

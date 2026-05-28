@@ -1,0 +1,76 @@
+---
+title: MarkdownRenderer
+---
+
+# MarkdownRenderer Example
+
+This component supports both `light` and `dark` color modes via the `colorMode` prop. Consumers should pass it synchronized with their own theme.
+
+## Dark mode
+
+<MarkdownRenderer
+  colorMode="dark"
+  source={`# Hello from MarkdownRenderer
+
+    This component renders **GitHub Flavored Markdown**, including:
+
+    | Feature       | Supported |
+    |---------------|-----------|
+    | Bold / italic | ✓         |
+    | Tables (GFM)  | ✓         |
+    | Strikethrough | ✓         |
+
+    ~~No more silent rendering bugs.~~ GFM is now native.
+`}
+/>
+
+## Light mode
+
+<MarkdownRenderer
+  colorMode="light"
+  source={`# Hello from MarkdownRenderer
+
+  This component renders **GitHub Flavored Markdown**, including:
+
+  | Feature       | Supported |
+  |---------------|-----------|
+  | Bold / italic | ✓         |
+  | Tables (GFM)  | ✓         |
+  | Strikethrough | ✓         |
+
+  ~~No more silent rendering bugs.~~ GFM is now native.
+`}
+/>
+
+## How to use this markdown-renderer
+
+### Props
+
+| Name           | Type                       | Default | Description                                                                                          |
+| -------------- | -------------------------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| **source**     | _string_                   | —       | Markdown content to render. Required.                                                                |
+| **colorMode**  | _enum ("light" \| "dark")_ | "light" | Color mode propagated via the `data-color-mode` attribute, used by the internal markdown rendering.  |
+| **className**  | _string_                   | —       | Optional CSS class merged on the wrapper div.                                                        |
+
+### Playground
+
+_Import from @filigran/ui :_
+
+Import \{MarkdownRenderer\} from '@filigran/ui/clients'
+
+<ReactLiveDisplay
+  codeExample={`<MarkdownRenderer
+  source={\`# Markdown demo
+
+  **Bold** text, *italic*, and a [link](https://filigran.io).
+
+  | Col 1 | Col 2 |
+  |-------|-------|
+  | A     | B     |
+
+  - [x] Task done
+  - [ ] Task pending
+  \`}
+    colorMode="dark"
+  />`}
+/>

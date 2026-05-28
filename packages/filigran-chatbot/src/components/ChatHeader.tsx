@@ -68,7 +68,9 @@ export const ChatHeader = ({
   const CurrentModeIcon = mode === 'sidebar' ? SidebarIcon : mode === 'fullscreen' ? FullscreenExitIcon : FloatingIcon;
 
   return (
-    <div className={`flex items-center px-3 py-2 min-h-[48px] border-b border-gray-200 dark:border-white/10 bg-gradient-to-br from-[var(--chat-accent-dark)]/[0.13] to-[var(--chat-accent)]/[0.07] ${mode === 'floating' ? 'rounded-t-xl' : ''}`}>
+    <div
+      className={`flex items-center px-3 py-2 min-h-[48px] border-b border-gray-200 dark:border-white/10 bg-gradient-to-br from-[var(--chat-accent-dark)]/[0.13] to-[var(--chat-accent)]/[0.07] ${mode === 'floating' ? 'rounded-t-xl' : ''}`}
+    >
       <div className="min-w-0">
         <button
           ref={agentAnchorRef}

@@ -1,6 +1,17 @@
 import { useEffect, useRef } from 'react';
 import type { AgentStatusState, IconProps } from '../types';
-import { BrainIcon, DatabaseIcon, ExternalLinkIcon, GlobeIcon, MailIcon, SearchIcon, SparklesIcon, TerminalIcon, UserPlusIcon, WrenchIcon } from './icons';
+import {
+  BrainIcon,
+  DatabaseIcon,
+  ExternalLinkIcon,
+  GlobeIcon,
+  MailIcon,
+  SearchIcon,
+  SparklesIcon,
+  TerminalIcon,
+  UserPlusIcon,
+  WrenchIcon,
+} from './icons';
 
 interface ChatThinkingProps {
   agentStatus: AgentStatusState | null;
@@ -28,9 +39,7 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
       // Delegation tools have dedicated statuses
       if (lower.some((n) => n === 'spawn_background_task')) {
         const count = rawNames.filter((n) => n === 'spawn_background_task').length;
-        const label = count > 1
-          ? `${t('Delegating')} ${count} ${t('tasks')}…`
-          : `${t('Delegating task')}…`;
+        const label = count > 1 ? `${t('Delegating')} ${count} ${t('tasks')}…` : `${t('Delegating task')}…`;
         return { label, StatusIcon: UserPlusIcon, showDots: false };
       }
       if (lower.some((n) => n === 'check_task_status')) {
@@ -76,7 +85,11 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
     }
     case 'delegating': {
       const count = agentStatus.tools?.filter((n) => n === 'spawn_background_task').length ?? 0;
-      return { label: count > 1 ? `${t('Delegating')} ${count} ${t('tasks')}…` : `${t('Delegating task')}…`, StatusIcon: UserPlusIcon, showDots: false };
+      return {
+        label: count > 1 ? `${t('Delegating')} ${count} ${t('tasks')}…` : `${t('Delegating task')}…`,
+        StatusIcon: UserPlusIcon,
+        showDots: false,
+      };
     }
     case 'polling': {
       const checkCount = agentStatus.tools?.filter((n) => n === 'check_task_status').length ?? 0;
@@ -128,9 +141,7 @@ export function ThinkingTextBubble({ content }: { content: string }) {
       className="ml-11 max-w-[70%] max-h-20 overflow-hidden relative rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] pl-3 pr-3 py-2"
       style={{ animation: 'reasoningGlow 3s ease-in-out infinite, chat-fade-in 0.5s ease-out' }}
     >
-      <p className="text-[13px] leading-[1.35rem] text-gray-400 dark:text-white/40 break-words m-0">
-        {cleaned}
-      </p>
+      <p className="text-[13px] leading-[1.35rem] text-gray-400 dark:text-white/40 break-words m-0">{cleaned}</p>
       <div className="absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-white/90 dark:from-[#1e1e2e]/90 to-transparent pointer-events-none" />
     </div>
   );

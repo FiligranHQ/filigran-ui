@@ -3,7 +3,13 @@ import type { ChatToggleButtonProps } from '../types';
 import { hexAlpha } from '../utils';
 import { DefaultLogoIcon } from './icons';
 
-export const ChatToggleButton: FunctionComponent<ChatToggleButtonProps> = ({ isOpen, onToggle, label = 'Ask Assistant', accentColor = '#7b5cff', icon }) => {
+export const ChatToggleButton: FunctionComponent<ChatToggleButtonProps> = ({
+  isOpen,
+  onToggle,
+  label = 'Ask Assistant',
+  accentColor = '#7b5cff',
+  icon,
+}) => {
   const resolvedIcon = icon ?? <DefaultLogoIcon size={16} />;
 
   return (
