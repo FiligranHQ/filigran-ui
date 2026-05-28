@@ -14,6 +14,7 @@
     "build:filigran-chatbot": "yarn workspace @filigran/chatbot run build",
     "build:filigran-email": "yarn workspace @filigran/email run build",
     "build:filigran-icon": "yarn workspace @filigran/icon run build",
+    "build:filigran-rich-text-editor": "yarn workspace @filigran/rich-text-editor run build",
     "build:filigran-ui": "yarn workspace @filigran/ui run build",
     "build:filigran-website": "yarn workspace @filigran/website run build",
     "dev": "yarn workspace @filigran/website run dev",
