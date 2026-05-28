@@ -39,7 +39,7 @@ import type { Theme } from '@mui/material/styles';
 import { TaskList } from './richTextEditor/extensions/TaskList';
 import { TaskItem } from './richTextEditor/extensions/TaskListItem';
 
-import '../static/css/TiptapEditor.css';
+import './styles/TiptapEditor.css';
 
 export const TIPTAP_EDITOR_SELECTOR = '.tiptap-editor-content.ProseMirror';
 
