@@ -25,6 +25,10 @@ export interface ApiEndpoints {
    * the host platform (e.g. OpenCTI / OpenAEV session) — the proxy mints
    * any upstream token server-side, so the user never authenticates to the
    * upstream chat service directly. Set to null to disable download chips.
+   *
+   * Exception: in `singleEndpoint` mode the `/chat/files` default is NOT
+   * applied (there is no per-path routing), so download cards stay disabled
+   * unless this path is set explicitly to a proxy route.
    */
   download?: string | null;
 }
