@@ -91,10 +91,14 @@ function buildRequestBody(
       // non-serializable value (circular reference, BigInt, …) would otherwise
       // throw and break the message send. Drop the context instead — page
       // context is supplementary and must never prevent a message from going out.
+      // Decide using the serialized result so values that normalize to an empty
+      // object (e.g. `{ url: undefined }`, `{ fn: () => {} }`) are also omitted.
       if (opts.pageContext && Object.keys(opts.pageContext).length > 0) {
         try {
-          JSON.stringify(opts.pageContext);
-          body.context = opts.pageContext;
+          const serialized = JSON.stringify(opts.pageContext);
+          if (serialized && serialized !== '{}') {
+            body.context = opts.pageContext;
+          }
         } catch {
           // Non-serializable page context — skip it rather than fail the send.
         }
