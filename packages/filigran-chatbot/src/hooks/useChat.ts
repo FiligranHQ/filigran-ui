@@ -87,8 +87,17 @@ function buildRequestBody(
       const body: Record<string, unknown> = { content, conversation_id: opts.conversationId, agent_slug: opts.agentSlug };
       // Forward arbitrary host page context (e.g. current URL) so the agent
       // knows where the user is. Omitted when empty to keep payloads lean.
+      // Guard serialization: the whole body is later JSON.stringify'd, so a
+      // non-serializable value (circular reference, BigInt, …) would otherwise
+      // throw and break the message send. Drop the context instead — page
+      // context is supplementary and must never prevent a message from going out.
       if (opts.pageContext && Object.keys(opts.pageContext).length > 0) {
-        body.context = opts.pageContext;
+        try {
+          JSON.stringify(opts.pageContext);
+          body.context = opts.pageContext;
+        } catch {
+          // Non-serializable page context — skip it rather than fail the send.
+        }
       }
       return body;
     }

@@ -85,6 +85,10 @@ export interface ChatPanelProps {
    * `{ url: '/dashboard/analyses/reports/<id>/overview' }`, and can be
    * extended later (page title, selected entity, user role, etc.).
    *
+   * Must be JSON-serializable — it is sent via `JSON.stringify`. A
+   * non-serializable value (circular reference, `BigInt`, etc.) is skipped
+   * rather than thrown, so it can never break message sending.
+   *
    * Read fresh at send time, so it always reflects the page the user is on
    * when the message is sent (not when the panel was opened). Only emitted
    * for the `rest` backend, and omitted entirely when empty.
