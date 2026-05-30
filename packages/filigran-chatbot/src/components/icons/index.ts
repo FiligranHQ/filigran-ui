@@ -6,6 +6,7 @@ export * from './CloseIcon';
 export * from './CopyIcon';
 export * from './DatabaseIcon';
 export * from './DefaultLogoIcon';
+export * from './DownloadIcon';
 export * from './EditIcon';
 export * from './ExternalLinkIcon';
 export * from './FileIcon';

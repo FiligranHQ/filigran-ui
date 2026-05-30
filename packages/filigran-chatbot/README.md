@@ -7,6 +7,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - 🔄 **SSE Message Streaming** — Real-time response streaming with status indicators
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
+- 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose
 - 📝 **Full Markdown** — Tables, code blocks with copy button, lists, blockquotes
 - 🎨 **Customizable Theme** — Accent color and logo customization
 - 📱 **3 Display Modes** — Floating, sidebar (resizable), and fullscreen
@@ -184,6 +185,29 @@ data: {"type": "stream", "content": "today is sunny."}
 data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1}
 ```
 
+#### Agent-generated file attachments
+
+When an agent produces a downloadable file, the `done` event carries an `attachments` array and the streamed prose embeds `[[FILE:<file_id>]]` markers. The component strips those markers and renders a download card per attachment:
+
+```json
+{
+  "type": "done",
+  "content": "Here is your export. [[FILE:0f3a...]]",
+  "conversation_id": "uuid",
+  "attachments": [
+    { "file_id": "0f3a...", "filename": "iocs.csv", "type": "csv", "size": 2048, "content_type": "text/csv", "file_tag": "download_file" }
+  ]
+}
+```
+
+Each attachment carries only `file_id` + display metadata — **never an absolute download URL**. Clicking a card issues:
+
+```
+GET {apiBaseUrl}{apiEndpoints.download ?? '/chat/files'}/{file_id}/download
+```
+
+with `credentials: 'include'` and your `requestHeaders`. Point `apiEndpoints.download` at your **own backend proxy** so the download is authenticated by your platform (the proxy mints any upstream token server-side) — the user never authenticates to the upstream chat service directly. Set `apiEndpoints.download` to `null` to disable download cards.
+
 **Status values:**
 
 - `thinking` — Agent is processing
@@ -261,6 +285,7 @@ function App() {
 - `'Browse agents'`
 - `'Create agent'`
 - `'Reasoning details'`
+- `'Download'`
 - `'tool call'` / `'tool calls'`
 - `'Uses AI. Verify results.'`
 - `'How can I help you, '`

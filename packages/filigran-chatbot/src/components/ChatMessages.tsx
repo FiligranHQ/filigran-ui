@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AgentStatusState, ChatMessage } from '../types';
-import { FileIcon, InfoIcon } from './icons';
+import type { AgentStatusState, ChatAttachment, ChatMessage } from '../types';
+import { stripFileMarkers } from '../utils';
+import { DownloadIcon, FileIcon, InfoIcon } from './icons';
 import { ChatThinking, ThinkingTextBubble } from './ChatThinking';
 import { MarkdownMessage } from './MarkdownMessage';
 
@@ -11,10 +12,19 @@ interface ChatMessagesProps {
   agentName: string;
   logoIcon: React.ReactNode;
   onRelativeLinkClick?: (href: string) => void;
+  /** Download an agent-generated file via the host app's backend proxy. */
+  onDownloadFile?: (attachment: ChatAttachment) => void;
   t: (key: string) => string;
 }
 
-export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logoIcon, onRelativeLinkClick, t }: ChatMessagesProps) => {
+function formatFileSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logoIcon, onRelativeLinkClick, onDownloadFile, t }: ChatMessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [toolDetailMsgId, setToolDetailMsgId] = useState<string | null>(null);
 
@@ -28,6 +38,11 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
         const isAssistant = msg.role === 'assistant';
         const isEmpty = !msg.content;
         const isThinking = isAssistant && isEmpty && isLoading;
+        // Strip the [[FILE:<id>]] deliverable markers from assistant prose —
+        // the generated files render as separate download cards below. User
+        // text is never altered.
+        const displayContent = isAssistant ? stripFileMarkers(msg.content) : msg.content;
+        const downloadable = isAssistant ? (msg.attachments ?? []) : [];
 
         if (isThinking) {
           return (
@@ -71,12 +86,56 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
                   : 'px-3.5 py-2 rounded-[14px_14px_4px_14px] bg-[var(--chat-accent-dark)] text-white text-[0.8125rem] leading-6'
               }`}
             >
-              {isAssistant ? <MarkdownMessage content={msg.content} onRelativeLinkClick={onRelativeLinkClick} /> : msg.content}
+              {isAssistant ? <MarkdownMessage content={displayContent} onRelativeLinkClick={onRelativeLinkClick} /> : msg.content}
               {isAssistant && isEmpty && !isLoading && <span className="text-[0.8125rem] text-gray-400 dark:text-white/40 italic">...</span>}
               {isAssistant && !isEmpty && isLoading && (
                 <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-xs ml-0.5 animate-pulse align-text-bottom" />
               )}
             </div>
+
+            {downloadable.length > 0 && !isLoading && (
+              <div className="flex flex-col gap-1.5 mt-1.5 max-w-[90%] w-full">
+                {downloadable.map((att) => {
+                  const isWorking = att.fileTag === 'working_file';
+                  const sizeLabel = formatFileSize(att.size);
+                  return (
+                    <button
+                      key={att.fileId}
+                      type="button"
+                      onClick={() => onDownloadFile?.(att)}
+                      disabled={!onDownloadFile}
+                      title={t('Download')}
+                      className={`group flex items-center gap-2 text-left rounded-lg border px-2.5 py-1.5 transition-colors ${
+                        isWorking
+                          ? 'border-gray-200 dark:border-white/10 bg-transparent'
+                          : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] hover:border-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/5'
+                      } ${onDownloadFile ? 'cursor-pointer' : 'cursor-default'}`}
+                    >
+                      <span
+                        className={`shrink-0 ${
+                          isWorking ? 'text-gray-400 dark:text-white/40' : 'text-[var(--chat-accent)]'
+                        }`}
+                      >
+                        <FileIcon size={16} />
+                      </span>
+                      <span className="flex flex-col min-w-0 flex-1">
+                        <span className="truncate text-[0.75rem] text-gray-900 dark:text-white">{att.filename}</span>
+                        {(att.type || sizeLabel) && (
+                          <span className="text-[0.65rem] text-gray-400 dark:text-white/40 uppercase">
+                            {[att.type, sizeLabel].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                      </span>
+                      {onDownloadFile && (
+                        <span className="shrink-0 text-gray-400 dark:text-white/30 group-hover:text-[var(--chat-accent)]">
+                          <DownloadIcon size={15} />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {isAssistant && !isEmpty && !isLoading && msg.toolNames && msg.toolNames.length > 0 && (
               <>

@@ -17,6 +17,16 @@ export interface ApiEndpoints {
   sessions?: string | null;
   /** Path for uploading files. Default: '/chat/upload'. Set to null to disable file uploads. */
   upload?: string | null;
+  /**
+   * Base path for downloading agent-generated files. Default: '/chat/files'.
+   * The download URL is built as
+   * `${apiBaseUrl}${download}/${fileId}/download`, resolved against the
+   * host app's own backend proxy. This keeps the download authenticated by
+   * the host platform (e.g. OpenCTI / OpenAEV session) — the proxy mints
+   * any upstream token server-side, so the user never authenticates to the
+   * upstream chat service directly. Set to null to disable download chips.
+   */
+  download?: string | null;
 }
 
 export interface ChatPanelProps {
@@ -84,9 +94,34 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   files?: ChatFile[];
+  /** Agent-generated downloadable files attached to an assistant message. */
+  attachments?: ChatAttachment[];
   toolNames?: string[];
   toolCallCount?: number;
   iterations?: number;
+}
+
+/**
+ * An agent-generated file produced during a chat turn (via the backend
+ * `generate_file` tool / custom-tool `$output_files`). Rendered as a
+ * download card in assistant messages.
+ *
+ * Intentionally carries no absolute URL: the download is resolved against
+ * the host app's backend proxy from `fileId` (see `ApiEndpoints.download`)
+ * so the user stays authenticated to the host platform only.
+ */
+export interface ChatAttachment {
+  fileId: string;
+  filename: string;
+  /** Short extension-style label surfaced under the filename (e.g. "PDF"). */
+  type?: string;
+  size?: number;
+  contentType?: string;
+  /**
+   * `download_file` → prominent download card (user deliverable).
+   * `working_file` → de-emphasized scratch/working artifact chip.
+   */
+  fileTag?: 'download_file' | 'working_file';
 }
 
 export interface AgentStatusState {

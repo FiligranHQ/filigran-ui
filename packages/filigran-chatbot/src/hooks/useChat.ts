@@ -438,6 +438,7 @@ export function useChat({
                           toolNames: parsed.toolNames,
                           toolCallCount: parsed.toolCallCount,
                           iterations: parsed.iterations,
+                          attachments: parsed.attachments,
                         }
                       : m,
                   ),
