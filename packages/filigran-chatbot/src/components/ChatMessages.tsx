@@ -123,12 +123,12 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
       {messages.map((msg, index) => {
         const isAssistant = msg.role === 'assistant';
         const isEmpty = !msg.content;
-        const isThinking = isAssistant && isEmpty && isLoading;
         // The streaming response is always the last message, so the live
-        // cursor / thinking bubble must be gated on it — otherwise every
-        // previously completed assistant message would also show them while a
-        // *later* response is streaming.
+        // cursor / thinking bubble / ChatThinking state must be gated on it —
+        // otherwise every previously completed assistant message would also
+        // show them while a *later* response is streaming.
         const isStreamingMessage = isLoading && index === messages.length - 1;
+        const isThinking = isAssistant && isEmpty && isStreamingMessage;
 
         if (isThinking) {
           return (
