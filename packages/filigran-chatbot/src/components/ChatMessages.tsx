@@ -93,7 +93,11 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
               )}
             </div>
 
-            {downloadable.length > 0 && !isLoading && (
+            {/* Only render download cards when a download handler is wired.
+                When the host disables downloads (`apiEndpoints.download = null`)
+                `onDownloadFile` is undefined and we surface no cards at all,
+                rather than non-clickable ones. */}
+            {downloadable.length > 0 && !isLoading && onDownloadFile && (
               <div className="flex flex-col gap-1.5 mt-1.5 max-w-[90%] w-full">
                 {downloadable.map((att) => {
                   const isWorking = att.fileTag === 'working_file';
@@ -102,14 +106,13 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
                     <button
                       key={att.fileId}
                       type="button"
-                      onClick={() => onDownloadFile?.(att)}
-                      disabled={!onDownloadFile}
+                      onClick={() => onDownloadFile(att)}
                       title={t('Download')}
-                      className={`group flex items-center gap-2 text-left rounded-lg border px-2.5 py-1.5 transition-colors ${
+                      className={`group flex items-center gap-2 text-left rounded-lg border px-2.5 py-1.5 transition-colors cursor-pointer ${
                         isWorking
                           ? 'border-gray-200 dark:border-white/10 bg-transparent'
                           : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] hover:border-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/5'
-                      } ${onDownloadFile ? 'cursor-pointer' : 'cursor-default'}`}
+                      }`}
                     >
                       <span
                         className={`shrink-0 ${
@@ -126,11 +129,9 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
                           </span>
                         )}
                       </span>
-                      {onDownloadFile && (
-                        <span className="shrink-0 text-gray-400 dark:text-white/30 group-hover:text-[var(--chat-accent)]">
-                          <DownloadIcon size={15} />
-                        </span>
-                      )}
+                      <span className="shrink-0 text-gray-400 dark:text-white/30 group-hover:text-[var(--chat-accent)]">
+                        <DownloadIcon size={15} />
+                      </span>
                     </button>
                   );
                 })}

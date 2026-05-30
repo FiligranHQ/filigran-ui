@@ -136,8 +136,17 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   // authenticated to the host platform (e.g. OpenCTI / OpenAEV) only and
   // never logs in to the upstream service. Same-origin cookies +
   // requestHeaders (CSRF / draft context) carry the host-app auth.
+  // Downloads need a path to build the URL from. Enabled for the REST
+  // backend unless explicitly disabled (`download === null`). In
+  // single-endpoint mode there is no per-path routing, so a download path
+  // must be provided explicitly (e.g. an OpenCTI-style proxy route);
+  // otherwise the default REST `/chat/files` path is used.
+  const downloadPathProvided =
+    apiEndpoints?.download !== null && apiEndpoints?.download !== undefined;
   const canDownload =
-    backendType === 'rest' && !apiEndpoints?.singleEndpoint && apiEndpoints?.download !== null;
+    backendType === 'rest' &&
+    apiEndpoints?.download !== null &&
+    (!apiEndpoints?.singleEndpoint || downloadPathProvided);
 
   const handleDownloadFile = useCallback(
     async (att: ChatAttachment) => {
