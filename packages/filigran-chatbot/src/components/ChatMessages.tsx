@@ -120,10 +120,15 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable">
-      {messages.map((msg) => {
+      {messages.map((msg, index) => {
         const isAssistant = msg.role === 'assistant';
         const isEmpty = !msg.content;
         const isThinking = isAssistant && isEmpty && isLoading;
+        // The streaming response is always the last message, so the live
+        // cursor / thinking bubble must be gated on it — otherwise every
+        // previously completed assistant message would also show them while a
+        // *later* response is streaming.
+        const isStreamingMessage = isLoading && index === messages.length - 1;
 
         if (isThinking) {
           return (
@@ -144,7 +149,7 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
               </div>
             )}
 
-            {isAssistant && !isEmpty && isLoading && agentStatus?.thinkingContent && <ThinkingTextBubble content={agentStatus.thinkingContent} />}
+            {isAssistant && !isEmpty && isStreamingMessage && agentStatus?.thinkingContent && <ThinkingTextBubble content={agentStatus.thinkingContent} />}
 
             {msg.files && msg.files.length > 0 && (
               <div className="flex gap-1.5 flex-wrap mb-1.5">
@@ -162,8 +167,8 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
 
             {isAssistant ? (
               <div className="flex flex-col gap-1.5 w-full items-start">
-                {buildAssistantBlocks(msg, isLoading)}
-                {!isEmpty && isLoading && (
+                {buildAssistantBlocks(msg, isStreamingMessage)}
+                {!isEmpty && isStreamingMessage && (
                   <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-xs ml-1 animate-pulse" />
                 )}
               </div>

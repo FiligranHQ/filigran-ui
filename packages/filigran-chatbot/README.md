@@ -159,6 +159,26 @@ Restores conversation history.
 }
 ```
 
+Assistant history messages **should echo the same `attachments[]` array** that
+was sent on the original `done` event (see [Agent-generated file attachments](#agent-generated-file-attachments)),
+keyed by `file_id`. The component re-surfaces the download cards on restore,
+so omitting them means download cards silently disappear after a page reload
+even though streaming downloads work:
+
+```json
+{
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "Here is your export. [[FILE:0f3a...]]",
+      "attachments": [
+        { "file_id": "0f3a...", "filename": "iocs.csv", "type": "csv", "size": 2048, "content_type": "text/csv", "file_tag": "download_file" }
+      ]
+    }
+  ]
+}
+```
+
 ### `POST {apiBaseUrl}/chat/messages`
 
 Sends a message and streams the response via SSE.
