@@ -76,6 +76,21 @@ export interface ChatPanelProps {
   /** Additional HTTP headers added to chatbot API requests (messages, sessions, agents, uploads). */
   requestHeaders?: Record<string, string>;
   /**
+   * Arbitrary contextual metadata about the host page/application, forwarded
+   * to the backend alongside every message as a `context` JSON object so the
+   * agent is aware of where the user is.
+   *
+   * The shape is up to the host. Today it typically carries the current
+   * relative URL, e.g.
+   * `{ url: '/dashboard/analyses/reports/<id>/overview' }`, and can be
+   * extended later (page title, selected entity, user role, etc.).
+   *
+   * Read fresh at send time, so it always reflects the page the user is on
+   * when the message is sent (not when the panel was opened). Only emitted
+   * for the `rest` backend, and omitted entirely when empty.
+   */
+  pageContext?: Record<string, unknown>;
+  /**
    * CSS selector for the main content element that should be pushed when sidebar is open.
    * When set, the component will automatically apply margin-right to push the content.
    * Example: '#main-content' or '.app-content'

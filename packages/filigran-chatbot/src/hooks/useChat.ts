@@ -17,6 +17,8 @@ interface UseChatOptions {
   backendType?: BackendType;
   agentSlug: string | null | undefined;
   requestHeaders?: Record<string, string>;
+  /** Arbitrary host page/application context, sent as `context` on the REST message body. */
+  pageContext?: Record<string, unknown>;
   t: (key: string) => string;
   maxFileCount?: number;
   maxTotalSize?: number;
@@ -61,7 +63,12 @@ function getParser(backendType: BackendType): (evt: Record<string, unknown>, ctx
 function buildRequestBody(
   backendType: BackendType,
   content: string,
-  opts: { legacyChatId: string | null; conversationId: string | null; agentSlug: string | null | undefined },
+  opts: {
+    legacyChatId: string | null;
+    conversationId: string | null;
+    agentSlug: string | null | undefined;
+    pageContext?: Record<string, unknown>;
+  },
 ): Record<string, unknown> {
   switch (backendType) {
     case 'legacy':
@@ -76,8 +83,15 @@ function buildRequestBody(
         state: {},
         forwardedProps: opts.agentSlug ? { agentSlug: opts.agentSlug } : {},
       };
-    default:
-      return { content, conversation_id: opts.conversationId, agent_slug: opts.agentSlug };
+    default: {
+      const body: Record<string, unknown> = { content, conversation_id: opts.conversationId, agent_slug: opts.agentSlug };
+      // Forward arbitrary host page context (e.g. current URL) so the agent
+      // knows where the user is. Omitted when empty to keep payloads lean.
+      if (opts.pageContext && Object.keys(opts.pageContext).length > 0) {
+        body.context = opts.pageContext;
+      }
+      return body;
+    }
   }
 }
 
@@ -87,6 +101,7 @@ export function useChat({
   backendType = 'rest',
   agentSlug,
   requestHeaders,
+  pageContext,
   t,
   maxFileCount = DEFAULT_MAX_FILE_COUNT,
   maxTotalSize = DEFAULT_MAX_TOTAL_SIZE,
@@ -112,6 +127,10 @@ export function useChat({
   const hasUsedToolsRef = useRef(false);
   // Ref mirror of conversationId — always current across async boundaries
   const conversationIdRef = useRef(conversationId);
+  // Ref mirror of pageContext so the value sent reflects the page the user is
+  // on at send time, regardless of when the send handler closure was created.
+  const pageContextRef = useRef(pageContext);
+  pageContextRef.current = pageContext;
   // Mutex to prevent concurrent session creation
   const creatingSessionRef = useRef<Promise<string | null> | null>(null);
   // Abort controller for in-flight file uploads (cancelled on new chat)
@@ -350,6 +369,7 @@ export function useChat({
         legacyChatId,
         conversationId: conversationIdRef.current,
         agentSlug,
+        pageContext: pageContextRef.current,
       });
       if (fileIds.length > 0) {
         (requestBody as Record<string, unknown>).file_ids = fileIds;

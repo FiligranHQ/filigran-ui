@@ -46,6 +46,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   maxFileCount,
   maxTotalSize,
   requestHeaders,
+  pageContext,
   pushContentSelector,
   backendType = 'rest',
 }) => {
@@ -82,6 +83,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     backendType,
     agentSlug: selectedAgent?.slug,
     requestHeaders,
+    pageContext,
     t,
     maxFileCount,
     maxTotalSize,
