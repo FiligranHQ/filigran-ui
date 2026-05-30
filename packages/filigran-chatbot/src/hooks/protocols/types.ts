@@ -1,3 +1,5 @@
+import type { ChatAttachment } from '../../types';
+
 /**
  * Normalized action produced by all protocol parsers.
  * The SSE read loop is protocol-agnostic — only the JSON-to-action mapping differs.
@@ -14,6 +16,7 @@ export type ParsedAction =
       iterations?: number;
       transferAgentId?: string;
       transferAgentName?: string;
+      attachments?: ChatAttachment[];
     }
   | { action: 'error'; content: string }
   | { action: 'set_chat_id'; chatId: string }

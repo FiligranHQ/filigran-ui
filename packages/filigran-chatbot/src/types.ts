@@ -17,6 +17,20 @@ export interface ApiEndpoints {
   sessions?: string | null;
   /** Path for uploading files. Default: '/chat/upload'. Set to null to disable file uploads. */
   upload?: string | null;
+  /**
+   * Base path for downloading agent-generated files. Default: '/chat/files'.
+   * The download URL is built as
+   * `${apiBaseUrl}${download}/${fileId}/download`, resolved against the
+   * host app's own backend proxy. This keeps the download authenticated by
+   * the host platform (e.g. OpenCTI / OpenAEV session) — the proxy mints
+   * any upstream token server-side, so the user never authenticates to the
+   * upstream chat service directly. Set to null to disable download chips.
+   *
+   * Exception: in `singleEndpoint` mode the `/chat/files` default is NOT
+   * applied (there is no per-path routing), so download cards stay disabled
+   * unless this path is set explicitly to a proxy route.
+   */
+  download?: string | null;
 }
 
 export interface ChatPanelProps {
@@ -49,6 +63,12 @@ export interface ChatPanelProps {
   disableFileManagement?: boolean;
   /** Called when a relative markdown link is clicked in assistant messages. */
   onRelativeLinkClick?: (href: string) => void;
+  /**
+   * Called when an agent-generated file download fails (non-2xx response or
+   * network error). Lets the host surface the failure through its own
+   * notification system (the chatbot has no toast surface of its own).
+   */
+  onDownloadError?: (error: unknown, attachment: ChatAttachment) => void;
   /** Maximum number of files attachable in one chat context. Default: 10. */
   maxFileCount?: number;
   /** Maximum total size in bytes for attached files. Default: 50 * 1024 * 1024 (50 MB). */
@@ -84,9 +104,34 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   files?: ChatFile[];
+  /** Agent-generated downloadable files attached to an assistant message. */
+  attachments?: ChatAttachment[];
   toolNames?: string[];
   toolCallCount?: number;
   iterations?: number;
+}
+
+/**
+ * An agent-generated file produced during a chat turn (via the backend
+ * `generate_file` tool / custom-tool `$output_files`). Rendered as a
+ * download card in assistant messages.
+ *
+ * Intentionally carries no absolute URL: the download is resolved against
+ * the host app's backend proxy from `fileId` (see `ApiEndpoints.download`)
+ * so the user stays authenticated to the host platform only.
+ */
+export interface ChatAttachment {
+  fileId: string;
+  filename: string;
+  /** Short extension-style label surfaced under the filename (e.g. "PDF"). */
+  type?: string;
+  size?: number;
+  contentType?: string;
+  /**
+   * `download_file` → prominent download card (user deliverable).
+   * `working_file` → de-emphasized scratch/working artifact chip.
+   */
+  fileTag?: 'download_file' | 'working_file';
 }
 
 export interface AgentStatusState {

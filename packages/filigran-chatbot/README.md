@@ -7,6 +7,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - 🔄 **SSE Message Streaming** — Real-time response streaming with status indicators
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
+- 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose
 - 📝 **Full Markdown** — Tables, code blocks with copy button, lists, blockquotes
 - 🎨 **Customizable Theme** — Accent color and logo customization
 - 📱 **3 Display Modes** — Floating, sidebar (resizable), and fullscreen
@@ -158,6 +159,26 @@ Restores conversation history.
 }
 ```
 
+Assistant history messages **should echo the same `attachments[]` array** that
+was sent on the original `done` event (see [Agent-generated file attachments](#agent-generated-file-attachments)),
+keyed by `file_id`. The component re-surfaces the download cards on restore,
+so omitting them means download cards silently disappear after a page reload
+even though streaming downloads work:
+
+```json
+{
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "Here is your export. [[FILE:0f3a...]]",
+      "attachments": [
+        { "file_id": "0f3a...", "filename": "iocs.csv", "type": "csv", "size": 2048, "content_type": "text/csv", "file_tag": "download_file" }
+      ]
+    }
+  ]
+}
+```
+
 ### `POST {apiBaseUrl}/chat/messages`
 
 Sends a message and streams the response via SSE.
@@ -183,6 +204,33 @@ data: {"type": "stream", "content": "The weather "}
 data: {"type": "stream", "content": "today is sunny."}
 data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1}
 ```
+
+#### Agent-generated file attachments
+
+When an agent produces a downloadable file, the `done` event carries an `attachments` array and the streamed prose embeds `[[FILE:<file_id>]]` markers. The component strips those markers and renders a download card per attachment:
+
+```json
+{
+  "type": "done",
+  "content": "Here is your export. [[FILE:0f3a...]]",
+  "conversation_id": "uuid",
+  "attachments": [
+    { "file_id": "0f3a...", "filename": "iocs.csv", "type": "csv", "size": 2048, "content_type": "text/csv", "file_tag": "download_file" }
+  ]
+}
+```
+
+Each attachment carries only `file_id` + display metadata — **never an absolute download URL**. Clicking a card issues:
+
+```
+GET {apiBaseUrl}{apiEndpoints.download ?? '/chat/files'}/{file_id}/download
+```
+
+with `credentials: 'include'` and your `requestHeaders`. Point `apiEndpoints.download` at your **own backend proxy** so the download is authenticated by your platform (the proxy mints any upstream token server-side) — the user never authenticates to the upstream chat service directly. Set `apiEndpoints.download` to `null` to disable download cards.
+
+The `/chat/files` default applies to REST-style endpoints. In `singleEndpoint` mode there is no per-path routing, so the default is **not** applied — download cards stay disabled unless you set `apiEndpoints.download` explicitly to a proxy route.
+
+Download failures (403/404/5xx/network) are reported through the optional `onDownloadError(error, attachment)` callback so the host can surface them via its own notification system (the chatbot has no toast surface of its own).
 
 **Status values:**
 
@@ -261,6 +309,7 @@ function App() {
 - `'Browse agents'`
 - `'Create agent'`
 - `'Reasoning details'`
+- `'Download'`
 - `'tool call'` / `'tool calls'`
 - `'Uses AI. Verify results.'`
 - `'How can I help you, '`

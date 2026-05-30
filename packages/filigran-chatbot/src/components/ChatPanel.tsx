@@ -1,6 +1,7 @@
-import { type FunctionComponent, useEffect, useState } from 'react';
-import type { ChatMessage, ChatPanelProps } from '../types';
+import { type FunctionComponent, useCallback, useEffect, useState } from 'react';
+import type { ChatAttachment, ChatMessage, ChatPanelProps } from '../types';
 import { hexAlpha, identity } from '../utils';
+import { parseAttachments } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useSidebarResize } from '../hooks/useSidebarResize';
@@ -41,6 +42,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   onResizeEnd,
   disableFileManagement = false,
   onRelativeLinkClick,
+  onDownloadError,
   maxFileCount,
   maxTotalSize,
   requestHeaders,
@@ -129,6 +131,55 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   const firstName = user.firstName;
   const agentName = transferredAgent?.name || selectedAgent?.name || 'Assistant';
 
+  // Download an agent-generated file. The URL is resolved against the host
+  // app's own backend proxy (apiBaseUrl), NOT the upstream chat service:
+  // the proxy mints any upstream token server-side, so the user stays
+  // authenticated to the host platform (e.g. OpenCTI / OpenAEV) only and
+  // never logs in to the upstream service. Same-origin cookies +
+  // requestHeaders (CSRF / draft context) carry the host-app auth.
+  // Downloads need a path to build the URL from. Enabled for the REST
+  // backend unless explicitly disabled (`download === null`). In
+  // single-endpoint mode there is no per-path routing, so a download path
+  // must be provided explicitly (e.g. an OpenCTI-style proxy route);
+  // otherwise the default REST `/chat/files` path is used.
+  const downloadPathProvided =
+    apiEndpoints?.download !== null && apiEndpoints?.download !== undefined;
+  const canDownload =
+    backendType === 'rest' &&
+    apiEndpoints?.download !== null &&
+    (!apiEndpoints?.singleEndpoint || downloadPathProvided);
+
+  const handleDownloadFile = useCallback(
+    async (att: ChatAttachment) => {
+      const base = apiEndpoints?.download ?? '/chat/files';
+      const url = `${apiBaseUrl}${base}/${encodeURIComponent(att.fileId)}/download`;
+      try {
+        const res = await fetch(url, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { ...(requestHeaders ?? {}) },
+        });
+        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = att.filename || 'download';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+      } catch (err) {
+        // Surface the failure (403/404/5xx/network) to the host so it can
+        // notify the user — the chatbot has no toast surface of its own.
+        // If the host doesn't provide a handler the error is intentionally
+        // not thrown further (a rejected click handler has nowhere to go).
+        onDownloadError?.(err, att);
+      }
+    },
+    [apiBaseUrl, apiEndpoints, requestHeaders, onDownloadError],
+  );
+
   const cssVars = {
     '--chat-accent': accentColor,
     '--chat-accent-10': hexAlpha(accentColor, 0.1),
@@ -167,12 +218,18 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
       })
       .then((data) => {
         if (!data?.messages?.length) return;
-        const restored: ChatMessage[] = data.messages.map((m: { role: string; content: string }, i: number) => ({
-          id: `restored-${i}`,
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-          timestamp: new Date(),
-        }));
+        const restored: ChatMessage[] = data.messages.map(
+          (m: { role: string; content: string; attachments?: unknown }, i: number) => ({
+            id: `restored-${i}`,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            timestamp: new Date(),
+            // Re-surface agent-generated download chips on conversation
+            // restore (the [[FILE:…]] markers in content are stripped at
+            // render time by ChatMessages).
+            attachments: m.role === 'assistant' ? parseAttachments(m.attachments) : undefined,
+          }),
+        );
         setMessages(restored);
       })
       .catch(() => {
@@ -247,6 +304,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           agentName={agentName}
           logoIcon={resolvedLogo}
           onRelativeLinkClick={onRelativeLinkClick}
+          onDownloadFile={canDownload ? handleDownloadFile : undefined}
           t={t}
         />
       )}
