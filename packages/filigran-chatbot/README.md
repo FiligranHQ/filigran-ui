@@ -67,6 +67,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `accentColor`       | `string`                                  | `'#7b5cff'`  | Primary accent color (hex)                                       |
 | `logoIcon`          | `React.ReactNode`                         | default icon | Custom logo/icon for the assistant                               |
 | `promptSuggestions` | `string[]`                                | default list | Prompt suggestions shown on welcome screen                       |
+| `pageContext`       | `Record<string, unknown>`                 | —            | Arbitrary host page context (e.g. `{ url: '/dashboard/...' }`) sent as `context` on each `rest` message so the agent knows where the user is. Must be JSON-serializable (skipped if not). Read fresh at send time; omitted when empty. |
 | `resizable`         | `boolean`                                 | `false`      | Enable drag-to-resize for sidebar mode                           |
 | `onWidthChange`     | `(width: number) => void`                 | —            | Called when sidebar width changes during resize                  |
 | `onResizeStart`     | `() => void`                              | —            | Called when resize drag starts                                   |
@@ -189,9 +190,17 @@ Sends a message and streams the response via SSE.
 {
   "content": "What is the weather?",
   "conversation_id": "uuid-or-null",
-  "agent_slug": "general"
+  "agent_slug": "general",
+  "context": { "url": "/dashboard/analyses/reports/<id>/overview" }
 }
 ```
+
+The optional `context` object is forwarded verbatim from the `pageContext`
+prop (REST backend only) and is omitted entirely when empty. Use it to make
+the agent aware of the user's current location/page; the shape is up to the
+host and can be extended later (page title, selected entity, user role, etc.).
+It must be JSON-serializable — a non-serializable value (circular reference,
+`BigInt`, …) is skipped rather than breaking the request.
 
 **Response:** Server-Sent Events stream with these event types:
 
