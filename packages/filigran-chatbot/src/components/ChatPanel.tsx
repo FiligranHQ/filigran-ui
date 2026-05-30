@@ -42,6 +42,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   onResizeEnd,
   disableFileManagement = false,
   onRelativeLinkClick,
+  onDownloadError,
   maxFileCount,
   maxTotalSize,
   requestHeaders,
@@ -168,12 +169,15 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         link.click();
         link.remove();
         URL.revokeObjectURL(objectUrl);
-      } catch {
-        // Best-effort: the host app surfaces network/permission errors via
-        // its own console; the lib has no toast surface of its own.
+      } catch (err) {
+        // Surface the failure (403/404/5xx/network) to the host so it can
+        // notify the user — the chatbot has no toast surface of its own.
+        // If the host doesn't provide a handler the error is intentionally
+        // not thrown further (a rejected click handler has nowhere to go).
+        onDownloadError?.(err, att);
       }
     },
-    [apiBaseUrl, apiEndpoints, requestHeaders],
+    [apiBaseUrl, apiEndpoints, requestHeaders, onDownloadError],
   );
 
   const cssVars = {

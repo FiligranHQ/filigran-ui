@@ -59,6 +59,12 @@ export interface ChatPanelProps {
   disableFileManagement?: boolean;
   /** Called when a relative markdown link is clicked in assistant messages. */
   onRelativeLinkClick?: (href: string) => void;
+  /**
+   * Called when an agent-generated file download fails (non-2xx response or
+   * network error). Lets the host surface the failure through its own
+   * notification system (the chatbot has no toast surface of its own).
+   */
+  onDownloadError?: (error: unknown, attachment: ChatAttachment) => void;
   /** Maximum number of files attachable in one chat context. Default: 10. */
   maxFileCount?: number;
   /** Maximum total size in bytes for attached files. Default: 50 * 1024 * 1024 (50 MB). */

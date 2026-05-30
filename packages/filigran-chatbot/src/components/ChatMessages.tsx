@@ -96,8 +96,13 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
             {/* Only render download cards when a download handler is wired.
                 When the host disables downloads (`apiEndpoints.download = null`)
                 `onDownloadFile` is undefined and we surface no cards at all,
-                rather than non-clickable ones. */}
-            {downloadable.length > 0 && !isLoading && onDownloadFile && (
+                rather than non-clickable ones.
+                Not gated on the global `isLoading`: attachments are only
+                hydrated on a message's own `done` event, so a streaming
+                message never has cards anyway — gating on `isLoading` would
+                wrongly hide already-completed cards while a *later* message
+                streams. */}
+            {downloadable.length > 0 && onDownloadFile && (
               <div className="flex flex-col gap-1.5 mt-1.5 max-w-[90%] w-full">
                 {downloadable.map((att) => {
                   const isWorking = att.fileTag === 'working_file';
