@@ -198,6 +198,13 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     historyLoadedRef.current = true;
     const sessionsUrl = `${apiBaseUrl}${apiEndpoints?.sessions ?? '/chat/sessions'}`;
 
+    // If a new chat is started or the agent is switched while this request is
+    // in flight, `handleNewChat()` resets the conversation id / selected agent
+    // (both effect dependencies), so this effect is cleaned up. Ignore the
+    // late response in that case, otherwise it could resurrect a dead id or
+    // overwrite the freshly-started conversation with restored history.
+    let cancelled = false;
+
     fetch(sessionsUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
@@ -207,6 +214,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
       }),
     })
       .then((res) => {
+        if (cancelled) return null;
         if (!res.ok) {
           // Stale or invalid stored id (e.g. the platform was reset but the
           // browser kept an old id) — silently reset so a fresh conversation
@@ -218,7 +226,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         return res.json();
       })
       .then((data) => {
-        if (!data) return;
+        if (cancelled || !data) return;
         // The backend resolves the session: it returns the same id when the
         // conversation still exists, or transparently creates a fresh one and
         // returns its NEW id when the stored id is stale. Adopt whatever id it
@@ -244,8 +252,13 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         setMessages(restored);
       })
       .catch(() => {
+        if (cancelled) return;
         updateConversationId(null);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, backendType, historyLoadedRef, requestHeaders, setMessages, updateConversationId]);
 
   const onSwitchAgent = (agent: typeof selectedAgent) => {
