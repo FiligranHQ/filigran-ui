@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { AgentStatusState, ApiEndpoints, BackendType, ChatFile, ChatMessage } from '../types';
 import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
@@ -46,7 +46,14 @@ interface UseChatReturn {
   handleStopGenerating: () => void;
   setAttachedFiles: React.Dispatch<React.SetStateAction<ChatFile[]>>;
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
-  setConversationId: React.Dispatch<React.SetStateAction<string | null>>;
+  /**
+   * Set (or clear) the active conversation id, keeping React state, the
+   * cross-async-boundary ref mirror, and localStorage all in sync. Pass
+   * `null` to reset. Prefer this over a raw state setter so the id consumed
+   * by `handleSendMessage` (which reads the ref) never drifts from what the
+   * UI shows.
+   */
+  updateConversationId: (id: string | null) => void;
 }
 
 function getParser(backendType: BackendType): (evt: Record<string, unknown>, ctx: ProtocolContext) => ParsedAction {
@@ -178,9 +185,10 @@ export function useChat({
   };
 
   /**
-   * Update conversationId in both React state and the ref mirror.
+   * Update conversationId in React state, the ref mirror, and localStorage.
+   * Stable identity (useCallback) so it can be used as an effect dependency.
    */
-  const updateConversationId = (id: string | null) => {
+  const updateConversationId = useCallback((id: string | null) => {
     conversationIdRef.current = id;
     setConversationId(id);
     if (id) {
@@ -188,7 +196,7 @@ export function useChat({
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
-  };
+  }, []);
 
   /**
    * Ensure a conversation exists. Uses a mutex so concurrent callers
@@ -565,6 +573,6 @@ export function useChat({
     handleStopGenerating,
     setAttachedFiles,
     setMessages,
-    setConversationId,
+    updateConversationId,
   };
 }
