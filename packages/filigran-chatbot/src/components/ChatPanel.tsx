@@ -76,7 +76,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     handleStopGenerating,
     setAttachedFiles,
     setMessages,
-    setConversationId,
+    updateConversationId,
   } = useChat({
     apiBaseUrl,
     apiEndpoints,
@@ -198,10 +198,12 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     historyLoadedRef.current = true;
     const sessionsUrl = `${apiBaseUrl}${apiEndpoints?.sessions ?? '/chat/sessions'}`;
 
-    const clearStaleConversation = () => {
-      setConversationId(null);
-      localStorage.removeItem('filigranChatConversationId');
-    };
+    // If a new chat is started or the agent is switched while this request is
+    // in flight, `handleNewChat()` resets the conversation id / selected agent
+    // (both effect dependencies), so this effect is cleaned up. Ignore the
+    // late response in that case, otherwise it could resurrect a dead id or
+    // overwrite the freshly-started conversation with restored history.
+    let cancelled = false;
 
     fetch(sessionsUrl, {
       method: 'POST',
@@ -212,14 +214,29 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
       }),
     })
       .then((res) => {
+        if (cancelled) return null;
         if (!res.ok) {
-          clearStaleConversation();
+          // Stale or invalid stored id (e.g. the platform was reset but the
+          // browser kept an old id) — silently reset so a fresh conversation
+          // is created on the next message instead of surfacing an error and
+          // forcing the user to click "New conversation".
+          updateConversationId(null);
           return null;
         }
         return res.json();
       })
       .then((data) => {
-        if (!data?.messages?.length) return;
+        if (cancelled || !data) return;
+        // The backend resolves the session: it returns the same id when the
+        // conversation still exists, or transparently creates a fresh one and
+        // returns its NEW id when the stored id is stale. Adopt whatever id it
+        // returns (and persist it) so we never send subsequent messages
+        // against a dead conversation — which would 404 with
+        // "conversation does not exist".
+        if (typeof data.conversation_id === 'string' && data.conversation_id && data.conversation_id !== conversationId) {
+          updateConversationId(data.conversation_id);
+        }
+        if (!data.messages?.length) return;
         const restored: ChatMessage[] = data.messages.map(
           (m: { role: string; content: string; attachments?: unknown }, i: number) => ({
             id: `restored-${i}`,
@@ -235,9 +252,14 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         setMessages(restored);
       })
       .catch(() => {
-        clearStaleConversation();
+        if (cancelled) return;
+        updateConversationId(null);
       });
-  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, historyLoadedRef, requestHeaders, setMessages, setConversationId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, backendType, historyLoadedRef, requestHeaders, setMessages, updateConversationId]);
 
   const onSwitchAgent = (agent: typeof selectedAgent) => {
     if (!agent) return;

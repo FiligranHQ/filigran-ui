@@ -138,7 +138,7 @@ Returns available AI agents.
 
 ### `POST {apiBaseUrl}/chat/sessions`
 
-Restores conversation history.
+Restores conversation history (and, implicitly, resolves the session).
 
 **Request:**
 
@@ -153,12 +153,24 @@ Restores conversation history.
 
 ```json
 {
+  "conversation_id": "uuid-here",
   "messages": [
     { "role": "user", "content": "Hello" },
     { "role": "assistant", "content": "Hi! How can I help?" }
   ]
 }
 ```
+
+The response **should echo a `conversation_id`**. When the stored
+`conversation_id` no longer exists (e.g. the platform was reset but the
+browser kept an old id in `localStorage`), the backend is expected to
+transparently create a fresh conversation and return its **new** id with an
+empty `messages` array. The component adopts whatever id the response returns
+(persisting it to `localStorage`), so subsequent messages are never sent
+against a dead conversation — which would otherwise fail with a
+"conversation does not exist" error and force the user to manually start a new
+conversation. If the endpoint responds with a non-2xx status, the component
+silently resets the stored id and starts fresh on the next message.
 
 Assistant history messages **should echo the same `attachments[]` array** that
 was sent on the original `done` event (see [Agent-generated file attachments](#agent-generated-file-attachments)),
