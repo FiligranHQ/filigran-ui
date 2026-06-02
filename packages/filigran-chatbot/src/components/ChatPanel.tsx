@@ -1,4 +1,4 @@
-import { type FunctionComponent, useCallback, useEffect, useState } from 'react';
+import { type FunctionComponent, useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatAttachment, ChatMessage, ChatPanelProps } from '../types';
 import { hexAlpha, identity } from '../utils';
 import { parseAttachments } from '../hooks/protocols/parseRestEvent';
@@ -69,6 +69,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     conversationId,
     transferredAgent,
     historyLoadedRef,
+    conversationIdRef,
     handleFileAdd,
     handlePaste,
     handleSendMessage,
@@ -190,6 +191,23 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     '--chat-accent-dark': accentColor,
   } as React.CSSProperties;
 
+  // Tracks whether this panel is still mounted. Flipped to false ONLY on a
+  // real unmount (empty-deps cleanup) — never on the benign teardowns that an
+  // inline `apiEndpoints` / `requestHeaders` prop churn or a StrictMode
+  // double-invoke trigger. The restore effect below reads it so an in-flight
+  // `/chat/sessions` response that outlives the panel — the host renders
+  // `<ChatPanel />` conditionally and the user closes it mid-request — can't
+  // call `setMessages` / `updateConversationId` after unmount, while a restore
+  // merely interrupted by a re-render still lands. Re-set to true on setup so
+  // StrictMode's mount → unmount → remount of the same instance leaves it true.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Load conversation history when agent is selected
   useEffect(() => {
     // Skip session history if disabled, using single endpoint mode, or non-REST backend
@@ -198,12 +216,21 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     historyLoadedRef.current = true;
     const sessionsUrl = `${apiBaseUrl}${apiEndpoints?.sessions ?? '/chat/sessions'}`;
 
-    // If a new chat is started or the agent is switched while this request is
-    // in flight, `handleNewChat()` resets the conversation id / selected agent
-    // (both effect dependencies), so this effect is cleaned up. Ignore the
-    // late response in that case, otherwise it could resurrect a dead id or
-    // overwrite the freshly-started conversation with restored history.
-    let cancelled = false;
+    // The conversation this restore is being issued for. A host re-render that
+    // churns an inline `apiEndpoints` / `requestHeaders` prop, or a React
+    // StrictMode double-invoke, tears this effect down and re-runs it while the
+    // request is still in flight — but the conversation itself hasn't changed.
+    // We must NOT drop the restore in those benign cases (doing so left the
+    // panel looking like a brand-new chat, randomly, on reload). Only a real
+    // change — the user starting a new chat or switching agent, both of which
+    // reset the id via `handleNewChat()` — should abandon the response, so it
+    // can't resurrect a dead id or overwrite the freshly-started conversation.
+    // Compare the live ref at apply time (not a blanket teardown flag) so the
+    // legitimate restore always lands while a superseded one is still ignored —
+    // and bail out entirely once the panel has actually unmounted, so a late
+    // response can't write to localStorage / state after the panel is gone.
+    const requestedConversationId = conversationId;
+    const isStale = () => !isMountedRef.current || conversationIdRef.current !== requestedConversationId;
 
     fetch(sessionsUrl, {
       method: 'POST',
@@ -214,7 +241,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
       }),
     })
       .then((res) => {
-        if (cancelled) return null;
+        if (isStale()) return null;
         if (!res.ok) {
           // Stale or invalid stored id (e.g. the platform was reset but the
           // browser kept an old id) — silently reset so a fresh conversation
@@ -226,14 +253,14 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         return res.json();
       })
       .then((data) => {
-        if (cancelled || !data) return;
+        if (!data || isStale()) return;
         // The backend resolves the session: it returns the same id when the
         // conversation still exists, or transparently creates a fresh one and
         // returns its NEW id when the stored id is stale. Adopt whatever id it
         // returns (and persist it) so we never send subsequent messages
         // against a dead conversation — which would 404 with
         // "conversation does not exist".
-        if (typeof data.conversation_id === 'string' && data.conversation_id && data.conversation_id !== conversationId) {
+        if (typeof data.conversation_id === 'string' && data.conversation_id && data.conversation_id !== requestedConversationId) {
           updateConversationId(data.conversation_id);
         }
         if (!data.messages?.length) return;
@@ -255,14 +282,10 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         setMessages(restored);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (isStale()) return;
         updateConversationId(null);
       });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, backendType, historyLoadedRef, requestHeaders, setMessages, updateConversationId]);
+  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, backendType, historyLoadedRef, conversationIdRef, isMountedRef, requestHeaders, setMessages, updateConversationId]);
 
   const onSwitchAgent = (agent: typeof selectedAgent) => {
     if (!agent) return;

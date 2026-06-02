@@ -39,6 +39,15 @@ interface UseChatReturn {
   conversationId: string | null;
   transferredAgent: TransferredAgent | null;
   historyLoadedRef: React.MutableRefObject<boolean>;
+  /**
+   * Ref mirror of {@link conversationId}, always current across async
+   * boundaries. Exposed so the history-restore effect can tell, when its
+   * `/chat/sessions` response arrives, whether the conversation it was issued
+   * for is still the active one — and ignore a genuinely superseded response
+   * (new chat / agent switch) without discarding a restore that was merely
+   * torn down by a benign host re-render or a StrictMode double-invoke.
+   */
+  conversationIdRef: React.MutableRefObject<string | null>;
   handleFileAdd: (fileList: FileList | null) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
   handleSendMessage: () => Promise<void>;
@@ -566,6 +575,7 @@ export function useChat({
     conversationId,
     transferredAgent,
     historyLoadedRef,
+    conversationIdRef,
     handleFileAdd,
     handlePaste,
     handleSendMessage,
