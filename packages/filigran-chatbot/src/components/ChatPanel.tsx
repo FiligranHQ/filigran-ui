@@ -1,4 +1,4 @@
-import { type FunctionComponent, useCallback, useEffect, useState } from 'react';
+import { type FunctionComponent, useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatAttachment, ChatMessage, ChatPanelProps } from '../types';
 import { hexAlpha, identity } from '../utils';
 import { parseAttachments } from '../hooks/protocols/parseRestEvent';
@@ -191,6 +191,23 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     '--chat-accent-dark': accentColor,
   } as React.CSSProperties;
 
+  // Tracks whether this panel is still mounted. Flipped to false ONLY on a
+  // real unmount (empty-deps cleanup) — never on the benign teardowns that an
+  // inline `apiEndpoints` / `requestHeaders` prop churn or a StrictMode
+  // double-invoke trigger. The restore effect below reads it so an in-flight
+  // `/chat/sessions` response that outlives the panel — the host renders
+  // `<ChatPanel />` conditionally and the user closes it mid-request — can't
+  // call `setMessages` / `updateConversationId` after unmount, while a restore
+  // merely interrupted by a re-render still lands. Re-set to true on setup so
+  // StrictMode's mount → unmount → remount of the same instance leaves it true.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Load conversation history when agent is selected
   useEffect(() => {
     // Skip session history if disabled, using single endpoint mode, or non-REST backend
@@ -209,9 +226,11 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     // reset the id via `handleNewChat()` — should abandon the response, so it
     // can't resurrect a dead id or overwrite the freshly-started conversation.
     // Compare the live ref at apply time (not a blanket teardown flag) so the
-    // legitimate restore always lands while a superseded one is still ignored.
+    // legitimate restore always lands while a superseded one is still ignored —
+    // and bail out entirely once the panel has actually unmounted, so a late
+    // response can't write to localStorage / state after the panel is gone.
     const requestedConversationId = conversationId;
-    const isStale = () => conversationIdRef.current !== requestedConversationId;
+    const isStale = () => !isMountedRef.current || conversationIdRef.current !== requestedConversationId;
 
     fetch(sessionsUrl, {
       method: 'POST',
@@ -266,7 +285,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         if (isStale()) return;
         updateConversationId(null);
       });
-  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, backendType, historyLoadedRef, conversationIdRef, requestHeaders, setMessages, updateConversationId]);
+  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, backendType, historyLoadedRef, conversationIdRef, isMountedRef, requestHeaders, setMessages, updateConversationId]);
 
   const onSwitchAgent = (agent: typeof selectedAgent) => {
     if (!agent) return;
