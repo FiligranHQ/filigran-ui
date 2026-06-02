@@ -24,6 +24,14 @@ function formatFileSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** Short uppercase extension label for a file chip (e.g. `report.pdf` → `PDF`). */
+function fileExtensionLabel(filename: string): string | undefined {
+  const dot = filename.lastIndexOf('.');
+  if (dot <= 0 || dot === filename.length - 1) return undefined;
+  const ext = filename.slice(dot + 1);
+  return ext.length <= 8 ? ext.toUpperCase() : undefined;
+}
+
 export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logoIcon, onRelativeLinkClick, onDownloadFile, t }: ChatMessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [toolDetailMsgId, setToolDetailMsgId] = useState<string | null>(null);
@@ -118,15 +126,67 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
     return blocks;
   };
 
+  // A user-uploaded file shown as a non-clickable chip — used while the upload
+  // is still in flight (no server `fileId` yet) or when no download handler is
+  // wired by the host.
+  const renderFileChip = (name: string, key: string) => (
+    <span
+      key={key}
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-200 dark:border-white/10 text-[0.7rem] text-gray-600 dark:text-white/60"
+    >
+      <FileIcon size={14} />
+      {name}
+    </span>
+  );
+
+  // Build the file cards shown on a user message. A successfully-uploaded file
+  // carries a server `fileId`, so it renders as the same download card as an
+  // agent-generated attachment (re-using the host download proxy via
+  // `onDownloadFile`) — uploaded files must stay downloadable, not just
+  // displayed. Files still uploading (no `fileId` / not `done`) or hosts
+  // without a download handler fall back to a static chip. On conversation
+  // restore the backend re-surfaces user uploads as `attachments` (there are
+  // no live `files`), so those are rendered too.
+  const buildUserFileBlocks = (msg: ChatMessage): React.ReactNode[] => {
+    const blocks: React.ReactNode[] = [];
+    const seen = new Set<string>();
+
+    (msg.files ?? []).forEach((f, i) => {
+      const downloadable = !!(onDownloadFile && f.fileId && f.uploadStatus === 'done');
+      if (downloadable && f.fileId) {
+        seen.add(f.fileId);
+        blocks.push(
+          renderAttachmentCard(
+            { fileId: f.fileId, filename: f.name, type: fileExtensionLabel(f.name), size: f.size, contentType: f.type },
+            `file-${f.fileId}-${i}`,
+          ),
+        );
+      } else {
+        blocks.push(renderFileChip(f.name, `file-${i}`));
+      }
+    });
+
+    (msg.attachments ?? []).forEach((att, i) => {
+      if (seen.has(att.fileId)) return;
+      seen.add(att.fileId);
+      blocks.push(onDownloadFile ? renderAttachmentCard(att, `att-${att.fileId}-${i}`) : renderFileChip(att.filename, `att-${i}`));
+    });
+
+    return blocks;
+  };
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable">
       {messages.map((msg, index) => {
         const isAssistant = msg.role === 'assistant';
         const isEmpty = !msg.content;
         // The streaming response is always the last message, so the live
-        // cursor / thinking bubble / ChatThinking state must be gated on it —
-        // otherwise every previously completed assistant message would also
-        // show them while a *later* response is streaming.
+        // cursor / thinking bubble / ChatThinking state — and, conversely, the
+        // hiding of the completed-message affordances (the reasoning "i"
+        // button) — must be gated on it. Gating those on the global
+        // `isLoading` instead made the blinking cursor leak onto every prior
+        // assistant message and the "i" button vanish from all of them while a
+        // *later* response was streaming.
         const isStreamingMessage = isLoading && index === messages.length - 1;
         const isThinking = isAssistant && isEmpty && isStreamingMessage;
 
@@ -151,18 +211,8 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
 
             {isAssistant && !isEmpty && isStreamingMessage && agentStatus?.thinkingContent && <ThinkingTextBubble content={agentStatus.thinkingContent} />}
 
-            {msg.files && msg.files.length > 0 && (
-              <div className="flex gap-1.5 flex-wrap mb-1.5">
-                {msg.files.map((f, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-200 dark:border-white/10 text-[0.7rem] text-gray-600 dark:text-white/60"
-                  >
-                    <FileIcon size={14} />
-                    {f.name}
-                  </span>
-                ))}
-              </div>
+            {!isAssistant && ((msg.files?.length ?? 0) > 0 || (msg.attachments?.length ?? 0) > 0) && (
+              <div className="flex gap-1.5 flex-wrap mb-1.5 justify-end">{buildUserFileBlocks(msg)}</div>
             )}
 
             {isAssistant ? (
@@ -178,7 +228,7 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
               </div>
             )}
 
-            {isAssistant && !isEmpty && !isLoading && msg.toolNames && msg.toolNames.length > 0 && (
+            {isAssistant && !isEmpty && !isStreamingMessage && msg.toolNames && msg.toolNames.length > 0 && (
               <>
                 <button
                   type="button"
