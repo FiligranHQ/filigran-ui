@@ -243,10 +243,13 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
             role: m.role as 'user' | 'assistant',
             content: m.content,
             timestamp: new Date(),
-            // Re-surface agent-generated download chips on conversation
-            // restore (the [[FILE:…]] markers in content are stripped at
-            // render time by ChatMessages).
-            attachments: m.role === 'assistant' ? parseAttachments(m.attachments) : undefined,
+            // Re-surface downloadable file chips on conversation restore for
+            // both roles: agent-generated deliverables on assistant messages
+            // (the [[FILE:…]] markers in content are stripped at render time by
+            // ChatMessages) and user-uploaded files on user messages (so an
+            // upload stays downloadable after a page reload, not just in the
+            // live session where it is carried on `files`).
+            attachments: parseAttachments(m.attachments),
           }),
         );
         setMessages(restored);
