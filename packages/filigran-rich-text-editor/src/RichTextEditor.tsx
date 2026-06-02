@@ -38,6 +38,7 @@ import { Paragraph } from './richTextEditor/extensions/Paragraph';
 import type { Theme } from '@mui/material/styles';
 import { TaskList } from './richTextEditor/extensions/TaskList';
 import { TaskItem } from './richTextEditor/extensions/TaskListItem';
+import { Div } from './richTextEditor/extensions/Div';
 
 import './styles/TiptapEditor.css';
 
@@ -237,6 +238,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       Placeholder.configure({ placeholder }),
       PageBreak,
       TableCellSplit,
+      Div,
     ],
     content: initialContentRef.current,
     editable: !disabled,
