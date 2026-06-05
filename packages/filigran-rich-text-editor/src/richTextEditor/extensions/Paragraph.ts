@@ -1,7 +1,7 @@
 import { Paragraph as ParagraphBase } from '@tiptap/extension-paragraph';
 import { mergeAttributes } from '@tiptap/core';
 
-const INDENT_STEP = 40; // px, matches CKEditor default
+const INDENT_STEP = 40; // px
 const INDENT_MAX = 400; // px
 
 declare module '@tiptap/core' {

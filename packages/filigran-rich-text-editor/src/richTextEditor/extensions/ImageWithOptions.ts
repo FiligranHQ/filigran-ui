@@ -172,7 +172,7 @@ export const ImageWithOptions = Image.extend<ImageWithOptionsOptions>({
       imgAttrs['style'] = String(imgStyle).trim();
     }
 
-    // Always wrap in figure.image-figure for CKEditor compatibility (centering, margins)
+    // Always wrap in figure.image-figure for layout compatibility (centering, margins)
     const imgTag: [string, Record<string, string>] = ['img', imgAttrs];
     const wrappedImg = hasLink
       ? ['a', { href: String(href).trim(), target: '_blank', rel: 'noopener noreferrer' }, imgTag]
