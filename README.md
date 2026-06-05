@@ -10,6 +10,7 @@ This project draws inspiration from popular libraries such as **Shadcn**, **Radi
 - **Website:** A dedicated website that hosts both libraries
 - **Filigran-UI:** Component library
 - **Filigran-Icon:** Icon library
+- **Filigran-Rich-Text-Editor:** [Rich text editor package](./packages/filigran-rich-text-editor/README.md)
 
 > **Note:** The work is currently in progress, and the project is not yet officially released.
 
