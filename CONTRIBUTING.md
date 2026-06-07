@@ -46,11 +46,7 @@ You can assist by reviewing open issues, providing additional information, or su
 ### Code Standards
 We maintain certain guidelines to ensure consistency across the codebase:
 - **Code formatting**: Use [Prettier](https://prettier.io/) and [ESLint](https://eslint.org/) for code linting and formatting.
-- **Commit messages**: Follow this format: `[project] Your message here (#issue-number)`. Projects can be:
-  - `@filigran/chatbot`
-  - `@filigran/icon`
-  - `@filigran/ui`
-  - `@filigran/website`
+- **Commit messages**: Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification with a GitHub issue reference: `type(scope?)!?: description (#issue)` (e.g. `feat(ui): add card component (#123)`). Allowed types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `revert`. The old `[project]` bracket prefix is **discontinued** — use a lowercase scope instead (e.g. `chatbot`, `icon`, `ui`, `website`). Pull request titles must end with the related issue reference and be linked to an issue. See [`.github/LABELS.md`](.github/LABELS.md) for the full title & label taxonomy.
   
 ## Code of Conduct
 
