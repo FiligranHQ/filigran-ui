@@ -2,6 +2,11 @@
 
 TipTap-based rich text editor component with MUI toolbar for Filigran products.
 
+## Releasing a new version
+
+Releases are automated via a GitHub Actions workflow.  
+See **[deployment-package.md](./deployment-package.md)** for the full guide (how to trigger the workflow, when to use `patch` / `minor` / `major`, and what happens under the hood).
+
 ## Installation
 
 ```bash
