@@ -5,6 +5,63 @@ export function hexAlpha(hex: string, alpha: number): string {
   return `${hex}${a}`;
 }
 
+/**
+ * Markdown has no native support for nesting fenced code blocks of the same
+ * length: per the CommonMark spec, the first inner ``` closes the outer block,
+ * so everything after it renders *outside* the code block. LLMs constantly hit
+ * this — when an agent shows a prompt or a full markdown document inside a
+ * ```markdown … ``` fence, that document's own ``` fences shatter the snippet
+ * into alternating code / prose fragments.
+ *
+ * The robust, spec-compliant fix is to make the *outer* fence longer than any
+ * fence it contains: a 4-backtick fence is only closed by a run of ≥4
+ * backticks, so all inner 3-backtick fences become literal content and the
+ * whole document renders as one clean, copyable code block.
+ *
+ * We act only on the unambiguous, dominant case — a 3-backtick opener whose
+ * info string is a markup language (markdown / md / mdx / markup) that actually
+ * contains nested fences — so already-correct markdown is never rewritten
+ * (a correctly authored nested block already uses a 4+-backtick opener, which
+ * we skip).
+ */
+export function hardenNestedCodeFences(raw: string): string {
+  if (!raw) return raw;
+  const lines = raw.split('\n');
+  const fenceRe = /^(\s*)(`{3,})(.*)$/;
+  const markupLang = /^(markdown|md|mdx|markup)\b/i;
+
+  let openerIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(fenceRe);
+    if (m && m[2].length === 3 && markupLang.test(m[3].trim())) {
+      openerIdx = i;
+      break;
+    }
+  }
+  if (openerIdx === -1) return raw;
+
+  let maxRun = 3;
+  let nestedCount = 0;
+  let lastBareFence = -1;
+  for (let i = openerIdx + 1; i < lines.length; i++) {
+    const m = lines[i].match(fenceRe);
+    if (!m) continue;
+    nestedCount++;
+    maxRun = Math.max(maxRun, m[2].length);
+    if (m[3].trim() === '') lastBareFence = i;
+  }
+  if (nestedCount === 0) return raw;
+
+  const fence = '`'.repeat(Math.max(maxRun + 1, 4));
+  const om = lines[openerIdx].match(fenceRe)!;
+  lines[openerIdx] = `${om[1]}${fence}${om[3]}`;
+  if (lastBareFence > openerIdx) {
+    const cm = lines[lastBareFence].match(fenceRe)!;
+    lines[lastBareFence] = `${cm[1]}${fence}`;
+  }
+  return lines.join('\n');
+}
+
 export const identity = (key: string) => key;
 
 /** Matches a complete `[[FILE:<id>]]` deliverable marker agents embed in prose. */
