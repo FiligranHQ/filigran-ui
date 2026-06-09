@@ -39,6 +39,14 @@ The workflow follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PA
 | `minor` | New features — **backward compatible** | `1.2.3` → `1.3.0` |
 | `major` | Breaking changes — **not backward compatible** | `1.2.3` → `2.0.0` |
 
+ [!WARNING]
+ **First release of a new package**
+ The deployment workflow **always** bumps the version using `yarn version` before publishing. It cannot publish the version defined in `package.json` as-is.
+ 
+ If you want the first published version to be `1.0.0`:
+ 1. In your PR adding the package, set `"version": "0.0.0"` in its `package.json`.
+ 2. When triggering the manual release workflow, select **`major`** to bump the version to `1.0.0`.
+
 ---
 
 ## What the workflow does
