@@ -52,6 +52,13 @@ Thank you for your interest in Filigran-UI. Together, we can build a cohesive, m
 
 ---
 
+## Releasing a new version
+
+Releases are automated via a GitHub Actions workflow.  
+See **[deployment-package.md](./deployment-package.md)** for the full guide (how to trigger the workflow, when to use `patch` / `minor` / `major`, and what happens under the hood).
+
+--- 
+
 ## 💻 Some playground
 ### Vite starter with Tailwind CSS, React and Filigran UI
 https://codesandbox.io/p/devbox/filigran-ui-with-vite-starter-js63h4

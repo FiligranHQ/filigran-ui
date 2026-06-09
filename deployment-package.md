@@ -1,6 +1,6 @@
 # Deploying a new package version
 
-Releases for all Filigran packages are handled via the GitHub Actions workflow [**Release and Publish to NPM**](../../.github/workflows/release-version.yml).  
+Releases for all Filigran packages are handled via the GitHub Actions workflow [**Release and Publish to NPM**](.github/workflows/release-version.yml).  
 It is triggered **manually** from the GitHub Actions tab — no push or tag is required to start it.
 
 ---
