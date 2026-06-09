@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AgentStatusState, IconProps } from '../types';
 import {
   BrainIcon,
@@ -111,38 +111,53 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
   }
 }
 
-function stripMarkdown(text: string): string {
+/**
+ * Light markdown cleanup for reasoning prose. Preserves paragraph breaks so
+ * multi-step reasoning stays readable inside the small scrolling window
+ * instead of collapsing into one unbroken blob.
+ */
+function cleanReasoningText(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/__(.+?)__/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
-    .replace(/_(.+?)_/g, '$1')
     .replace(/#{1,6}\s+/g, '')
-    .replace(/[*\->]+/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/^[ \t]*[-*>]+[ \t]*/gm, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
+/**
+ * Cursor-style reasoning pane: smaller, lighter text inside a capped-height
+ * window that stays pinned to the newest line while tokens stream in, with
+ * a soft fade at the top so older reasoning appears to scroll away.
+ */
 export function ThinkingTextBubble({ content }: { content: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const cleaned = stripMarkdown(content);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const cleaned = cleanReasoningText(content);
 
   useEffect(() => {
-    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+    const el = ref.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
   }, [cleaned]);
 
   if (cleaned.length < 3) return null;
 
   return (
-    <div
-      ref={ref}
-      className="ml-11 max-w-[70%] max-h-20 overflow-hidden relative rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] pl-3 pr-3 py-2"
-      style={{ animation: 'reasoningGlow 3s ease-in-out infinite, chat-fade-in 0.5s ease-out' }}
-    >
-      <p className="text-[13px] leading-[1.35rem] text-gray-400 dark:text-white/40 break-words m-0">{cleaned}</p>
-      <div className="absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-white/90 dark:from-[#1e1e2e]/90 to-transparent pointer-events-none" />
+    <div className="ml-11 max-w-[75%]" style={{ animation: 'chat-fade-in 0.5s ease-out' }}>
+      <div
+        ref={ref}
+        className={`max-h-40 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden${
+          isOverflowing ? ' [mask-image:linear-gradient(to_bottom,transparent_0,black_3rem)]' : ''
+        }`}
+      >
+        <p className="m-0 whitespace-pre-wrap break-words text-xs leading-5 text-gray-500 dark:text-white/45">{cleaned}</p>
+      </div>
     </div>
   );
 }

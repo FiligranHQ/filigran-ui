@@ -448,8 +448,20 @@ export function useChat({
             ctx.hasUsedTools = ctx.hasUsedTools || hasUsedToolsRef.current;
 
             switch (parsed.action) {
-              case 'status':
+              case 'status': {
                 if (parsed.status === 'tool_start') hasUsedToolsRef.current = true;
+                // Text streamed before a tool call (or a new loop iteration)
+                // is the model thinking out loud, not the final answer.
+                // Fold it into the reasoning pane so it shrinks into the
+                // dimmed thinking window instead of streaming at full size
+                // and then abruptly vanishing when the real answer starts.
+                const isIterationBoundary =
+                  parsed.status === 'tool_start' || parsed.status === 'thinking' || parsed.status === 'analyzing';
+                const folded = isIterationBoundary && accumulated.trim() ? accumulated : '';
+                if (folded) {
+                  accumulated = '';
+                  setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: '' } : m)));
+                }
                 if (parsed.status === 'thinking_text') {
                   setAgentStatus((prev) => ({
                     ...prev,
@@ -460,10 +472,13 @@ export function useChat({
                   setAgentStatus((prev) => ({
                     status: parsed.status,
                     tools: parsed.tools,
-                    thinkingContent: prev?.thinkingContent,
+                    thinkingContent: folded
+                      ? (prev?.thinkingContent ? `${prev.thinkingContent}\n\n` : '') + folded
+                      : prev?.thinkingContent,
                   }));
                 }
                 break;
+              }
 
               case 'stream':
                 accumulated += parsed.content;
