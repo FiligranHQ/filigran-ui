@@ -1,10 +1,12 @@
 import type { Editor } from '@tiptap/react';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import Box from '@mui/material/Box';
-import Popover from '@mui/material/Popover';
-import Typography from '@mui/material/Typography';
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
+import {
+  Box,
+  Checkbox,
+  FormControlLabel,
+  Popover,
+  Typography,
+} from '@mui/material';
 
 const MAX_ROWS = 10;
 const MAX_COLS = 10;
