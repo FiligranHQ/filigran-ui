@@ -132,7 +132,8 @@ function cleanReasoningText(text: string): string {
 /**
  * Cursor-style reasoning pane: smaller, lighter text inside a capped-height
  * window that stays pinned to the newest line while tokens stream in, with
- * a soft fade at the top so older reasoning appears to scroll away.
+ * a soft fade at the top so older reasoning appears to scroll away — framed
+ * by the signature breathing accent left-border glow.
  */
 export function ThinkingTextBubble({ content }: { content: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -149,7 +150,10 @@ export function ThinkingTextBubble({ content }: { content: string }) {
   if (cleaned.length < 3) return null;
 
   return (
-    <div className="ml-11 max-w-[75%]" style={{ animation: 'chat-fade-in 0.5s ease-out' }}>
+    <div
+      className="ml-11 max-w-[75%] rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] py-2 pl-3 pr-3"
+      style={{ animation: 'reasoningGlow 3s ease-in-out infinite, chat-fade-in 0.5s ease-out' }}
+    >
       <div
         ref={ref}
         className={`max-h-40 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden${
