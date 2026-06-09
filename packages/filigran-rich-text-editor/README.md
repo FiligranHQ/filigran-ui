@@ -12,13 +12,8 @@ yarn add @filigran/rich-text-editor
 
 ```bash
 yarn add react react-dom \
-  @mui/material @mui/icons-material @mui/styles \
-  @tiptap/core @tiptap/react @tiptap/starter-kit \
-  @tiptap/extension-color @tiptap/extension-highlight @tiptap/extension-image \
-  @tiptap/extension-mention @tiptap/extension-paragraph @tiptap/extension-placeholder \
-  @tiptap/extension-subscript @tiptap/extension-superscript @tiptap/extension-table \
-  @tiptap/extension-task-item @tiptap/extension-task-list @tiptap/extension-text-align \
-  @tiptap/extension-text-style @tiptap/extension-typography @tiptap/pm \
+  @mui/material @mui/icons-material \
+  @tiptap/core @tiptap/react @tiptap/pm \
   react-color
 ```
 

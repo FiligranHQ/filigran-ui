@@ -18,7 +18,7 @@ import { NestedTableCell } from './richTextEditor/extensions/TableCell';
 import { NestedTableHeader } from './richTextEditor/extensions/TableHeader';
 import Placeholder from '@tiptap/extension-placeholder';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import Popover from '@mui/material/Popover';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
