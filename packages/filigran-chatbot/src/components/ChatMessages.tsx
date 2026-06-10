@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AgentStatusState, ChatAttachment, ChatMessage } from '../types';
 import { splitFileMarkers } from '../utils';
-import { BrainIcon, DownloadIcon, FileIcon, InfoIcon, WrenchIcon } from './icons';
-import { ChatThinking, cleanReasoningText } from './ChatThinking';
+import { AlertTriangleIcon, DownloadIcon, FileIcon, InfoIcon } from './icons';
+import { ChatThinking } from './ChatThinking';
 import { MarkdownMessage } from './MarkdownMessage';
+import { ReasoningDetailsDialog } from './ReasoningDetailsDialog';
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
@@ -258,59 +259,36 @@ export const ChatMessages = ({
               </div>
             )}
 
-            {isAssistant && !isEmpty && !isStreamingMessage && ((msg.toolNames && msg.toolNames.length > 0) || (msg.reasoning ?? '').trim()) && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setToolDetailMsgId(toolDetailMsgId === msg.id ? null : msg.id)}
-                  className="mt-0.5 p-1 rounded-lg opacity-50 hover:opacity-100 hover:text-[var(--chat-accent)] transition-opacity"
-                  title={t('Reasoning details')}
-                >
-                  <InfoIcon size={14} />
-                </button>
-                {toolDetailMsgId === msg.id && (
-                  <div className="mt-1.5 p-3 rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/10 max-w-[90%]">
-                    {/* Header — mirrors the XTM One web chat "Reasoning details"
-                        dialog (title + iterations/calls summary) so the embedded
-                        chatbot and the native web chat read the same. */}
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <WrenchIcon size={13} className="text-[var(--chat-accent)]" />
-                      <span className="text-[0.75rem] font-semibold text-gray-900 dark:text-white">{t('Reasoning details')}</span>
-                    </div>
-                    <p className="text-[0.7rem] text-gray-500 dark:text-white/40 mb-1.5">
-                      {msg.iterations && msg.iterations > 1 ? `${msg.iterations} ${t('iterations')} · ` : ''}
-                      {msg.toolCallCount ?? msg.toolNames?.length ?? 0}{' '}
-                      {(msg.toolCallCount ?? msg.toolNames?.length ?? 0) === 1 ? t('tool call') : t('tool calls')}
-                    </p>
-                    {(msg.reasoning ?? '').trim() && (
-                      <div className="mb-2">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <BrainIcon size={13} className="text-[var(--chat-accent)]/70" />
-                          <span className="text-[0.7rem] font-medium text-gray-500 dark:text-white/50">{t('Model reasoning')}</span>
-                        </div>
-                        <div className="rounded-md border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.01] px-2.5 py-2 max-h-44 overflow-y-auto">
-                          <p className="m-0 whitespace-pre-wrap break-words text-[0.7rem] leading-5 text-gray-500 dark:text-white/45">
-                            {cleanReasoningText(msg.reasoning!)}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {msg.toolNames && msg.toolNames.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {Array.from(new Set(msg.toolNames)).map((tn) => (
-                          <span
-                            key={tn}
-                            className="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-200 dark:border-white/10 text-[0.68rem] font-mono text-gray-500 dark:text-white/40"
-                          >
-                            {tn.replace(/_/g, ' ')}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
+            {isAssistant &&
+              !isEmpty &&
+              !isStreamingMessage &&
+              ((msg.toolNames && msg.toolNames.length > 0) ||
+                (msg.reasoning ?? '').trim() ||
+                (msg.toolCallTrace && msg.toolCallTrace.length > 0) ||
+                (msg.transferChain && msg.transferChain.length > 0) ||
+                msg.isTruncated) && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setToolDetailMsgId(toolDetailMsgId === msg.id ? null : msg.id)}
+                    className={`mt-0.5 p-1 rounded-lg transition-opacity ${
+                      msg.isTruncated
+                        ? // A truncated turn must be visible at a glance (not
+                          // gated on hover) so the user notices the warning —
+                          // mirrors the XTM One web chat affordance.
+                          'opacity-100 text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
+                        : 'opacity-50 hover:opacity-100 hover:text-[var(--chat-accent)]'
+                    }`}
+                    title={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}
+                    aria-label={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}
+                    aria-haspopup="dialog"
+                    aria-expanded={toolDetailMsgId === msg.id}
+                  >
+                    {msg.isTruncated ? <AlertTriangleIcon size={14} /> : <InfoIcon size={14} />}
+                  </button>
+                  {toolDetailMsgId === msg.id && <ReasoningDetailsDialog msg={msg} onClose={() => setToolDetailMsgId(null)} t={t} />}
+                </>
+              )}
           </div>
         );
       })}

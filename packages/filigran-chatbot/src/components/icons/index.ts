@@ -1,5 +1,9 @@
+export * from './AlertTriangleIcon';
+export * from './ArrowRightLeftIcon';
 export * from './AttachFileIcon';
+export * from './BotIcon';
 export * from './BrainIcon';
+export * from './CheckCircleIcon';
 export * from './CheckIcon';
 export * from './ChevronDownIcon';
 export * from './CloseIcon';
@@ -26,3 +30,4 @@ export * from './TerminalIcon';
 export * from './TrashIcon';
 export * from './UserPlusIcon';
 export * from './WrenchIcon';
+export * from './XCircleIcon';

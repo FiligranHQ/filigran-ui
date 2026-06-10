@@ -1,7 +1,7 @@
 import { type FunctionComponent, useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatAttachment, ChatMessage, ChatPanelProps } from '../types';
 import { hexAlpha, identity } from '../utils';
-import { parseAttachments } from '../hooks/protocols/parseRestEvent';
+import { parseAttachments, parseToolCallTrace, parseTransferChain } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
@@ -308,6 +308,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
               tool_call_count?: unknown;
               iterations?: unknown;
               reasoning?: unknown;
+              tool_call_trace?: unknown;
+              transfer_chain?: unknown;
+              is_truncated?: unknown;
             },
             i: number,
           ) => ({
@@ -329,6 +332,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
             toolCallCount: typeof m.tool_call_count === 'number' ? m.tool_call_count : undefined,
             iterations: typeof m.iterations === 'number' ? m.iterations : undefined,
             reasoning: typeof m.reasoning === 'string' ? m.reasoning : undefined,
+            toolCallTrace: parseToolCallTrace(m.tool_call_trace),
+            transferChain: parseTransferChain(m.transfer_chain),
+            isTruncated: m.is_truncated === true || undefined,
           }),
         );
         setMessages(restored);

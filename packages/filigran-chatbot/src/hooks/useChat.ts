@@ -616,6 +616,9 @@ export function useChat({
                           iterations: parsed.iterations,
                           attachments: parsed.attachments,
                           reasoning: parsed.reasoning,
+                          toolCallTrace: parsed.toolCallTrace,
+                          transferChain: parsed.transferChain,
+                          isTruncated: parsed.isTruncated,
                         }
                       : m,
                   ),
