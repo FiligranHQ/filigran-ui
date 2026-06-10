@@ -153,6 +153,7 @@ export const ChatInput = ({
             <button
               type="button"
               onClick={onSend}
+              aria-label={t('Send now')}
               className="p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
             >
               <SendIcon size={18} />

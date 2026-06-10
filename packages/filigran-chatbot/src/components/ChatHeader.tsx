@@ -181,6 +181,9 @@ export const ChatHeader = ({
               ref={historyAnchorRef}
               type="button"
               onClick={onHistoryMenuToggle}
+              aria-label={t('Conversation history')}
+              aria-haspopup="menu"
+              aria-expanded={historyMenuOpen}
               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
             >
               <HistoryIcon size={18} />

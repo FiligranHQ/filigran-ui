@@ -52,12 +52,14 @@ export const ChatMessages = ({
   // Keep the bottom in view while the reasoning window below the status
   // bubble grows: thinking prose streams in without any `messages` change,
   // so without this the growing window slides under the fold and the user
-  // stops seeing the live reasoning. Instant (non-smooth) scrolling — this
-  // fires on every reasoning chunk and smooth animations would queue up.
+  // stops seeing the live reasoning. `behavior: 'instant'` (CSSOM View,
+  // Baseline-supported) forces a non-animated jump — this fires on every
+  // reasoning chunk and smooth animations would queue up; 'auto' would not
+  // do, since a `scroll-behavior: smooth` ancestor turns it smooth again.
   const thinkingLen = agentStatus?.thinkingContent?.length ?? 0;
   useEffect(() => {
     if (!thinkingLen) return;
-    messagesEndRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
   }, [thinkingLen]);
 
   const renderAttachmentCard = (att: ChatAttachment, key: string) => {

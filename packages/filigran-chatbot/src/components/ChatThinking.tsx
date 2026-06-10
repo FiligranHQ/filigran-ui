@@ -182,9 +182,12 @@ export function ThinkingTextBubble({ content }: { content: string }) {
 
 /** Render seconds as a compact elapsed label (e.g. `45s`, `3m 20s`). */
 function formatElapsed(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
+  // Floor at the boundary: `elapsed_s` comes from the backend and may be a
+  // float, which would otherwise render as "45.3s" / "3m 20.5s".
+  const total = Math.floor(seconds);
+  if (total < 60) return `${total}s`;
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
