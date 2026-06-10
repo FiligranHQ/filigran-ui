@@ -147,6 +147,12 @@ export interface ChatMessage {
   toolNames?: string[];
   toolCallCount?: number;
   iterations?: number;
+  /**
+   * Accumulated model reasoning / pre-tool preamble prose for the turn
+   * (from `thinking_text` events), surfaced in the reasoning-details panel
+   * after the answer completes — mirroring the XTM One web chat.
+   */
+  reasoning?: string;
 }
 
 /**

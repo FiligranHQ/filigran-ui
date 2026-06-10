@@ -256,8 +256,23 @@ data: {"type": "status", "status": "analyzing"}
 data: {"type": "status", "status": "streaming"}
 data: {"type": "stream", "content": "The weather "}
 data: {"type": "stream", "content": "today is sunny."}
-data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1}
+data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1, "reasoning": "Let me check the weather data first."}
 ```
+
+The optional `reasoning` field on `done` (and on restored session messages)
+carries the accumulated model reasoning / pre-tool preamble prose for the
+turn. When present it is surfaced in the per-message reasoning-details panel
+(the "i" button), mirroring the XTM One web chat.
+
+#### Internal links
+
+Assistant markdown links are routed through `onRelativeLinkClick` when they
+are **internal to the host application**: relative hrefs (`/dashboard/...`)
+and absolute http(s) hrefs on the **same origin** as the embedding page
+(backends emit absolute links so they work from any chat surface — when the
+chatbot is embedded in that very platform, e.g. the OpenCTI link inside
+OpenCTI, the link is reduced to `pathname + search + hash` and navigates
+in-app instead of opening a new tab). All other links open in a new tab.
 
 #### Agent-generated file attachments
 
@@ -419,6 +434,8 @@ function App() {
 - `'Browse agents'`
 - `'Create agent'`
 - `'Reasoning details'`
+- `'Model reasoning'`
+- `'iterations'`
 - `'Download'`
 - `'tool call'` / `'tool calls'`
 - `'Uses AI. Verify results.'`

@@ -118,7 +118,7 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
  * multi-step reasoning stays readable inside the small scrolling window
  * instead of collapsing into one unbroken blob.
  */
-function cleanReasoningText(text: string): string {
+export function cleanReasoningText(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`([^`]+)`/g, '$1')
@@ -131,30 +131,28 @@ function cleanReasoningText(text: string): string {
     .trim();
 }
 
-/** A scroll position within this distance of the bottom counts as "pinned". */
-const REASONING_PIN_THRESHOLD_PX = 24;
-
 /**
  * Reasoning window — the model's reasoning prose rendered below the status
  * bubble while the agent works: smaller, dimmed text inside a capped-height
- * (max-h-40) scrolling window pinned to the newest line, with a Cursor-style
+ * (max-h-40) window always pinned to the newest line, with a Cursor-style
  * top dissolve once full (soft gradient fade at the top only — the text reads
  * as scrolling up and dissolving; the bottom stays sharp) — framed by the
- * breathing accent left-border glow.  Scrolling up detaches the pin so
- * earlier reasoning can be read while tokens keep streaming; scrolling back
- * to the bottom re-pins.  The window (and the status bubble above it)
- * disappears the moment the final answer starts flowing.
+ * breathing accent left-border glow.  The window is intentionally NOT
+ * user-scrollable (overflow-hidden, no scrollbar): the prose is ambient
+ * feedback that scrolls up and dissolves; the full accumulated reasoning
+ * stays readable afterwards via the message's reasoning details.  The window
+ * (and the status bubble above it) disappears the moment the final answer
+ * starts flowing.
  */
 export function ThinkingTextBubble({ content }: { content: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
-  const pinnedRef = useRef(true);
   const cleaned = cleanReasoningText(content);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (pinnedRef.current) el.scrollTop = el.scrollHeight;
+    el.scrollTop = el.scrollHeight;
     setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
   }, [cleaned]);
 
@@ -167,12 +165,7 @@ export function ThinkingTextBubble({ content }: { content: string }) {
     >
       <div
         ref={ref}
-        onScroll={() => {
-          const el = ref.current;
-          if (!el) return;
-          pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < REASONING_PIN_THRESHOLD_PX;
-        }}
-        className={`max-h-40 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden${
+        className={`max-h-40 overflow-hidden${
           isOverflowing
             ? // -webkit- twin first: Safari/WebKit ignores unprefixed mask-image
               // on older versions, which would silently drop the top dissolve.

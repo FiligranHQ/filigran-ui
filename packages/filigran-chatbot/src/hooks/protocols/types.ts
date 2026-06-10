@@ -17,6 +17,8 @@ export type ParsedAction =
       transferAgentId?: string;
       transferAgentName?: string;
       attachments?: ChatAttachment[];
+      /** Accumulated model reasoning for the turn (reasoning-details panel). */
+      reasoning?: string;
     }
   | { action: 'error'; content: string }
   | { action: 'set_chat_id'; chatId: string }

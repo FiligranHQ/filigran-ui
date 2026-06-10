@@ -73,6 +73,7 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       transferAgentId: evt.transfer_agent_id as string | undefined,
       transferAgentName: evt.transfer_agent_name as string | undefined,
       attachments: parseAttachments(evt.attachments),
+      reasoning: typeof evt.reasoning === 'string' ? evt.reasoning : undefined,
     };
   }
 

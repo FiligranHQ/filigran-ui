@@ -295,19 +295,39 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           updateConversationId(data.conversation_id);
         }
         if (!data.messages?.length) return;
-        const restored: ChatMessage[] = data.messages.map((m: { role: string; content: string; attachments?: unknown }, i: number) => ({
-          id: `restored-${i}`,
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-          timestamp: new Date(),
-          // Re-surface downloadable file chips on conversation restore for
-          // both roles: agent-generated deliverables on assistant messages
-          // (the [[FILE:…]] markers in content are stripped at render time by
-          // ChatMessages) and user-uploaded files on user messages (so an
-          // upload stays downloadable after a page reload, not just in the
-          // live session where it is carried on `files`).
-          attachments: parseAttachments(m.attachments),
-        }));
+        const restored: ChatMessage[] = data.messages.map(
+          (
+            m: {
+              role: string;
+              content: string;
+              attachments?: unknown;
+              tool_names?: unknown;
+              tool_call_count?: unknown;
+              iterations?: unknown;
+              reasoning?: unknown;
+            },
+            i: number,
+          ) => ({
+            id: `restored-${i}`,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            timestamp: new Date(),
+            // Re-surface downloadable file chips on conversation restore for
+            // both roles: agent-generated deliverables on assistant messages
+            // (the [[FILE:…]] markers in content are stripped at render time by
+            // ChatMessages) and user-uploaded files on user messages (so an
+            // upload stays downloadable after a page reload, not just in the
+            // live session where it is carried on `files`).
+            attachments: parseAttachments(m.attachments),
+            // Re-surface the reasoning-details affordance ("i" button) on
+            // restored assistant messages — same fields the live `done`
+            // event carries.
+            toolNames: Array.isArray(m.tool_names) ? (m.tool_names as string[]) : undefined,
+            toolCallCount: typeof m.tool_call_count === 'number' ? m.tool_call_count : undefined,
+            iterations: typeof m.iterations === 'number' ? m.iterations : undefined,
+            reasoning: typeof m.reasoning === 'string' ? m.reasoning : undefined,
+          }),
+        );
         setMessages(restored);
       })
       .catch(() => {
