@@ -450,19 +450,18 @@ export function useChat({
             switch (parsed.action) {
               case 'status': {
                 if (parsed.status === 'tool_start') hasUsedToolsRef.current = true;
-                // Text streamed before a tool call (or a new loop iteration)
-                // is the model thinking out loud, not the final answer.
-                // Fold it into the reasoning pane so it shrinks into the
-                // dimmed thinking window instead of streaming at full size
-                // and then abruptly vanishing when the real answer starts.
-                const isIterationBoundary =
-                  parsed.status === 'tool_start' || parsed.status === 'thinking' || parsed.status === 'analyzing';
-                const folded = isIterationBoundary && accumulated.trim() ? accumulated : '';
-                if (folded) {
+                if (parsed.status === 'stream_retract') {
+                  // Rare: text that streamed as a provisional answer turned
+                  // out to precede tool calls — discard the answer bubble
+                  // (the text re-arrives as thinking_text right after, so it
+                  // lands in the reasoning window instead).
                   accumulated = '';
                   setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: '' } : m)));
-                }
-                if (parsed.status === 'thinking_text') {
+                  setAgentStatus((prev) => ({
+                    status: 'analyzing',
+                    thinkingContent: prev?.thinkingContent,
+                  }));
+                } else if (parsed.status === 'thinking_text') {
                   setAgentStatus((prev) => ({
                     ...prev,
                     status: prev?.status ?? 'thinking',
@@ -472,9 +471,7 @@ export function useChat({
                   setAgentStatus((prev) => ({
                     status: parsed.status,
                     tools: parsed.tools,
-                    thinkingContent: folded
-                      ? (prev?.thinkingContent ? `${prev.thinkingContent}\n\n` : '') + folded
-                      : prev?.thinkingContent,
+                    thinkingContent: prev?.thinkingContent,
                   }));
                 }
                 break;
