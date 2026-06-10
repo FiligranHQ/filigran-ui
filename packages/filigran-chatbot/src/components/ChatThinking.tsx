@@ -77,6 +77,8 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
     }
     case 'analyzing':
       return { label: t('Analyzing results…'), StatusIcon: SparklesIcon, showDots: false };
+    case 'steering':
+      return { label: t('Incorporating your message…'), StatusIcon: SparklesIcon, showDots: true };
     case 'composing':
       return { label: t('Composing answer…'), StatusIcon: BrainIcon, showDots: true };
     case 'consulting': {

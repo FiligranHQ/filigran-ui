@@ -32,7 +32,16 @@ function fileExtensionLabel(filename: string): string | undefined {
   return ext.length <= 8 ? ext.toUpperCase() : undefined;
 }
 
-export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logoIcon, onRelativeLinkClick, onDownloadFile, t }: ChatMessagesProps) => {
+export const ChatMessages = ({
+  messages,
+  isLoading,
+  agentStatus,
+  agentName,
+  logoIcon,
+  onRelativeLinkClick,
+  onDownloadFile,
+  t,
+}: ChatMessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [toolDetailMsgId, setToolDetailMsgId] = useState<string | null>(null);
 
@@ -61,9 +70,7 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
         <span className="flex flex-col min-w-0 flex-1">
           <span className="truncate text-[0.75rem] text-gray-900 dark:text-white">{att.filename}</span>
           {(att.type || sizeLabel) && (
-            <span className="text-[0.65rem] text-gray-400 dark:text-white/40 uppercase">
-              {[att.type, sizeLabel].filter(Boolean).join(' · ')}
-            </span>
+            <span className="text-[0.65rem] text-gray-400 dark:text-white/40 uppercase">{[att.type, sizeLabel].filter(Boolean).join(' · ')}</span>
           )}
         </span>
         <span className="shrink-0 text-gray-400 dark:text-white/30 group-hover:text-[var(--chat-accent)]">
@@ -175,19 +182,31 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
     return blocks;
   };
 
+  // The streaming response is the LAST ASSISTANT message — not necessarily
+  // the last message overall: a mid-run steering send appends an optimistic
+  // user bubble after the assistant message that is still streaming. Gating
+  // on `messages.length - 1` would then drop the live cursor / ChatThinking
+  // state the moment the user steers.
+  let lastAssistantIndex = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'assistant') {
+      lastAssistantIndex = i;
+      break;
+    }
+  }
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable">
       {messages.map((msg, index) => {
         const isAssistant = msg.role === 'assistant';
         const isEmpty = !msg.content;
-        // The streaming response is always the last message, so the live
-        // cursor / thinking bubble / ChatThinking state — and, conversely, the
-        // hiding of the completed-message affordances (the reasoning "i"
-        // button) — must be gated on it. Gating those on the global
-        // `isLoading` instead made the blinking cursor leak onto every prior
-        // assistant message and the "i" button vanish from all of them while a
-        // *later* response was streaming.
-        const isStreamingMessage = isLoading && index === messages.length - 1;
+        // The live cursor / thinking bubble / ChatThinking state — and,
+        // conversely, the hiding of the completed-message affordances (the
+        // reasoning "i" button) — must be gated on the streaming message.
+        // Gating those on the global `isLoading` instead made the blinking
+        // cursor leak onto every prior assistant message and the "i" button
+        // vanish from all of them while a *later* response was streaming.
+        const isStreamingMessage = isLoading && index === lastAssistantIndex;
         const isThinking = isAssistant && isEmpty && isStreamingMessage;
 
         if (isThinking) {

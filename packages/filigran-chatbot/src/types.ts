@@ -11,10 +11,29 @@ export interface ApiEndpoints {
   singleEndpoint?: boolean;
   /** Path for sending messages. Default: '/chat/messages' */
   messages?: string;
+  /**
+   * Path for steering the agent mid-run (sending a message while a response
+   * is still streaming). Default: '/chat/messages/steer'. The widget POSTs
+   * `{ conversation_id, content, agent_slug }`; a 2xx response means the
+   * message was persisted and will be injected into the running agentic loop
+   * at the next iteration boundary. On a non-2xx response the optimistic
+   * bubble is rolled back and the text is restored into the composer, so a
+   * backend without steering support degrades gracefully. Set to null to
+   * disable mid-run steering entirely.
+   */
+  steer?: string | null;
   /** Path for fetching agents. Default: '/chat/agents'. Set to null to disable. */
   agents?: string | null;
   /** Path for fetching session history. Default: '/chat/sessions'. Set to null to disable. */
   sessions?: string | null;
+  /**
+   * Path for the multi-conversation history menu. Defaults to the sessions
+   * path: the widget lists past conversations via `GET {history}` and deletes
+   * one via `DELETE {history}/{conversation_id}`. Set to null to hide the
+   * history menu (e.g. when the backend only implements the session-restore
+   * POST contract).
+   */
+  history?: string | null;
   /** Path for uploading files. Default: '/chat/upload'. Set to null to disable file uploads. */
   upload?: string | null;
   /**
@@ -169,6 +188,18 @@ export interface ChatFile {
   fileId?: string;
   /** Upload status: 'pending' while uploading, 'done' when uploaded, 'error' on failure. */
   uploadStatus?: 'pending' | 'done' | 'error';
+}
+
+/**
+ * A past conversation surfaced in the history menu (REST backend only).
+ * Listed via `GET {apiBaseUrl}{apiEndpoints.sessions ?? '/chat/sessions'}`.
+ */
+export interface ChatConversationSummary {
+  conversationId: string;
+  title: string;
+  /** ISO timestamp of the last activity, used for the relative-time label. */
+  updatedAt?: string;
+  messageCount?: number;
 }
 
 export interface XtmAgent {

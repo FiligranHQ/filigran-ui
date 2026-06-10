@@ -5,6 +5,8 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 ## Features
 
 - 🔄 **SSE Message Streaming** — Real-time response streaming with status indicators
+- ⚡ **Mid-Run Steering** — Send messages while the agent is generating; they are injected into the running agentic loop instead of waiting for the turn to finish
+- 🗂️ **Conversation History** — Switch between (and delete) past conversations from a history menu in the header
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
 - 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose
@@ -192,6 +194,37 @@ even though streaming downloads work:
 }
 ```
 
+### `GET {apiBaseUrl}/chat/sessions`
+
+Lists the user's past conversations for the history menu in the chat header.
+
+**Response** (a bare array or `{ "conversations": [...] }`):
+
+```json
+[
+  {
+    "conversation_id": "uuid-here",
+    "title": "What is the weather?",
+    "updated_at": "2026-06-10T08:30:00Z",
+    "message_count": 12
+  }
+]
+```
+
+Selecting a conversation restores it through the existing
+`POST /chat/sessions` contract above. The endpoint is fetched lazily when the
+history menu opens; a backend that doesn't implement it yet (404/405) simply
+yields an empty list, so the menu shows its empty state instead of breaking
+the chat. Set `apiEndpoints.history` to `null` to hide the history menu
+entirely, or point it at a dedicated path if your proxy can't route `GET` on
+the sessions path.
+
+### `DELETE {apiBaseUrl}/chat/sessions/{conversation_id}`
+
+Deletes a conversation from the history menu. Any 2xx response counts as
+success; deleting the active conversation resets the panel to a fresh chat so
+the next message never targets a dead conversation id.
+
 ### `POST {apiBaseUrl}/chat/messages`
 
 Sends a message and streams the response via SSE.
@@ -260,11 +293,57 @@ Download failures (403/404/5xx/network) are reported through the optional `onDow
 - `analyzing` — Agent is analyzing tool results
 - `composing` — Agent is composing the response
 - `streaming` — Content is being streamed
+- `steering` — A mid-run steering message is being incorporated (see below)
 
 **Error event:**
 
 ```
 data: {"type": "error", "content": "Something went wrong"}
+```
+
+### `POST {apiBaseUrl}/chat/messages/steer`
+
+Steers the agent mid-run: while a response is still streaming, Enter / the
+accent Send button dispatches the typed text immediately instead of blocking
+until the turn finishes. The widget POSTs:
+
+```json
+{
+  "conversation_id": "uuid-here",
+  "content": "Actually, filter by subregion instead",
+  "agent_slug": "general"
+}
+```
+
+A 2xx response means the message was persisted and will be injected into the
+running agentic loop at the next iteration boundary. On a non-2xx response or
+a network error the optimistic user bubble is rolled back and the text is
+restored into the composer (prepended on its own line if the user already
+typed something new) — so a backend without steering support degrades
+gracefully and the message is never silently lost. Set `apiEndpoints.steer`
+to `null` to disable the steering affordances entirely.
+
+Steering only applies to text-only sends on the `rest` backend with a known
+`conversation_id` (the first turn of a fresh conversation only receives its id
+on `done`). Sends with attachments keep the legacy wait behavior. Esc stops
+generating.
+
+#### Multi-segment responses
+
+A steered turn can produce **multiple response segments** on one SSE stream:
+when the steering message arrives too late to be folded into the current
+pass, the backend completes the current segment (an intermediate `done`
+event) and then runs a follow-up pass for the steering message (a fresh
+`thinking` status followed by more `stream` events and a final `done`). The
+widget renders each segment as its own assistant message:
+
+```
+data: {"type": "status", "status": "steering"}
+data: {"type": "stream", "content": "...current answer keeps streaming..."}
+data: {"type": "done", "content": "First segment answer", "conversation_id": "uuid"}
+data: {"type": "status", "status": "thinking"}
+data: {"type": "stream", "content": "Follow-up answer to the steering message"}
+data: {"type": "done", "content": "Follow-up answer to the steering message", "conversation_id": "uuid"}
 ```
 
 ## Customization
@@ -321,9 +400,18 @@ function App() {
 - `'Using tools…'`
 - `'Analyzing results…'`
 - `'Composing answer…'`
+- `'Incorporating your message…'`
 - `'Ask a question...'`
 - `'Stop generating'`
+- `'Send now'`
+- `'Enter to send now · Esc to stop'`
+- `'Attachments wait for the current response'`
 - `'New chat'`
+- `'Conversation history'`
+- `'No conversations yet'`
+- `'New conversation'`
+- `'Delete conversation'`
+- `'just now'` / `'m ago'` / `'h ago'` / `'d ago'`
 - `'Switch view'`
 - `'Close'`
 - `'Switch to another agent'`
