@@ -129,21 +129,30 @@ function cleanReasoningText(text: string): string {
     .trim();
 }
 
+/** A scroll position within this distance of the bottom counts as "pinned". */
+const REASONING_PIN_THRESHOLD_PX = 24;
+
 /**
- * Cursor-style reasoning pane: smaller, lighter text inside a capped-height
- * window that stays pinned to the newest line while tokens stream in, with
- * a soft fade at the top so older reasoning appears to scroll away — framed
- * by the signature breathing accent left-border glow.
+ * Reasoning window — the model's reasoning prose rendered below the status
+ * bubble while the agent works: smaller, dimmed text inside a capped-height
+ * (max-h-40) scrolling window pinned to the newest line, with a Cursor-style
+ * top dissolve once full (soft gradient fade at the top only — the text reads
+ * as scrolling up and dissolving; the bottom stays sharp) — framed by the
+ * breathing accent left-border glow.  Scrolling up detaches the pin so
+ * earlier reasoning can be read while tokens keep streaming; scrolling back
+ * to the bottom re-pins.  The window (and the status bubble above it)
+ * disappears the moment the final answer starts flowing.
  */
 export function ThinkingTextBubble({ content }: { content: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
+  const pinnedRef = useRef(true);
   const cleaned = cleanReasoningText(content);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    if (pinnedRef.current) el.scrollTop = el.scrollHeight;
     setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
   }, [cleaned]);
 
@@ -156,8 +165,15 @@ export function ThinkingTextBubble({ content }: { content: string }) {
     >
       <div
         ref={ref}
+        onScroll={() => {
+          const el = ref.current;
+          if (!el) return;
+          pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < REASONING_PIN_THRESHOLD_PX;
+        }}
         className={`max-h-40 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden${
-          isOverflowing ? ' [mask-image:linear-gradient(to_bottom,transparent_0,black_3rem)]' : ''
+          isOverflowing
+            ? ' [mask-image:linear-gradient(to_bottom,transparent_0,rgb(0_0_0/0.25)_1.5rem,rgb(0_0_0/0.7)_3rem,black_4.5rem)]'
+            : ''
         }`}
       >
         <p className="m-0 whitespace-pre-wrap break-words text-xs leading-5 text-gray-500 dark:text-white/45">{cleaned}</p>

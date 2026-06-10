@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { AgentStatusState, ChatAttachment, ChatMessage } from '../types';
 import { splitFileMarkers } from '../utils';
 import { DownloadIcon, FileIcon, InfoIcon } from './icons';
-import { ChatThinking, ThinkingTextBubble } from './ChatThinking';
+import { ChatThinking } from './ChatThinking';
 import { MarkdownMessage } from './MarkdownMessage';
 
 interface ChatMessagesProps {
@@ -208,8 +208,6 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
                 <span className="font-semibold text-xs text-gray-900 dark:text-white">{agentName}</span>
               </div>
             )}
-
-            {isAssistant && !isEmpty && isStreamingMessage && agentStatus?.thinkingContent && <ThinkingTextBubble content={agentStatus.thinkingContent} />}
 
             {!isAssistant && ((msg.files?.length ?? 0) > 0 || (msg.attachments?.length ?? 0) > 0) && (
               <div className="flex gap-1.5 flex-wrap mb-1.5 justify-end">{buildUserFileBlocks(msg)}</div>
