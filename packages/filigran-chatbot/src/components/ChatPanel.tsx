@@ -102,13 +102,16 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   const [historyMenuOpen, setHistoryMenuOpen] = useState(false);
 
   const handleHistoryMenuToggle = () => {
-    setHistoryMenuOpen((prev) => {
-      const next = !prev;
+    // Computed from the committed state in the event handler — NOT inside the
+    // state updater, which must stay pure (StrictMode/concurrent rendering may
+    // invoke updaters more than once, which would duplicate the fetch).
+    const next = !historyMenuOpen;
+    if (next) {
       // Fetch lazily on open so the list reflects the latest server state
       // (titles are rewritten by the backend after the first message).
-      if (next) void refreshConversations();
-      return next;
-    });
+      void refreshConversations();
+    }
+    setHistoryMenuOpen(next);
   };
 
   const handleSelectConversation = (id: string) => {
