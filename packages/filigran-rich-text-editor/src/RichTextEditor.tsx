@@ -18,16 +18,18 @@ import { NestedTableCell } from './richTextEditor/extensions/TableCell';
 import { NestedTableHeader } from './richTextEditor/extensions/TableHeader';
 import Placeholder from '@tiptap/extension-placeholder';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useTheme } from '@mui/styles';
-import Popover from '@mui/material/Popover';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import Stack from '@mui/material/Stack';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import MuiTypography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
+import { useTheme } from '@mui/material/styles';
+import {
+  Box,
+  Button,
+  IconButton,
+  Popover,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Typography as MuiTypography,
+} from '@mui/material';
 import { EditOutlined } from '@mui/icons-material';
 import { TiptapEditorToolbar } from './richTextEditor/TiptapEditorToolbar';
 import { TableContextMenu } from './richTextEditor/TableContextMenu';
@@ -52,7 +54,9 @@ export interface RichTextEditorProps {
   id?: string;
   data?: string;
   onChange?: (evt: unknown, editor: RichTextEditorAdapter) => void;
+  /** @deprecated Use onTextSelection instead */
   onReady?: (editor: Editor) => void;
+  onTextSelection?: (text: string) => void;
   onBlur?: (evt: unknown, editor: RichTextEditorAdapter) => void;
   onFocus?: (evt: unknown) => void;
   disabled?: boolean;
@@ -69,6 +73,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   data = '',
   onChange,
   onReady,
+  onTextSelection,
   onBlur,
   onFocus,
   disabled = false,
@@ -78,8 +83,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const isDark = theme.palette?.mode === 'dark';
   const initialContentRef = useRef(data);
   const onChangeRef = useRef(onChange);
+  const onTextSelectionRef = useRef(onTextSelection);
   const editorRef = useRef<Editor | null>(null);
   onChangeRef.current = onChange;
+  onTextSelectionRef.current = onTextSelection;
 
   const [sourceMode, setSourceMode] = useState(false);
   const [sourceHtml, setSourceHtml] = useState('');
@@ -709,6 +716,21 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       editor.off('focus', handler);
     };
   }, [editor, onFocus]);
+
+  useEffect(() => {
+    if (!editor || !disabled) return;
+    const handler = () => {
+      const {from, to} = editor.state.selection;
+      const text = editor.state.doc.textBetween(from, to, ' ');
+      if (text.length > 2) {
+        onTextSelectionRef.current?.(text);
+      }
+    };
+    editor.on('selectionUpdate', handler);
+    return () => {
+      editor.off('selectionUpdate', handler);
+    };
+  }, [editor, disabled]);
 
   if (!editor) {
     return null;

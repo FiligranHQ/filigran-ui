@@ -13,6 +13,9 @@ export default defineConfig({
     'react-dom',
     '@mui/material',
     '@mui/icons-material',
-    '@mui/styles',
+    'react-color',
+    '@tiptap/react',
+    '@tiptap/core',
+    '@tiptap/pm',
   ],
 })

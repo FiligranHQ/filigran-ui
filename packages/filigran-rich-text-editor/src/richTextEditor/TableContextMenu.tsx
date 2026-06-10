@@ -1,11 +1,13 @@
 import type { Editor } from '@tiptap/react';
 import React, { useCallback } from 'react';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import Divider from '@mui/material/Divider';
-import ListSubheader from '@mui/material/ListSubheader';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
+import {
+  Divider,
+  ListItemIcon,
+  ListItemText,
+  ListSubheader,
+  Menu,
+  MenuItem,
+} from '@mui/material';
 import { DeleteOutline, MergeType, SplitscreenOutlined, BorderTopOutlined, BorderLeftOutlined, TableChart, AddOutlined, RemoveOutlined } from '@mui/icons-material';
 
 interface TableContextMenuProps {

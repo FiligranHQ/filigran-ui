@@ -35,15 +35,17 @@ import {
   FormatIndentDecrease,
   MoreVert,
 } from '@mui/icons-material';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import IconButton from '@mui/material/IconButton';
-import Box from '@mui/material/Box';
-import Tooltip from '@mui/material/Tooltip';
-import Select from '@mui/material/Select';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import Popover from '@mui/material/Popover';
+import {
+  Box,
+  IconButton,
+  Menu,
+  MenuItem,
+  Popover,
+  Select,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+} from '@mui/material';
 import { SketchPicker } from 'react-color';
 import { TableGridPicker } from './TableGridPicker';
 
