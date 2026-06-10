@@ -119,7 +119,10 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
 
-  const totalCalls = msg.toolCallCount ?? msg.toolNames?.length ?? 0;
+  // Prefer the backend's explicit count, then the detailed trace (what the
+  // dialog body actually renders), then the flat tool-name list — keeps the
+  // header summary consistent with the rows below.
+  const totalCalls = msg.toolCallCount ?? msg.toolCallTrace?.length ?? msg.toolNames?.length ?? 0;
   const tools = msg.toolNames ?? [];
   const iterations = msg.iterations ?? 1;
   const transfers = msg.transferChain ?? [];
@@ -203,7 +206,10 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
                     // messages / backends without trace support).
                     <div>
                       {tools.map((tn, i) => (
-                        <div key={`${tn}-${i}`} className="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-white/[0.04] last:border-0">
+                        <div
+                          key={`${tn}-${i}`}
+                          className="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-white/[0.04] last:border-0"
+                        >
                           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[var(--chat-accent)]/10 text-[0.65rem] font-medium text-[var(--chat-accent)]">
                             {i + 1}
                           </span>
@@ -223,7 +229,9 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {transfers.map((tr, i) => (
-                        <div key={tr.agentId || i} className="flex items-center gap-1.5">
+                        // Composite key: the same agent can appear twice in a
+                        // chain (A -> B -> A) and older payloads have no id.
+                        <div key={`${tr.agentId}-${i}`} className="flex items-center gap-1.5">
                           {i > 0 && <span className="text-gray-300 dark:text-white/30 text-[0.72rem]">→</span>}
                           <span className="inline-flex items-center gap-1 rounded-md bg-[var(--chat-accent)]/10 px-2 py-0.5 text-[0.72rem] font-medium text-[var(--chat-accent)]">
                             <BotIcon size={12} />

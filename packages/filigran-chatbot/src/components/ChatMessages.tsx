@@ -262,7 +262,11 @@ export const ChatMessages = ({
             {isAssistant &&
               !isEmpty &&
               !isStreamingMessage &&
-              ((msg.toolNames && msg.toolNames.length > 0) || (msg.reasoning ?? '').trim() || msg.isTruncated) && (
+              ((msg.toolNames && msg.toolNames.length > 0) ||
+                (msg.reasoning ?? '').trim() ||
+                (msg.toolCallTrace && msg.toolCallTrace.length > 0) ||
+                (msg.transferChain && msg.transferChain.length > 0) ||
+                msg.isTruncated) && (
                 <>
                   <button
                     type="button"
@@ -276,6 +280,9 @@ export const ChatMessages = ({
                         : 'opacity-50 hover:opacity-100 hover:text-[var(--chat-accent)]'
                     }`}
                     title={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}
+                    aria-label={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}
+                    aria-haspopup="dialog"
+                    aria-expanded={toolDetailMsgId === msg.id}
                   >
                     {msg.isTruncated ? <AlertTriangleIcon size={14} /> : <InfoIcon size={14} />}
                   </button>

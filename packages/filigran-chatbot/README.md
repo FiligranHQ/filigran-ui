@@ -256,13 +256,29 @@ data: {"type": "status", "status": "analyzing"}
 data: {"type": "status", "status": "streaming"}
 data: {"type": "stream", "content": "The weather "}
 data: {"type": "stream", "content": "today is sunny."}
-data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1, "reasoning": "Let me check the weather data first."}
+data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1, "reasoning": "Let me check the weather data first.", "tool_call_trace": [{"name": "search_web", "input": "{\"query\": \"weather\"}", "output": "Sunny, 24C", "success": true}], "transfer_chain": [{"agent_id": "uuid", "agent_name": "General"}], "is_truncated": false}
 ```
 
 The optional `reasoning` field on `done` (and on restored session messages)
 carries the accumulated model reasoning / pre-tool preamble prose for the
-turn. When present it is surfaced in the per-message reasoning-details panel
+turn. When present it is surfaced in the per-message reasoning-details dialog
 (the "i" button), mirroring the XTM One web chat.
+
+The reasoning-details dialog also consumes three more optional `done` fields
+(all parsed defensively — older backends without them fall back to the flat
+tool-name list and the plain "i" affordance):
+
+- `tool_call_trace` — array of `{ name, input, output, success }` entries
+  rendered as expandable rows (numbered, success/failure icon, pretty-printed
+  JSON input, output)
+- `transfer_chain` — array of `{ agent_id, agent_name }` hops rendered as the
+  agent transfer chain
+- `is_truncated` — `true` when the agent's iteration budget was exhausted;
+  the message then shows an always-visible amber warning triangle instead of
+  the hover-only "i" and the dialog opens with a "Turn limit reached" banner
+
+The same fields are read from restored session messages, so the dialog
+survives a page reload.
 
 #### Internal links
 
@@ -435,8 +451,14 @@ function App() {
 - `'Browse agents'`
 - `'Create agent'`
 - `'Reasoning details'`
+- `'Reasoning details — turn limit reached'`
 - `'Model reasoning'`
 - `'iterations'`
+- `'transfer'` / `'transfers'`
+- `'Transfer chain'`
+- `'Turn limit reached.'`
+- `"The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far."`
+- `'Input'` / `'Output'` / `'(no output)'`
 - `'Download'`
 - `'tool call'` / `'tool calls'`
 - `'Uses AI. Verify results.'`
