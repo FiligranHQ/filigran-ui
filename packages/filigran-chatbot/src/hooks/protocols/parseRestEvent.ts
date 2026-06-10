@@ -52,6 +52,17 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       ctx.hasUsedTools = true;
       return { action: 'status', status: 'tool_start', tools: evt.tools as string[] | undefined };
     }
+    if (st === 'tool_heartbeat') {
+      // Liveness signal during a long tool execution (background tasks,
+      // consults, big integration calls): carries the elapsed seconds but
+      // no new semantic state — the consumer must keep its current label.
+      return {
+        action: 'status',
+        status: 'tool_heartbeat',
+        tools: evt.tools as string[] | undefined,
+        elapsedS: typeof evt.elapsed_s === 'number' ? evt.elapsed_s : undefined,
+      };
+    }
     if (st === 'thinking' && ctx.hasUsedTools) {
       return { action: 'status', status: 'analyzing' };
     }

@@ -564,6 +564,14 @@ export function useChat({
                     status: prev?.status ?? 'thinking',
                     thinkingContent: (prev?.thinkingContent ?? '') + (parsed.thinkingContent ?? ''),
                   }));
+                } else if (parsed.status === 'tool_heartbeat') {
+                  // Liveness signal during a long tool execution: update the
+                  // elapsed counter but KEEP the current status label/tools —
+                  // replacing the status would flip e.g. "Waiting for
+                  // background task…" back to "Thinking…" mid-execution.
+                  setAgentStatus((prev) =>
+                    prev ? { ...prev, elapsedS: parsed.elapsedS } : { status: 'tool_start', tools: parsed.tools, elapsedS: parsed.elapsedS },
+                  );
                 } else {
                   setAgentStatus((prev) => ({
                     status: parsed.status,

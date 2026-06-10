@@ -182,6 +182,12 @@ export interface AgentStatusState {
   status: string;
   tools?: string[];
   thinkingContent?: string;
+  /**
+   * Seconds the current tool batch has been executing (from periodic
+   * `tool_heartbeat` events) — rendered as a live elapsed-time indicator
+   * so long executions (background tasks, consults) never look stuck.
+   */
+  elapsedS?: number;
 }
 
 export interface ChatFile {

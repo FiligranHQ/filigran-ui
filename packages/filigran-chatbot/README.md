@@ -305,6 +305,7 @@ Download failures (403/404/5xx/network) are reported through the optional `onDow
 
 - `thinking` — Agent is processing
 - `tool_start` — Agent is using tools (with `tools` array)
+- `tool_heartbeat` — Liveness signal during a long tool execution (with `tools` and `elapsed_s`). The widget keeps the current status label and renders a live elapsed-time indicator next to it once the execution exceeds ~15 s, so long operations (background tasks, agent consults) never look stuck
 - `analyzing` — Agent is analyzing tool results
 - `composing` — Agent is composing the response
 - `streaming` — Content is being streamed

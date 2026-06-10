@@ -180,9 +180,25 @@ export function ThinkingTextBubble({ content }: { content: string }) {
   );
 }
 
+/** Render seconds as a compact elapsed label (e.g. `45s`, `3m 20s`). */
+function formatElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
+/**
+ * Elapsed time is only surfaced once the current operation has been
+ * running long enough that the user could wonder whether it is stuck.
+ */
+const ELAPSED_DISPLAY_THRESHOLD_S = 15;
+
 export const ChatThinking = ({ agentStatus, logoIcon, t }: ChatThinkingProps) => {
   const { label, StatusIcon, showDots } = resolveStatusVisual(agentStatus, t);
   const thinkingContent = agentStatus?.thinkingContent;
+  const elapsedS = agentStatus?.elapsedS;
+  const showElapsed = typeof elapsedS === 'number' && elapsedS >= ELAPSED_DISPLAY_THRESHOLD_S;
 
   return (
     <>
@@ -207,6 +223,7 @@ export const ChatThinking = ({ agentStatus, logoIcon, t }: ChatThinkingProps) =>
               <StatusIcon size={14} className="text-[var(--chat-accent)] animate-pulse transition-all duration-300" />
             )}
             <span className="text-sm text-gray-500 dark:text-white/50 transition-all duration-300">{label}</span>
+            {showElapsed && <span className="text-xs text-gray-400 dark:text-white/30 tabular-nums shrink-0">{formatElapsed(elapsedS)}</span>}
           </div>
         </div>
       </div>
