@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AgentStatusState, ChatAttachment, ChatMessage } from '../types';
 import { splitFileMarkers } from '../utils';
-import { DownloadIcon, FileIcon, InfoIcon } from './icons';
-import { ChatThinking } from './ChatThinking';
+import { BrainIcon, DownloadIcon, FileIcon, InfoIcon, WrenchIcon } from './icons';
+import { ChatThinking, cleanReasoningText } from './ChatThinking';
 import { MarkdownMessage } from './MarkdownMessage';
 
 interface ChatMessagesProps {
@@ -32,13 +32,35 @@ function fileExtensionLabel(filename: string): string | undefined {
   return ext.length <= 8 ? ext.toUpperCase() : undefined;
 }
 
-export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logoIcon, onRelativeLinkClick, onDownloadFile, t }: ChatMessagesProps) => {
+export const ChatMessages = ({
+  messages,
+  isLoading,
+  agentStatus,
+  agentName,
+  logoIcon,
+  onRelativeLinkClick,
+  onDownloadFile,
+  t,
+}: ChatMessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [toolDetailMsgId, setToolDetailMsgId] = useState<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Keep the bottom in view while the reasoning window below the status
+  // bubble grows: thinking prose streams in without any `messages` change,
+  // so without this the growing window slides under the fold and the user
+  // stops seeing the live reasoning. `behavior: 'instant'` (CSSOM View,
+  // Baseline-supported) forces a non-animated jump — this fires on every
+  // reasoning chunk and smooth animations would queue up; 'auto' would not
+  // do, since a `scroll-behavior: smooth` ancestor turns it smooth again.
+  const thinkingLen = agentStatus?.thinkingContent?.length ?? 0;
+  useEffect(() => {
+    if (!thinkingLen) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+  }, [thinkingLen]);
 
   const renderAttachmentCard = (att: ChatAttachment, key: string) => {
     const isWorking = att.fileTag === 'working_file';
@@ -61,9 +83,7 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
         <span className="flex flex-col min-w-0 flex-1">
           <span className="truncate text-[0.75rem] text-gray-900 dark:text-white">{att.filename}</span>
           {(att.type || sizeLabel) && (
-            <span className="text-[0.65rem] text-gray-400 dark:text-white/40 uppercase">
-              {[att.type, sizeLabel].filter(Boolean).join(' · ')}
-            </span>
+            <span className="text-[0.65rem] text-gray-400 dark:text-white/40 uppercase">{[att.type, sizeLabel].filter(Boolean).join(' · ')}</span>
           )}
         </span>
         <span className="shrink-0 text-gray-400 dark:text-white/30 group-hover:text-[var(--chat-accent)]">
@@ -175,19 +195,31 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
     return blocks;
   };
 
+  // The streaming response is the LAST ASSISTANT message — not necessarily
+  // the last message overall: a mid-run steering send appends an optimistic
+  // user bubble after the assistant message that is still streaming. Gating
+  // on `messages.length - 1` would then drop the live cursor / ChatThinking
+  // state the moment the user steers.
+  let lastAssistantIndex = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'assistant') {
+      lastAssistantIndex = i;
+      break;
+    }
+  }
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable">
       {messages.map((msg, index) => {
         const isAssistant = msg.role === 'assistant';
         const isEmpty = !msg.content;
-        // The streaming response is always the last message, so the live
-        // cursor / thinking bubble / ChatThinking state — and, conversely, the
-        // hiding of the completed-message affordances (the reasoning "i"
-        // button) — must be gated on it. Gating those on the global
-        // `isLoading` instead made the blinking cursor leak onto every prior
-        // assistant message and the "i" button vanish from all of them while a
-        // *later* response was streaming.
-        const isStreamingMessage = isLoading && index === messages.length - 1;
+        // The live cursor / thinking bubble / ChatThinking state — and,
+        // conversely, the hiding of the completed-message affordances (the
+        // reasoning "i" button) — must be gated on the streaming message.
+        // Gating those on the global `isLoading` instead made the blinking
+        // cursor leak onto every prior assistant message and the "i" button
+        // vanish from all of them while a *later* response was streaming.
+        const isStreamingMessage = isLoading && index === lastAssistantIndex;
         const isThinking = isAssistant && isEmpty && isStreamingMessage;
 
         if (isThinking) {
@@ -226,7 +258,7 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
               </div>
             )}
 
-            {isAssistant && !isEmpty && !isStreamingMessage && msg.toolNames && msg.toolNames.length > 0 && (
+            {isAssistant && !isEmpty && !isStreamingMessage && ((msg.toolNames && msg.toolNames.length > 0) || (msg.reasoning ?? '').trim()) && (
               <>
                 <button
                   type="button"
@@ -237,22 +269,44 @@ export const ChatMessages = ({ messages, isLoading, agentStatus, agentName, logo
                   <InfoIcon size={14} />
                 </button>
                 {toolDetailMsgId === msg.id && (
-                  <div className="mt-1.5 p-3 rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/10">
-                    <p className="text-[0.7rem] text-gray-500 dark:text-white/40 mb-1.5">
-                      {msg.iterations && msg.iterations > 1 ? `${msg.iterations} iterations · ` : ''}
-                      {msg.toolCallCount ?? msg.toolNames.length}{' '}
-                      {(msg.toolCallCount ?? msg.toolNames.length) === 1 ? t('tool call') : t('tool calls')}
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {Array.from(new Set(msg.toolNames)).map((tn) => (
-                        <span
-                          key={tn}
-                          className="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-200 dark:border-white/10 text-[0.68rem] font-mono text-gray-500 dark:text-white/40"
-                        >
-                          {tn.replace(/_/g, ' ')}
-                        </span>
-                      ))}
+                  <div className="mt-1.5 p-3 rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/10 max-w-[90%]">
+                    {/* Header — mirrors the XTM One web chat "Reasoning details"
+                        dialog (title + iterations/calls summary) so the embedded
+                        chatbot and the native web chat read the same. */}
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <WrenchIcon size={13} className="text-[var(--chat-accent)]" />
+                      <span className="text-[0.75rem] font-semibold text-gray-900 dark:text-white">{t('Reasoning details')}</span>
                     </div>
+                    <p className="text-[0.7rem] text-gray-500 dark:text-white/40 mb-1.5">
+                      {msg.iterations && msg.iterations > 1 ? `${msg.iterations} ${t('iterations')} · ` : ''}
+                      {msg.toolCallCount ?? msg.toolNames?.length ?? 0}{' '}
+                      {(msg.toolCallCount ?? msg.toolNames?.length ?? 0) === 1 ? t('tool call') : t('tool calls')}
+                    </p>
+                    {(msg.reasoning ?? '').trim() && (
+                      <div className="mb-2">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <BrainIcon size={13} className="text-[var(--chat-accent)]/70" />
+                          <span className="text-[0.7rem] font-medium text-gray-500 dark:text-white/50">{t('Model reasoning')}</span>
+                        </div>
+                        <div className="rounded-md border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.01] px-2.5 py-2 max-h-44 overflow-y-auto">
+                          <p className="m-0 whitespace-pre-wrap break-words text-[0.7rem] leading-5 text-gray-500 dark:text-white/45">
+                            {cleanReasoningText(msg.reasoning!)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {msg.toolNames && msg.toolNames.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {Array.from(new Set(msg.toolNames)).map((tn) => (
+                          <span
+                            key={tn}
+                            className="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-200 dark:border-white/10 text-[0.68rem] font-mono text-gray-500 dark:text-white/40"
+                          >
+                            {tn.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </>

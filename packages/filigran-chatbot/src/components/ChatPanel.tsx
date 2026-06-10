@@ -4,6 +4,7 @@ import { hexAlpha, identity } from '../utils';
 import { parseAttachments } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
+import { useConversations } from '../hooks/useConversations';
 import { useSidebarResize } from '../hooks/useSidebarResize';
 import { DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
@@ -68,6 +69,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     attachedFiles,
     conversationId,
     transferredAgent,
+    canSteer,
     historyLoadedRef,
     conversationIdRef,
     handleFileAdd,
@@ -78,6 +80,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     setAttachedFiles,
     setMessages,
     updateConversationId,
+    handleSwitchConversation,
   } = useChat({
     apiBaseUrl,
     apiEndpoints,
@@ -89,6 +92,41 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     maxFileCount,
     maxTotalSize,
   });
+
+  const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation } = useConversations({
+    apiBaseUrl,
+    apiEndpoints,
+    backendType,
+    requestHeaders,
+  });
+  const [historyMenuOpen, setHistoryMenuOpen] = useState(false);
+
+  const handleHistoryMenuToggle = () => {
+    // Computed from the committed state in the event handler — NOT inside the
+    // state updater, which must stay pure (StrictMode/concurrent rendering may
+    // invoke updaters more than once, which would duplicate the fetch).
+    const next = !historyMenuOpen;
+    if (next) {
+      // Fetch lazily on open so the list reflects the latest server state
+      // (titles are rewritten by the backend after the first message).
+      void refreshConversations();
+    }
+    setHistoryMenuOpen(next);
+  };
+
+  const handleSelectConversation = (id: string) => {
+    setHistoryMenuOpen(false);
+    handleSwitchConversation(id);
+  };
+
+  const handleDeleteConversation = async (id: string) => {
+    const deleted = await deleteConversation(id);
+    // Deleting the active conversation resets to a fresh chat so the next
+    // message doesn't target a dead conversation id.
+    if (deleted && id === conversationIdRef.current) {
+      handleNewChat();
+    }
+  };
 
   const { sidebarWidth, handleResizeStart, defaultWidth, isResizing } = useSidebarResize({
     mode,
@@ -145,12 +183,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   // single-endpoint mode there is no per-path routing, so a download path
   // must be provided explicitly (e.g. an OpenCTI-style proxy route);
   // otherwise the default REST `/chat/files` path is used.
-  const downloadPathProvided =
-    apiEndpoints?.download !== null && apiEndpoints?.download !== undefined;
-  const canDownload =
-    backendType === 'rest' &&
-    apiEndpoints?.download !== null &&
-    (!apiEndpoints?.singleEndpoint || downloadPathProvided);
+  const downloadPathProvided = apiEndpoints?.download !== null && apiEndpoints?.download !== undefined;
+  const canDownload = backendType === 'rest' && apiEndpoints?.download !== null && (!apiEndpoints?.singleEndpoint || downloadPathProvided);
 
   const handleDownloadFile = useCallback(
     async (att: ChatAttachment) => {
@@ -265,7 +299,18 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         }
         if (!data.messages?.length) return;
         const restored: ChatMessage[] = data.messages.map(
-          (m: { role: string; content: string; attachments?: unknown }, i: number) => ({
+          (
+            m: {
+              role: string;
+              content: string;
+              attachments?: unknown;
+              tool_names?: unknown;
+              tool_call_count?: unknown;
+              iterations?: unknown;
+              reasoning?: unknown;
+            },
+            i: number,
+          ) => ({
             id: `restored-${i}`,
             role: m.role as 'user' | 'assistant',
             content: m.content,
@@ -277,6 +322,13 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
             // upload stays downloadable after a page reload, not just in the
             // live session where it is carried on `files`).
             attachments: parseAttachments(m.attachments),
+            // Re-surface the reasoning-details affordance ("i" button) on
+            // restored assistant messages — same fields the live `done`
+            // event carries.
+            toolNames: Array.isArray(m.tool_names) ? (m.tool_names as string[]) : undefined,
+            toolCallCount: typeof m.tool_call_count === 'number' ? m.tool_call_count : undefined,
+            iterations: typeof m.iterations === 'number' ? m.iterations : undefined,
+            reasoning: typeof m.reasoning === 'string' ? m.reasoning : undefined,
           }),
         );
         setMessages(restored);
@@ -285,7 +337,19 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         if (isStale()) return;
         updateConversationId(null);
       });
-  }, [conversationId, selectedAgent, apiBaseUrl, apiEndpoints, backendType, historyLoadedRef, conversationIdRef, isMountedRef, requestHeaders, setMessages, updateConversationId]);
+  }, [
+    conversationId,
+    selectedAgent,
+    apiBaseUrl,
+    apiEndpoints,
+    backendType,
+    historyLoadedRef,
+    conversationIdRef,
+    isMountedRef,
+    requestHeaders,
+    setMessages,
+    updateConversationId,
+  ]);
 
   const onSwitchAgent = (agent: typeof selectedAgent) => {
     if (!agent) return;
@@ -342,6 +406,15 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         onClose={onClose}
         logoIcon={resolvedLogo}
         agentDashboardUrl={agentDashboardUrl}
+        historyEnabled={historyEnabled}
+        historyMenuOpen={historyMenuOpen}
+        onHistoryMenuToggle={handleHistoryMenuToggle}
+        onHistoryMenuClose={() => setHistoryMenuOpen(false)}
+        conversations={conversations}
+        conversationsLoading={conversationsLoading}
+        activeConversationId={conversationId}
+        onSelectConversation={handleSelectConversation}
+        onDeleteConversation={(id) => void handleDeleteConversation(id)}
         t={t}
       />
       {messages.length === 0 ? (
@@ -364,6 +437,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         onSend={handleSendMessage}
         onStop={handleStopGenerating}
         isLoading={isLoading}
+        canSteer={canSteer}
         attachedFiles={disableFileManagement ? [] : attachedFiles}
         onFileAdd={disableFileManagement ? undefined : handleFileAdd}
         onFileRemove={disableFileManagement ? undefined : (i) => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}

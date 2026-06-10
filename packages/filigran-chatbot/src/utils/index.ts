@@ -64,6 +64,27 @@ export function hardenNestedCodeFences(raw: string): string {
 
 export const identity = (key: string) => key;
 
+/**
+ * Compact relative-time label for the conversation history menu
+ * ("just now", "5m ago", "3h ago", "2d ago", then a short date).
+ * Returns an empty string for missing/unparseable timestamps so the row
+ * simply omits the label instead of showing "Invalid Date".
+ */
+export function timeAgo(iso: string | undefined, t: (key: string) => string): string {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const diffMs = Date.now() - then;
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return t('just now');
+  if (minutes < 60) return `${minutes}${t('m ago')}`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}${t('h ago')}`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}${t('d ago')}`;
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 /** Matches a complete `[[FILE:<id>]]` deliverable marker agents embed in prose. */
 const FILE_MARKER_RE = /\[\[FILE:[^\]]+\]\]/g;
 

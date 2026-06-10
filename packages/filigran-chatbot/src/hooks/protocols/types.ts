@@ -5,7 +5,7 @@ import type { ChatAttachment } from '../../types';
  * The SSE read loop is protocol-agnostic — only the JSON-to-action mapping differs.
  */
 export type ParsedAction =
-  | { action: 'status'; status: string; tools?: string[]; thinkingContent?: string }
+  | { action: 'status'; status: string; tools?: string[]; thinkingContent?: string; elapsedS?: number }
   | { action: 'stream'; content: string }
   | {
       action: 'done';
@@ -17,6 +17,8 @@ export type ParsedAction =
       transferAgentId?: string;
       transferAgentName?: string;
       attachments?: ChatAttachment[];
+      /** Accumulated model reasoning for the turn (reasoning-details panel). */
+      reasoning?: string;
     }
   | { action: 'error'; content: string }
   | { action: 'set_chat_id'; chatId: string }

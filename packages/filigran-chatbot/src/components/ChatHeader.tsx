@@ -1,5 +1,6 @@
 import { useRef } from 'react';
-import type { ChatMode, XtmAgent } from '../types';
+import type { ChatConversationSummary, ChatMode, XtmAgent } from '../types';
+import { timeAgo } from '../utils';
 import {
   ChevronDownIcon,
   CloseIcon,
@@ -8,7 +9,9 @@ import {
   FloatingIcon,
   FullscreenExitIcon,
   FullscreenIcon,
+  HistoryIcon,
   SidebarIcon,
+  TrashIcon,
   UserPlusIcon,
 } from './icons';
 import { Dropdown } from './Dropdown';
@@ -33,6 +36,16 @@ interface ChatHeaderProps {
   onClose: () => void;
   logoIcon: React.ReactNode;
   agentDashboardUrl?: string;
+  /** Multi-conversation history menu (REST backend). Hidden when false. */
+  historyEnabled?: boolean;
+  historyMenuOpen?: boolean;
+  onHistoryMenuToggle?: () => void;
+  onHistoryMenuClose?: () => void;
+  conversations?: ChatConversationSummary[];
+  conversationsLoading?: boolean;
+  activeConversationId?: string | null;
+  onSelectConversation?: (id: string) => void;
+  onDeleteConversation?: (id: string) => void;
   t: (key: string) => string;
 }
 
@@ -60,10 +73,20 @@ export const ChatHeader = ({
   onClose,
   logoIcon,
   agentDashboardUrl,
+  historyEnabled = false,
+  historyMenuOpen = false,
+  onHistoryMenuToggle,
+  onHistoryMenuClose,
+  conversations = [],
+  conversationsLoading = false,
+  activeConversationId = null,
+  onSelectConversation,
+  onDeleteConversation,
   t,
 }: ChatHeaderProps) => {
   const agentAnchorRef = useRef<HTMLButtonElement>(null);
   const modeAnchorRef = useRef<HTMLButtonElement>(null);
+  const historyAnchorRef = useRef<HTMLButtonElement>(null);
 
   const CurrentModeIcon = mode === 'sidebar' ? SidebarIcon : mode === 'fullscreen' ? FullscreenExitIcon : FloatingIcon;
 
@@ -150,6 +173,82 @@ export const ChatHeader = ({
       </Dropdown>
 
       <div className="flex-1" />
+
+      {historyEnabled && (
+        <>
+          <Tooltip title={t('Conversation history')}>
+            <button
+              ref={historyAnchorRef}
+              type="button"
+              onClick={onHistoryMenuToggle}
+              aria-label={t('Conversation history')}
+              aria-haspopup="menu"
+              aria-expanded={historyMenuOpen}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
+            >
+              <HistoryIcon size={18} />
+            </button>
+          </Tooltip>
+
+          <Dropdown open={historyMenuOpen} onClose={() => onHistoryMenuClose?.()} anchorRef={historyAnchorRef} placement="bottom-end" width={300}>
+            <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase text-gray-400 dark:text-white/40">
+              {t('Conversation history')}
+            </span>
+            <div className="max-h-72 overflow-y-auto filigran-chat-scrollable">
+              {conversationsLoading && conversations.length === 0 && (
+                <div className="px-4 py-2">
+                  <Spinner size={16} />
+                </div>
+              )}
+              {!conversationsLoading && conversations.length === 0 && (
+                <div className="px-4 py-3 text-[0.75rem] text-gray-400 dark:text-white/40">{t('No conversations yet')}</div>
+              )}
+              {conversations.map((conv) => {
+                const isActive = conv.conversationId === activeConversationId;
+                const when = timeAgo(conv.updatedAt, t);
+                return (
+                  <div
+                    key={conv.conversationId}
+                    className={`group flex items-center gap-2 px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${
+                      isActive ? 'bg-[var(--chat-accent)]/10' : ''
+                    }`}
+                  >
+                    <button type="button" onClick={() => onSelectConversation?.(conv.conversationId)} className="flex-1 min-w-0 text-left">
+                      <div className="text-[0.8125rem] font-medium text-gray-900 dark:text-white truncate">
+                        {conv.title || t('Untitled conversation')}
+                      </div>
+                      {when && <div className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">{when}</div>}
+                    </button>
+                    {onDeleteConversation && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteConversation(conv.conversationId)}
+                        title={t('Delete conversation')}
+                        aria-label={t('Delete conversation')}
+                        className="shrink-0 p-1 rounded-md text-gray-400 dark:text-white/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
+                      >
+                        <TrashIcon size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="h-px bg-gray-200 dark:bg-white/10 mx-2" />
+            <button
+              type="button"
+              onClick={() => {
+                onHistoryMenuClose?.();
+                onNewChat();
+              }}
+              className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+            >
+              <EditIcon size={16} className="text-gray-400 dark:text-white/40 shrink-0" />
+              <span className="text-[0.8125rem] text-gray-700 dark:text-white/70">{t('New conversation')}</span>
+            </button>
+          </Dropdown>
+        </>
+      )}
 
       <Tooltip title={t('New chat')}>
         <button
