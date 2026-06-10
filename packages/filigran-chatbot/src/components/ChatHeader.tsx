@@ -211,7 +211,9 @@ export const ChatHeader = ({
                     }`}
                   >
                     <button type="button" onClick={() => onSelectConversation?.(conv.conversationId)} className="flex-1 min-w-0 text-left">
-                      <div className="text-[0.8125rem] font-medium text-gray-900 dark:text-white truncate">{conv.title}</div>
+                      <div className="text-[0.8125rem] font-medium text-gray-900 dark:text-white truncate">
+                        {conv.title || t('Untitled conversation')}
+                      </div>
                       {when && <div className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">{when}</div>}
                     </button>
                     {onDeleteConversation && (
@@ -219,7 +221,8 @@ export const ChatHeader = ({
                         type="button"
                         onClick={() => onDeleteConversation(conv.conversationId)}
                         title={t('Delete conversation')}
-                        className="shrink-0 p-1 rounded-md text-gray-400 dark:text-white/30 opacity-0 group-hover:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
+                        aria-label={t('Delete conversation')}
+                        className="shrink-0 p-1 rounded-md text-gray-400 dark:text-white/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
                       >
                         <TrashIcon size={14} />
                       </button>

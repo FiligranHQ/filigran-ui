@@ -192,7 +192,9 @@ export interface ChatFile {
 
 /**
  * A past conversation surfaced in the history menu (REST backend only).
- * Listed via `GET {apiBaseUrl}{apiEndpoints.sessions ?? '/chat/sessions'}`.
+ * Listed via `GET {apiBaseUrl}{apiEndpoints.history ?? apiEndpoints.sessions ?? '/chat/sessions'}`
+ * — the optional `apiEndpoints.history` override takes precedence when the
+ * proxy cannot route GET/DELETE on the sessions path.
  */
 export interface ChatConversationSummary {
   conversationId: string;

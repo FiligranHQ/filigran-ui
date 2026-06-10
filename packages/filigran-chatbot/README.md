@@ -409,6 +409,7 @@ function App() {
 - `'New chat'`
 - `'Conversation history'`
 - `'No conversations yet'`
+- `'Untitled conversation'`
 - `'New conversation'`
 - `'Delete conversation'`
 - `'just now'` / `'m ago'` / `'h ago'` / `'d ago'`

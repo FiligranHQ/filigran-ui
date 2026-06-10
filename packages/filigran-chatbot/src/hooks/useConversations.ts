@@ -29,7 +29,10 @@ function parseConversation(raw: unknown): ChatConversationSummary | null {
   const c = raw as Record<string, unknown>;
   const id = c.conversation_id ?? c.id;
   if (typeof id !== 'string' || !id) return null;
-  const title = typeof c.title === 'string' && c.title.trim() ? c.title : 'Untitled conversation';
+  // Keep the raw (trimmed) title; the localized "Untitled conversation"
+  // fallback is applied at render time (ChatHeader) so it goes through the
+  // component's translation function instead of being hardcoded in English.
+  const title = typeof c.title === 'string' ? c.title.trim() : '';
   const updatedAt = typeof c.updated_at === 'string' ? c.updated_at : typeof c.created_at === 'string' ? c.created_at : undefined;
   const messageCount = typeof c.message_count === 'number' ? c.message_count : undefined;
   return { conversationId: id, title, updatedAt, messageCount };
