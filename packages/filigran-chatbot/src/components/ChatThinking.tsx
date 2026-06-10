@@ -172,7 +172,10 @@ export function ThinkingTextBubble({ content }: { content: string }) {
         }}
         className={`max-h-40 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden${
           isOverflowing
-            ? ' [mask-image:linear-gradient(to_bottom,transparent_0,rgb(0_0_0/0.25)_1.5rem,rgb(0_0_0/0.7)_3rem,black_4.5rem)]'
+            ? // -webkit- twin first: Safari/WebKit ignores unprefixed mask-image
+              // on older versions, which would silently drop the top dissolve.
+              ' [-webkit-mask-image:linear-gradient(to_bottom,transparent_0,rgb(0_0_0/0.25)_1.5rem,rgb(0_0_0/0.7)_3rem,black_4.5rem)]' +
+              ' [mask-image:linear-gradient(to_bottom,transparent_0,rgb(0_0_0/0.25)_1.5rem,rgb(0_0_0/0.7)_3rem,black_4.5rem)]'
             : ''
         }`}
       >
