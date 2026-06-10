@@ -1,4 +1,4 @@
-import type { ChatAttachment } from '../../types';
+import type { ChatAttachment, ToolCallTraceEntry, TransferChainEntry } from '../../types';
 import type { ParsedAction, ProtocolContext } from './types';
 
 /**
@@ -22,6 +22,48 @@ export function parseAttachments(raw: unknown): ChatAttachment[] | undefined {
       size: typeof a.size === 'number' ? a.size : undefined,
       contentType: typeof a.content_type === 'string' ? a.content_type : undefined,
       fileTag: a.file_tag === 'working_file' ? 'working_file' : 'download_file',
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/**
+ * Normalize the raw `tool_call_trace` array (from a `done` event or restored
+ * session metadata) into typed {@link ToolCallTraceEntry} objects. Defensive:
+ * skips entries without a `name`. Returns `undefined` when empty so the
+ * reasoning-details dialog falls back to the flat tool-name list.
+ */
+export function parseToolCallTrace(raw: unknown): ToolCallTraceEntry[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: ToolCallTraceEntry[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const e = item as Record<string, unknown>;
+    if (typeof e.name !== 'string' || !e.name) continue;
+    out.push({
+      name: e.name,
+      input: typeof e.input === 'string' ? e.input : undefined,
+      output: typeof e.output === 'string' ? e.output : undefined,
+      success: e.success !== false,
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/**
+ * Normalize the raw `transfer_chain` array (from a `done` event or restored
+ * session metadata) into typed {@link TransferChainEntry} objects.
+ */
+export function parseTransferChain(raw: unknown): TransferChainEntry[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: TransferChainEntry[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const e = item as Record<string, unknown>;
+    if (typeof e.agent_name !== 'string' || !e.agent_name) continue;
+    out.push({
+      agentId: typeof e.agent_id === 'string' ? e.agent_id : '',
+      agentName: e.agent_name,
     });
   }
   return out.length > 0 ? out : undefined;
@@ -85,6 +127,9 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       transferAgentName: evt.transfer_agent_name as string | undefined,
       attachments: parseAttachments(evt.attachments),
       reasoning: typeof evt.reasoning === 'string' ? evt.reasoning : undefined,
+      toolCallTrace: parseToolCallTrace(evt.tool_call_trace),
+      transferChain: parseTransferChain(evt.transfer_chain),
+      isTruncated: evt.is_truncated === true || undefined,
     };
   }
 

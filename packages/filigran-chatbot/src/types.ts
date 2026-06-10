@@ -149,10 +149,39 @@ export interface ChatMessage {
   iterations?: number;
   /**
    * Accumulated model reasoning / pre-tool preamble prose for the turn
-   * (from `thinking_text` events), surfaced in the reasoning-details panel
+   * (from `thinking_text` events), surfaced in the reasoning-details dialog
    * after the answer completes — mirroring the XTM One web chat.
    */
   reasoning?: string;
+  /**
+   * Per-tool-call execution trace (name, input, output, success) for the
+   * reasoning-details dialog — same shape the XTM One web chat renders as
+   * expandable rows. Optional: backends without trace support fall back to
+   * the flat `toolNames` list.
+   */
+  toolCallTrace?: ToolCallTraceEntry[];
+  /** Agent transfer chain for the turn (reasoning-details dialog). */
+  transferChain?: TransferChainEntry[];
+  /**
+   * True when the agent's iteration budget was exhausted and the final
+   * response is a best-effort summary — surfaced as an amber warning on the
+   * reasoning-details affordance, mirroring the XTM One web chat.
+   */
+  isTruncated?: boolean;
+}
+
+/** One tool call in the reasoning-details execution trace. */
+export interface ToolCallTraceEntry {
+  name: string;
+  input?: string;
+  output?: string;
+  success: boolean;
+}
+
+/** One hop in the agent transfer chain shown in the reasoning-details dialog. */
+export interface TransferChainEntry {
+  agentId: string;
+  agentName: string;
 }
 
 /**

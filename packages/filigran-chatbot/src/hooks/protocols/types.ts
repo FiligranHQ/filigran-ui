@@ -1,4 +1,4 @@
-import type { ChatAttachment } from '../../types';
+import type { ChatAttachment, ToolCallTraceEntry, TransferChainEntry } from '../../types';
 
 /**
  * Normalized action produced by all protocol parsers.
@@ -17,8 +17,14 @@ export type ParsedAction =
       transferAgentId?: string;
       transferAgentName?: string;
       attachments?: ChatAttachment[];
-      /** Accumulated model reasoning for the turn (reasoning-details panel). */
+      /** Accumulated model reasoning for the turn (reasoning-details dialog). */
       reasoning?: string;
+      /** Per-tool-call execution trace (reasoning-details dialog). */
+      toolCallTrace?: ToolCallTraceEntry[];
+      /** Agent transfer chain for the turn (reasoning-details dialog). */
+      transferChain?: TransferChainEntry[];
+      /** True when the agent's iteration budget was exhausted. */
+      isTruncated?: boolean;
     }
   | { action: 'error'; content: string }
   | { action: 'set_chat_id'; chatId: string }
