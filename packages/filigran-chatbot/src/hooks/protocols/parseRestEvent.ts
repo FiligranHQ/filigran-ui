@@ -44,7 +44,9 @@ export function parseToolCallTrace(raw: unknown): ToolCallTraceEntry[] | undefin
       name: e.name,
       input: typeof e.input === 'string' ? e.input : undefined,
       output: typeof e.output === 'string' ? e.output : undefined,
-      success: e.success !== false,
+      // Only a boolean is honored; a missing/malformed value defaults to
+      // success so unknown states never render a false failure icon.
+      success: typeof e.success === 'boolean' ? e.success : true,
     });
   }
   return out.length > 0 ? out : undefined;

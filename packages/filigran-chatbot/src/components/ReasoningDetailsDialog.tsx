@@ -105,6 +105,7 @@ interface ReasoningDetailsDialogProps {
  */
 export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDialogProps) => {
   const hostRef = useRef<HTMLSpanElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [root, setRoot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -118,6 +119,15 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
+
+  // Move initial keyboard focus into the modal (aria-modal) once the portal
+  // is mounted, and hand it back to the trigger when the dialog closes.
+  useEffect(() => {
+    if (!root) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus({ preventScroll: true });
+    return () => previouslyFocused?.focus({ preventScroll: true });
+  }, [root]);
 
   // Prefer the backend's explicit count, then the detailed trace (what the
   // dialog body actually renders), then the flat tool-name list — keeps the
@@ -156,6 +166,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
                   <WrenchIcon size={15} className="text-[var(--chat-accent)]" />
                   <span className="flex-1 text-[0.875rem] font-semibold text-gray-900 dark:text-white">{t('Reasoning details')}</span>
                   <button
+                    ref={closeButtonRef}
                     type="button"
                     onClick={onClose}
                     aria-label={t('Close')}
