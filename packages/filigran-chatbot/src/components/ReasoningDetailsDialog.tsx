@@ -13,17 +13,23 @@ import {
   XCircleIcon,
 } from './icons';
 import { cleanReasoningText } from './ChatThinking';
+import { findChatbotRoot } from '../utils';
 
-/** Inputs longer than this are shown raw instead of pretty-printed JSON. */
-const TRACE_INPUT_PRETTY_LIMIT = 10_000;
+/** Trace values longer than this are shown raw instead of pretty-printed JSON. */
+const TRACE_PRETTY_LIMIT = 10_000;
 
-function findChatbotRoot(el: HTMLElement | null): HTMLElement {
-  let node = el;
-  while (node) {
-    if (node.classList.contains('filigran-chatbot')) return node;
-    node = node.parentElement;
+/**
+ * Pretty-print a tool-call input/output when it is compact JSON; anything
+ * else (plain text, oversized payloads, malformed JSON) is shown raw.
+ */
+function prettyTraceValue(raw: string | undefined): string {
+  if (!raw) return '';
+  if (raw.length > TRACE_PRETTY_LIMIT) return raw;
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2);
+  } catch {
+    return raw;
   }
-  return document.body;
 }
 
 function toolDisplayName(name: string): string {
@@ -34,15 +40,8 @@ function toolDisplayName(name: string): string {
 const ToolCallRow = ({ entry, index, t }: { entry: ToolCallTraceEntry; index: number; t: (key: string) => string }) => {
   const [expanded, setExpanded] = useState(false);
 
-  const inputDisplay = useMemo(() => {
-    if (!entry.input) return '';
-    if (entry.input.length > TRACE_INPUT_PRETTY_LIMIT) return entry.input;
-    try {
-      return JSON.stringify(JSON.parse(entry.input), null, 2);
-    } catch {
-      return entry.input;
-    }
-  }, [entry.input]);
+  const inputDisplay = useMemo(() => prettyTraceValue(entry.input), [entry.input]);
+  const outputDisplay = useMemo(() => prettyTraceValue(entry.output), [entry.output]);
   const hasInput = !!inputDisplay && inputDisplay !== '{}';
 
   return (
@@ -81,7 +80,7 @@ const ToolCallRow = ({ entry, index, t }: { entry: ToolCallTraceEntry; index: nu
           <div className="px-3 py-2 bg-gray-50/50 dark:bg-white/[0.01]">
             <p className="m-0 mb-1.5 text-[0.6rem] text-gray-500 dark:text-white/40 uppercase tracking-wider font-medium">{t('Output')}</p>
             <pre className="m-0 text-[0.7rem] text-gray-600 dark:text-white/60 font-mono whitespace-pre-wrap break-all leading-relaxed max-h-48 overflow-y-auto filigran-chat-scrollable">
-              {entry.output || t('(no output)')}
+              {outputDisplay || t('(no output)')}
             </pre>
           </div>
         </div>

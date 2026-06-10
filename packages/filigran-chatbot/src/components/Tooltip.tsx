@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { findChatbotRoot } from '../utils';
 
 interface TooltipProps {
   title: string;
@@ -9,15 +10,6 @@ interface TooltipProps {
 // Approximate rendered tooltip height (text-xs + py-1) plus the 4px gap.
 // Used to decide whether a top-placed tooltip would overflow the panel.
 const TOOLTIP_CLEARANCE = 28;
-
-function findChatbotRoot(el: HTMLElement | null): HTMLElement {
-  let node = el;
-  while (node) {
-    if (node.classList.contains('filigran-chatbot')) return node;
-    node = node.parentElement;
-  }
-  return document.body;
-}
 
 export const Tooltip = ({ title, children }: TooltipProps) => {
   const ref = useRef<HTMLSpanElement>(null);

@@ -65,6 +65,21 @@ export function hardenNestedCodeFences(raw: string): string {
 export const identity = (key: string) => key;
 
 /**
+ * Nearest chatbot panel root (`.filigran-chatbot`) for portal-based overlays
+ * (tooltips, dropdowns, dialogs), so they stay inside the panel's stacking
+ * context instead of competing with the host app's z-indexes. Falls back to
+ * `document.body` when rendered outside a panel.
+ */
+export function findChatbotRoot(el: HTMLElement | null): HTMLElement {
+  let node = el;
+  while (node) {
+    if (node.classList.contains('filigran-chatbot')) return node;
+    node = node.parentElement;
+  }
+  return document.body;
+}
+
+/**
  * Compact relative-time label for the conversation history menu
  * ("just now", "5m ago", "3h ago", "2d ago", then a short date).
  * Returns an empty string for missing/unparseable timestamps so the row
