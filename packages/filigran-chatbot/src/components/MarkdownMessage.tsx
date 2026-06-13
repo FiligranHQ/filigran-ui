@@ -144,7 +144,7 @@ export const MarkdownMessage = ({ content, onRelativeLinkClick }: MarkdownMessag
         ),
       }}
     >
-      {hardenNestedCodeFences(normalizeMarkdownTables(content))}
+      {normalizeMarkdownTables(hardenNestedCodeFences(content))}
     </Markdown>
   );
 };
