@@ -145,9 +145,14 @@ export function normalizeMarkdownTables(raw: string): string {
     const delimCells = splitCells(delim);
     if (headerCols < 2 || delimCells.length === headerCols) continue;
 
+    // Keep the header row's indentation on the rewritten delimiter: GFM drops a
+    // table whose delimiter row dedents away from its header, so a repaired
+    // table nested in a list item must stay aligned with it. Top-level tables
+    // have empty indentation, so their output is unchanged.
+    const indent = header.slice(0, header.length - header.trimStart().length);
     const aligns: string[] = [];
     for (let c = 0; c < headerCols; c++) aligns.push(delimCells[c] ? alignOf(delimCells[c]) : '---');
-    lines[i + 1] = `| ${aligns.join(' | ')} |`;
+    lines[i + 1] = `${indent}| ${aligns.join(' | ')} |`;
   }
   return lines.join('\n');
 }
