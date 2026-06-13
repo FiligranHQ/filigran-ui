@@ -204,7 +204,7 @@ const ELAPSED_DISPLAY_THRESHOLD_S = 15;
  * The reasoning window flips to the waiting game once nothing has progressed
  * for this long — i.e. no reasoning at all, or a reasoning stream that stalled.
  */
-const STALL_DELAY_MS = 7000;
+const STALL_DELAY_MS = 5000;
 
 /**
  * True once `signal` has stayed unchanged for `delayMs`. Re-arms whenever the
@@ -227,7 +227,7 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true 
   const thinkingContent = agentStatus?.thinkingContent;
   const elapsedS = agentStatus?.elapsedS;
   const showElapsed = typeof elapsedS === 'number' && elapsedS >= ELAPSED_DISPLAY_THRESHOLD_S;
-  // Show the waiting game when reasoning is absent or has stalled for 7s; flip
+  // Show the waiting game when reasoning is absent or has stalled for 5s; flip
   // back to the reasoning window the moment new reasoning text resumes (the
   // accumulated content carries the continuation).
   const stalled = useStalled(thinkingContent?.length ?? 0, STALL_DELAY_MS);
