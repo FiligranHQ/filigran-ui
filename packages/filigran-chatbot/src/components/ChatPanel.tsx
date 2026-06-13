@@ -6,6 +6,7 @@ import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
 import { useSidebarResize } from '../hooks/useSidebarResize';
+import { useAwayCompletionNotice } from '../hooks/useAwayCompletionNotice';
 import { DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
@@ -50,6 +51,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   pageContext,
   pushContentSelector,
   backendType = 'rest',
+  miniGameEnabled = true,
+  notifyOnComplete = true,
+  onTaskComplete,
 }) => {
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
@@ -171,6 +175,24 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   const resolvedLogo = logoIcon ?? <DefaultLogoIcon size={24} />;
   const firstName = user.firstName;
   const agentName = transferredAgent?.name || selectedAgent?.name || 'Assistant';
+
+  // Key on `.filigran-chatbot.fixed` (the panel root carries both in every
+  // mode) rather than `.filigran-chatbot` alone, which the toggle button also
+  // uses — otherwise focusing the toggle would be mistaken for viewing the chat.
+  // Stable reference (useCallback) so the notifier's effect doesn't re-run on
+  // every render — the panel re-renders frequently while a response streams.
+  const isViewingChat = useCallback(() => typeof document !== 'undefined' && !!document.activeElement?.closest('.filigran-chatbot.fixed'), []);
+
+  // Notify when a long turn finishes and the user is not watching the chat —
+  // away (tab hidden / another window) or in-app but focused outside the panel.
+  useAwayCompletionNotice({
+    isLoading,
+    agentName,
+    t,
+    enabled: notifyOnComplete,
+    onComplete: onTaskComplete,
+    isViewingChat,
+  });
 
   // Download an agent-generated file. The URL is resolved against the host
   // app's own backend proxy (apiBaseUrl), NOT the upstream chat service:
@@ -434,6 +456,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           logoIcon={resolvedLogo}
           onRelativeLinkClick={onRelativeLinkClick}
           onDownloadFile={canDownload ? handleDownloadFile : undefined}
+          miniGameEnabled={miniGameEnabled}
           t={t}
         />
       )}

@@ -12,11 +12,14 @@ import {
   UserPlusIcon,
   WrenchIcon,
 } from './icons';
+import { ChatWaitingGame } from './ChatWaitingGame';
 
 interface ChatThinkingProps {
   agentStatus: AgentStatusState | null;
   logoIcon?: React.ReactNode;
   t: (key: string) => string;
+  /** Host-level override for the waiting mini-game / dynamic messages. */
+  miniGameEnabled?: boolean;
 }
 
 type IconComponent = (props: IconProps) => React.JSX.Element;
@@ -197,11 +200,53 @@ function formatElapsed(seconds: number): string {
  */
 const ELAPSED_DISPLAY_THRESHOLD_S = 15;
 
-export const ChatThinking = ({ agentStatus, logoIcon, t }: ChatThinkingProps) => {
+/**
+ * The reasoning window flips to the waiting game once nothing has progressed
+ * for this long — i.e. no reasoning at all, or a reasoning stream that stalled.
+ */
+const STALL_DELAY_MS = 5000;
+
+/**
+ * True once `signal` has stayed unchanged for `delayMs`. Re-arms whenever the
+ * signal changes, so resumed reasoning clears the flag immediately. Used to
+ * detect a stalled (or absent) reasoning stream so we can show the waiting game
+ * in the meantime and flip back to the reasoning the moment it resumes. Arms no
+ * timer (and never flips) while `enabled` is false, so a host that disables the
+ * waiting game schedules no timeouts or re-renders for it.
+ */
+function useStalled(signal: number, delayMs: number, enabled: boolean): boolean {
+  const [stalled, setStalled] = useState(false);
+  const prevSignalRef = useRef(signal);
+
+  // Did the signal change since the last settled render? When it did, reasoning
+  // has just resumed, so we report "not stalled" for this very render without a
+  // render-phase state update (discouraged in React / brittle under StrictMode
+  // and concurrent rendering). The effect below then resets the flag and re-arms
+  // the timer — deriving the value here keeps the flip back to the reasoning
+  // window free of the one-frame lag a clear-in-effect alone would leave.
+  const signalChanged = prevSignalRef.current !== signal;
+
+  useEffect(() => {
+    prevSignalRef.current = signal;
+    setStalled(false);
+    if (!enabled) return;
+    const id = window.setTimeout(() => setStalled(true), delayMs);
+    return () => window.clearTimeout(id);
+  }, [signal, delayMs, enabled]);
+
+  return enabled && stalled && !signalChanged;
+}
+
+export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true }: ChatThinkingProps) => {
   const { label, StatusIcon, showDots } = resolveStatusVisual(agentStatus, t);
   const thinkingContent = agentStatus?.thinkingContent;
   const elapsedS = agentStatus?.elapsedS;
   const showElapsed = typeof elapsedS === 'number' && elapsedS >= ELAPSED_DISPLAY_THRESHOLD_S;
+  // Show the waiting game when reasoning is absent or has stalled for 5s; flip
+  // back to the reasoning window the moment new reasoning text resumes (the
+  // accumulated content carries the continuation).
+  const stalled = useStalled(thinkingContent?.length ?? 0, STALL_DELAY_MS, miniGameEnabled);
+  const showGame = miniGameEnabled && stalled;
 
   return (
     <>
@@ -230,7 +275,11 @@ export const ChatThinking = ({ agentStatus, logoIcon, t }: ChatThinkingProps) =>
           </div>
         </div>
       </div>
-      {thinkingContent && <ThinkingTextBubble content={thinkingContent} />}
+      {thinkingContent && !showGame ? (
+        <ThinkingTextBubble content={thinkingContent} />
+      ) : showGame ? (
+        <ChatWaitingGame t={t} enabled={miniGameEnabled} />
+      ) : null}
     </>
   );
 };
