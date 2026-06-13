@@ -218,21 +218,23 @@ function useStalled(signal: number, delayMs: number, enabled: boolean): boolean 
   const [stalled, setStalled] = useState(false);
   const prevSignalRef = useRef(signal);
 
-  // Clear the flag synchronously during render (not in an effect) the moment
-  // the signal changes or the feature is disabled, so resumed reasoning flips
-  // back without a one-frame lag where the waiting game lingers.
+  // Did the signal change since the last settled render? When it did, reasoning
+  // has just resumed, so we report "not stalled" for this very render without a
+  // render-phase state update (discouraged in React / brittle under StrictMode
+  // and concurrent rendering). The effect below then resets the flag and re-arms
+  // the timer — deriving the value here keeps the flip back to the reasoning
+  // window free of the one-frame lag a clear-in-effect alone would leave.
   const signalChanged = prevSignalRef.current !== signal;
-  prevSignalRef.current = signal;
-  if (stalled && (signalChanged || !enabled)) {
-    setStalled(false);
-  }
 
   useEffect(() => {
+    prevSignalRef.current = signal;
+    setStalled(false);
     if (!enabled) return;
     const id = window.setTimeout(() => setStalled(true), delayMs);
     return () => window.clearTimeout(id);
   }, [signal, delayMs, enabled]);
-  return stalled;
+
+  return enabled && stalled && !signalChanged;
 }
 
 export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true }: ChatThinkingProps) => {

@@ -354,8 +354,13 @@ export const ChatWaitingGame = ({ t, enabled = true }: ChatWaitingGameProps) => 
   const current = messages[msgIndex % messages.length];
 
   return (
-    <div className="ml-11 mt-2.5 max-w-[78%]" role="status" aria-live="polite">
-      <span className="sr-only">{current}</span>
+    <div className="ml-11 mt-2.5 max-w-[78%]">
+      {/* Keep the live region scoped to the announced text only — wrapping the
+          whole UI (including the toggle button) made screen readers re-announce
+          the control alongside each message change. */}
+      <span className="sr-only" role="status" aria-live="polite">
+        {current}
+      </span>
       <div className="relative overflow-hidden rounded-md bg-[var(--chat-accent)]/[0.03]" style={{ animation: 'chat-fade-in 0.5s ease-out' }}>
         {playMode ? (
           <canvas ref={canvasRef} aria-hidden className="block w-full" style={{ height: GAME_HEIGHT }} />
@@ -375,6 +380,7 @@ export const ChatWaitingGame = ({ t, enabled = true }: ChatWaitingGameProps) => 
               setMinigameOn(next);
               writePref(next);
             }}
+            aria-pressed={minigameOn}
             aria-label={minigameOn ? t('Turn off the waiting mini-game') : t('Turn on the waiting mini-game')}
             title={minigameOn ? t('Turn off the waiting mini-game') : t('Turn on the waiting mini-game')}
             className={`absolute top-1 right-1 rounded p-1 transition-opacity ${
