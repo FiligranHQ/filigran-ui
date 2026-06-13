@@ -62,6 +62,110 @@ export function hardenNestedCodeFences(raw: string): string {
   return lines.join('\n');
 }
 
+/**
+ * GFM renders a pipe table only when the delimiter row (`|---|---|`) has the
+ * SAME number of columns as the header row. LLMs frequently miscount (e.g. a
+ * 4-column header followed by a 3-column delimiter), and a server-side guard can
+ * corrupt the delimiter — in either case the whole table silently degrades to
+ * raw `| … |` text. This repairs a mismatched delimiter row to the header's
+ * column count (preserving any alignment colons) so the table renders.
+ *
+ * It only rewrites a delimiter that is ACTUALLY mismatched, so already-valid
+ * tables are never touched. Fenced code blocks are skipped, and setext headings
+ * (underlines with no `|`) are never mistaken for a table.
+ */
+export function normalizeMarkdownTables(raw: string): string {
+  if (!raw || raw.indexOf('|') === -1) return raw;
+  const lines = raw.split('\n');
+
+  // Splits on unescaped `|` only. A manual walk (rather than a negative
+  // lookbehind, which is unsupported on older engines and would throw at parse
+  // time in an untranspiled ESNext bundle) keeps `\|` inside a cell intact.
+  const splitCells = (row: string): string[] => {
+    let s = row.trim();
+    if (s.startsWith('|')) s = s.slice(1);
+    if (s.endsWith('|')) s = s.slice(0, -1);
+    const cells: string[] = [];
+    let current = '';
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (ch === '\\' && i + 1 < s.length) {
+        current += ch + s[i + 1];
+        i++;
+      } else if (ch === '|') {
+        cells.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    cells.push(current);
+    return cells;
+  };
+  const isDelimiterRow = (row: string): boolean => row.includes('|') && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(row);
+  // Emit the canonical 3-hyphen delimiter form. remark-gfm accepts a single
+  // hyphen, but `---` (with optional alignment colons) is the portable form
+  // every Markdown renderer agrees on, so prefer it.
+  const alignOf = (cell: string): string => {
+    const c = cell.trim();
+    const left = c.startsWith(':');
+    const right = c.endsWith(':');
+    return left && right ? ':---:' : right ? '---:' : left ? ':---' : '---';
+  };
+
+  // Track both the fence character AND its run length: per CommonMark a closing
+  // fence must use the same character and be at least as long as the opener, so
+  // a shorter run (```) must not close a longer one (````), and a closing fence
+  // carries no info string. Optional blockquote / list-item markers are allowed
+  // before the run so fences nested in those containers (e.g. `- ```) are still
+  // recognised and the table inside them is left untouched.
+  const fenceRe = /^\s*(?:(?:>\s?)|(?:[-*+]\s+)|(?:\d{1,9}[.)]\s+))*(`{3,}|~{3,})(.*)$/;
+  let fenceChar: string | null = null;
+  let fenceLen = 0;
+  // A pipe-table header can share its line with a list-item marker (e.g.
+  // `- | a | b |`). Strip a leading list marker before counting columns so the
+  // count matches the cells GFM sees inside the list item, not the marker.
+  const listMarkerRe = /^\s*(?:[-*+]\s+|\d{1,9}[.)]\s+)/;
+  for (let i = 0; i < lines.length - 1; i++) {
+    const fenceMatch = lines[i].match(fenceRe);
+    if (fenceMatch) {
+      const run = fenceMatch[1];
+      if (fenceChar === null) {
+        fenceChar = run[0];
+        fenceLen = run.length;
+      } else if (run[0] === fenceChar && run.length >= fenceLen && fenceMatch[2].trim() === '') {
+        fenceChar = null;
+        fenceLen = 0;
+      }
+      continue;
+    }
+    if (fenceChar !== null) continue;
+
+    const header = lines[i];
+    const delim = lines[i + 1];
+    if (!header.includes('|') || isDelimiterRow(header) || !isDelimiterRow(delim)) continue;
+
+    // A table can start on a list-item line, so both the cells and the
+    // delimiter's alignment live AFTER the marker. Anchor the rewritten
+    // delimiter to that content offset (padding the marker width with spaces) so
+    // it stays a continuation line of the list item: GFM drops a table whose
+    // delimiter dedents away from its header. Without a marker this is just the
+    // header's leading whitespace, so top-level tables are emitted unchanged.
+    const markerMatch = header.match(listMarkerRe);
+    const offset = markerMatch ? markerMatch[0].length : header.length - header.trimStart().length;
+    const indent = markerMatch ? ' '.repeat(offset) : header.slice(0, offset);
+
+    const headerCols = splitCells(header.slice(offset)).length;
+    const delimCells = splitCells(delim);
+    if (headerCols < 2 || delimCells.length === headerCols) continue;
+
+    const aligns: string[] = [];
+    for (let c = 0; c < headerCols; c++) aligns.push(delimCells[c] ? alignOf(delimCells[c]) : '---');
+    lines[i + 1] = `${indent}| ${aligns.join(' | ')} |`;
+  }
+  return lines.join('\n');
+}
+
 export const identity = (key: string) => key;
 
 /**
