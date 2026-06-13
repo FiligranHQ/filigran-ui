@@ -80,11 +80,11 @@ export function useAwayCompletionNotice({ isLoading, agentName, t, enabled = tru
   const sawHiddenRef = useRef(false);
 
   // Stop the flash and restore the title as soon as the user returns to the
-  // tab. Bound once for the hook's lifetime and torn down on unmount, so we
-  // never leak listeners (and never leave the title flashing after the panel
-  // is gone).
+  // tab. Bound only while the feature is enabled and torn down on unmount (or
+  // when the host disables it), so we never leak listeners or leave the title
+  // flashing after the panel is gone.
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (!enabled || typeof document === 'undefined') return;
     const clearOnReturn = () => {
       if (!document.hidden) stopTitleFlash();
     };
@@ -95,17 +95,18 @@ export function useAwayCompletionNotice({ isLoading, agentName, t, enabled = tru
       window.removeEventListener('focus', clearOnReturn);
       stopTitleFlash();
     };
-  }, []);
+  }, [enabled]);
 
-  // Track whether the tab was hidden at any point during the turn.
+  // Track whether the tab was hidden at any point during the turn. Skipped
+  // entirely when the feature is disabled.
   useEffect(() => {
-    if (!isLoading) return;
+    if (!enabled || !isLoading) return;
     const onVisibility = () => {
       if (document.hidden) sawHiddenRef.current = true;
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [isLoading]);
+  }, [enabled, isLoading]);
 
   useEffect(() => {
     const wasLoading = wasLoadingRef.current;

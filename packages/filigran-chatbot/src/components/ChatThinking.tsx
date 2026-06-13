@@ -210,15 +210,18 @@ const STALL_DELAY_MS = 5000;
  * True once `signal` has stayed unchanged for `delayMs`. Re-arms whenever the
  * signal changes, so resumed reasoning clears the flag immediately. Used to
  * detect a stalled (or absent) reasoning stream so we can show the waiting game
- * in the meantime and flip back to the reasoning the moment it resumes.
+ * in the meantime and flip back to the reasoning the moment it resumes. Arms no
+ * timer (and never flips) while `enabled` is false, so a host that disables the
+ * waiting game schedules no timeouts or re-renders for it.
  */
-function useStalled(signal: number, delayMs: number): boolean {
+function useStalled(signal: number, delayMs: number, enabled: boolean): boolean {
   const [stalled, setStalled] = useState(false);
   useEffect(() => {
     setStalled(false);
+    if (!enabled) return;
     const id = window.setTimeout(() => setStalled(true), delayMs);
     return () => window.clearTimeout(id);
-  }, [signal, delayMs]);
+  }, [signal, delayMs, enabled]);
   return stalled;
 }
 
@@ -230,7 +233,7 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true 
   // Show the waiting game when reasoning is absent or has stalled for 5s; flip
   // back to the reasoning window the moment new reasoning text resumes (the
   // accumulated content carries the continuation).
-  const stalled = useStalled(thinkingContent?.length ?? 0, STALL_DELAY_MS);
+  const stalled = useStalled(thinkingContent?.length ?? 0, STALL_DELAY_MS, miniGameEnabled);
   const showGame = miniGameEnabled && stalled;
 
   return (
