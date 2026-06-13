@@ -24,8 +24,6 @@ const DEFAULT_MESSAGES = [
 /** localStorage key for the per-browser mini-game preference (on by default). */
 const PREF_KEY = 'filigranChatMiniGame';
 
-/** Only reveal the game on genuinely long waits, so normal replies stay clean. */
-const REVEAL_DELAY_MS = 7000;
 /** Plain (no-game) message rotation cadence. */
 const PLAIN_ROTATE_MS = 2600;
 
@@ -314,33 +312,27 @@ export const ChatWaitingGame = ({ t, enabled = true }: ChatWaitingGameProps) => 
   const messages = useMemo(() => DEFAULT_MESSAGES.map((m) => t(m)), [t]);
   const reducedMotion = usePrefersReducedMotion();
   const [minigameOn, setMinigameOn] = useState(readPref);
-  const [visible, setVisible] = useState(false);
   const [msgIndex, setMsgIndex] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const playMode = enabled && minigameOn && !reducedMotion;
 
-  useEffect(() => {
-    const id = window.setTimeout(() => setVisible(true), REVEAL_DELAY_MS);
-    return () => window.clearTimeout(id);
-  }, []);
-
   // Plain-text rotation when the game is off / reduced motion.
   useEffect(() => {
-    if (!visible || playMode) return;
+    if (playMode) return;
     const id = window.setInterval(() => setMsgIndex((i) => (i + 1) % messages.length), PLAIN_ROTATE_MS);
     return () => window.clearInterval(id);
-  }, [visible, playMode, messages.length]);
+  }, [playMode, messages.length]);
 
   // Canvas engine when the game is on.
   useEffect(() => {
-    if (!visible || !playMode) return;
+    if (!playMode) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     return createInvaderGame(canvas, messages, setMsgIndex);
-  }, [visible, playMode, messages]);
+  }, [playMode, messages]);
 
-  if (!enabled || !visible) return null;
+  if (!enabled) return null;
 
   const current = messages[msgIndex % messages.length];
 

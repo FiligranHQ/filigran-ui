@@ -200,11 +200,38 @@ function formatElapsed(seconds: number): string {
  */
 const ELAPSED_DISPLAY_THRESHOLD_S = 15;
 
+/**
+ * The reasoning window flips to the waiting game once nothing has progressed
+ * for this long — i.e. no reasoning at all, or a reasoning stream that stalled.
+ */
+const STALL_DELAY_MS = 7000;
+
+/**
+ * True once `signal` has stayed unchanged for `delayMs`. Re-arms whenever the
+ * signal changes, so resumed reasoning clears the flag immediately. Used to
+ * detect a stalled (or absent) reasoning stream so we can show the waiting game
+ * in the meantime and flip back to the reasoning the moment it resumes.
+ */
+function useStalled(signal: number, delayMs: number): boolean {
+  const [stalled, setStalled] = useState(false);
+  useEffect(() => {
+    setStalled(false);
+    const id = window.setTimeout(() => setStalled(true), delayMs);
+    return () => window.clearTimeout(id);
+  }, [signal, delayMs]);
+  return stalled;
+}
+
 export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true }: ChatThinkingProps) => {
   const { label, StatusIcon, showDots } = resolveStatusVisual(agentStatus, t);
   const thinkingContent = agentStatus?.thinkingContent;
   const elapsedS = agentStatus?.elapsedS;
   const showElapsed = typeof elapsedS === 'number' && elapsedS >= ELAPSED_DISPLAY_THRESHOLD_S;
+  // Show the waiting game when reasoning is absent or has stalled for 7s; flip
+  // back to the reasoning window the moment new reasoning text resumes (the
+  // accumulated content carries the continuation).
+  const stalled = useStalled(thinkingContent?.length ?? 0, STALL_DELAY_MS);
+  const showGame = miniGameEnabled && stalled;
 
   return (
     <>
@@ -233,7 +260,11 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true 
           </div>
         </div>
       </div>
-      {thinkingContent ? <ThinkingTextBubble content={thinkingContent} /> : <ChatWaitingGame t={t} enabled={miniGameEnabled} />}
+      {thinkingContent && !showGame ? (
+        <ThinkingTextBubble content={thinkingContent} />
+      ) : showGame ? (
+        <ChatWaitingGame t={t} enabled={miniGameEnabled} />
+      ) : null}
     </>
   );
 };
