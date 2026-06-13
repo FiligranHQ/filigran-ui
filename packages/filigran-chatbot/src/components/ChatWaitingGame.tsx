@@ -24,8 +24,8 @@ const DEFAULT_MESSAGES = [
 /** localStorage key for the per-browser mini-game preference (on by default). */
 const PREF_KEY = 'filigranChatMiniGame';
 
-/** Quick interactions should stay clean — only reveal the game after a beat. */
-const REVEAL_DELAY_MS = 2200;
+/** Only reveal the game on genuinely long waits, so normal replies stay clean. */
+const REVEAL_DELAY_MS = 7000;
 /** Plain (no-game) message rotation cadence. */
 const PLAIN_ROTATE_MS = 2600;
 
