@@ -176,6 +176,13 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   const firstName = user.firstName;
   const agentName = transferredAgent?.name || selectedAgent?.name || 'Assistant';
 
+  // Key on `.filigran-chatbot.fixed` (the panel root carries both in every
+  // mode) rather than `.filigran-chatbot` alone, which the toggle button also
+  // uses — otherwise focusing the toggle would be mistaken for viewing the chat.
+  // Stable reference (useCallback) so the notifier's effect doesn't re-run on
+  // every render — the panel re-renders frequently while a response streams.
+  const isViewingChat = useCallback(() => typeof document !== 'undefined' && !!document.activeElement?.closest('.filigran-chatbot.fixed'), []);
+
   // Notify when a long turn finishes and the user is not watching the chat —
   // away (tab hidden / another window) or in-app but focused outside the panel.
   useAwayCompletionNotice({
@@ -184,10 +191,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     t,
     enabled: notifyOnComplete,
     onComplete: onTaskComplete,
-    // Key on `.filigran-chatbot.fixed` (the panel root carries both in every
-    // mode) rather than `.filigran-chatbot` alone, which the toggle button also
-    // uses — otherwise focusing the toggle would be mistaken for viewing the chat.
-    isViewingChat: () => typeof document !== 'undefined' && !!document.activeElement?.closest('.filigran-chatbot.fixed'),
+    isViewingChat,
   });
 
   // Download an agent-generated file. The URL is resolved against the host

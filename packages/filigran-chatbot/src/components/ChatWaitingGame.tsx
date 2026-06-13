@@ -361,14 +361,24 @@ export const ChatWaitingGame = ({ t, enabled = true }: ChatWaitingGameProps) => 
       <span className="sr-only" role="status" aria-live="polite">
         {current}
       </span>
-      <div className="relative overflow-hidden rounded-md bg-[var(--chat-accent)]/[0.03]" style={{ animation: 'chat-fade-in 0.5s ease-out' }}>
+      {/* Suppress every non-essential animation (fade-ins, the blinking caret)
+          under prefers-reduced-motion, so the reduced-motion path really is
+          motion-free — only the plain dimmed text rotates. */}
+      <div
+        className="relative overflow-hidden rounded-md bg-[var(--chat-accent)]/[0.03]"
+        style={reducedMotion ? undefined : { animation: 'chat-fade-in 0.5s ease-out' }}
+      >
         {playMode ? (
           <canvas ref={canvasRef} aria-hidden className="block w-full" style={{ height: GAME_HEIGHT }} />
         ) : (
           <div className="flex items-center" style={{ height: GAME_HEIGHT }}>
-            <span key={current} className="px-3 text-xs text-gray-500 dark:text-white/45" style={{ animation: 'chat-fade-in 0.4s ease-out' }}>
+            <span
+              key={current}
+              className="px-3 text-xs text-gray-500 dark:text-white/45"
+              style={reducedMotion ? undefined : { animation: 'chat-fade-in 0.4s ease-out' }}
+            >
               {current}
-              <span className="ml-0.5 inline-block w-1 h-3 align-middle bg-[var(--chat-accent)]/60 animate-pulse" />
+              <span className={`ml-0.5 inline-block w-1 h-3 align-middle bg-[var(--chat-accent)]/60 ${reducedMotion ? '' : 'animate-pulse'}`} />
             </span>
           </div>
         )}
