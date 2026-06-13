@@ -78,11 +78,29 @@ export function normalizeMarkdownTables(raw: string): string {
   if (!raw || raw.indexOf('|') === -1) return raw;
   const lines = raw.split('\n');
 
+  // Splits on unescaped `|` only. A manual walk (rather than a negative
+  // lookbehind, which is unsupported on older engines and would throw at parse
+  // time in an untranspiled ESNext bundle) keeps `\|` inside a cell intact.
   const splitCells = (row: string): string[] => {
     let s = row.trim();
     if (s.startsWith('|')) s = s.slice(1);
     if (s.endsWith('|')) s = s.slice(0, -1);
-    return s.split(/(?<!\\)\|/);
+    const cells: string[] = [];
+    let current = '';
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (ch === '\\' && i + 1 < s.length) {
+        current += ch + s[i + 1];
+        i++;
+      } else if (ch === '|') {
+        cells.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    cells.push(current);
+    return cells;
   };
   const isDelimiterRow = (row: string): boolean => row.includes('|') && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(row);
   const alignOf = (cell: string): string => {
@@ -92,16 +110,26 @@ export function normalizeMarkdownTables(raw: string): string {
     return left && right ? ':-:' : right ? '--:' : left ? ':--' : '---';
   };
 
-  let fence: string | null = null;
+  // Track both the fence character AND its run length: per CommonMark a closing
+  // fence must use the same character and be at least as long as the opener, so
+  // a shorter run (```) must not close a longer one (````), and a closing fence
+  // carries no info string.
+  let fenceChar: string | null = null;
+  let fenceLen = 0;
   for (let i = 0; i < lines.length - 1; i++) {
-    const fenceMatch = lines[i].match(/^\s*(`{3,}|~{3,})/);
+    const fenceMatch = lines[i].match(/^\s*(`{3,}|~{3,})(.*)$/);
     if (fenceMatch) {
-      const marker = fenceMatch[1][0];
-      if (fence === null) fence = marker;
-      else if (marker === fence) fence = null;
+      const run = fenceMatch[1];
+      if (fenceChar === null) {
+        fenceChar = run[0];
+        fenceLen = run.length;
+      } else if (run[0] === fenceChar && run.length >= fenceLen && fenceMatch[2].trim() === '') {
+        fenceChar = null;
+        fenceLen = 0;
+      }
       continue;
     }
-    if (fence !== null) continue;
+    if (fenceChar !== null) continue;
 
     const header = lines[i];
     const delim = lines[i + 1];
