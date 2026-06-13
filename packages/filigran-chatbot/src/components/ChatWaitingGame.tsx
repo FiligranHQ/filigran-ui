@@ -288,14 +288,23 @@ function createInvaderGame(canvas: HTMLCanvasElement, messages: string[], onMess
     layout();
   }
 
-  const ro = new ResizeObserver(applySize);
-  ro.observe(canvas);
+  // Prefer ResizeObserver; fall back to a window resize listener on older
+  // browsers / embedded webviews where it is unavailable (an unguarded
+  // `new ResizeObserver(...)` would throw and break the waiting experience).
+  let ro: ResizeObserver | null = null;
+  if (typeof ResizeObserver !== 'undefined') {
+    ro = new ResizeObserver(applySize);
+    ro.observe(canvas);
+  } else {
+    window.addEventListener('resize', applySize);
+  }
   applySize();
   raf = requestAnimationFrame(loop);
 
   return () => {
     cancelAnimationFrame(raf);
-    ro.disconnect();
+    if (ro) ro.disconnect();
+    else window.removeEventListener('resize', applySize);
   };
 }
 
