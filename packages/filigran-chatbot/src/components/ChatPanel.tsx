@@ -184,7 +184,10 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     t,
     enabled: notifyOnComplete,
     onComplete: onTaskComplete,
-    isViewingChat: () => typeof document !== 'undefined' && !!document.activeElement?.closest('.filigran-chatbot'),
+    // Key on `.filigran-chatbot.fixed` (the panel root carries both in every
+    // mode) rather than `.filigran-chatbot` alone, which the toggle button also
+    // uses — otherwise focusing the toggle would be mistaken for viewing the chat.
+    isViewingChat: () => typeof document !== 'undefined' && !!document.activeElement?.closest('.filigran-chatbot.fixed'),
   });
 
   // Download an agent-generated file. The URL is resolved against the host

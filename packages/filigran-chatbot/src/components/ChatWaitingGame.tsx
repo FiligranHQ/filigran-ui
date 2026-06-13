@@ -232,33 +232,34 @@ function createInvaderGame(canvas: HTMLCanvasElement, messages: string[], onMess
     }
   }
 
-  function withAlpha(a: number): string {
-    return `color-mix(in srgb, ${accent} ${Math.round(a * 100)}%, transparent)`;
-  }
-
   function draw(): void {
     ctx.clearRect(0, 0, cssW, cssH);
 
+    // Single solid fill colour throughout; vary opacity via globalAlpha rather
+    // than CSS color-mix() strings, which are not reliably accepted as a canvas
+    // fillStyle on every browser (some fall back to opaque black).
+    ctx.fillStyle = accent;
+
     ctx.font = arcadeFont(fontPx);
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = withAlpha(0.85);
+    ctx.globalAlpha = 0.85;
     for (const l of letters) {
       if (l.alive) ctx.fillText(l.char, l.x, letterY);
     }
 
-    ctx.fillStyle = accent;
+    ctx.globalAlpha = 1;
     for (const b of bullets) {
       ctx.fillRect(b.x - 1, b.y, 2, 7);
     }
 
     for (const p of particles) {
-      ctx.fillStyle = withAlpha(Math.max(p.life, 0) * 0.9);
+      ctx.globalAlpha = Math.max(p.life, 0) * 0.9;
       ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
     }
 
+    ctx.globalAlpha = 1;
     const frame = INVADER_FRAMES[legFrame];
     const ox = Math.round(shipX - SPRITE_W / 2);
-    ctx.fillStyle = accent;
     for (let r = 0; r < frame.length; r++) {
       const row = frame[r];
       for (let c = 0; c < row.length; c++) {
