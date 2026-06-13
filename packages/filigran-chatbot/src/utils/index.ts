@@ -62,6 +62,62 @@ export function hardenNestedCodeFences(raw: string): string {
   return lines.join('\n');
 }
 
+/**
+ * GFM renders a pipe table only when the delimiter row (`|---|---|`) has the
+ * SAME number of columns as the header row. LLMs frequently miscount (e.g. a
+ * 4-column header followed by a 3-column delimiter), and a server-side guard can
+ * corrupt the delimiter — in either case the whole table silently degrades to
+ * raw `| … |` text. This repairs a mismatched delimiter row to the header's
+ * column count (preserving any alignment colons) so the table renders.
+ *
+ * It only rewrites a delimiter that is ACTUALLY mismatched, so already-valid
+ * tables are never touched. Fenced code blocks are skipped, and setext headings
+ * (underlines with no `|`) are never mistaken for a table.
+ */
+export function normalizeMarkdownTables(raw: string): string {
+  if (!raw || raw.indexOf('|') === -1) return raw;
+  const lines = raw.split('\n');
+
+  const splitCells = (row: string): string[] => {
+    let s = row.trim();
+    if (s.startsWith('|')) s = s.slice(1);
+    if (s.endsWith('|')) s = s.slice(0, -1);
+    return s.split(/(?<!\\)\|/);
+  };
+  const isDelimiterRow = (row: string): boolean => row.includes('|') && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(row);
+  const alignOf = (cell: string): string => {
+    const c = cell.trim();
+    const left = c.startsWith(':');
+    const right = c.endsWith(':');
+    return left && right ? ':-:' : right ? '--:' : left ? ':--' : '---';
+  };
+
+  let fence: string | null = null;
+  for (let i = 0; i < lines.length - 1; i++) {
+    const fenceMatch = lines[i].match(/^\s*(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      const marker = fenceMatch[1][0];
+      if (fence === null) fence = marker;
+      else if (marker === fence) fence = null;
+      continue;
+    }
+    if (fence !== null) continue;
+
+    const header = lines[i];
+    const delim = lines[i + 1];
+    if (!header.includes('|') || isDelimiterRow(header) || !isDelimiterRow(delim)) continue;
+
+    const headerCols = splitCells(header).length;
+    const delimCells = splitCells(delim);
+    if (headerCols < 2 || delimCells.length === headerCols) continue;
+
+    const aligns: string[] = [];
+    for (let c = 0; c < headerCols; c++) aligns.push(delimCells[c] ? alignOf(delimCells[c]) : '---');
+    lines[i + 1] = `| ${aligns.join(' | ')} |`;
+  }
+  return lines.join('\n');
+}
+
 export const identity = (key: string) => key;
 
 /**

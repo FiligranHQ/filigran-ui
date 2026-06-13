@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CheckIcon, CopyIcon } from './icons';
-import { hardenNestedCodeFences } from '../utils';
+import { hardenNestedCodeFences, normalizeMarkdownTables } from '../utils';
 
 interface MarkdownMessageProps {
   content: string;
@@ -144,7 +144,7 @@ export const MarkdownMessage = ({ content, onRelativeLinkClick }: MarkdownMessag
         ),
       }}
     >
-      {hardenNestedCodeFences(content)}
+      {hardenNestedCodeFences(normalizeMarkdownTables(content))}
     </Markdown>
   );
 };
