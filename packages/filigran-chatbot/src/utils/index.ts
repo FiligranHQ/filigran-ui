@@ -122,6 +122,10 @@ export function normalizeMarkdownTables(raw: string): string {
   const fenceRe = /^\s*(?:(?:>\s?)|(?:[-*+]\s+)|(?:\d{1,9}[.)]\s+))*(`{3,}|~{3,})(.*)$/;
   let fenceChar: string | null = null;
   let fenceLen = 0;
+  // A pipe-table header can share its line with a list-item marker (e.g.
+  // `- | a | b |`). Strip a leading list marker before counting columns so the
+  // count matches the cells GFM sees inside the list item, not the marker.
+  const listMarkerRe = /^\s*(?:[-*+]\s+|\d{1,9}[.)]\s+)/;
   for (let i = 0; i < lines.length - 1; i++) {
     const fenceMatch = lines[i].match(fenceRe);
     if (fenceMatch) {
@@ -141,15 +145,20 @@ export function normalizeMarkdownTables(raw: string): string {
     const delim = lines[i + 1];
     if (!header.includes('|') || isDelimiterRow(header) || !isDelimiterRow(delim)) continue;
 
-    const headerCols = splitCells(header).length;
+    // A table can start on a list-item line, so both the cells and the
+    // delimiter's alignment live AFTER the marker. Anchor the rewritten
+    // delimiter to that content offset (padding the marker width with spaces) so
+    // it stays a continuation line of the list item: GFM drops a table whose
+    // delimiter dedents away from its header. Without a marker this is just the
+    // header's leading whitespace, so top-level tables are emitted unchanged.
+    const markerMatch = header.match(listMarkerRe);
+    const offset = markerMatch ? markerMatch[0].length : header.length - header.trimStart().length;
+    const indent = markerMatch ? ' '.repeat(offset) : header.slice(0, offset);
+
+    const headerCols = splitCells(header.slice(offset)).length;
     const delimCells = splitCells(delim);
     if (headerCols < 2 || delimCells.length === headerCols) continue;
 
-    // Keep the header row's indentation on the rewritten delimiter: GFM drops a
-    // table whose delimiter row dedents away from its header, so a repaired
-    // table nested in a list item must stay aligned with it. Top-level tables
-    // have empty indentation, so their output is unchanged.
-    const indent = header.slice(0, header.length - header.trimStart().length);
     const aligns: string[] = [];
     for (let c = 0; c < headerCols; c++) aligns.push(delimCells[c] ? alignOf(delimCells[c]) : '---');
     lines[i + 1] = `${indent}| ${aligns.join(' | ')} |`;
