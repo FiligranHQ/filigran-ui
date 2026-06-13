@@ -332,12 +332,14 @@ export const ChatWaitingGame = ({ t, enabled = true }: ChatWaitingGameProps) => 
 
   const playMode = enabled && minigameOn && !reducedMotion;
 
-  // Plain-text rotation when the game is off / reduced motion.
+  // Plain-text rotation when the game is off / reduced motion. Skipped while the
+  // game drives the index, and entirely when the feature is disabled (so a
+  // disabled host arms no timer); `enabled` is a dep so toggling it cleans up.
   useEffect(() => {
-    if (playMode) return;
+    if (playMode || !enabled) return;
     const id = window.setInterval(() => setMsgIndex((i) => (i + 1) % messages.length), PLAIN_ROTATE_MS);
     return () => window.clearInterval(id);
-  }, [playMode, messages.length]);
+  }, [playMode, enabled, messages.length]);
 
   // Canvas engine when the game is on.
   useEffect(() => {
