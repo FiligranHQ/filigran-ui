@@ -216,8 +216,18 @@ const STALL_DELAY_MS = 5000;
  */
 function useStalled(signal: number, delayMs: number, enabled: boolean): boolean {
   const [stalled, setStalled] = useState(false);
-  useEffect(() => {
+  const prevSignalRef = useRef(signal);
+
+  // Clear the flag synchronously during render (not in an effect) the moment
+  // the signal changes or the feature is disabled, so resumed reasoning flips
+  // back without a one-frame lag where the waiting game lingers.
+  const signalChanged = prevSignalRef.current !== signal;
+  prevSignalRef.current = signal;
+  if (stalled && (signalChanged || !enabled)) {
     setStalled(false);
+  }
+
+  useEffect(() => {
     if (!enabled) return;
     const id = window.setTimeout(() => setStalled(true), delayMs);
     return () => window.clearTimeout(id);
