@@ -103,11 +103,14 @@ export function normalizeMarkdownTables(raw: string): string {
     return cells;
   };
   const isDelimiterRow = (row: string): boolean => row.includes('|') && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(row);
+  // Emit the canonical 3-hyphen delimiter form. remark-gfm accepts a single
+  // hyphen, but `---` (with optional alignment colons) is the portable form
+  // every Markdown renderer agrees on, so prefer it.
   const alignOf = (cell: string): string => {
     const c = cell.trim();
     const left = c.startsWith(':');
     const right = c.endsWith(':');
-    return left && right ? ':-:' : right ? '--:' : left ? ':--' : '---';
+    return left && right ? ':---:' : right ? '---:' : left ? ':---' : '---';
   };
 
   // Track both the fence character AND its run length: per CommonMark a closing
