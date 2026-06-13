@@ -10,7 +10,6 @@ const TITLE_FLASH_MS = 1200;
 
 let flashTimer: number | null = null;
 let originalTitle: string | null = null;
-let returnListenerBound = false;
 
 /** Stop flashing and restore the page title captured when the flash began. */
 function stopTitleFlash(): void {
@@ -26,9 +25,10 @@ function stopTitleFlash(): void {
 
 /**
  * Flash the document title so a multitasking user notices the answer landed
- * even from another tab. Restores the original title the moment the tab
- * regains focus. Title flashing needs no permission and is the reliable
- * baseline of the completion notification.
+ * even from another tab. The flash is stopped (and the title restored) the
+ * moment the tab regains focus by the hook-scoped listeners below. Title
+ * flashing needs no permission and is the reliable baseline of the completion
+ * notification.
  */
 function startTitleFlash(message: string): void {
   if (typeof document === 'undefined') return;
@@ -40,15 +40,6 @@ function startTitleFlash(message: string): void {
     showMessage = !showMessage;
     document.title = showMessage ? message : (originalTitle ?? message);
   }, TITLE_FLASH_MS);
-
-  if (!returnListenerBound) {
-    returnListenerBound = true;
-    const clearOnReturn = () => {
-      if (!document.hidden) stopTitleFlash();
-    };
-    document.addEventListener('visibilitychange', clearOnReturn);
-    window.addEventListener('focus', clearOnReturn);
-  }
 }
 
 /**
@@ -87,6 +78,24 @@ export function useAwayCompletionNotice({ isLoading, agentName, t, enabled = tru
   const wasLoadingRef = useRef(false);
   const startRef = useRef(0);
   const sawHiddenRef = useRef(false);
+
+  // Stop the flash and restore the title as soon as the user returns to the
+  // tab. Bound once for the hook's lifetime and torn down on unmount, so we
+  // never leak listeners (and never leave the title flashing after the panel
+  // is gone).
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const clearOnReturn = () => {
+      if (!document.hidden) stopTitleFlash();
+    };
+    document.addEventListener('visibilitychange', clearOnReturn);
+    window.addEventListener('focus', clearOnReturn);
+    return () => {
+      document.removeEventListener('visibilitychange', clearOnReturn);
+      window.removeEventListener('focus', clearOnReturn);
+      stopTitleFlash();
+    };
+  }, []);
 
   // Track whether the tab was hidden at any point during the turn.
   useEffect(() => {
