@@ -6,6 +6,7 @@ import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
 import { useSidebarResize } from '../hooks/useSidebarResize';
+import { useAwayCompletionNotice } from '../hooks/useAwayCompletionNotice';
 import { DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
@@ -50,6 +51,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   pageContext,
   pushContentSelector,
   backendType = 'rest',
+  miniGameEnabled = true,
+  notifyOnComplete = true,
+  onTaskComplete,
 }) => {
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
@@ -171,6 +175,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   const resolvedLogo = logoIcon ?? <DefaultLogoIcon size={24} />;
   const firstName = user.firstName;
   const agentName = transferredAgent?.name || selectedAgent?.name || 'Assistant';
+
+  // Notify on away-completion (tab hidden / multitasking) of a long-running turn.
+  useAwayCompletionNotice({ isLoading, agentName, t, enabled: notifyOnComplete, onComplete: onTaskComplete });
 
   // Download an agent-generated file. The URL is resolved against the host
   // app's own backend proxy (apiBaseUrl), NOT the upstream chat service:
@@ -434,6 +441,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           logoIcon={resolvedLogo}
           onRelativeLinkClick={onRelativeLinkClick}
           onDownloadFile={canDownload ? handleDownloadFile : undefined}
+          miniGameEnabled={miniGameEnabled}
           t={t}
         />
       )}

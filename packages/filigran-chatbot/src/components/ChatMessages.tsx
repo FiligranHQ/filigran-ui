@@ -15,6 +15,8 @@ interface ChatMessagesProps {
   onRelativeLinkClick?: (href: string) => void;
   /** Download an agent-generated file via the host app's backend proxy. */
   onDownloadFile?: (attachment: ChatAttachment) => void;
+  /** Host-level override for the waiting mini-game / dynamic messages. */
+  miniGameEnabled?: boolean;
   t: (key: string) => string;
 }
 
@@ -41,6 +43,7 @@ export const ChatMessages = ({
   logoIcon,
   onRelativeLinkClick,
   onDownloadFile,
+  miniGameEnabled = true,
   t,
 }: ChatMessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -226,7 +229,7 @@ export const ChatMessages = ({
         if (isThinking) {
           return (
             <div key={msg.id}>
-              <ChatThinking agentStatus={agentStatus} logoIcon={logoIcon} t={t} />
+              <ChatThinking agentStatus={agentStatus} logoIcon={logoIcon} t={t} miniGameEnabled={miniGameEnabled} />
             </div>
           );
         }

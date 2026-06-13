@@ -12,11 +12,14 @@ import {
   UserPlusIcon,
   WrenchIcon,
 } from './icons';
+import { ChatWaitingGame } from './ChatWaitingGame';
 
 interface ChatThinkingProps {
   agentStatus: AgentStatusState | null;
   logoIcon?: React.ReactNode;
   t: (key: string) => string;
+  /** Host-level override for the waiting mini-game / dynamic messages. */
+  miniGameEnabled?: boolean;
 }
 
 type IconComponent = (props: IconProps) => React.JSX.Element;
@@ -197,7 +200,7 @@ function formatElapsed(seconds: number): string {
  */
 const ELAPSED_DISPLAY_THRESHOLD_S = 15;
 
-export const ChatThinking = ({ agentStatus, logoIcon, t }: ChatThinkingProps) => {
+export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true }: ChatThinkingProps) => {
   const { label, StatusIcon, showDots } = resolveStatusVisual(agentStatus, t);
   const thinkingContent = agentStatus?.thinkingContent;
   const elapsedS = agentStatus?.elapsedS;
@@ -230,7 +233,7 @@ export const ChatThinking = ({ agentStatus, logoIcon, t }: ChatThinkingProps) =>
           </div>
         </div>
       </div>
-      {thinkingContent && <ThinkingTextBubble content={thinkingContent} />}
+      {thinkingContent ? <ThinkingTextBubble content={thinkingContent} /> : <ChatWaitingGame t={t} enabled={miniGameEnabled} />}
     </>
   );
 };

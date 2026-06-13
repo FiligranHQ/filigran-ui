@@ -126,6 +126,25 @@ export interface ChatPanelProps {
    * - 'ag-ui': AG-UI protocol (https://github.com/ag-ui-protocol/ag-ui)
    */
   backendType?: BackendType;
+  /**
+   * Show the waiting experience during longer waits: dynamic rotating status
+   * messages plus an optional Space Invader mini-game that shoots the message
+   * letters away one by one. Users can still toggle the game off per browser
+   * from the panel; this prop is a host-level master switch. Default: true.
+   */
+  miniGameEnabled?: boolean;
+  /**
+   * Notify the user when a long-running turn finishes while they are away
+   * (tab hidden / multitasking) via a document-title flash and — when already
+   * granted — a browser notification. Default: true.
+   */
+  notifyOnComplete?: boolean;
+  /**
+   * Called when an away-completion notification fires, so the host can also
+   * surface it through its own notification system (the chatbot has no toast
+   * surface of its own).
+   */
+  onTaskComplete?: () => void;
 }
 
 export interface ChatToggleButtonProps {

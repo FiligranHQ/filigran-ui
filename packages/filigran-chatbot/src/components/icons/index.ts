@@ -17,6 +17,7 @@ export * from './FileIcon';
 export * from './FloatingIcon';
 export * from './FullscreenExitIcon';
 export * from './FullscreenIcon';
+export * from './GamepadIcon';
 export * from './GlobeIcon';
 export * from './HistoryIcon';
 export * from './InfoIcon';
