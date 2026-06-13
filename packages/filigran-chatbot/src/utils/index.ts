@@ -116,11 +116,14 @@ export function normalizeMarkdownTables(raw: string): string {
   // Track both the fence character AND its run length: per CommonMark a closing
   // fence must use the same character and be at least as long as the opener, so
   // a shorter run (```) must not close a longer one (````), and a closing fence
-  // carries no info string.
+  // carries no info string. Optional blockquote / list-item markers are allowed
+  // before the run so fences nested in those containers (e.g. `- ```) are still
+  // recognised and the table inside them is left untouched.
+  const fenceRe = /^\s*(?:(?:>\s?)|(?:[-*+]\s+)|(?:\d{1,9}[.)]\s+))*(`{3,}|~{3,})(.*)$/;
   let fenceChar: string | null = null;
   let fenceLen = 0;
   for (let i = 0; i < lines.length - 1; i++) {
-    const fenceMatch = lines[i].match(/^\s*(`{3,}|~{3,})(.*)$/);
+    const fenceMatch = lines[i].match(fenceRe);
     if (fenceMatch) {
       const run = fenceMatch[1];
       if (fenceChar === null) {
