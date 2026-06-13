@@ -10,7 +10,6 @@ const TITLE_FLASH_MS = 1200;
 
 let flashTimer: number | null = null;
 let originalTitle: string | null = null;
-let returnListenerBound = false;
 
 /** Stop flashing and restore the page title captured when the flash began. */
 function stopTitleFlash(): void {
@@ -26,9 +25,10 @@ function stopTitleFlash(): void {
 
 /**
  * Flash the document title so a multitasking user notices the answer landed
- * even from another tab or window. Restores the original title the moment the
- * tab is visible AND focused again. Title flashing needs no permission and is
- * the reliable baseline of the completion notification.
+ * even from another tab or window. The flash is stopped (and the title
+ * restored) the moment the tab is visible AND focused again, by the
+ * hook-scoped listeners below. Title flashing needs no permission and is the
+ * reliable baseline of the completion notification.
  */
 function startTitleFlash(message: string): void {
   if (typeof document === 'undefined') return;
@@ -40,15 +40,6 @@ function startTitleFlash(message: string): void {
     showMessage = !showMessage;
     document.title = showMessage ? message : (originalTitle ?? message);
   }, TITLE_FLASH_MS);
-
-  if (!returnListenerBound) {
-    returnListenerBound = true;
-    const clearOnReturn = () => {
-      if (!document.hidden && document.hasFocus()) stopTitleFlash();
-    };
-    document.addEventListener('visibilitychange', clearOnReturn);
-    window.addEventListener('focus', clearOnReturn);
-  }
 }
 
 /**
@@ -78,7 +69,7 @@ interface UseAwayCompletionNoticeOptions {
    * Host hook fired when a long turn finishes and the user is not actively
    * watching the chat — either away (tab hidden / another window) or in-app
    * but focused elsewhere. Lets the host raise its own in-app toast (the
-   * chatbot has no toast surface of its own).
+   * chatbot has no toast surface of its own). Receives the translated strings.
    */
   onComplete?: (title: string, body: string) => void;
   /**
@@ -96,21 +87,31 @@ interface UseAwayCompletionNoticeOptions {
  * stepped away but returned before the turn finished is not pinged:
  *  - **Away** (tab hidden or another window/app focused): document-title flash +
  *    OS notification (when granted) + host toast.
- *  - **In-app but elsewhere** (window focused, but focus is outside the chat —
- *    only when `isViewingChat` is supplied): host toast only.
- *  - **Actively watching** (focused, looking at the chat): nothing — the
- *    streamed answer is itself the feedback.
+ *  - **In-app but elsewhere** (window focused, focus outside the chat — only
+ *    when `isViewingChat` is supplied): host toast only.
+ *  - **Actively watching**: nothing — the streamed answer is the feedback.
  */
-export function useAwayCompletionNotice({
-  isLoading,
-  agentName,
-  t,
-  enabled = true,
-  onComplete,
-  isViewingChat,
-}: UseAwayCompletionNoticeOptions): void {
+export function useAwayCompletionNotice({ isLoading, agentName, t, enabled = true, onComplete, isViewingChat }: UseAwayCompletionNoticeOptions): void {
   const wasLoadingRef = useRef(false);
   const startRef = useRef(0);
+
+  // Stop the flash and restore the title as soon as the user returns to a
+  // visible, focused tab. Bound only while enabled and torn down on unmount (or
+  // when the host disables it), so we never leak listeners or leave the title
+  // flashing after the panel is gone.
+  useEffect(() => {
+    if (!enabled || typeof document === 'undefined') return;
+    const clearOnReturn = () => {
+      if (!document.hidden && document.hasFocus()) stopTitleFlash();
+    };
+    document.addEventListener('visibilitychange', clearOnReturn);
+    window.addEventListener('focus', clearOnReturn);
+    return () => {
+      document.removeEventListener('visibilitychange', clearOnReturn);
+      window.removeEventListener('focus', clearOnReturn);
+      stopTitleFlash();
+    };
+  }, [enabled]);
 
   useEffect(() => {
     const wasLoading = wasLoadingRef.current;
