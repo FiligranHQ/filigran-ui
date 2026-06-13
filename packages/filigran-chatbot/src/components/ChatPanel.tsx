@@ -176,8 +176,16 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   const firstName = user.firstName;
   const agentName = transferredAgent?.name || selectedAgent?.name || 'Assistant';
 
-  // Notify on away-completion (tab hidden / multitasking) of a long-running turn.
-  useAwayCompletionNotice({ isLoading, agentName, t, enabled: notifyOnComplete, onComplete: onTaskComplete });
+  // Notify when a long turn finishes and the user is not watching the chat —
+  // away (tab hidden / another window) or in-app but focused outside the panel.
+  useAwayCompletionNotice({
+    isLoading,
+    agentName,
+    t,
+    enabled: notifyOnComplete,
+    onComplete: onTaskComplete,
+    isViewingChat: () => typeof document !== 'undefined' && !!document.activeElement?.closest('.filigran-chatbot'),
+  });
 
   // Download an agent-generated file. The URL is resolved against the host
   // app's own backend proxy (apiBaseUrl), NOT the upstream chat service:

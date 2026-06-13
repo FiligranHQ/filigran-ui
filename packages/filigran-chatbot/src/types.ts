@@ -134,17 +134,19 @@ export interface ChatPanelProps {
    */
   miniGameEnabled?: boolean;
   /**
-   * Notify the user when a long-running turn finishes while they are away
-   * (tab hidden / multitasking) via a document-title flash and — when already
-   * granted — a browser notification. Default: true.
+   * Notify the user when a long-running turn finishes while they are not
+   * watching the chat — away (tab hidden / another window) via a document-title
+   * flash and a browser notification (when already granted), or in-app but
+   * looking elsewhere via the `onTaskComplete` host toast. Default: true.
    */
   notifyOnComplete?: boolean;
   /**
-   * Called when an away-completion notification fires, so the host can also
-   * surface it through its own notification system (the chatbot has no toast
-   * surface of its own).
+   * Called when a long turn finishes and the user is not actively watching the
+   * chat (away, or in-app but focused elsewhere) so the host can raise its own
+   * in-app toast (the chatbot has no toast surface of its own). Receives the
+   * already-translated `title` and `body`.
    */
-  onTaskComplete?: () => void;
+  onTaskComplete?: (title: string, body: string) => void;
 }
 
 export interface ChatToggleButtonProps {
