@@ -91,7 +91,14 @@ interface UseAwayCompletionNoticeOptions {
  *    when `isViewingChat` is supplied): host toast only.
  *  - **Actively watching**: nothing — the streamed answer is the feedback.
  */
-export function useAwayCompletionNotice({ isLoading, agentName, t, enabled = true, onComplete, isViewingChat }: UseAwayCompletionNoticeOptions): void {
+export function useAwayCompletionNotice({
+  isLoading,
+  agentName,
+  t,
+  enabled = true,
+  onComplete,
+  isViewingChat,
+}: UseAwayCompletionNoticeOptions): void {
   const wasLoadingRef = useRef(false);
   const startRef = useRef(0);
 
