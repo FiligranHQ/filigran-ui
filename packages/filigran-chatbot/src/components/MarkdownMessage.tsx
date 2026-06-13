@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CheckIcon, CopyIcon } from './icons';
@@ -51,6 +51,11 @@ const toInternalHref = (href?: string): string | null => {
 
 export const MarkdownMessage = ({ content, onRelativeLinkClick }: MarkdownMessageProps) => {
   const [copiedBlock, setCopiedBlock] = useState<string | null>(null);
+
+  // Preprocess once per `content`: this component re-renders on UI-only state
+  // (e.g. `copiedBlock`), and both passes scan the whole message, so memoizing
+  // keeps that work off the hot path for large messages.
+  const processedContent = useMemo(() => normalizeMarkdownTables(hardenNestedCodeFences(content)), [content]);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -144,7 +149,7 @@ export const MarkdownMessage = ({ content, onRelativeLinkClick }: MarkdownMessag
         ),
       }}
     >
-      {normalizeMarkdownTables(hardenNestedCodeFences(content))}
+      {processedContent}
     </Markdown>
   );
 };
