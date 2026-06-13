@@ -8,8 +8,14 @@ const MIN_NOTICE_MS = 4000;
 /** Document-title flash cadence while the user is away. */
 const TITLE_FLASH_MS = 1200;
 
+// The document title is a single page-global resource, so the flash is shared
+// across hook instances on purpose (per-hook timers would fight over the one
+// `document.title` and clobber each other's saved title). `activeHooks` ref-
+// counts mounted, enabled instances so one panel unmounting never cancels a
+// flash another panel still owns — only the last one to leave restores it.
 let flashTimer: number | null = null;
 let originalTitle: string | null = null;
+let activeHooks = 0;
 
 /** Stop flashing and restore the page title captured when the flash began. */
 function stopTitleFlash(): void {
@@ -108,6 +114,7 @@ export function useAwayCompletionNotice({
   // flashing after the panel is gone.
   useEffect(() => {
     if (!enabled || typeof document === 'undefined') return;
+    activeHooks += 1;
     const clearOnReturn = () => {
       if (!document.hidden && document.hasFocus()) stopTitleFlash();
     };
@@ -116,7 +123,10 @@ export function useAwayCompletionNotice({
     return () => {
       document.removeEventListener('visibilitychange', clearOnReturn);
       window.removeEventListener('focus', clearOnReturn);
-      stopTitleFlash();
+      activeHooks = Math.max(0, activeHooks - 1);
+      // Only restore the title once the last consumer leaves, so unmounting one
+      // panel never cancels another panel's in-flight flash.
+      if (activeHooks === 0) stopTitleFlash();
     };
   }, [enabled]);
 
