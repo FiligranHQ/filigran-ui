@@ -74,8 +74,9 @@ interface UseAwayCompletionNoticeOptions {
   /**
    * Host hook fired when a long turn finishes and the user is not actively
    * watching the chat — either away (tab hidden / another window) or in-app
-   * but focused elsewhere. Lets the host raise its own in-app toast (the
-   * chatbot has no toast surface of its own). Receives the translated strings.
+   * with the chat surface closed/hidden (`isViewingChat` reports not-viewing).
+   * Lets the host raise its own in-app toast (the chatbot has no toast surface
+   * of its own). Receives the translated strings.
    */
   onComplete?: (title: string, body: string) => void;
   /**
