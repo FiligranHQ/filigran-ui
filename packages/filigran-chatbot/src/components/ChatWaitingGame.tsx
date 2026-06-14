@@ -79,6 +79,22 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
+/** Px-from-bottom within which the user is considered "still following". */
+const FOLLOW_THRESHOLD_PX = 140;
+
+/** Nearest vertically-scrollable ancestor of `el`, or null. */
+function findScrollParent(el: HTMLElement | null): HTMLElement | null {
+  let node = el?.parentElement ?? null;
+  while (node) {
+    const oy = getComputedStyle(node).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
 interface Letter {
   char: string;
   x: number;
@@ -323,22 +339,6 @@ interface ChatWaitingGameProps {
  * OS requests reduced motion — the messages simply rotate as plain dimmed
  * text, so the "dynamic loading messages" feedback always stands on its own.
  */
-/** Px-from-bottom within which the user is considered "still following". */
-const FOLLOW_THRESHOLD_PX = 140;
-
-/** Nearest vertically-scrollable ancestor of `el`, or null. */
-function findScrollParent(el: HTMLElement | null): HTMLElement | null {
-  let node = el?.parentElement ?? null;
-  while (node) {
-    const oy = getComputedStyle(node).overflowY;
-    if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight) {
-      return node;
-    }
-    node = node.parentElement;
-  }
-  return null;
-}
-
 export const ChatWaitingGame = ({ t, enabled = true }: ChatWaitingGameProps) => {
   const messages = useMemo(() => DEFAULT_MESSAGES.map((m) => t(m)), [t]);
   const reducedMotion = usePrefersReducedMotion();
