@@ -176,15 +176,39 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   const firstName = user.firstName;
   const agentName = transferredAgent?.name || selectedAgent?.name || 'Assistant';
 
-  // Key on `.filigran-chatbot.fixed` (the panel root carries both in every
-  // mode) rather than `.filigran-chatbot` alone, which the toggle button also
-  // uses — otherwise focusing the toggle would be mistaken for viewing the chat.
-  // Stable reference (useCallback) so the notifier's effect doesn't re-run on
-  // every render — the panel re-renders frequently while a response streams.
-  const isViewingChat = useCallback(() => typeof document !== 'undefined' && !!document.activeElement?.closest('.filigran-chatbot.fixed'), []);
+  // "Viewing the chat" must mean the panel is on screen in the active tab —
+  // NOT that an element inside it currently holds focus. In sidebar (and
+  // floating) mode the user routinely reads a streamed answer while their focus
+  // stays in the host app, so the previous focus-within test
+  // (`document.activeElement.closest('.filigran-chatbot.fixed')`) wrongly
+  // classified them as "not viewing" and fired a redundant completion toast for
+  // an answer sitting right in front of them. The host mounts `<ChatPanel/>`
+  // only while the widget is open, so a mounted + visible panel root means the
+  // answer is visible to the user; the notifier still treats a hidden tab or an
+  // unfocused window as "away" and notifies there. A host that keeps the panel
+  // mounted but `display:none` while "closed" is likewise reported as not
+  // viewing (checkVisibility() === false), so completion still notifies. The
+  // `.fixed` qualifier targets the panel root, never the toggle button (which
+  // carries `.filigran-chatbot` alone). Stable reference (useCallback) so the
+  // notifier's effect doesn't re-run on every render — the panel re-renders
+  // frequently while a response streams; the DOM is queried live on each call.
+  const isViewingChat = useCallback(() => {
+    if (typeof document === 'undefined') return false;
+    const panel = document.querySelector('.filigran-chatbot.fixed') as (HTMLElement & { checkVisibility?: () => boolean }) | null;
+    if (!panel) return false;
+    if (typeof panel.checkVisibility === 'function') return panel.checkVisibility();
+    // Fallback for browsers without Element.checkVisibility(): a display:none
+    // panel generates no layout box, so an empty client-rect list means hidden
+    // (works for the position:fixed root, whose offsetParent is null even when
+    // shown). Erring toward "not viewing" keeps the documented closed/hidden
+    // path notifying instead of silently swallowing the notice on older engines.
+    return panel.getClientRects().length > 0;
+  }, []);
 
   // Notify when a long turn finishes and the user is not watching the chat —
-  // away (tab hidden / another window) or in-app but focused outside the panel.
+  // away (tab hidden / another window / panel closed-or-hidden). An open,
+  // on-screen panel in the focused tab counts as watching, so no toast fires
+  // for an answer the user can already see.
   useAwayCompletionNotice({
     isLoading,
     agentName,
