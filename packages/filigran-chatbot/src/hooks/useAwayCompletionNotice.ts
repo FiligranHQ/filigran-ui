@@ -79,10 +79,14 @@ interface UseAwayCompletionNoticeOptions {
    */
   onComplete?: (title: string, body: string) => void;
   /**
-   * Returns true when the user's focus is within the chat surface. When
-   * provided, the toast also fires if the user is in the app but looking
-   * elsewhere (panel open in a corner while they work in the main app). When
-   * omitted, only the away case triggers it.
+   * Returns true when the chat surface is on screen for the user (the panel is
+   * open and visible) — NOT merely whether focus sits inside it. When provided,
+   * the notice also fires if the chat surface is hidden/closed while the tab is
+   * still focused (e.g. a docked sidebar the host has collapsed). It must NOT
+   * key on focus-within: in sidebar/floating mode the user reads a streamed
+   * answer while their focus stays in the host app, and pinging them for an
+   * answer they can already see is exactly the noise this guards against. When
+   * omitted, only the away case (tab hidden / window unfocused) triggers it.
    */
   isViewingChat?: () => boolean;
 }
@@ -93,9 +97,11 @@ interface UseAwayCompletionNoticeOptions {
  * stepped away but returned before the turn finished is not pinged:
  *  - **Away** (tab hidden or another window/app focused): document-title flash +
  *    OS notification (when granted) + host toast.
- *  - **In-app but elsewhere** (window focused, focus outside the chat — only
- *    when `isViewingChat` is supplied): host toast only.
- *  - **Actively watching**: nothing — the streamed answer is the feedback.
+ *  - **Surface not visible** (window focused & tab visible, but the chat panel
+ *    is closed/hidden — only when `isViewingChat` reports not-viewing): host
+ *    toast only.
+ *  - **Actively watching** (tab visible, window focused, panel on screen):
+ *    nothing — the streamed answer is itself the feedback.
  */
 export function useAwayCompletionNotice({
   isLoading,
