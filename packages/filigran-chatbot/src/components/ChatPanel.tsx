@@ -194,11 +194,15 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   // frequently while a response streams; the DOM is queried live on each call.
   const isViewingChat = useCallback(() => {
     if (typeof document === 'undefined') return false;
-    const panel = document.querySelector('.filigran-chatbot.fixed') as
-      | (HTMLElement & { checkVisibility?: () => boolean })
-      | null;
+    const panel = document.querySelector('.filigran-chatbot.fixed') as (HTMLElement & { checkVisibility?: () => boolean }) | null;
     if (!panel) return false;
-    return panel.checkVisibility ? panel.checkVisibility() : true;
+    if (typeof panel.checkVisibility === 'function') return panel.checkVisibility();
+    // Fallback for browsers without Element.checkVisibility(): a display:none
+    // panel generates no layout box, so an empty client-rect list means hidden
+    // (works for the position:fixed root, whose offsetParent is null even when
+    // shown). Erring toward "not viewing" keeps the documented closed/hidden
+    // path notifying instead of silently swallowing the notice on older engines.
+    return panel.getClientRects().length > 0;
   }, []);
 
   // Notify when a long turn finishes and the user is not watching the chat —
