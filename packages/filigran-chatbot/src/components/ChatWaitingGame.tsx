@@ -79,6 +79,22 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
+/** Px-from-bottom within which the user is considered "still following". */
+const FOLLOW_THRESHOLD_PX = 140;
+
+/** Nearest vertically-scrollable ancestor of `el`, or null. */
+function findScrollParent(el: HTMLElement | null): HTMLElement | null {
+  let node = el?.parentElement ?? null;
+  while (node) {
+    const oy = getComputedStyle(node).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
 interface Letter {
   char: string;
   x: number;
@@ -329,8 +345,22 @@ export const ChatWaitingGame = ({ t, enabled = true }: ChatWaitingGameProps) => 
   const [minigameOn, setMinigameOn] = useState(readPref);
   const [msgIndex, setMsgIndex] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const playMode = enabled && minigameOn && !reducedMotion;
+
+  // The game mounts below the last message but, unlike streamed reasoning/answer
+  // text (which auto-scrolls on length change), nothing else triggers a scroll —
+  // so at the bottom it lands under the fold. Reveal it on mount IF the user is
+  // still following the bottom; if they scrolled up to read history, leave them.
+  useEffect(() => {
+    const scroller = findScrollParent(rootRef.current);
+    if (!scroller) return;
+    const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+    if (distance <= FOLLOW_THRESHOLD_PX) {
+      scroller.scrollTop = scroller.scrollHeight;
+    }
+  }, []);
 
   // Plain-text rotation when the game is off / reduced motion. Skipped while the
   // game drives the index, and entirely when the feature is disabled (so a
@@ -354,7 +384,7 @@ export const ChatWaitingGame = ({ t, enabled = true }: ChatWaitingGameProps) => 
   const current = messages[msgIndex % messages.length];
 
   return (
-    <div className="ml-11 mt-2.5 max-w-[78%]">
+    <div ref={rootRef} className="ml-11 mt-2.5 max-w-[78%]">
       {/* Keep the live region scoped to the announced text only — wrapping the
           whole UI (including the toggle button) made screen readers re-announce
           the control alongside each message change. */}
