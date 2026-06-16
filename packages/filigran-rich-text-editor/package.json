@@ -30,12 +30,14 @@
   "peerDependencies": {
     "@mui/icons-material": ">=5",
     "@mui/material": ">=5",
-    "@tiptap/core": ">=3",
-    "@tiptap/pm": ">=3",
-    "@tiptap/react": ">=3",
     "react": ">=18",
     "react-color": ">=2",
     "react-dom": ">=18"
+  },
+  "dependencies": {
+    "@tiptap/core": "^3.23.1",
+    "@tiptap/pm": "^3.23.1",
+    "@tiptap/react": "^3.23.1"
   },
   "devDependencies": {
     "@mui/icons-material": "6.5.0",
