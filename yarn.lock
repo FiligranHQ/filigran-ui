@@ -2259,9 +2259,6 @@ __metadata:
   peerDependencies:
     "@mui/icons-material": ">=5"
     "@mui/material": ">=5"
-    "@tiptap/core": ">=3"
-    "@tiptap/pm": ">=3"
-    "@tiptap/react": ">=3"
     react: ">=18"
     react-color: ">=2"
     react-dom: ">=18"
