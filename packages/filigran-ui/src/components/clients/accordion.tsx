@@ -1,7 +1,7 @@
 'use client'
 
 import * as AccordionPrimitive from '@radix-ui/react-accordion'
-import {KeyboardArrowDownIcon} from '@filigran/icon'
+import {ArrowDropDownIcon, KeyboardArrowDownIcon} from '@filigran/icon'
 import * as React from 'react'
 import {cn} from '../../lib/utils'
 
@@ -32,7 +32,7 @@ const AccordionTrigger = React.forwardRef<
       )}
       {...props}>
       {children}
-      <KeyboardArrowDownIcon className="h-3 w-3 shrink-0 transition-transform duration-200" />
+      <ArrowDropDownIcon className="h-5 w-5 shrink-0 transition-transform duration-200" />
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))
