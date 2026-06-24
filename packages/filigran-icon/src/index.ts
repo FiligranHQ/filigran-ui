@@ -87,6 +87,8 @@ export { default as KillChainPhaseIcon } from "./KillChainPhase";
 export { default as LabelIcon } from "./Label";
 export { default as LanguageIcon } from "./Language";
 export { default as LayersBlackIcon } from "./LayersBlack";
+export { default as LeftPanelCloseIcon } from "./LeftPanelClose";
+export { default as LeftPanelOpenIcon } from "./LeftPanelOpen";
 export { default as LinkIcon } from "./Link";
 export { default as ListViewIcon } from "./ListView";
 export { default as LittleArrowIcon } from "./LittleArrow";
