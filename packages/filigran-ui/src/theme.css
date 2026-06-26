@@ -6,6 +6,7 @@
   --color-border-medium-light: hsl(var(--border-medium-light));
   --color-border-light: hsl(var(--border-light));
   --color-border-focus: hsl(var(--border-focus));
+  --color-elevation-border-strong: hsl(var(--elevation-border-strong));
 
   --color-text: hsl(var(--text-foreground));
   --color-text-secondary: hsl(var(--secondary-text-foreground));
@@ -219,9 +220,16 @@
 
   --font-title: var(--font-geologica), system-ui, sans-serif;
   --font-body: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  --tracking-default: 0.0075em;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+@layer base {
+  * {
+    letter-spacing: var(--tracking-default);
+  }
 }
 
 @keyframes accordion-down {
@@ -249,98 +257,83 @@
 
 @utility txt-jumbo {
   font-size: 2.5rem;
-  letter-spacing: 0.01875rem;
   font-family: var(--font-geologica);
 }
 
 @utility txt-title {
   font-size: 1.375rem;
   font-weight: 400;
-  letter-spacing: 0.01125rem;
   font-family: var(--font-geologica);
 }
 
 @utility txt-subtitle {
   font-size: 1rem;
   font-weight: 500;
-  letter-spacing: 0.00844rem;
   font-family: var(--font-geologica);
 }
 
 @utility txt-category {
   font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.00656rem;
   font-family: var(--font-geologica);
 }
 
 @utility txt-tab {
   font-size: 0.875rem;
-  letter-spacing: 0.00656rem;
   text-transform: uppercase;
   font-family: var(--font-geologica);
 }
 
 @utility txt-container-title {
   font-size: 0.75rem;
-  letter-spacing: 0.00563rem;
   text-transform: uppercase;
 }
 
 @utility txt-default {
   font-size: 0.9rem;
   line-height: 1.52;
-  letter-spacing: 0.0035rem;
 }
 
 @utility txt-body2 {
   font-size: 0.8rem;
   line-height: 1.2rem;
-  letter-spacing: 0.003rem;
 }
 
 @utility txt-subtitle2 {
   font-size: 1.125rem;
   font-weight: 400;
-  letter-spacing: 0.00844rem;
 }
 
 @utility txt-h3 {
   font-size: 0.8125rem;
   font-weight: 400;
-  letter-spacing: 0.003rem;
   font-family: var(--font-geologica);
 }
 
 @utility txt-h4 {
   font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.00563rem;
 }
 
 @utility txt-h5 {
   font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.00656rem;
   font-family: var(--font-geologica);
 }
 
 @utility txt-sub-content {
   font-size: 0.75rem;
   line-height: 1.52;
-  letter-spacing: 0.003rem;
 }
 
 @utility txt-table {
   font-size: 0.8125rem;
   line-height: 1.52;
-  letter-spacing: 0.003rem;
 }
 
 @utility txt-mini {
   font-size: 0.5625rem;
   line-height: 1.52;
-  letter-spacing: 0.00225rem;
 }
 
 @utility container {
@@ -375,6 +368,7 @@
   --border-medium-light: var(--gray-200);
   --border-light: var(--gray-150);
   --border-focus: var(--darkblue-300);
+  --elevation-border-strong: 231, 5%, 70%;
 
   --hover-background: var(--gray-150);
   --menu-active: 207, 52%, 21%;
@@ -573,7 +567,7 @@
 .dark,
 body[data-theme="dark"],
 body[data-theme="Dark"] {
-  --background: 220 56% 6%;
+  --background: 220 54% 6%;
   --foreground: var(--gray-100);
   --tw-prose-body: var(--gray-400);
   --primary: 196.75 100% 52.94%;
@@ -590,7 +584,7 @@ body[data-theme="Dark"] {
   --card-foreground: 247 10% 97.15%;
   --input: var(--gray-800);
 
-  --page-background: 220 54% 8%;
+  --page-background: 220 54% 11%;
   --box-background: #ffffff;
   --primary-background: var(--blue-400);
   --focus-background: var(--blue-900);
@@ -605,7 +599,7 @@ body[data-theme="Dark"] {
   --border-medium-light: var(--gray-700);
   --border-light: var(--gray-800);
   --border-focus: var(--blue-600);
-
+  --elevation-border-strong: 220, 53%, 20%;
   --hover-background: hsla(0, 0%, 100%, 0.1);
 
   --ai-main: 262 100% 76%;

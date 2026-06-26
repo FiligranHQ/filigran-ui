@@ -19,7 +19,7 @@
     color: hsl(var(--foreground));
     font-size: 0.9rem;
     line-height: 1.52;
-    letter-spacing: 0.0035rem;
+    letter-spacing: var(--tracking-default, 0.0075em);
   }
 }
 
