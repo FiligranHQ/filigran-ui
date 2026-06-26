@@ -8,6 +8,7 @@
 @layer base {
   * {
     font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
+    letter-spacing: var(--tracking-default, 0.0075em);
   }
   h1,
   h2,
