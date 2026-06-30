@@ -62,6 +62,10 @@ export interface RichTextEditorProps {
   disabled?: boolean;
   disableWatchdog?: boolean;
   placeholder?: string;
+  /** Visual variant. "standard" (default) = current borderless look. "outlined" = MUI-style border + focus ring. */
+  variant?: 'standard' | 'outlined';
+  /** Additional CSS class name on the root wrapper div */
+  className?: string;
 }
 
 const createEditorAdapter = (editor: Editor): RichTextEditorAdapter => ({
@@ -78,6 +82,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   onFocus,
   disabled = false,
   placeholder = '',
+  variant = 'standard',
+  className,
 }) => {
   const theme = useTheme<Theme>();
   const isDark = theme.palette?.mode === 'dark';
@@ -736,11 +742,33 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     return null;
   }
 
+  const isOutlined = variant === 'outlined';
+
+  const wrapperStyle: React.CSSProperties = {
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    ...(isOutlined && {
+      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.23)' : 'rgba(0,0,0,0.23)'}`,
+      borderRadius: theme.shape.borderRadius,
+      overflow: 'hidden',
+      '--rte-primary-color': theme.palette.primary.main,
+    } as React.CSSProperties),
+  };
+
+  const wrapperClassName = `rich-text-editor-wrapper${isOutlined ? ' rich-text-editor-outlined' : ''}${className ? ` ${className}` : ''}`;
+
   return (
     <div
-      className="rich-text-editor-wrapper"
-      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+      className={wrapperClassName}
+      style={wrapperStyle}
     >
+      <div
+        style={isOutlined ? {
+          backgroundColor: theme.palette.background.default,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        } : undefined}
+      >
       <TiptapEditorToolbar
         editor={editor}
         disabled={disabled}
@@ -749,6 +777,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         isSourceMode={sourceMode}
         onToggleSourceMode={toggleSourceMode}
       />
+      </div>
       <div
         ref={editorWrapRef}
         style={{ flex: 1, minHeight: 0, overflow: 'auto' }}

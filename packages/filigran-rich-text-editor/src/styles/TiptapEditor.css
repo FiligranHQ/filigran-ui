@@ -6,6 +6,24 @@
   flex-direction: column;
 }
 
+/* Outlined variant - focus ring using CSS variable set inline for theme compatibility */
+.rich-text-editor-wrapper.rich-text-editor-outlined:focus-within {
+  border-color: var(--rte-primary-color);
+  border-width: 2px;
+  margin: -1px; /* compensate layout shift from extra border pixel */
+}
+
+/* Outlined variant - remove underlines from Select components in toolbar */
+.rich-text-editor-wrapper.rich-text-editor-outlined > div:first-of-type .MuiInput-underline::before,
+.rich-text-editor-wrapper.rich-text-editor-outlined > div:first-of-type .MuiInput-underline::after {
+  display: none;
+}
+
+/* Outlined variant - tighter content area padding */
+.rich-text-editor-wrapper.rich-text-editor-outlined .ProseMirror {
+  padding: 8px 12px;
+}
+
 .rich-text-editor-wrapper .ProseMirror {
   min-height: 100px;
   padding: 12px;
