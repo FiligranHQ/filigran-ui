@@ -39,6 +39,12 @@ import { FontSize } from './richTextEditor/extensions/FontSize';
 import { Paragraph } from './richTextEditor/extensions/Paragraph';
 import type { Theme } from '@mui/material/styles';
 import { TaskList } from './richTextEditor/extensions/TaskList';
+
+declare module '@mui/material/styles' {
+  interface TypeBackground {
+    accent?: string;
+  }
+}
 import { TaskItem } from './richTextEditor/extensions/TaskListItem';
 import { Div } from './richTextEditor/extensions/Div';
 
@@ -749,10 +755,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     display: 'flex',
     flexDirection: 'column',
     ...(isOutlined && {
-      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.23)' : 'rgba(0,0,0,0.23)'}`,
-      borderRadius: theme.shape.borderRadius,
-      overflow: 'hidden',
+      '--rte-border-color': theme.palette.text.primary,
       '--rte-primary-color': theme.palette.primary.main,
+      '--rte-border-radius': `${theme.shape.borderRadius}px`,
     } as React.CSSProperties),
   };
 
@@ -765,7 +770,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     >
       <div
         style={isOutlined ? {
-          backgroundColor: theme.palette.background.default,
+          backgroundColor: theme.palette.background.accent,
           borderBottom: `1px solid ${theme.palette.divider}`,
         } : undefined}
       >
@@ -776,6 +781,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         onOpenImagePopover={openImagePopoverFromToolbar}
         isSourceMode={sourceMode}
         onToggleSourceMode={toggleSourceMode}
+        variant={variant}
       />
       </div>
       <div

@@ -46,6 +46,7 @@ import {
   ToggleButtonGroup,
   Tooltip,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { SketchPicker } from 'react-color';
 import { TableGridPicker } from './TableGridPicker';
 
@@ -91,6 +92,7 @@ interface TiptapEditorToolbarProps {
   onOpenImagePopover?: () => void;
   isSourceMode?: boolean;
   onToggleSourceMode?: () => void;
+  variant?: 'standard' | 'outlined';
 }
 
 export const TiptapEditorToolbar: React.FC<TiptapEditorToolbarProps> = ({
@@ -100,6 +102,7 @@ export const TiptapEditorToolbar: React.FC<TiptapEditorToolbarProps> = ({
   onOpenImagePopover,
   isSourceMode = false,
   onToggleSourceMode,
+  variant = 'standard',
 }) => {
   const [, forceUpdate] = React.useReducer((x) => x + 1, 0);
   React.useEffect(() => {
@@ -265,7 +268,12 @@ export const TiptapEditorToolbar: React.FC<TiptapEditorToolbarProps> = ({
     return () => ro.disconnect();
   }, [itemIds, itemGroups]);
 
-  const toolbarItemStyles = {
+  const theme = useTheme();
+  const hoverBg = variant === 'outlined'
+    ? (theme.palette.mode === 'dark' ? 'rgb(1, 71, 141)' : 'rgb(178,178,178)')
+    : 'transparent';
+
+  const buildToolbarItemStyles = (hover: string) => ({
     '& .MuiToggleButtonGroup-root': {
       border: 'none',
       gap: '2px',
@@ -285,10 +293,10 @@ export const TiptapEditorToolbar: React.FC<TiptapEditorToolbarProps> = ({
         color: 'text.disabled',
       },
       '&:hover': {
-        backgroundColor: 'transparent',
+        backgroundColor: hoverBg,
       },
       '&:hover:not(.Mui-selected)': {
-        backgroundColor: 'transparent',
+        backgroundColor: hoverBg,
       },
       '&.Mui-selected': {
         backgroundColor: 'action.selected',
@@ -302,7 +310,10 @@ export const TiptapEditorToolbar: React.FC<TiptapEditorToolbarProps> = ({
         },
       },
     },
-  };
+  });
+
+  const toolbarItemStyles = buildToolbarItemStyles(hoverBg);
+  const overflowItemStyles = buildToolbarItemStyles('action.hover');
 
   return (
     <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -869,7 +880,7 @@ export const TiptapEditorToolbar: React.FC<TiptapEditorToolbarProps> = ({
             flexWrap: 'wrap',
             alignItems: 'center',
             gap: 0.5,
-            ...toolbarItemStyles,
+            ...overflowItemStyles,
           }}
         >
           {/* heading */}
