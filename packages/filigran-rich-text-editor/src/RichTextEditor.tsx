@@ -53,15 +53,20 @@ declare module '@mui/material/styles' {
 export const TIPTAP_EDITOR_SELECTOR = '.tiptap-editor-content.ProseMirror';
 
 export interface RichTextEditorAdapter {
+  /** Returns the current HTML content */
   getData: () => string;
+  /** Replaces the entire editor content with the given HTML */
+  setContent: (html: string) => void;
+  /** Scrolls the editor content area to the bottom */
+  scrollToBottom: () => void;
 }
 
 export interface RichTextEditorProps {
   id?: string;
   data?: string;
   onChange?: (evt: unknown, editor: RichTextEditorAdapter) => void;
-  /** @deprecated Use onTextSelection instead */
-  onReady?: (editor: Editor) => void;
+  /** Called when the editor is mounted and ready. Provides an imperative adapter handle. */
+  onReady?: (adapter: RichTextEditorAdapter) => void;
   onTextSelection?: (text: string) => void;
   onBlur?: (evt: unknown, editor: RichTextEditorAdapter) => void;
   onFocus?: (evt: unknown) => void;
@@ -74,9 +79,7 @@ export interface RichTextEditorProps {
   className?: string;
 }
 
-const createEditorAdapter = (editor: Editor): RichTextEditorAdapter => ({
-  getData: () => editor.getHTML(),
-});
+
 
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   id,
@@ -134,7 +137,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     } else {
       // switching FROM source mode: apply textarea content back to editor
       editorRef.current.commands.setContent(sourceHtml);
-      onChangeRef.current?.(undefined, createEditorAdapter(editorRef.current));
+      onChangeRef.current?.(undefined, createAdapter(editorRef.current));
     }
     setSourceMode((prev) => !prev);
   }, [sourceMode, sourceHtml]);
@@ -191,6 +194,19 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   } | null>(null);
   const editorWrapRef = useRef<HTMLDivElement | null>(null);
   const editorContentWrapRef = useRef<HTMLDivElement | null>(null);
+
+  const createAdapter = useCallback((editor: Editor): RichTextEditorAdapter => ({
+    getData: () => editor.getHTML(),
+    setContent: (html: string) => {
+      editor.commands.setContent(html, {emitUpdate: true});
+    },
+    scrollToBottom: () => {
+      const container = editorWrapRef.current;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    },
+  }), []);
   const imageEditPosRef = useRef<number | null>(null);
   const imageOptionsPopoverOpenRef = useRef(false);
   imageEditPosRef.current = imageEditButton?.pos ?? null;
@@ -520,7 +536,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     // Force immediate upstream sync to avoid losing attrs on fast mode toggles
     // where blur/update listeners can race with unmount.
     if (onChangeRef.current) {
-      onChangeRef.current(null, createEditorAdapter(editor));
+      onChangeRef.current(null, createAdapter(editor));
     }
     closeImageOptionsPopover();
   }, [editor, imageOptionsPopover, closeImageOptionsPopover]);
@@ -683,9 +699,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   useEffect(() => {
     if (editor && onReady) {
-      onReady(editor);
+      onReady(createAdapter(editor));
     }
-  }, [editor, onReady]);
+  }, [editor, onReady, createAdapter]);
 
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
@@ -702,7 +718,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (!editor) return;
     const handler = () => {
       if (onChangeRef.current) {
-        onChangeRef.current(null, createEditorAdapter(editor));
+        onChangeRef.current(null, createAdapter(editor));
       }
     };
     editor.on('update', handler);
@@ -713,7 +729,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   useEffect(() => {
     if (!editor || !onBlur) return;
-    const handler = ({ event }: { event: FocusEvent }) => onBlur(event, createEditorAdapter(editor));
+    const handler = ({ event }: { event: FocusEvent }) => onBlur(event, createAdapter(editor));
     editor.on('blur', handler);
     return () => {
       editor.off('blur', handler);
