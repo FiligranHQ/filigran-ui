@@ -195,7 +195,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const editorWrapRef = useRef<HTMLDivElement | null>(null);
   const editorContentWrapRef = useRef<HTMLDivElement | null>(null);
 
-  const createAdapter = (editor: Editor): RichTextEditorAdapter => ({
+  const createAdapter = useCallback((editor: Editor): RichTextEditorAdapter => ({
     getData: () => editor.getHTML(),
     setContent: (html: string) => {
       editor.commands.setContent(html, {emitUpdate: true});
@@ -206,7 +206,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         container.scrollTop = container.scrollHeight;
       }
     },
-  });
+  }), []);
   const imageEditPosRef = useRef<number | null>(null);
   const imageOptionsPopoverOpenRef = useRef(false);
   imageEditPosRef.current = imageEditButton?.pos ?? null;
@@ -701,8 +701,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (editor && onReady) {
       onReady(createAdapter(editor));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, onReady]);
+  }, [editor, onReady, createAdapter]);
 
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
