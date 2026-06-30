@@ -39,6 +39,7 @@ export const Paragraph = ParagraphBase.extend({
 
   addCommands() {
     return {
+      ...this.parent?.(),
       indent:
         () =>
           ({ commands, editor }) => {
