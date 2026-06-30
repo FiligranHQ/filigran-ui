@@ -293,10 +293,10 @@ export const TiptapEditorToolbar: React.FC<TiptapEditorToolbarProps> = ({
         color: 'text.disabled',
       },
       '&:hover': {
-        backgroundColor: hoverBg,
+        backgroundColor: hover,
       },
       '&:hover:not(.Mui-selected)': {
-        backgroundColor: hoverBg,
+        backgroundColor: hover,
       },
       '&.Mui-selected': {
         backgroundColor: 'action.selected',

@@ -39,16 +39,16 @@ import { FontSize } from './richTextEditor/extensions/FontSize';
 import { Paragraph } from './richTextEditor/extensions/Paragraph';
 import type { Theme } from '@mui/material/styles';
 import { TaskList } from './richTextEditor/extensions/TaskList';
+import { TaskItem } from './richTextEditor/extensions/TaskListItem';
+import { Div } from './richTextEditor/extensions/Div';
+
+import './styles/TiptapEditor.css';
 
 declare module '@mui/material/styles' {
   interface TypeBackground {
     accent?: string;
   }
 }
-import { TaskItem } from './richTextEditor/extensions/TaskListItem';
-import { Div } from './richTextEditor/extensions/Div';
-
-import './styles/TiptapEditor.css';
 
 export const TIPTAP_EDITOR_SELECTOR = '.tiptap-editor-content.ProseMirror';
 
@@ -770,7 +770,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     >
       <div
         style={isOutlined ? {
-          backgroundColor: theme.palette.background.accent,
+          backgroundColor: theme.palette.background.accent ?? theme.palette.background.default,
           borderBottom: `1px solid ${theme.palette.divider}`,
         } : undefined}
       >
