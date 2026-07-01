@@ -31,6 +31,7 @@ yarn add react react-dom \
 ## Usage
 
 ```tsx
+import { useState } from 'react'
 import { RichTextEditor } from '@filigran/rich-text-editor'
 import '@filigran/rich-text-editor/styles.css'
 
@@ -51,13 +52,14 @@ function MyEditor() {
 | Prop              | Type                                                  | Default      | Description                                                                 |
 | ----------------- | ----------------------------------------------------- | ------------ | --------------------------------------------------------------------------- |
 | `id`              | `string`                                              | —            | Sets a `data-editor-id` attribute on the editing area.                      |
-| `data`            | `string`                                              | `''`         | Initial HTML content.                                                       |
+| `data`            | `string`                                              | `''`         | HTML content. Controlled: updating this prop replaces the editor content.   |
 | `onChange`        | `(evt: unknown, adapter: RichTextEditorAdapter) => void` | —          | Called on every content change.                                             |
 | `onReady`         | `(adapter: RichTextEditorAdapter) => void`            | —            | Called when the editor is mounted and ready. Provides an imperative handle. |
-| `onTextSelection` | `(text: string) => void`                              | —            | Called when text is selected inside the editor.                             |
+| `onTextSelection` | `(text: string) => void`                              | —            | Called when text is selected. Only fires when `disabled={true}` (read-only mode). |
 | `onBlur`          | `(evt: unknown, adapter: RichTextEditorAdapter) => void` | —         | Called when the editor loses focus.                                         |
 | `onFocus`         | `(evt: unknown) => void`                              | —            | Called when the editor gains focus.                                         |
 | `disabled`        | `boolean`                                             | `false`      | Makes the editor read-only.                                                 |
+| `disableWatchdog` | `boolean`                                             | —            | Disables the internal editor watchdog.                                      |
 | `placeholder`     | `string`                                              | `''`         | Placeholder text shown when the editor is empty.                            |
 | `variant`         | `'standard' \| 'outlined'`                            | `'standard'` | `standard` = borderless look. `outlined` = MUI-style border + focus ring.   |
 | `className`       | `string`                                              | —            | Additional CSS class on the root wrapper div.                               |
@@ -80,6 +82,10 @@ interface RichTextEditorAdapter {
 ### Example: programmatic content update
 
 ```tsx
+import { useRef } from 'react'
+import { RichTextEditor } from '@filigran/rich-text-editor'
+import type { RichTextEditorAdapter } from '@filigran/rich-text-editor'
+
 function App() {
   const adapterRef = useRef<RichTextEditorAdapter | null>(null)
 
