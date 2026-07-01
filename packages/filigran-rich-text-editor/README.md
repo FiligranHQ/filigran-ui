@@ -142,7 +142,3 @@ Use the exported `TIPTAP_EDITOR_SELECTOR` constant to target the editor content 
   min-height: 200px;
 }
 ```
-
-## License
-
-Apache-2.0
