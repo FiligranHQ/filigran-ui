@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { findChatbotRoot } from '../utils';
 
 interface DropdownProps {
   open: boolean;
@@ -9,15 +10,6 @@ interface DropdownProps {
   placement?: 'bottom-start' | 'bottom-end';
   width?: number;
   children: React.ReactNode;
-}
-
-function findChatbotRoot(el: HTMLElement | null): HTMLElement {
-  let node = el;
-  while (node) {
-    if (node.classList.contains('filigran-chatbot')) return node;
-    node = node.parentElement;
-  }
-  return document.body;
 }
 
 export const Dropdown = ({ open, onClose, anchorRef, placement = 'bottom-start', width = 280, children }: DropdownProps) => {

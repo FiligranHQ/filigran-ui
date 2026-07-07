@@ -46,6 +46,7 @@ interface MultiSelectFormFieldProps<
   options: T[]
   keyLabel?: keyof T
   keyValue?: keyof T
+  shouldFilter?: boolean
   defaultValue?: string[]
   disabled?: boolean
   placeholder: string
@@ -67,6 +68,7 @@ const MultiSelectFormField = React.forwardRef<
       options,
       keyLabel = 'label',
       keyValue = 'value',
+      shouldFilter=true,
       defaultValue,
       onValueChange,
       onInputChange,
@@ -324,7 +326,8 @@ const MultiSelectFormField = React.forwardRef<
             className="w-[300px] p-0 drop-shadow-xs"
             align="start"
             onEscapeKeyDown={() => setIsPopoverOpen(false)}>
-            <Command onChange={handleSearchInputChange}>
+            {/*ShouldFilter use to filter on client side or server side*/}
+            <Command onChange={handleSearchInputChange} shouldFilter={shouldFilter}>
               <CommandInput
                 placeholder="Search..."
                 onKeyDown={handleInputKeyDown}

@@ -14,12 +14,16 @@
     "build:filigran-chatbot": "yarn workspace @filigran/chatbot run build",
     "build:filigran-email": "yarn workspace @filigran/email run build",
     "build:filigran-icon": "yarn workspace @filigran/icon run build",
+    "build:filigran-rich-text-editor": "yarn workspace @filigran/rich-text-editor run build",
     "build:filigran-ui": "yarn workspace @filigran/ui run build",
     "build:filigran-website": "yarn workspace @filigran/website run build",
     "dev": "yarn workspace @filigran/website run dev",
-    "publish:filigran-chatbot": "yarn build:filigran-chatbot && yarn workspace @filigran/chatbot publish --provenance --access public",
-    "publish:filigran-icon": "yarn build:filigran-icon && yarn workspace @filigran/icon publish --provenance --access public",
-    "publish:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace @filigran/ui publish --provenance --access public"
+    "publish:filigran-chatbot": "yarn build:filigran-chatbot && yarn workspace @filigran/chatbot npm publish --provenance --access public",
+    "publish:filigran-icon": "yarn build:filigran-icon && yarn workspace @filigran/icon npm publish --provenance --access public",
+    "publish:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace @filigran/ui npm publish --provenance --access public",
+    "release:filigran-chatbot": "yarn build:filigran-chatbot && yarn workspace @filigran/chatbot npm publish --access public",
+    "release:filigran-icon": "yarn build:filigran-icon && yarn workspace @filigran/icon npm publish --access public",
+    "release:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace @filigran/ui npm publish --access public"
   },
   "workspaces": [
     "packages/*",

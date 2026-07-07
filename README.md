@@ -10,6 +10,7 @@ This project draws inspiration from popular libraries such as **Shadcn**, **Radi
 - **Website:** A dedicated website that hosts both libraries
 - **Filigran-UI:** Component library
 - **Filigran-Icon:** Icon library
+- **Filigran-Rich-Text-Editor:** [Rich text editor package](./packages/filigran-rich-text-editor/README.md)
 
 > **Note:** The work is currently in progress, and the project is not yet officially released.
 
@@ -50,6 +51,13 @@ Filigran-UI is still under active development. New components and features are b
 Thank you for your interest in Filigran-UI. Together, we can build a cohesive, modern, and secure UI experience across Filigran's product ecosystem.
 
 ---
+
+## Releasing a new version
+
+Releases are automated via a GitHub Actions workflow.  
+See **[deployment-package.md](./deployment-package.md)** for the full guide (how to trigger the workflow, when to use `patch` / `minor` / `major`, and what happens under the hood).
+
+--- 
 
 ## 💻 Some playground
 ### Vite starter with Tailwind CSS, React and Filigran UI

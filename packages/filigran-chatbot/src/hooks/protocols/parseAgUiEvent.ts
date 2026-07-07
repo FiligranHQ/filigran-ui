@@ -105,7 +105,11 @@ export function parseAgUiEvent(evt: Record<string, unknown>, ctx: ProtocolContex
   }
 
   if (type === 'REASONING_MESSAGE_CONTENT' || type === 'REASONING_MESSAGE_CHUNK') {
-    // Reasoning text — show as thinking status (content not surfaced to chat)
+    // Reasoning text — surface it in the dedicated thinking pane
+    const delta = evt.delta as string | undefined;
+    if (delta) {
+      return { action: 'status', status: 'thinking_text', thinkingContent: delta };
+    }
     return { action: 'status', status: 'thinking' };
   }
 

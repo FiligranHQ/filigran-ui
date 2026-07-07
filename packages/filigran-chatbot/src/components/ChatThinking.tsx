@@ -1,11 +1,25 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AgentStatusState, IconProps } from '../types';
-import { BrainIcon, DatabaseIcon, ExternalLinkIcon, GlobeIcon, MailIcon, SearchIcon, SparklesIcon, TerminalIcon, UserPlusIcon, WrenchIcon } from './icons';
+import {
+  BrainIcon,
+  DatabaseIcon,
+  ExternalLinkIcon,
+  GlobeIcon,
+  MailIcon,
+  SearchIcon,
+  SparklesIcon,
+  TerminalIcon,
+  UserPlusIcon,
+  WrenchIcon,
+} from './icons';
+import { ChatWaitingGame } from './ChatWaitingGame';
 
 interface ChatThinkingProps {
   agentStatus: AgentStatusState | null;
   logoIcon?: React.ReactNode;
   t: (key: string) => string;
+  /** Host-level override for the waiting mini-game / dynamic messages. */
+  miniGameEnabled?: boolean;
 }
 
 type IconComponent = (props: IconProps) => React.JSX.Element;
@@ -28,9 +42,7 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
       // Delegation tools have dedicated statuses
       if (lower.some((n) => n === 'spawn_background_task')) {
         const count = rawNames.filter((n) => n === 'spawn_background_task').length;
-        const label = count > 1
-          ? `${t('Delegating')} ${count} ${t('tasks')}…`
-          : `${t('Delegating task')}…`;
+        const label = count > 1 ? `${t('Delegating')} ${count} ${t('tasks')}…` : `${t('Delegating task')}…`;
         return { label, StatusIcon: UserPlusIcon, showDots: false };
       }
       if (lower.some((n) => n === 'check_task_status')) {
@@ -68,6 +80,8 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
     }
     case 'analyzing':
       return { label: t('Analyzing results…'), StatusIcon: SparklesIcon, showDots: false };
+    case 'steering':
+      return { label: t('Incorporating your message…'), StatusIcon: SparklesIcon, showDots: true };
     case 'composing':
       return { label: t('Composing answer…'), StatusIcon: BrainIcon, showDots: true };
     case 'consulting': {
@@ -76,7 +90,11 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
     }
     case 'delegating': {
       const count = agentStatus.tools?.filter((n) => n === 'spawn_background_task').length ?? 0;
-      return { label: count > 1 ? `${t('Delegating')} ${count} ${t('tasks')}…` : `${t('Delegating task')}…`, StatusIcon: UserPlusIcon, showDots: false };
+      return {
+        label: count > 1 ? `${t('Delegating')} ${count} ${t('tasks')}…` : `${t('Delegating task')}…`,
+        StatusIcon: UserPlusIcon,
+        showDots: false,
+      };
     }
     case 'polling': {
       const checkCount = agentStatus.tools?.filter((n) => n === 'check_task_status').length ?? 0;
@@ -98,47 +116,137 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
   }
 }
 
-function stripMarkdown(text: string): string {
+/**
+ * Light markdown cleanup for reasoning prose. Preserves paragraph breaks so
+ * multi-step reasoning stays readable inside the small scrolling window
+ * instead of collapsing into one unbroken blob.
+ */
+export function cleanReasoningText(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/__(.+?)__/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
-    .replace(/_(.+?)_/g, '$1')
     .replace(/#{1,6}\s+/g, '')
-    .replace(/[*\->]+/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/^[ \t]*[-*>]+[ \t]*/gm, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
+/**
+ * Reasoning window — the model's reasoning prose rendered below the status
+ * bubble while the agent works: smaller, dimmed text inside a capped-height
+ * (max-h-40) window always pinned to the newest line, with a Cursor-style
+ * top dissolve once full (soft gradient fade at the top only — the text reads
+ * as scrolling up and dissolving; the bottom stays sharp) — framed by the
+ * breathing accent left-border glow.  The window is intentionally NOT
+ * user-scrollable (overflow-hidden, no scrollbar): the prose is ambient
+ * feedback that scrolls up and dissolves; the full accumulated reasoning
+ * stays readable afterwards via the message's reasoning details.  The window
+ * (and the status bubble above it) disappears the moment the final answer
+ * starts flowing.
+ */
 export function ThinkingTextBubble({ content }: { content: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const cleaned = stripMarkdown(content);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const cleaned = cleanReasoningText(content);
 
   useEffect(() => {
-    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+    const el = ref.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
   }, [cleaned]);
 
   if (cleaned.length < 3) return null;
 
   return (
     <div
-      ref={ref}
-      className="ml-11 max-w-[70%] max-h-20 overflow-hidden relative rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] pl-3 pr-3 py-2"
+      className="ml-11 mt-2.5 max-w-[75%] rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] py-2 pl-3 pr-3"
       style={{ animation: 'reasoningGlow 3s ease-in-out infinite, chat-fade-in 0.5s ease-out' }}
     >
-      <p className="text-[13px] leading-[1.35rem] text-gray-400 dark:text-white/40 break-words m-0">
-        {cleaned}
-      </p>
-      <div className="absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-white/90 dark:from-[#1e1e2e]/90 to-transparent pointer-events-none" />
+      <div
+        ref={ref}
+        className={`max-h-40 overflow-hidden${
+          isOverflowing
+            ? // -webkit- twin first: Safari/WebKit ignores unprefixed mask-image
+              // on older versions, which would silently drop the top dissolve.
+              ' [-webkit-mask-image:linear-gradient(to_bottom,transparent_0,rgb(0_0_0/0.25)_1.5rem,rgb(0_0_0/0.7)_3rem,black_4.5rem)]' +
+              ' [mask-image:linear-gradient(to_bottom,transparent_0,rgb(0_0_0/0.25)_1.5rem,rgb(0_0_0/0.7)_3rem,black_4.5rem)]'
+            : ''
+        }`}
+      >
+        <p className="m-0 whitespace-pre-wrap break-words text-xs leading-5 text-gray-500 dark:text-white/45">{cleaned}</p>
+      </div>
     </div>
   );
 }
 
-export const ChatThinking = ({ agentStatus, logoIcon, t }: ChatThinkingProps) => {
+/** Render seconds as a compact elapsed label (e.g. `45s`, `3m 20s`). */
+function formatElapsed(seconds: number): string {
+  // Floor at the boundary: `elapsed_s` comes from the backend and may be a
+  // float, which would otherwise render as "45.3s" / "3m 20.5s".
+  const total = Math.floor(seconds);
+  if (total < 60) return `${total}s`;
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
+/**
+ * Elapsed time is only surfaced once the current operation has been
+ * running long enough that the user could wonder whether it is stuck.
+ */
+const ELAPSED_DISPLAY_THRESHOLD_S = 15;
+
+/**
+ * The reasoning window flips to the waiting game once nothing has progressed
+ * for this long — i.e. no reasoning at all, or a reasoning stream that stalled.
+ */
+const STALL_DELAY_MS = 5000;
+
+/**
+ * True once `signal` has stayed unchanged for `delayMs`. Re-arms whenever the
+ * signal changes, so resumed reasoning clears the flag immediately. Used to
+ * detect a stalled (or absent) reasoning stream so we can show the waiting game
+ * in the meantime and flip back to the reasoning the moment it resumes. Arms no
+ * timer (and never flips) while `enabled` is false, so a host that disables the
+ * waiting game schedules no timeouts or re-renders for it.
+ */
+function useStalled(signal: number, delayMs: number, enabled: boolean): boolean {
+  const [stalled, setStalled] = useState(false);
+  const prevSignalRef = useRef(signal);
+
+  // Did the signal change since the last settled render? When it did, reasoning
+  // has just resumed, so we report "not stalled" for this very render without a
+  // render-phase state update (discouraged in React / brittle under StrictMode
+  // and concurrent rendering). The effect below then resets the flag and re-arms
+  // the timer — deriving the value here keeps the flip back to the reasoning
+  // window free of the one-frame lag a clear-in-effect alone would leave.
+  const signalChanged = prevSignalRef.current !== signal;
+
+  useEffect(() => {
+    prevSignalRef.current = signal;
+    setStalled(false);
+    if (!enabled) return;
+    const id = window.setTimeout(() => setStalled(true), delayMs);
+    return () => window.clearTimeout(id);
+  }, [signal, delayMs, enabled]);
+
+  return enabled && stalled && !signalChanged;
+}
+
+export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true }: ChatThinkingProps) => {
   const { label, StatusIcon, showDots } = resolveStatusVisual(agentStatus, t);
   const thinkingContent = agentStatus?.thinkingContent;
+  const elapsedS = agentStatus?.elapsedS;
+  const showElapsed = typeof elapsedS === 'number' && elapsedS >= ELAPSED_DISPLAY_THRESHOLD_S;
+  // Show the waiting game when reasoning is absent or has stalled for 5s; flip
+  // back to the reasoning window the moment new reasoning text resumes (the
+  // accumulated content carries the continuation).
+  const stalled = useStalled(thinkingContent?.length ?? 0, STALL_DELAY_MS, miniGameEnabled);
+  const showGame = miniGameEnabled && stalled;
 
   return (
     <>
@@ -163,10 +271,15 @@ export const ChatThinking = ({ agentStatus, logoIcon, t }: ChatThinkingProps) =>
               <StatusIcon size={14} className="text-[var(--chat-accent)] animate-pulse transition-all duration-300" />
             )}
             <span className="text-sm text-gray-500 dark:text-white/50 transition-all duration-300">{label}</span>
+            {showElapsed && <span className="text-xs text-gray-400 dark:text-white/30 tabular-nums shrink-0">{formatElapsed(elapsedS)}</span>}
           </div>
         </div>
       </div>
-      {thinkingContent && <ThinkingTextBubble content={thinkingContent} />}
+      {thinkingContent && !showGame ? (
+        <ThinkingTextBubble content={thinkingContent} />
+      ) : showGame ? (
+        <ChatWaitingGame t={t} enabled={miniGameEnabled} />
+      ) : null}
     </>
   );
 };

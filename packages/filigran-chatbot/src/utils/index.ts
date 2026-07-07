@@ -5,4 +5,267 @@ export function hexAlpha(hex: string, alpha: number): string {
   return `${hex}${a}`;
 }
 
+/**
+ * Markdown has no native support for nesting fenced code blocks of the same
+ * length: per the CommonMark spec, the first inner ``` closes the outer block,
+ * so everything after it renders *outside* the code block. LLMs constantly hit
+ * this — when an agent shows a prompt or a full markdown document inside a
+ * ```markdown … ``` fence, that document's own ``` fences shatter the snippet
+ * into alternating code / prose fragments.
+ *
+ * The robust, spec-compliant fix is to make the *outer* fence longer than any
+ * fence it contains: a 4-backtick fence is only closed by a run of ≥4
+ * backticks, so all inner 3-backtick fences become literal content and the
+ * whole document renders as one clean, copyable code block.
+ *
+ * We act only on the unambiguous, dominant case — a 3-backtick opener whose
+ * info string is a markup language (markdown / md / mdx / markup) that actually
+ * contains nested fences — so already-correct markdown is never rewritten
+ * (a correctly authored nested block already uses a 4+-backtick opener, which
+ * we skip).
+ */
+export function hardenNestedCodeFences(raw: string): string {
+  if (!raw) return raw;
+  const lines = raw.split('\n');
+  const fenceRe = /^(\s*)(`{3,})(.*)$/;
+  const markupLang = /^(markdown|md|mdx|markup)\b/i;
+
+  let openerIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(fenceRe);
+    if (m && m[2].length === 3 && markupLang.test(m[3].trim())) {
+      openerIdx = i;
+      break;
+    }
+  }
+  if (openerIdx === -1) return raw;
+
+  let maxRun = 3;
+  let nestedCount = 0;
+  let lastBareFence = -1;
+  for (let i = openerIdx + 1; i < lines.length; i++) {
+    const m = lines[i].match(fenceRe);
+    if (!m) continue;
+    nestedCount++;
+    maxRun = Math.max(maxRun, m[2].length);
+    if (m[3].trim() === '') lastBareFence = i;
+  }
+  if (nestedCount === 0) return raw;
+
+  const fence = '`'.repeat(Math.max(maxRun + 1, 4));
+  const om = lines[openerIdx].match(fenceRe)!;
+  lines[openerIdx] = `${om[1]}${fence}${om[3]}`;
+  if (lastBareFence > openerIdx) {
+    const cm = lines[lastBareFence].match(fenceRe)!;
+    lines[lastBareFence] = `${cm[1]}${fence}`;
+  }
+  return lines.join('\n');
+}
+
+/**
+ * GFM renders a pipe table only when the delimiter row (`|---|---|`) has the
+ * SAME number of columns as the header row. LLMs frequently miscount (e.g. a
+ * 4-column header followed by a 3-column delimiter), and a server-side guard can
+ * corrupt the delimiter — in either case the whole table silently degrades to
+ * raw `| … |` text. This repairs a mismatched delimiter row to the header's
+ * column count (preserving any alignment colons) so the table renders.
+ *
+ * It only rewrites a delimiter that is ACTUALLY mismatched, so already-valid
+ * tables are never touched. Fenced code blocks are skipped, and setext headings
+ * (underlines with no `|`) are never mistaken for a table.
+ */
+export function normalizeMarkdownTables(raw: string): string {
+  if (!raw || raw.indexOf('|') === -1) return raw;
+  const lines = raw.split('\n');
+
+  // Splits on unescaped `|` only. A manual walk (rather than a negative
+  // lookbehind, which is unsupported on older engines and would throw at parse
+  // time in an untranspiled ESNext bundle) keeps `\|` inside a cell intact.
+  const splitCells = (row: string): string[] => {
+    let s = row.trim();
+    if (s.startsWith('|')) s = s.slice(1);
+    if (s.endsWith('|')) s = s.slice(0, -1);
+    const cells: string[] = [];
+    let current = '';
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (ch === '\\' && i + 1 < s.length) {
+        current += ch + s[i + 1];
+        i++;
+      } else if (ch === '|') {
+        cells.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    cells.push(current);
+    return cells;
+  };
+  const isDelimiterRow = (row: string): boolean => row.includes('|') && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(row);
+  // Emit the canonical 3-hyphen delimiter form. remark-gfm accepts a single
+  // hyphen, but `---` (with optional alignment colons) is the portable form
+  // every Markdown renderer agrees on, so prefer it.
+  const alignOf = (cell: string): string => {
+    const c = cell.trim();
+    const left = c.startsWith(':');
+    const right = c.endsWith(':');
+    return left && right ? ':---:' : right ? '---:' : left ? ':---' : '---';
+  };
+
+  // Track both the fence character AND its run length: per CommonMark a closing
+  // fence must use the same character and be at least as long as the opener, so
+  // a shorter run (```) must not close a longer one (````), and a closing fence
+  // carries no info string. Optional blockquote / list-item markers are allowed
+  // before the run so fences nested in those containers (e.g. `- ```) are still
+  // recognised and the table inside them is left untouched.
+  const fenceRe = /^\s*(?:(?:>\s?)|(?:[-*+]\s+)|(?:\d{1,9}[.)]\s+))*(`{3,}|~{3,})(.*)$/;
+  let fenceChar: string | null = null;
+  let fenceLen = 0;
+  // A pipe-table header can share its line with a list-item marker (e.g.
+  // `- | a | b |`). Strip a leading list marker before counting columns so the
+  // count matches the cells GFM sees inside the list item, not the marker.
+  const listMarkerRe = /^\s*(?:[-*+]\s+|\d{1,9}[.)]\s+)/;
+  for (let i = 0; i < lines.length - 1; i++) {
+    const fenceMatch = lines[i].match(fenceRe);
+    if (fenceMatch) {
+      const run = fenceMatch[1];
+      if (fenceChar === null) {
+        fenceChar = run[0];
+        fenceLen = run.length;
+      } else if (run[0] === fenceChar && run.length >= fenceLen && fenceMatch[2].trim() === '') {
+        fenceChar = null;
+        fenceLen = 0;
+      }
+      continue;
+    }
+    if (fenceChar !== null) continue;
+
+    const header = lines[i];
+    const delim = lines[i + 1];
+    if (!header.includes('|') || isDelimiterRow(header) || !isDelimiterRow(delim)) continue;
+
+    // A table can start on a list-item line, so both the cells and the
+    // delimiter's alignment live AFTER the marker. Anchor the rewritten
+    // delimiter to that content offset (padding the marker width with spaces) so
+    // it stays a continuation line of the list item: GFM drops a table whose
+    // delimiter dedents away from its header. Without a marker this is just the
+    // header's leading whitespace, so top-level tables are emitted unchanged.
+    const markerMatch = header.match(listMarkerRe);
+    const offset = markerMatch ? markerMatch[0].length : header.length - header.trimStart().length;
+    const indent = markerMatch ? ' '.repeat(offset) : header.slice(0, offset);
+
+    const headerCols = splitCells(header.slice(offset)).length;
+    const delimCells = splitCells(delim);
+    if (headerCols < 2 || delimCells.length === headerCols) continue;
+
+    const aligns: string[] = [];
+    for (let c = 0; c < headerCols; c++) aligns.push(delimCells[c] ? alignOf(delimCells[c]) : '---');
+    lines[i + 1] = `${indent}| ${aligns.join(' | ')} |`;
+  }
+  return lines.join('\n');
+}
+
 export const identity = (key: string) => key;
+
+/**
+ * Nearest chatbot panel root (`.filigran-chatbot`) for portal-based overlays
+ * (tooltips, dropdowns, dialogs), so they stay inside the panel's stacking
+ * context instead of competing with the host app's z-indexes. Falls back to
+ * `document.body` when rendered outside a panel.
+ */
+export function findChatbotRoot(el: HTMLElement | null): HTMLElement {
+  let node = el;
+  while (node) {
+    if (node.classList.contains('filigran-chatbot')) return node;
+    node = node.parentElement;
+  }
+  return document.body;
+}
+
+/**
+ * Compact relative-time label for the conversation history menu
+ * ("just now", "5m ago", "3h ago", "2d ago", then a short date).
+ * Returns an empty string for missing/unparseable timestamps so the row
+ * simply omits the label instead of showing "Invalid Date".
+ */
+export function timeAgo(iso: string | undefined, t: (key: string) => string): string {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const diffMs = Date.now() - then;
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return t('just now');
+  if (minutes < 60) return `${minutes}${t('m ago')}`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}${t('h ago')}`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}${t('d ago')}`;
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+/** Matches a complete `[[FILE:<id>]]` deliverable marker agents embed in prose. */
+const FILE_MARKER_RE = /\[\[FILE:[^\]]+\]\]/g;
+
+/**
+ * Matches an INCOMPLETE marker at the very end of the string. SSE streams can
+ * split a `[[FILE:<id>]]` token before the closing `]]` arrives, so the tail
+ * may be `[[FILE`, `[[FILE:`, `[[FILE:abc`, or `[[FILE:abc]` mid-stream. We
+ * anchor on the literal `[[FILE` prefix (which is vanishingly unlikely to
+ * appear legitimately at the end of prose) so it never clips real content.
+ */
+const PARTIAL_FILE_MARKER_RE = /\[\[FILE(?::[^\]]*)?\]?$/;
+
+/**
+ * Strip the `[[FILE:<id>]]` markers an agent embeds in its reply to point at
+ * generated files. The actual files render as separate download chips, so the
+ * raw markers must be removed from the prose. Complete markers are removed
+ * anywhere; an incomplete marker at the end is also removed so a partially
+ * streamed token never flickers as raw `[[FILE:...` text.
+ *
+ * When no marker is present the content is returned **untouched** — we must
+ * not trim or collapse blank lines on ordinary prose, which would clobber
+ * intentional leading/trailing whitespace (e.g. indented Markdown / code).
+ * Whitespace is only normalized when a marker was actually removed.
+ *
+ * Applied to assistant content only — user-typed text is never touched, so a
+ * user who literally types `[[FILE:x]]` still sees their own text.
+ */
+export function stripFileMarkers(content: string): string {
+  if (!content) return content;
+  const stripped = content.replace(FILE_MARKER_RE, '').replace(PARTIAL_FILE_MARKER_RE, '');
+  if (stripped === content) return content;
+  return stripped
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/** An ordered piece of assistant content: prose text or a file marker. */
+export type FileMarkerPart = { type: 'text'; value: string } | { type: 'file'; fileId: string };
+
+/**
+ * Split assistant content into ordered text/file parts around complete
+ * `[[FILE:<id>]]` markers, so the renderer can place each download card at the
+ * marker's source position (preserving interleaved order). A trailing
+ * incomplete marker (an SSE token split mid-stream) is removed from the final
+ * text part so it never shows as raw `[[FILE:...` text.
+ */
+export function splitFileMarkers(content: string): FileMarkerPart[] {
+  if (!content) return [];
+  const parts: FileMarkerPart[] = [];
+  const re = /\[\[FILE:([^\]]+)\]\]/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null = re.exec(content);
+  while (match !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', value: content.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: 'file', fileId: match[1] });
+    lastIndex = re.lastIndex;
+    match = re.exec(content);
+  }
+  const tail = content.slice(lastIndex).replace(PARTIAL_FILE_MARKER_RE, '');
+  if (tail) parts.push({ type: 'text', value: tail });
+  return parts;
+}

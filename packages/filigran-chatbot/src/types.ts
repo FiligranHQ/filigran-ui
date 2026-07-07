@@ -11,12 +11,45 @@ export interface ApiEndpoints {
   singleEndpoint?: boolean;
   /** Path for sending messages. Default: '/chat/messages' */
   messages?: string;
+  /**
+   * Path for steering the agent mid-run (sending a message while a response
+   * is still streaming). Default: '/chat/messages/steer'. The widget POSTs
+   * `{ conversation_id, content, agent_slug }`; a 2xx response means the
+   * message was persisted and will be injected into the running agentic loop
+   * at the next iteration boundary. On a non-2xx response the optimistic
+   * bubble is rolled back and the text is restored into the composer, so a
+   * backend without steering support degrades gracefully. Set to null to
+   * disable mid-run steering entirely.
+   */
+  steer?: string | null;
   /** Path for fetching agents. Default: '/chat/agents'. Set to null to disable. */
   agents?: string | null;
   /** Path for fetching session history. Default: '/chat/sessions'. Set to null to disable. */
   sessions?: string | null;
+  /**
+   * Path for the multi-conversation history menu. Defaults to the sessions
+   * path: the widget lists past conversations via `GET {history}` and deletes
+   * one via `DELETE {history}/{conversation_id}`. Set to null to hide the
+   * history menu (e.g. when the backend only implements the session-restore
+   * POST contract).
+   */
+  history?: string | null;
   /** Path for uploading files. Default: '/chat/upload'. Set to null to disable file uploads. */
   upload?: string | null;
+  /**
+   * Base path for downloading agent-generated files. Default: '/chat/files'.
+   * The download URL is built as
+   * `${apiBaseUrl}${download}/${fileId}/download`, resolved against the
+   * host app's own backend proxy. This keeps the download authenticated by
+   * the host platform (e.g. OpenCTI / OpenAEV session) — the proxy mints
+   * any upstream token server-side, so the user never authenticates to the
+   * upstream chat service directly. Set to null to disable download chips.
+   *
+   * Exception: in `singleEndpoint` mode the `/chat/files` default is NOT
+   * applied (there is no per-path routing), so download cards stay disabled
+   * unless this path is set explicitly to a proxy route.
+   */
+  download?: string | null;
 }
 
 export interface ChatPanelProps {
@@ -49,12 +82,37 @@ export interface ChatPanelProps {
   disableFileManagement?: boolean;
   /** Called when a relative markdown link is clicked in assistant messages. */
   onRelativeLinkClick?: (href: string) => void;
+  /**
+   * Called when an agent-generated file download fails (non-2xx response or
+   * network error). Lets the host surface the failure through its own
+   * notification system (the chatbot has no toast surface of its own).
+   */
+  onDownloadError?: (error: unknown, attachment: ChatAttachment) => void;
   /** Maximum number of files attachable in one chat context. Default: 10. */
   maxFileCount?: number;
   /** Maximum total size in bytes for attached files. Default: 50 * 1024 * 1024 (50 MB). */
   maxTotalSize?: number;
   /** Additional HTTP headers added to chatbot API requests (messages, sessions, agents, uploads). */
   requestHeaders?: Record<string, string>;
+  /**
+   * Arbitrary contextual metadata about the host page/application, forwarded
+   * to the backend alongside every message as a `context` JSON object so the
+   * agent is aware of where the user is.
+   *
+   * The shape is up to the host. Today it typically carries the current
+   * relative URL, e.g.
+   * `{ url: '/dashboard/analyses/reports/<id>/overview' }`, and can be
+   * extended later (page title, selected entity, user role, etc.).
+   *
+   * Must be JSON-serializable — it is sent via `JSON.stringify`. A
+   * non-serializable value (circular reference, `BigInt`, etc.) is skipped
+   * rather than thrown, so it can never break message sending.
+   *
+   * Read fresh at send time, so it always reflects the page the user is on
+   * when the message is sent (not when the panel was opened). Only emitted
+   * for the `rest` backend, and omitted entirely when empty.
+   */
+  pageContext?: Record<string, unknown>;
   /**
    * CSS selector for the main content element that should be pushed when sidebar is open.
    * When set, the component will automatically apply margin-right to push the content.
@@ -68,6 +126,27 @@ export interface ChatPanelProps {
    * - 'ag-ui': AG-UI protocol (https://github.com/ag-ui-protocol/ag-ui)
    */
   backendType?: BackendType;
+  /**
+   * Show the waiting experience during longer waits: dynamic rotating status
+   * messages plus an optional Space Invader mini-game that shoots the message
+   * letters away one by one. Users can still toggle the game off per browser
+   * from the panel; this prop is a host-level master switch. Default: true.
+   */
+  miniGameEnabled?: boolean;
+  /**
+   * Notify the user when a long-running turn finishes while they are not
+   * watching the chat — away (tab hidden / another window) via a document-title
+   * flash and a browser notification (when already granted), or in-app with the
+   * chat panel closed/hidden via the `onTaskComplete` host toast. Default: true.
+   */
+  notifyOnComplete?: boolean;
+  /**
+   * Called when a long turn finishes and the user is not actively watching the
+   * chat (away, or in-app with the chat panel closed/hidden) so the host can
+   * raise its own in-app toast (the chatbot has no toast surface of its own).
+   * Receives the already-translated `title` and `body`.
+   */
+  onTaskComplete?: (title: string, body: string) => void;
 }
 
 export interface ChatToggleButtonProps {
@@ -84,15 +163,81 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   files?: ChatFile[];
+  /** Agent-generated downloadable files attached to an assistant message. */
+  attachments?: ChatAttachment[];
   toolNames?: string[];
   toolCallCount?: number;
   iterations?: number;
+  /**
+   * Accumulated model reasoning / pre-tool preamble prose for the turn
+   * (from `thinking_text` events), surfaced in the reasoning-details dialog
+   * after the answer completes — mirroring the XTM One web chat.
+   */
+  reasoning?: string;
+  /**
+   * Per-tool-call execution trace (name, input, output, success) for the
+   * reasoning-details dialog — same shape the XTM One web chat renders as
+   * expandable rows. Optional: backends without trace support fall back to
+   * the flat `toolNames` list.
+   */
+  toolCallTrace?: ToolCallTraceEntry[];
+  /** Agent transfer chain for the turn (reasoning-details dialog). */
+  transferChain?: TransferChainEntry[];
+  /**
+   * True when the agent's iteration budget was exhausted and the final
+   * response is a best-effort summary — surfaced as an amber warning on the
+   * reasoning-details affordance, mirroring the XTM One web chat.
+   */
+  isTruncated?: boolean;
+}
+
+/** One tool call in the reasoning-details execution trace. */
+export interface ToolCallTraceEntry {
+  name: string;
+  input?: string;
+  output?: string;
+  success: boolean;
+}
+
+/** One hop in the agent transfer chain shown in the reasoning-details dialog. */
+export interface TransferChainEntry {
+  agentId: string;
+  agentName: string;
+}
+
+/**
+ * An agent-generated file produced during a chat turn (via the backend
+ * `generate_file` tool / custom-tool `$output_files`). Rendered as a
+ * download card in assistant messages.
+ *
+ * Intentionally carries no absolute URL: the download is resolved against
+ * the host app's backend proxy from `fileId` (see `ApiEndpoints.download`)
+ * so the user stays authenticated to the host platform only.
+ */
+export interface ChatAttachment {
+  fileId: string;
+  filename: string;
+  /** Short extension-style label surfaced under the filename (e.g. "PDF"). */
+  type?: string;
+  size?: number;
+  contentType?: string;
+  /**
+   * `download_file` → prominent download card (user deliverable).
+   * `working_file` → de-emphasized scratch/working artifact chip.
+   */
+  fileTag?: 'download_file' | 'working_file';
 }
 
 export interface AgentStatusState {
   status: string;
   tools?: string[];
   thinkingContent?: string;
+  /**
+   * Seconds the current tool batch has been executing (from periodic
+   * `tool_heartbeat` events) — rendered as a live elapsed-time indicator
+   * so long executions (background tasks, consults) never look stuck.
+   */
+  elapsedS?: number;
 }
 
 export interface ChatFile {
@@ -105,6 +250,20 @@ export interface ChatFile {
   fileId?: string;
   /** Upload status: 'pending' while uploading, 'done' when uploaded, 'error' on failure. */
   uploadStatus?: 'pending' | 'done' | 'error';
+}
+
+/**
+ * A past conversation surfaced in the history menu (REST backend only).
+ * Listed via `GET {apiBaseUrl}{apiEndpoints.history ?? apiEndpoints.sessions ?? '/chat/sessions'}`
+ * — the optional `apiEndpoints.history` override takes precedence when the
+ * proxy cannot route GET/DELETE on the sessions path.
+ */
+export interface ChatConversationSummary {
+  conversationId: string;
+  title: string;
+  /** ISO timestamp of the last activity, used for the relative-time label. */
+  updatedAt?: string;
+  messageCount?: number;
 }
 
 export interface XtmAgent {

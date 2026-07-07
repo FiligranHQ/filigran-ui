@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CheckIcon, CopyIcon } from './icons';
+import { hardenNestedCodeFences, normalizeMarkdownTables } from '../utils';
 
 interface MarkdownMessageProps {
   content: string;
@@ -15,8 +16,46 @@ const isRelativeHref = (href?: string) => {
   return !hasAbsoluteScheme;
 };
 
+/**
+ * Resolve an href to its host-app-internal form, or null when it points
+ * elsewhere.
+ *
+ * Internal links must route through the host application's router
+ * (`onRelativeLinkClick`) instead of a full page load / new tab. Two shapes
+ * qualify:
+ *
+ * 1. Relative hrefs (`/dashboard/...`) — kept as-is.
+ * 2. Absolute http(s) hrefs on the SAME origin as the embedding page
+ *    (e.g. `https://octi.example.com/dashboard/id/<uuid>`) — reduced to
+ *    `pathname + search + hash`. Backends intentionally emit absolute links
+ *    (so links work from any chat surface); when the chatbot is embedded in
+ *    that very platform the link must still navigate in-app.
+ *
+ * Anything else (other origins, non-http schemes, malformed URLs) returns
+ * null and falls back to a regular new-tab anchor.
+ */
+const toInternalHref = (href?: string): string | null => {
+  if (!href) return null;
+  if (isRelativeHref(href)) return href;
+  if (typeof window === 'undefined') return null;
+  try {
+    const url = new URL(href, window.location.href);
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.origin === window.location.origin) {
+      return `${url.pathname}${url.search}${url.hash}` || '/';
+    }
+  } catch {
+    /* malformed URL — treat as external */
+  }
+  return null;
+};
+
 export const MarkdownMessage = ({ content, onRelativeLinkClick }: MarkdownMessageProps) => {
   const [copiedBlock, setCopiedBlock] = useState<string | null>(null);
+
+  // Preprocess once per `content`: this component re-renders on UI-only state
+  // (e.g. `copiedBlock`), and both passes scan the whole message, so memoizing
+  // keeps that work off the hot path for large messages.
+  const processedContent = useMemo(() => normalizeMarkdownTables(hardenNestedCodeFences(content)), [content]);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -71,11 +110,13 @@ export const MarkdownMessage = ({ content, onRelativeLinkClick }: MarkdownMessag
           </blockquote>
         ),
         a: ({ href, children }) => {
-          const openInNewTab = !isRelativeHref(href);
+          const internalHref = toInternalHref(href);
+          const routeInternally = internalHref !== null && !!onRelativeLinkClick;
+          const openInNewTab = !routeInternally && !isRelativeHref(href);
           const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
-            if (!href || !isRelativeHref(href) || !onRelativeLinkClick) return;
+            if (!routeInternally) return;
             event.preventDefault();
-            onRelativeLinkClick(href);
+            onRelativeLinkClick!(internalHref!);
           };
 
           return (
@@ -108,7 +149,7 @@ export const MarkdownMessage = ({ content, onRelativeLinkClick }: MarkdownMessag
         ),
       }}
     >
-      {content}
+      {processedContent}
     </Markdown>
   );
 };

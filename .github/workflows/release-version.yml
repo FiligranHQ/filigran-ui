@@ -20,6 +20,7 @@ on:
         options:
           - '@filigran/chatbot'
           - '@filigran/icon'
+          - '@filigran/rich-text-editor'
           - '@filigran/ui'
           - all
 
@@ -44,6 +45,8 @@ jobs:
           owner: ${{ github.repository_owner }}
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          token: ${{ steps.app-token.outputs.token }}
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -64,6 +67,9 @@ jobs:
           if [[ "${{ github.event.inputs.package }}" == "@filigran/icon" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
             echo "FILIGRAN_ICON_CURRENT_VERSION=$(node -p "require('./packages/filigran-icon/package.json').version")" >> $GITHUB_ENV
           fi
+          if [[ "${{ github.event.inputs.package }}" == "@filigran/rich-text-editor" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
+            echo "FILIGRAN_RTE_CURRENT_VERSION=$(node -p "require('./packages/filigran-rich-text-editor/package.json').version")" >> $GITHUB_ENV
+          fi
           if [[ "${{ github.event.inputs.package }}" == "@filigran/ui" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
             echo "FILIGRAN_UI_CURRENT_VERSION=$(node -p "require('./packages/filigran-ui/package.json').version")" >> $GITHUB_ENV
           fi
@@ -79,6 +85,12 @@ jobs:
         run: |
           yarn version ${{ github.event.inputs.version_type }}
           echo "FILIGRAN_ICON_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+      - name: Update version for @filigran/rich-text-editor
+        if: github.event.inputs.package == '@filigran/rich-text-editor' || github.event.inputs.package == 'all'
+        working-directory: ./packages/filigran-rich-text-editor
+        run: |
+          yarn version ${{ github.event.inputs.version_type }}
+          echo "FILIGRAN_RTE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
       - name: Update version for @filigran/ui
         if: github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all'
         working-directory: ./packages/filigran-ui
@@ -177,6 +189,10 @@ jobs:
             [ -n "$PARTS" ] && PARTS="$PARTS, "
             PARTS="${PARTS}@filigran/icon to v$FILIGRAN_ICON_VERSION"
           fi
+          if [ -n "$FILIGRAN_RTE_VERSION" ]; then
+            [ -n "$PARTS" ] && PARTS="$PARTS, "
+            PARTS="${PARTS}@filigran/rich-text-editor to v$FILIGRAN_RTE_VERSION"
+          fi
           
           if [ -z "$PARTS" ]; then
             echo "No version changes to commit"
@@ -195,6 +211,10 @@ jobs:
             git tag "@filigran/icon-v$FILIGRAN_ICON_VERSION"
             echo "Created tag: @filigran/icon-v$FILIGRAN_ICON_VERSION"
           fi
+          if [ -n "$FILIGRAN_RTE_VERSION" ]; then
+            git tag "@filigran/rich-text-editor-v$FILIGRAN_RTE_VERSION"
+            echo "Created tag: @filigran/rich-text-editor-v$FILIGRAN_RTE_VERSION"
+          fi
           if [ -n "$FILIGRAN_UI_VERSION" ]; then
             git tag "@filigran/ui-v$FILIGRAN_UI_VERSION"
             echo "Created tag: @filigran/ui-v$FILIGRAN_UI_VERSION"
@@ -210,6 +230,10 @@ jobs:
             echo "Building @filigran/icon..."
             yarn workspace @filigran/icon run build
           fi
+          if [ -n "$FILIGRAN_RTE_VERSION" ]; then
+            echo "Building @filigran/rich-text-editor..."
+            yarn workspace @filigran/rich-text-editor run build
+          fi
           if [ -n "$FILIGRAN_UI_VERSION" ]; then
             echo "Building @filigran/ui..."
             yarn workspace @filigran/ui run build
@@ -224,6 +248,13 @@ jobs:
       - name: Publish @filigran/icon to NPM
         if: (github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all') && env.FILIGRAN_ICON_VERSION != ''
         working-directory: ./packages/filigran-icon
+        run: yarn npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish @filigran/rich-text-editor to NPM
+        if: (github.event.inputs.package == '@filigran/rich-text-editor' || github.event.inputs.package == 'all') && env.FILIGRAN_RTE_VERSION != ''
+        working-directory: ./packages/filigran-rich-text-editor
         run: yarn npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -255,6 +286,21 @@ jobs:
             
             ### Issues Closed
             ${{ steps.changelog.outputs.icon_issues }}
+          draft: false
+          prerelease: false
+      - name: Create GitHub Release for @filigran/rich-text-editor
+        if: (github.event.inputs.package == '@filigran/rich-text-editor' || github.event.inputs.package == 'all') && env.FILIGRAN_RTE_VERSION != ''
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: '@filigran/rich-text-editor-v${{ env.FILIGRAN_RTE_VERSION }}'
+          name: 'Filigran Rich Text Editor v${{ env.FILIGRAN_RTE_VERSION }}'
+          body: |
+            ## Filigran Rich Text Editor v${{ env.FILIGRAN_RTE_VERSION }}
+            
+            ### Installation
+            ```bash
+            yarn add @filigran/rich-text-editor@${{ env.FILIGRAN_RTE_VERSION }}
+            ```
           draft: false
           prerelease: false
       - name: Create GitHub Release for @filigran/ui

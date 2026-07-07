@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { AgentStatusState, ApiEndpoints, BackendType, ChatFile, ChatMessage } from '../types';
 import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
@@ -17,6 +17,8 @@ interface UseChatOptions {
   backendType?: BackendType;
   agentSlug: string | null | undefined;
   requestHeaders?: Record<string, string>;
+  /** Arbitrary host page/application context, sent as `context` on the REST message body. */
+  pageContext?: Record<string, unknown>;
   t: (key: string) => string;
   maxFileCount?: number;
   maxTotalSize?: number;
@@ -36,7 +38,23 @@ interface UseChatReturn {
   attachedFiles: ChatFile[];
   conversationId: string | null;
   transferredAgent: TransferredAgent | null;
+  /**
+   * True while a response is streaming AND the typed text can be dispatched
+   * immediately as a mid-run steering message (REST backend with a steer
+   * endpoint and a known conversation id). Gates the steering affordances in
+   * the composer (accent Send next to Stop, "Enter to send now" copy).
+   */
+  canSteer: boolean;
   historyLoadedRef: React.MutableRefObject<boolean>;
+  /**
+   * Ref mirror of {@link conversationId}, always current across async
+   * boundaries. Exposed so the history-restore effect can tell, when its
+   * `/chat/sessions` response arrives, whether the conversation it was issued
+   * for is still the active one — and ignore a genuinely superseded response
+   * (new chat / agent switch) without discarding a restore that was merely
+   * torn down by a benign host re-render or a StrictMode double-invoke.
+   */
+  conversationIdRef: React.MutableRefObject<string | null>;
   handleFileAdd: (fileList: FileList | null) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
   handleSendMessage: () => Promise<void>;
@@ -44,7 +62,21 @@ interface UseChatReturn {
   handleStopGenerating: () => void;
   setAttachedFiles: React.Dispatch<React.SetStateAction<ChatFile[]>>;
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
-  setConversationId: React.Dispatch<React.SetStateAction<string | null>>;
+  /**
+   * Set (or clear) the active conversation id, keeping React state, the
+   * cross-async-boundary ref mirror, and localStorage all in sync. Pass
+   * `null` to reset. Prefer this over a raw state setter so the id consumed
+   * by `handleSendMessage` (which reads the ref) never drifts from what the
+   * UI shows.
+   */
+  updateConversationId: (id: string | null) => void;
+  /**
+   * Switch to another existing conversation (history menu). Aborts any
+   * in-flight request, clears the transcript, and re-arms the history-restore
+   * effect so the selected conversation's messages are fetched via the
+   * sessions endpoint.
+   */
+  handleSwitchConversation: (id: string) => void;
 }
 
 function getParser(backendType: BackendType): (evt: Record<string, unknown>, ctx: ProtocolContext) => ParsedAction {
@@ -61,7 +93,12 @@ function getParser(backendType: BackendType): (evt: Record<string, unknown>, ctx
 function buildRequestBody(
   backendType: BackendType,
   content: string,
-  opts: { legacyChatId: string | null; conversationId: string | null; agentSlug: string | null | undefined },
+  opts: {
+    legacyChatId: string | null;
+    conversationId: string | null;
+    agentSlug: string | null | undefined;
+    pageContext?: Record<string, unknown>;
+  },
 ): Record<string, unknown> {
   switch (backendType) {
     case 'legacy':
@@ -76,8 +113,28 @@ function buildRequestBody(
         state: {},
         forwardedProps: opts.agentSlug ? { agentSlug: opts.agentSlug } : {},
       };
-    default:
-      return { content, conversation_id: opts.conversationId, agent_slug: opts.agentSlug };
+    default: {
+      const body: Record<string, unknown> = { content, conversation_id: opts.conversationId, agent_slug: opts.agentSlug };
+      // Forward arbitrary host page context (e.g. current URL) so the agent
+      // knows where the user is. Omitted when empty to keep payloads lean.
+      // Guard serialization: the whole body is later JSON.stringify'd, so a
+      // non-serializable value (circular reference, BigInt, …) would otherwise
+      // throw and break the message send. Drop the context instead — page
+      // context is supplementary and must never prevent a message from going out.
+      // Decide using the serialized result so values that normalize to an empty
+      // object (e.g. `{ url: undefined }`, `{ fn: () => {} }`) are also omitted.
+      if (opts.pageContext && Object.keys(opts.pageContext).length > 0) {
+        try {
+          const serialized = JSON.stringify(opts.pageContext);
+          if (serialized && serialized !== '{}') {
+            body.context = opts.pageContext;
+          }
+        } catch {
+          // Non-serializable page context — skip it rather than fail the send.
+        }
+      }
+      return body;
+    }
   }
 }
 
@@ -87,6 +144,7 @@ export function useChat({
   backendType = 'rest',
   agentSlug,
   requestHeaders,
+  pageContext,
   t,
   maxFileCount = DEFAULT_MAX_FILE_COUNT,
   maxTotalSize = DEFAULT_MAX_TOTAL_SIZE,
@@ -112,6 +170,10 @@ export function useChat({
   const hasUsedToolsRef = useRef(false);
   // Ref mirror of conversationId — always current across async boundaries
   const conversationIdRef = useRef(conversationId);
+  // Ref mirror of pageContext so the value sent reflects the page the user is
+  // on at send time, regardless of when the send handler closure was created.
+  const pageContextRef = useRef(pageContext);
+  pageContextRef.current = pageContext;
   // Mutex to prevent concurrent session creation
   const creatingSessionRef = useRef<Promise<string | null> | null>(null);
   // Abort controller for in-flight file uploads (cancelled on new chat)
@@ -127,6 +189,14 @@ export function useChat({
       return apiBaseUrl; // POST directly to base URL
     }
     return `${apiBaseUrl}${apiEndpoints?.messages ?? '/chat/messages'}`;
+  };
+
+  // Determine mid-run steering endpoint URL (null disables steering)
+  const getSteerUrl = (): string | null => {
+    if (isLegacy || backendType === 'ag-ui' || apiEndpoints?.singleEndpoint || apiEndpoints?.steer === null) {
+      return null;
+    }
+    return `${apiBaseUrl}${apiEndpoints?.steer ?? '/chat/messages/steer'}`;
   };
 
   // Determine upload endpoint URL (null disables file upload proxying)
@@ -146,9 +216,10 @@ export function useChat({
   };
 
   /**
-   * Update conversationId in both React state and the ref mirror.
+   * Update conversationId in React state, the ref mirror, and localStorage.
+   * Stable identity (useCallback) so it can be used as an effect dependency.
    */
-  const updateConversationId = (id: string | null) => {
+  const updateConversationId = useCallback((id: string | null) => {
     conversationIdRef.current = id;
     setConversationId(id);
     if (id) {
@@ -156,7 +227,7 @@ export function useChat({
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
-  };
+  }, []);
 
   /**
    * Ensure a conversation exists. Uses a mutex so concurrent callers
@@ -315,8 +386,55 @@ export function useChat({
     }
   };
 
+  /**
+   * Mid-run steering: dispatch a message while the agent is still generating.
+   * The user bubble is added optimistically and the steer endpoint is POSTed;
+   * the backend persists the message and injects it into the running agentic
+   * loop at the next iteration boundary. On failure (network error, or a
+   * backend without steering support answering non-2xx) the optimistic bubble
+   * is rolled back and the text is restored into the composer — prepended on
+   * its own line if the user already typed something new — so the message is
+   * never silently lost and never resets the in-flight run state.
+   */
+  const steerMessage = async (content: string) => {
+    const steerUrl = getSteerUrl();
+    const convId = conversationIdRef.current;
+    if (!steerUrl || !convId) return;
+
+    const optimistic: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+
+    try {
+      const res = await fetch(steerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+        body: JSON.stringify({ conversation_id: convId, content, agent_slug: agentSlug }),
+      });
+      if (!res.ok) throw new Error(`Steer failed: ${res.status}`);
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      setInputValue((prev) => (prev ? `${content}\n${prev}` : content));
+    }
+  };
+
   const handleSendMessage = async () => {
-    if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return;
+    const steerText = inputValue.trim();
+    if (isLoading) {
+      // Mid-run steering — text-only sends while a response is streaming.
+      // Attachments keep the legacy wait behavior (the upload + message pair
+      // cannot be injected into a running loop).
+      if (steerText && attachedFiles.length === 0 && getSteerUrl() && conversationIdRef.current) {
+        setInputValue('');
+        await steerMessage(steerText);
+      }
+      return;
+    }
+    if (!inputValue.trim() && attachedFiles.length === 0) return;
     const content = inputValue.trim();
 
     const userMsg: ChatMessage = {
@@ -337,14 +455,21 @@ export function useChat({
     const assistantId = crypto.randomUUID();
     setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
 
+    // The assistant message currently being streamed into. A steered turn can
+    // produce multiple response segments on one SSE stream: the backend
+    // completes the current segment (intermediate `done`), then runs a
+    // follow-up pass for the steering message (fresh `thinking` + `stream`
+    // events). Each segment gets its own assistant bubble. Declared outside
+    // the try so the catch below writes the error into the LIVE segment, not
+    // an already-completed one.
+    let currentAssistantId = assistantId;
+
     try {
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
       // Collect file_ids from already-uploaded files (uploaded eagerly on selection)
-      const fileIds = (userMsg.files ?? [])
-        .filter((f) => f.uploadStatus === 'done' && f.fileId)
-        .map((f) => f.fileId!);
+      const fileIds = (userMsg.files ?? []).filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
 
       // Step 1: Send the message (with file_ids if files were uploaded)
       // Use conversationIdRef to get the latest value (may have been set by eager upload)
@@ -352,6 +477,7 @@ export function useChat({
         legacyChatId,
         conversationId: conversationIdRef.current,
         agentSlug,
+        pageContext: pageContextRef.current,
       });
       if (fileIds.length > 0) {
         (requestBody as Record<string, unknown>).file_ids = fileIds;
@@ -382,6 +508,23 @@ export function useChat({
       let accumulated = '';
       let doneReceived = false;
 
+      /**
+       * Open a new response segment when events keep flowing after a `done`.
+       * Appends a fresh empty assistant message (after any steered user
+       * bubble) and resets the per-segment accumulators. The fresh `thinking`
+       * status also clears the reasoning window — each segment carries its
+       * own reasoning, mirroring the web chat behavior.
+       */
+      const ensureSegment = () => {
+        if (!doneReceived) return;
+        doneReceived = false;
+        accumulated = '';
+        currentAssistantId = crypto.randomUUID();
+        const segmentId = currentAssistantId;
+        setMessages((prev) => [...prev, { id: segmentId, role: 'assistant', content: '', timestamp: new Date() }]);
+        setAgentStatus({ status: 'thinking' });
+      };
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -400,14 +543,35 @@ export function useChat({
             ctx.hasUsedTools = ctx.hasUsedTools || hasUsedToolsRef.current;
 
             switch (parsed.action) {
-              case 'status':
+              case 'status': {
+                ensureSegment();
+                const segId = currentAssistantId;
                 if (parsed.status === 'tool_start') hasUsedToolsRef.current = true;
-                if (parsed.status === 'thinking_text') {
+                if (parsed.status === 'stream_retract') {
+                  // Rare: text that streamed as a provisional answer turned
+                  // out to precede tool calls — discard the answer bubble
+                  // (the text re-arrives as thinking_text right after, so it
+                  // lands in the reasoning window instead).
+                  accumulated = '';
+                  setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: '' } : m)));
+                  setAgentStatus((prev) => ({
+                    status: 'analyzing',
+                    thinkingContent: prev?.thinkingContent,
+                  }));
+                } else if (parsed.status === 'thinking_text') {
                   setAgentStatus((prev) => ({
                     ...prev,
                     status: prev?.status ?? 'thinking',
                     thinkingContent: (prev?.thinkingContent ?? '') + (parsed.thinkingContent ?? ''),
                   }));
+                } else if (parsed.status === 'tool_heartbeat') {
+                  // Liveness signal during a long tool execution: update the
+                  // elapsed counter but KEEP the current status label/tools —
+                  // replacing the status would flip e.g. "Waiting for
+                  // background task…" back to "Thinking…" mid-execution.
+                  setAgentStatus((prev) =>
+                    prev ? { ...prev, elapsedS: parsed.elapsedS } : { status: 'tool_start', tools: parsed.tools, elapsedS: parsed.elapsedS },
+                  );
                 } else {
                   setAgentStatus((prev) => ({
                     status: parsed.status,
@@ -416,14 +580,22 @@ export function useChat({
                   }));
                 }
                 break;
+              }
 
-              case 'stream':
+              case 'stream': {
+                ensureSegment();
                 accumulated += parsed.content;
+                // Snapshot the segment id and text: the state updater runs
+                // asynchronously and `currentAssistantId` / `accumulated` may
+                // already belong to the NEXT segment by then.
+                const segId = currentAssistantId;
+                const text = accumulated;
                 setAgentStatus((prev) => ({ status: 'streaming', thinkingContent: prev?.thinkingContent }));
-                setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)));
+                setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: text } : m)));
                 break;
+              }
 
-              case 'done':
+              case 'done': {
                 doneReceived = true;
                 if (parsed.conversationId) {
                   updateConversationId(parsed.conversationId);
@@ -431,28 +603,39 @@ export function useChat({
                 if (parsed.transferAgentId && parsed.transferAgentName) {
                   setTransferredAgent({ id: parsed.transferAgentId, name: parsed.transferAgentName });
                 }
+                const segId = currentAssistantId;
+                const finalContent = parsed.content || accumulated;
                 setMessages((prev) =>
                   prev.map((m) =>
-                    m.id === assistantId
+                    m.id === segId
                       ? {
                           ...m,
-                          content: parsed.content || accumulated,
+                          content: finalContent,
                           toolNames: parsed.toolNames,
                           toolCallCount: parsed.toolCallCount,
                           iterations: parsed.iterations,
+                          attachments: parsed.attachments,
+                          reasoning: parsed.reasoning,
+                          toolCallTrace: parsed.toolCallTrace,
+                          transferChain: parsed.transferChain,
+                          isTruncated: parsed.isTruncated,
                         }
                       : m,
                   ),
                 );
                 break;
+              }
 
-              case 'error':
+              case 'error': {
+                ensureSegment();
+                const segId = currentAssistantId;
                 setMessages((prev) =>
                   prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: parsed.content || t('Unable to connect. Please check the configuration.') } : m,
+                    m.id === segId ? { ...m, content: parsed.content || t('Unable to connect. Please check the configuration.') } : m,
                   ),
                 );
                 return;
+              }
 
               case 'set_chat_id':
                 setLegacyChatId(parsed.chatId);
@@ -471,13 +654,14 @@ export function useChat({
         }
       }
       if (accumulated && !doneReceived) {
-        setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated || 'No response.' } : m)));
+        const segId = currentAssistantId;
+        const text = accumulated;
+        setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: text || 'No response.' } : m)));
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, content: t('Sorry, an error occurred. Please try again.') } : m)),
-      );
+      const segId = currentAssistantId;
+      setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: t('Sorry, an error occurred. Please try again.') } : m)));
     } finally {
       abortControllerRef.current = null;
       setIsLoading(false);
@@ -509,6 +693,18 @@ export function useChat({
     }
   };
 
+  const handleSwitchConversation = (id: string) => {
+    if (!isLegacy && id === conversationIdRef.current) return;
+    // Reuse the full new-chat reset (abort in-flight request + uploads,
+    // clear transcript/composer/status), then adopt the selected id and
+    // re-arm the history-restore effect so the host panel fetches the
+    // conversation's messages via the sessions endpoint.
+    handleNewChat();
+    if (!isLegacy) {
+      updateConversationId(id);
+    }
+  };
+
   const handleStopGenerating = () => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
@@ -517,6 +713,12 @@ export function useChat({
     hasUsedToolsRef.current = false;
     setMessages((prev) => prev.filter((m) => !(m.role === 'assistant' && !m.content)));
   };
+
+  // Steering affordances are only advertised when the typed text can actually
+  // be dispatched mid-run: a response is streaming (isLoading), the REST steer
+  // endpoint is configured, and the conversation already has a server id (the
+  // very first turn of a fresh conversation only receives its id on `done`).
+  const canSteer = isLoading && getSteerUrl() !== null && conversationId !== null;
 
   return {
     messages,
@@ -527,7 +729,9 @@ export function useChat({
     attachedFiles,
     conversationId,
     transferredAgent,
+    canSteer,
     historyLoadedRef,
+    conversationIdRef,
     handleFileAdd,
     handlePaste,
     handleSendMessage,
@@ -535,6 +739,7 @@ export function useChat({
     handleStopGenerating,
     setAttachedFiles,
     setMessages,
-    setConversationId,
+    updateConversationId,
+    handleSwitchConversation,
   };
 }
