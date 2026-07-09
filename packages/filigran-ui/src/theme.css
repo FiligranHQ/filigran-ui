@@ -8,6 +8,11 @@
   --color-border-focus: hsl(var(--border-focus));
   --color-elevation-border-strong: hsl(var(--elevation-border-strong));
 
+  /* Fallbacks for Radix runtime CSS vars */
+  --radix-accordion-content-height: 0px;
+  --radix-popover-trigger-width: auto;
+  --radix-popover-content-available-height: 100vh;
+
   --color-text: hsl(var(--text-foreground));
   --color-text-secondary: hsl(var(--secondary-text-foreground));
   --color-text-inverted: hsl(var(--text-inverted-foreground));
@@ -239,91 +244,131 @@
   --color-white-900: hsl(0 0% 100% / 0.95);
   --color-white-1000: hsl(0 0% 100%);
 
-  /* Additional semantic tokens (dark defaults) */
-  --color-elevation-background-layer-0: var(--color-grayblue-1000);
-  --color-elevation-background-layer-0-gradient: var(--color-grayblue-900);
-  --color-elevation-background-layer-1: var(--color-grayblue-850);
-  --color-elevation-background-layer-2: var(--color-grayblue-700);
-  --color-elevation-background-layer-3: var(--color-grayblue-500);
-  --color-elevation-surface-heading-layer-0: var(--color-grayblue-1000);
-  --color-elevation-surface-heading-layer-1: var(--color-grayblue-1000);
-  --color-elevation-surface-heading-layer-2: var(--color-grayblue-800);
-  --color-elevation-surface-heading-layer-3: var(--color-grayblue-600);
-  --color-elevation-surface-highlight-layer-0: var(--color-grayblue-800);
-  --color-elevation-surface-highlight-layer-1: var(--color-grayblue-700);
-  --color-elevation-surface-highlight-layer-2: var(--color-grayblue-900);
-  --color-elevation-surface-highlight-layer-3: var(--color-grayblue-700);
-  --color-elevation-surface-disabled-layer-0: var(--color-gray-900);
-  --color-elevation-surface-disabled-layer-1: var(--color-gray-800);
-  --color-elevation-surface-disabled-layer-2: var(--color-gray-800);
-  --color-elevation-surface-disabled-layer-3: var(--color-gray-800);
-  --color-elevation-border-subtle-layer-0: var(--color-grayblue-800);
-  --color-elevation-border-subtle-layer-1: var(--color-grayblue-600);
-  --color-elevation-border-subtle-layer-2: var(--color-grayblue-500);
-  --color-elevation-border-subtle-layer-3: var(--color-grayblue-400);
-  --color-elevation-border-default-layer-0: var(--color-grayblue-700);
-  --color-elevation-border-default-layer-1: var(--color-grayblue-500);
-  --color-elevation-border-default-layer-2: var(--color-grayblue-400);
-  --color-elevation-border-default-layer-3: var(--color-grayblue-300);
-  --color-elevation-border-strong-layer-0: var(--color-grayblue-600);
-  --color-elevation-border-strong-layer-1: var(--color-grayblue-400);
-  --color-elevation-border-strong-layer-2: var(--color-grayblue-300);
-  --color-elevation-border-strong-layer-3: var(--color-grayblue-200);
-  --color-text-default-primary: var(--color-gray-100);
-  --color-text-default-secondary: var(--color-gray-300);
-  --color-text-default-disabled: var(--color-grayblue-150);
-  --color-text-negative-primary: var(--color-gray-900);
-  --color-text-negative-secondary: var(--color-gray-700);
-  --color-text-negative-disabled: var(--color-grayblue-400);
-  --color-filigran-brand-primary: var(--color-blue-500);
-  --color-filigran-brand-primary-transparency: hsl(var(--blue-500) / 0.1);
-  --color-filigran-brand-secondary: var(--color-blue-200);
-  --color-filigran-brand-tertiary: var(--color-blue-600);
-  --color-filigran-tonic-primary: var(--color-turquoise-500);
-  --color-filigran-tonic-secondary: var(--color-turquoise-100);
-  --color-filigran-tonic-tertiary: var(--color-turquoise-700);
-  --color-filigran-ia-main: var(--color-purple-300);
-  --color-filigran-ia-secondary: var(--color-purple-100);
-  --color-filigran-ia-secondary-transparency: hsl(var(--purple-100) / 0.1);
-  --color-filigran-ia-tertiary: var(--color-purple-500);
-  --color-feedback-info-primary: var(--color-blue-400);
-  --color-feedback-info-secondary: var(--color-blue-700);
-  --color-feedback-info-secondary-transparency: hsl(var(--blue-700) / 0.3);
-  --color-feedback-info-tertiary: var(--color-blue-200);
-  --color-feedback-success-primary: var(--color-green-600);
-  --color-feedback-success-secondary: var(--color-green-800);
-  --color-feedback-success-secondary-transparency: hsl(var(--green-800) / 0.3);
-  --color-feedback-success-tertiary: var(--color-green-200);
-  --color-feedback-alert-primary: var(--color-yellow-400);
-  --color-feedback-alert-secondary: var(--color-yellow-600);
-  --color-feedback-alert-secondary-transparency: hsl(var(--yellow-600) / 0.3);
-  --color-feedback-alert-tertiary: var(--color-yellow-200);
-  --color-feedback-warning-primary: var(--color-orange-500);
-  --color-feedback-warning-secondary: var(--color-orange-700);
-  --color-feedback-warning-secondary-transparency: hsl(var(--orange-700) / 0.3);
-  --color-feedback-warning-tertiary: var(--color-orange-200);
-  --color-feedback-error-primary: var(--color-red-400);
-  --color-feedback-error-secondary: var(--color-red-700);
-  --color-feedback-error-secondary-transparency: hsl(var(--red-700) / 0.3);
-  --color-feedback-error-tertiary: var(--color-red-200);
-  --color-entities-analyses: hsl(var(--entity-analyse));
-  --color-entities-analyses-transparency: hsl(var(--entity-analyse) / 0.2);
-  --color-entities-cases: hsl(var(--entity-cases));
-  --color-entities-cases-transparency: hsl(var(--entity-cases) / 0.2);
-  --color-entities-events: hsl(var(--entity-events));
-  --color-entities-events-transparency: hsl(var(--entity-events) / 0.2);
-  --color-entities-observations: hsl(var(--entity-observations));
-  --color-entities-observations-transparency: hsl(var(--entity-observations) / 0.2);
-  --color-entities-all-threats: hsl(var(--entity-threats));
-  --color-entities-all-threats-transparency: hsl(var(--entity-threats) / 0.2);
-  --color-entities-arsenal: hsl(var(--entity-arsenal));
-  --color-entities-arsenal-transparency: hsl(var(--entity-arsenal) / 0.2);
-  --color-entities-techniques: hsl(var(--entity-techniques));
-  --color-entities-techniques-transparency: hsl(var(--entity-techniques) / 0.2);
-  --color-entities-victimology: hsl(var(--entity-victimology));
-  --color-entities-victimology-transparency: hsl(var(--entity-victimology) / 0.2);
-  --color-entities-location: hsl(var(--entity-locations));
-  --color-entities-location-transparency: hsl(var(--entity-locations) / 0.2);
+  /* Additional semantic tokens (resolved by :root/.dark semantic vars) */
+  --color-elevation-background-layer-0: var(--semantic-elevation-background-layer-0);
+  --color-elevation-background-layer-0-gradient: var(
+    --semantic-elevation-background-layer-0-gradient
+  );
+  --color-elevation-background-layer-1: var(--semantic-elevation-background-layer-1);
+  --color-elevation-background-layer-2: var(--semantic-elevation-background-layer-2);
+  --color-elevation-background-layer-3: var(--semantic-elevation-background-layer-3);
+  --color-elevation-surface-heading-layer-0: var(--semantic-elevation-surface-heading-layer-0);
+  --color-elevation-surface-heading-layer-1: var(--semantic-elevation-surface-heading-layer-1);
+  --color-elevation-surface-heading-layer-2: var(--semantic-elevation-surface-heading-layer-2);
+  --color-elevation-surface-heading-layer-3: var(--semantic-elevation-surface-heading-layer-3);
+  --color-elevation-surface-highlight-layer-0: var(
+    --semantic-elevation-surface-highlight-layer-0
+  );
+  --color-elevation-surface-highlight-layer-1: var(
+    --semantic-elevation-surface-highlight-layer-1
+  );
+  --color-elevation-surface-highlight-layer-2: var(
+    --semantic-elevation-surface-highlight-layer-2
+  );
+  --color-elevation-surface-highlight-layer-3: var(
+    --semantic-elevation-surface-highlight-layer-3
+  );
+  --color-elevation-surface-disabled-layer-0: var(
+    --semantic-elevation-surface-disabled-layer-0
+  );
+  --color-elevation-surface-disabled-layer-1: var(
+    --semantic-elevation-surface-disabled-layer-1
+  );
+  --color-elevation-surface-disabled-layer-2: var(
+    --semantic-elevation-surface-disabled-layer-2
+  );
+  --color-elevation-surface-disabled-layer-3: var(
+    --semantic-elevation-surface-disabled-layer-3
+  );
+  --color-elevation-border-subtle-layer-0: var(--semantic-elevation-border-subtle-layer-0);
+  --color-elevation-border-subtle-layer-1: var(--semantic-elevation-border-subtle-layer-1);
+  --color-elevation-border-subtle-layer-2: var(--semantic-elevation-border-subtle-layer-2);
+  --color-elevation-border-subtle-layer-3: var(--semantic-elevation-border-subtle-layer-3);
+  --color-elevation-border-default-layer-0: var(--semantic-elevation-border-default-layer-0);
+  --color-elevation-border-default-layer-1: var(--semantic-elevation-border-default-layer-1);
+  --color-elevation-border-default-layer-2: var(--semantic-elevation-border-default-layer-2);
+  --color-elevation-border-default-layer-3: var(--semantic-elevation-border-default-layer-3);
+  --color-elevation-border-strong-layer-0: var(--semantic-elevation-border-strong-layer-0);
+  --color-elevation-border-strong-layer-1: var(--semantic-elevation-border-strong-layer-1);
+  --color-elevation-border-strong-layer-2: var(--semantic-elevation-border-strong-layer-2);
+  --color-elevation-border-strong-layer-3: var(--semantic-elevation-border-strong-layer-3);
+  --color-text-default-primary: var(--semantic-text-default-primary);
+  --color-text-default-secondary: var(--semantic-text-default-secondary);
+  --color-text-default-disabled: var(--semantic-text-default-disabled);
+  --color-text-negative-primary: var(--semantic-text-negative-primary);
+  --color-text-negative-secondary: var(--semantic-text-negative-secondary);
+  --color-text-negative-disabled: var(--semantic-text-negative-disabled);
+  --color-filigran-brand-primary: var(--semantic-filigran-brand-primary);
+  --color-filigran-brand-primary-transparency: var(
+    --semantic-filigran-brand-primary-transparency
+  );
+  --color-filigran-brand-secondary: var(--semantic-filigran-brand-secondary);
+  --color-filigran-brand-tertiary: var(--semantic-filigran-brand-tertiary);
+  --color-filigran-tonic-primary: var(--semantic-filigran-tonic-primary);
+  --color-filigran-tonic-secondary: var(--semantic-filigran-tonic-secondary);
+  --color-filigran-tonic-tertiary: var(--semantic-filigran-tonic-tertiary);
+  --color-filigran-ia-main: var(--semantic-filigran-ia-main);
+  --color-filigran-ia-secondary: var(--semantic-filigran-ia-secondary);
+  --color-filigran-ia-secondary-transparency: var(
+    --semantic-filigran-ia-secondary-transparency
+  );
+  --color-filigran-ia-tertiary: var(--semantic-filigran-ia-tertiary);
+  --color-feedback-info-primary: var(--semantic-feedback-info-primary);
+  --color-feedback-info-secondary: var(--semantic-feedback-info-secondary);
+  --color-feedback-info-secondary-transparency: var(
+    --semantic-feedback-info-secondary-transparency
+  );
+  --color-feedback-info-tertiary: var(--semantic-feedback-info-tertiary);
+  --color-feedback-success-primary: var(--semantic-feedback-success-primary);
+  --color-feedback-success-secondary: var(--semantic-feedback-success-secondary);
+  --color-feedback-success-secondary-transparency: var(
+    --semantic-feedback-success-secondary-transparency
+  );
+  --color-feedback-success-tertiary: var(--semantic-feedback-success-tertiary);
+  --color-feedback-alert-primary: var(--semantic-feedback-alert-primary);
+  --color-feedback-alert-secondary: var(--semantic-feedback-alert-secondary);
+  --color-feedback-alert-secondary-transparency: var(
+    --semantic-feedback-alert-secondary-transparency
+  );
+  --color-feedback-alert-tertiary: var(--semantic-feedback-alert-tertiary);
+  --color-feedback-warning-primary: var(--semantic-feedback-warning-primary);
+  --color-feedback-warning-secondary: var(--semantic-feedback-warning-secondary);
+  --color-feedback-warning-secondary-transparency: var(
+    --semantic-feedback-warning-secondary-transparency
+  );
+  --color-feedback-warning-tertiary: var(--semantic-feedback-warning-tertiary);
+  --color-feedback-error-primary: var(--semantic-feedback-error-primary);
+  --color-feedback-error-secondary: var(--semantic-feedback-error-secondary);
+  --color-feedback-error-secondary-transparency: var(
+    --semantic-feedback-error-secondary-transparency
+  );
+  --color-feedback-error-tertiary: var(--semantic-feedback-error-tertiary);
+  --color-entities-analyses: var(--semantic-entities-analyses);
+  --color-entities-analyses-transparency: var(--semantic-entities-analyses-transparency);
+  --color-entities-cases: var(--semantic-entities-cases);
+  --color-entities-cases-transparency: var(--semantic-entities-cases-transparency);
+  --color-entities-events: var(--semantic-entities-events);
+  --color-entities-events-transparency: var(--semantic-entities-events-transparency);
+  --color-entities-observations: var(--semantic-entities-observations);
+  --color-entities-observations-transparency: var(
+    --semantic-entities-observations-transparency
+  );
+  --color-entities-all-threats: var(--semantic-entities-all-threats);
+  --color-entities-all-threats-transparency: var(
+    --semantic-entities-all-threats-transparency
+  );
+  --color-entities-arsenal: var(--semantic-entities-arsenal);
+  --color-entities-arsenal-transparency: var(--semantic-entities-arsenal-transparency);
+  --color-entities-techniques: var(--semantic-entities-techniques);
+  --color-entities-techniques-transparency: var(
+    --semantic-entities-techniques-transparency
+  );
+  --color-entities-victimology: var(--semantic-entities-victimology);
+  --color-entities-victimology-transparency: var(
+    --semantic-entities-victimology-transparency
+  );
+  --color-entities-location: var(--semantic-entities-location);
+  --color-entities-location-transparency: var(--semantic-entities-location-transparency);
 
   --color-elevation-bg: var(--color-elevation-background-layer-0);
   --color-elevation-border-subtle: var(--color-elevation-border-subtle-layer-0);
@@ -362,8 +407,8 @@
   --shadow-lg: 1rem;
   --shadow-xl: 1.25rem;
 
-  --font-sans-geologica: Geologica;
-  --font-sans-plex: IBM Plex Sans;
+  --font-geologica: Geologica;
+  --font-ibm-plex-sans: IBM Plex Sans;
   --text-1: 0.625rem;
   --text-2: 0.75rem;
   --text-3: 0.875rem;
@@ -388,111 +433,111 @@
   --tracking-normal: 0.046875rem;
   --tracking-relaxed: 0.0625rem;
 
-  --font-header-heading-lg: var(--font-sans-geologica);
+  --font-header-heading-lg: var(--font-geologica);
   --text-header-heading-lg: 1.5rem;
   --font-weight-header-heading-lg: 500;
   --leading-header-heading-lg: 2rem;
   --tracking-header-heading-lg: 0.01125rem;
 
-  --font-header-heading-sm: var(--font-sans-geologica);
+  --font-header-heading-sm: var(--font-geologica);
   --text-header-heading-sm: 1rem;
   --font-weight-header-heading-sm: 700;
   --leading-header-heading-sm: 1.5rem;
   --tracking-header-heading-sm: 0.0075rem;
 
-  --font-header-heading-2xl: var(--font-sans-geologica);
+  --font-header-heading-2xl: var(--font-geologica);
   --text-header-heading-2xl: 2rem;
   --font-weight-header-heading-2xl: 500;
   --leading-header-heading-2xl: 2.625rem;
   --tracking-header-heading-2xl: 0.015rem;
 
-  --font-header-heading-xs: var(--font-sans-geologica);
+  --font-header-heading-xs: var(--font-geologica);
   --text-header-heading-xs: 0.875rem;
   --font-weight-header-heading-xs: 600;
   --leading-header-heading-xs: 1.5rem;
   --tracking-header-heading-xs: 0.0065625rem;
 
-  --font-header-jumbo: var(--font-sans-geologica);
+  --font-header-jumbo: var(--font-geologica);
   --text-header-jumbo: 2.625rem;
   --font-weight-header-jumbo: 500;
   --leading-header-jumbo: 3.25rem;
   --tracking-header-jumbo: 0.046875rem;
 
-  --font-header-heading-xl: var(--font-sans-geologica);
+  --font-header-heading-xl: var(--font-geologica);
   --text-header-heading-xl: 1.75rem;
   --font-weight-header-heading-xl: 500;
   --leading-header-heading-xl: 2.25rem;
   --tracking-header-heading-xl: 0.013125rem;
 
-  --font-header-heading-md: var(--font-sans-geologica);
+  --font-header-heading-md: var(--font-geologica);
   --text-header-heading-md: 1.25rem;
   --font-weight-header-heading-md: 500;
   --leading-header-heading-md: 1.75rem;
   --tracking-header-heading-md: 0.009375rem;
 
-  --font-content-highlight: var(--font-sans-plex);
+  --font-content-highlight: var(--font-ibm-plex-sans);
   --text-content-highlight: 0.875rem;
   --font-weight-content-highlight: 600;
   --leading-content-highlight: 1.25rem;
   --tracking-content-highlight: 0.0065625rem;
 
-  --font-content-body-compact-link: var(--font-sans-plex);
+  --font-content-body-compact-link: var(--font-ibm-plex-sans);
   --text-content-body-compact-link: 0.75rem;
   --font-weight-content-body-compact-link: 500;
   --leading-content-body-compact-link: 1.25rem;
   --tracking-content-body-compact-link: 0.005625rem;
   --text-decoration-content-body-compact-link: underline;
 
-  --font-content-body-base-bold: var(--font-sans-plex);
+  --font-content-body-base-bold: var(--font-ibm-plex-sans);
   --text-content-body-base-bold: 0.875rem;
   --font-weight-content-body-base-bold: 600;
   --leading-content-body-base-bold: 1.25rem;
   --tracking-content-body-base-bold: 0.0065625rem;
 
-  --font-content-button: var(--font-sans-plex);
+  --font-content-button: var(--font-ibm-plex-sans);
   --text-content-button: 0.875rem;
   --font-weight-content-button: 600;
   --leading-content-button: 1.25rem;
   --tracking-content-button: 0.0065625rem;
 
-  --font-content-caption: var(--font-sans-plex);
+  --font-content-caption: var(--font-ibm-plex-sans);
   --text-content-caption: 0.625rem;
   --font-weight-content-caption: 400;
   --leading-content-caption: 1rem;
   --tracking-content-caption: 0.0046875rem;
 
-  --font-content-body-base-medium: var(--font-sans-plex);
+  --font-content-body-base-medium: var(--font-ibm-plex-sans);
   --text-content-body-base-medium: 0.875rem;
   --font-weight-content-body-base-medium: 500;
   --leading-content-body-base-medium: 1.25rem;
   --tracking-content-body-base-medium: 0.0065625rem;
 
-  --font-content-body-base-link: var(--font-sans-plex);
+  --font-content-body-base-link: var(--font-ibm-plex-sans);
   --text-content-body-base-link: 0.875rem;
   --font-weight-content-body-base-link: 500;
   --leading-content-body-base-link: 1.25rem;
   --tracking-content-body-base-link: 0.0065625rem;
   --text-decoration-content-body-base-link: underline;
 
-  --font-content-body-compact-bold: var(--font-sans-plex);
+  --font-content-body-compact-bold: var(--font-ibm-plex-sans);
   --text-content-body-compact-bold: 0.75rem;
   --font-weight-content-body-compact-bold: 600;
   --leading-content-body-compact-bold: 1.25rem;
   --tracking-content-body-compact-bold: 0.005625rem;
 
-  --font-content-body-compact-medium: var(--font-sans-plex);
+  --font-content-body-compact-medium: var(--font-ibm-plex-sans);
   --text-content-body-compact-medium: 0.75rem;
   --font-weight-content-body-compact-medium: 500;
   --leading-content-body-compact-medium: 1.25rem;
   --tracking-content-body-compact-medium: 0.005625rem;
 
-  --font-content-body-compact: var(--font-sans-plex);
+  --font-content-body-compact: var(--font-ibm-plex-sans);
   --text-content-body-compact: 0.75rem;
   --font-weight-content-body-compact: 400;
   --leading-content-body-compact: 1.25rem;
   --tracking-content-body-compact: 0.005625rem;
 
-  --font-content-body-base: var(--font-sans-plex);
+  --font-content-body-base: var(--font-ibm-plex-sans);
   --text-content-body-base: 0.875rem;
   --font-weight-content-body-base: 400;
   --leading-content-body-base: 1.25rem;
@@ -537,8 +582,8 @@
   --spacing-xl: 1.5rem;
   --spacing-xxl: 2rem;
 
-  --font-title: var(--font-geologica), system-ui, sans-serif;
-  --font-body: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  --font-title: var(--font-geologica);
+  --font-body: var(--font-ibm-plex-sans);
   --tracking-default: 0.0075em;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
@@ -556,13 +601,13 @@
     height: 0;
   }
   to {
-    height: var(--radix-accordion-content-height);
+    height: var(--radix-accordion-content-height, 0px);
   }
 }
 
 @keyframes accordion-up {
   from {
-    height: var(--radix-accordion-content-height);
+    height: var(--radix-accordion-content-height, 0px);
   }
   to {
     height: 0;
@@ -570,8 +615,8 @@
 }
 
 @utility popover-content-width-same-as-its-trigger {
-  width: var(--radix-popover-trigger-width);
-  max-height: var(--radix-popover-content-available-height);
+  width: var(--radix-popover-trigger-width, auto);
+  max-height: var(--radix-popover-content-available-height, 100vh);
 }
 
 @utility txt-jumbo {
@@ -814,6 +859,11 @@
 }
 
 :root {
+  /* Fallbacks for Radix runtime CSS vars (overridden when components mount) */
+  --radix-accordion-content-height: 0px;
+  --radix-popover-trigger-width: auto;
+  --radix-popover-content-available-height: 100vh;
+
   --dark-100: var(--gray-1000);
   --light-0: 0 0% 100%;
   --light-100: var(--gray-50);
@@ -858,8 +908,8 @@
   --radius: 0.25rem;
 
   --gray-default: var(--gray-200);
-  --gray-50: 240 11% 96%;
-  --gray-100: 240 4% 95%;
+  --gray-50: 240 10% 96.08%;
+  --gray-100: 240 4% 95.1%;
   --gray-150: 220 5.88% 90%;
   --gray-200: 225 3.92% 80%;
   --gray-300: 231.43 4.58% 70%;
@@ -874,7 +924,7 @@
   --darkblue-default: var(--darkblue-700);
   --darkblue-100: 231.67 100% 92.94%;
   --darkblue-200: 232.41 100% 82.94%;
-  --darkblue-300: 232.61 100% 72.94%;
+  --darkblue-300: 232.17 100% 72.94%;
   --darkblue-400: 232.38 100% 62.94%;
   --darkblue-500: 232.5 100% 52.94%;
   --darkblue-600: 232.6 100% 42.94%;
@@ -883,81 +933,81 @@
   --darkblue-900: 232.73 100% 12.94%;
 
   --blue-default: var(--blue-400);
-  --blue-100: 195 100% 90%;
-  --blue-200: 195 100% 85%;
-  --blue-300: 199 100% 75%;
-  --blue-400: 197 100% 65%;
-  --blue-500: 195 100% 40%;
-  --blue-600: 195 100% 30%;
-  --blue-700: 195 100% 25%;
-  --blue-800: 195 100% 20%;
-  --blue-900: 195 100% 13%;
+  --blue-100: 196.67 100% 92.94%;
+  --blue-200: 196.55 100% 82.94%;
+  --blue-300: 196.52 100% 72.94%;
+  --blue-400: 196.83 100% 62.94%;
+  --blue-500: 196.75 100% 52.94%;
+  --blue-600: 196.71 100% 42.94%;
+  --blue-700: 196.79 100% 32.94%;
+  --blue-800: 196.41 100% 22.94%;
+  --blue-900: 196.36 100% 12.94%;
 
   --green-default: var(--green-500);
-  --green-100: 123 80% 88%;
-  --green-200: 123 80% 76%;
-  --green-300: 123 73% 68%;
-  --green-400: 123 73% 57%;
-  --green-500: 123 73% 46%;
-  --green-600: 123 76% 38%;
-  --green-700: 123 76% 27%;
-  --green-800: 122 79% 17%;
-  --green-900: 122 75% 13%;
+  --green-100: 122.45 80.33% 88.04%;
+  --green-200: 123.06 80.33% 76.08%;
+  --green-300: 123.03 73.01% 68.04%;
+  --green-400: 123 72.73% 56.86%;
+  --green-500: 122.81 72.77% 46.08%;
+  --green-600: 123.24 76.29% 38.04%;
+  --green-700: 122.88 75.36% 27.06%;
+  --green-800: 121.74 79.31% 17.06%;
+  --green-900: 122.4 75.76% 12.94%;
 
   --turquoise-default: var(--turquoise-500);
-  --turquoise-100: 164 100% 87%;
-  --turquoise-200: 164 100% 75%;
-  --turquoise-300: 164 100% 66%;
-  --turquoise-400: 164 100% 56%;
-  --turquoise-500: 167 100% 47%;
-  --turquoise-600: 167 100% 37%;
-  --turquoise-700: 167 100% 29%;
-  --turquoise-800: 167 100% 17%;
-  --turquoise-900: 167 100% 7%;
+  --turquoise-100: 163.64 100% 87.06%;
+  --turquoise-200: 163.94 100% 75.1%;
+  --turquoise-300: 164.05 100% 66.08%;
+  --turquoise-400: 163.93 100% 56.08%;
+  --turquoise-500: 167 100% 47.06%;
+  --turquoise-600: 166.98 100% 37.06%;
+  --turquoise-700: 167.03 100% 29.02%;
+  --turquoise-800: 166.9 100% 17.06%;
+  --turquoise-900: 166.67 100% 7.06%;
 
   --red-default: var(--red-400);
-  --red-100: 6 88% 88%;
-  --red-200: 5 88% 76%;
-  --red-300: 5 88% 68%;
-  --red-400: 4 87% 58%;
-  --red-500: 4 87% 48%;
-  --red-600: 5 90% 38%;
-  --red-700: 5 91% 28%;
-  --red-800: 4 90% 18%;
-  --red-900: 4 92% 12%;
+  --red-100: 6.67 87.1% 87.84%;
+  --red-200: 5 88.52% 76.08%;
+  --red-300: 5.03 87.73% 68.04%;
+  --red-400: 3.87 86.92% 58.04%;
+  --red-500: 3.94 86.94% 48.04%;
+  --red-600: 4.83 89.69% 38.04%;
+  --red-700: 5.08 91.55% 27.84%;
+  --red-800: 3.66 89.13% 18.04%;
+  --red-900: 4.21 93.44% 11.96%;
 
   --orange-default: var(--orange-500);
-  --orange-100: 29 88% 87%;
-  --orange-200: 29 88% 76%;
-  --orange-300: 29 88% 68%;
-  --orange-400: 29 88% 59%;
-  --orange-500: 27 88% 48%;
-  --orange-600: 26 90% 38%;
-  --orange-700: 27 91% 28%;
-  --orange-800: 27 90% 18%;
-  --orange-900: 26 93% 12%;
+  --orange-100: 28.97 87.88% 87.06%;
+  --orange-200: 28.89 88.52% 76.08%;
+  --orange-300: 28.95 87.73% 68.04%;
+  --orange-400: 29.02 87.62% 58.82%;
+  --orange-500: 27.07 87.76% 48.04%;
+  --orange-600: 25.86 89.69% 38.04%;
+  --orange-700: 27.23 91.55% 27.84%;
+  --orange-800: 27.07 89.13% 18.04%;
+  --orange-900: 26.32 93.44% 11.96%;
 
   --yellow-default: var(--yellow-400);
-  --yellow-100: 43 88% 88%;
-  --yellow-200: 43 88% 76%;
-  --yellow-300: 43 88% 69%;
-  --yellow-400: 43 88% 59%;
-  --yellow-500: 41 87% 49%;
-  --yellow-600: 43 90% 38%;
-  --yellow-700: 44 91% 28%;
-  --yellow-800: 42 90% 18%;
-  --yellow-900: 41 91% 12%;
+  --yellow-100: 43.33 87.1% 87.84%;
+  --yellow-200: 42.78 88.52% 76.08%;
+  --yellow-300: 42.86 88.61% 69.02%;
+  --yellow-400: 43.04 87.62% 58.82%;
+  --yellow-500: 41.01 87.2% 49.02%;
+  --yellow-600: 43.1 89.69% 38.04%;
+  --yellow-700: 44.31 91.55% 27.84%;
+  --yellow-800: 41.71 89.13% 18.04%;
+  --yellow-900: 41.45 90.16% 11.96%;
 
   --purple-default: var(--purple-500);
-  --purple-100: 262 85% 92%;
-  --purple-200: 261 85% 87%;
-  --purple-300: 262 100% 76%;
-  --purple-400: 262 90% 65%;
-  --purple-500: 262 78% 47%;
-  --purple-600: 262 80% 38%;
-  --purple-700: 261 79% 31%;
-  --purple-800: 262 80% 20%;
-  --purple-900: 262 80% 12%;
+  --purple-100: 261.67 78.26% 90.98%;
+  --purple-200: 261.04 79.38% 80.98%;
+  --purple-300: 261.36 79.73% 70.98%;
+  --purple-400: 261.51 79.9% 60.98%;
+  --purple-500: 261.21 79.2% 50.98%;
+  --purple-600: 261.2 79.9% 40.98%;
+  --purple-700: 261.29 79.49% 30.59%;
+  --purple-800: 261.18 79.44% 20.98%;
+  --purple-900: 261.82 78.57% 10.98%;
 
   --ai-main: 262 78% 47%;
   --ai-light: 261 85% 87%;
@@ -1028,90 +1078,363 @@
   --entity-relationships: 0 0% 38%;
   --entity-restricted: 0 0% 26%;
 
-  --color-elevation-background-layer-0: var(--color-gray-100);
-  --color-elevation-background-layer-0-gradient: var(--color-white-1000);
-  --color-elevation-background-layer-1: var(--color-white-1000);
-  --color-elevation-background-layer-2: var(--color-gray-50);
-  --color-elevation-background-layer-3: var(--color-gray-150);
-  --color-elevation-surface-heading-layer-0: var(--color-gray-100);
-  --color-elevation-surface-heading-layer-1: var(--color-gray-100);
-  --color-elevation-surface-heading-layer-2: var(--color-gray-150);
-  --color-elevation-surface-heading-layer-3: var(--color-gray-200);
-  --color-elevation-surface-highlight-layer-0: var(--color-gray-150);
-  --color-elevation-surface-highlight-layer-1: var(--color-gray-100);
-  --color-elevation-surface-highlight-layer-2: var(--color-gray-150);
-  --color-elevation-surface-highlight-layer-3: var(--color-gray-50);
-  --color-elevation-surface-disabled-layer-0: var(--color-grayblue-100);
-  --color-elevation-surface-disabled-layer-1: var(--color-grayblue-50);
-  --color-elevation-surface-disabled-layer-2: var(--color-grayblue-100);
-  --color-elevation-surface-disabled-layer-3: var(--color-grayblue-100);
-  --color-elevation-border-subtle-layer-0: var(--color-gray-150);
-  --color-elevation-border-subtle-layer-1: var(--color-gray-100);
-  --color-elevation-border-subtle-layer-2: var(--color-gray-150);
-  --color-elevation-border-subtle-layer-3: var(--color-gray-200);
-  --color-elevation-border-default-layer-0: var(--color-gray-200);
-  --color-elevation-border-default-layer-1: var(--color-gray-150);
-  --color-elevation-border-default-layer-2: var(--color-gray-200);
-  --color-elevation-border-default-layer-3: var(--color-gray-300);
-  --color-elevation-border-strong-layer-0: var(--color-gray-300);
-  --color-elevation-border-strong-layer-1: var(--color-gray-200);
-  --color-elevation-border-strong-layer-2: var(--color-gray-300);
-  --color-elevation-border-strong-layer-3: var(--color-gray-400);
-  --color-text-default-primary: var(--color-gray-900);
-  --color-text-default-secondary: var(--color-gray-700);
-  --color-text-default-disabled: var(--color-grayblue-400);
-  --color-text-negative-primary: var(--color-gray-100);
-  --color-text-negative-secondary: var(--color-gray-300);
-  --color-text-negative-disabled: var(--color-grayblue-150);
-  --color-filigran-brand-primary: var(--color-darkblue-700);
-  --color-filigran-brand-primary-transparency: hsl(var(--darkblue-700) / 0.1);
-  --color-filigran-brand-secondary: var(--color-darkblue-300);
-  --color-filigran-brand-tertiary: var(--color-darkblue-900);
-  --color-filigran-tonic-primary: var(--color-turquoise-500);
-  --color-filigran-tonic-secondary: var(--color-turquoise-100);
-  --color-filigran-tonic-tertiary: var(--color-turquoise-700);
-  --color-filigran-ia-main: var(--color-purple-500);
-  --color-filigran-ia-secondary: var(--color-purple-700);
-  --color-filigran-ia-secondary-transparency: hsl(var(--purple-700) / 0.1);
-  --color-filigran-ia-tertiary: var(--color-purple-100);
-  --color-feedback-info-primary: var(--color-blue-600);
-  --color-feedback-info-secondary: var(--color-blue-400);
-  --color-feedback-info-secondary-transparency: hsl(var(--blue-400) / 0.3);
-  --color-feedback-info-tertiary: var(--color-blue-800);
-  --color-feedback-success-primary: var(--color-green-600);
-  --color-feedback-success-secondary: var(--color-green-300);
-  --color-feedback-success-secondary-transparency: hsl(var(--green-300) / 0.3);
-  --color-feedback-success-tertiary: var(--color-green-700);
-  --color-feedback-alert-primary: var(--color-yellow-400);
-  --color-feedback-alert-secondary: var(--color-yellow-200);
-  --color-feedback-alert-secondary-transparency: hsl(var(--yellow-200) / 0.3);
-  --color-feedback-alert-tertiary: var(--color-yellow-600);
-  --color-feedback-warning-primary: var(--color-orange-500);
-  --color-feedback-warning-secondary: var(--color-orange-200);
-  --color-feedback-warning-secondary-transparency: hsl(var(--orange-200) / 0.3);
-  --color-feedback-warning-tertiary: var(--color-orange-700);
-  --color-feedback-error-primary: var(--color-red-500);
-  --color-feedback-error-secondary: var(--color-red-200);
-  --color-feedback-error-secondary-transparency: hsl(var(--red-200) / 0.3);
-  --color-feedback-error-tertiary: var(--color-red-700);
-  --color-entities-analyses: hsl(93.27 72.37% 29.8%);
-  --color-entities-analyses-transparency: hsl(93.27 72.37% 29.8% / 0.2);
-  --color-entities-cases: hsl(291.35 87.39% 46.67%);
-  --color-entities-cases-transparency: hsl(291.35 87.39% 46.67% / 0.2);
-  --color-entities-events: hsl(339.89 71.54% 51.76%);
-  --color-entities-events-transparency: hsl(339.89 71.54% 51.76% / 0.2);
-  --color-entities-observations: hsl(17.1 82.3% 44.31%);
-  --color-entities-observations-transparency: hsl(17.1 82.3% 44.31% / 0.2);
-  --color-entities-all-threats: hsl(40.12 100% 31.37%);
-  --color-entities-all-threats-transparency: hsl(40.12 100% 31.37% / 0.2);
-  --color-entities-arsenal: hsl(55.81 100% 25.29%);
-  --color-entities-arsenal-transparency: hsl(55.81 100% 25.29% / 0.2);
-  --color-entities-techniques: hsl(71.81 100% 24.9%);
-  --color-entities-techniques-transparency: hsl(71.81 100% 24.9% / 0.2);
-  --color-entities-victimology: hsl(264.98 100% 48.04%);
-  --color-entities-victimology-transparency: hsl(264.98 100% 48.04% / 0.2);
-  --color-entities-location: hsl(186.58 100% 28.63%);
-  --color-entities-location-transparency: hsl(186.58 100% 28.63% / 0.2);
+  /* Runtime aliases for primitive color tokens used outside @theme inline */
+  --color-gray-50: hsl(var(--gray-50));
+  --color-gray-100: hsl(var(--gray-100));
+  --color-gray-150: hsl(var(--gray-150));
+  --color-gray-200: hsl(var(--gray-200));
+  --color-gray-300: hsl(var(--gray-300));
+  --color-gray-400: hsl(var(--gray-400));
+  --color-gray-500: hsl(var(--gray-500));
+  --color-gray-600: hsl(var(--gray-600));
+  --color-gray-700: hsl(var(--gray-700));
+  --color-gray-800: hsl(var(--gray-800));
+  --color-gray-900: hsl(var(--gray-900));
+  --color-gray-1000: hsl(var(--gray-1000));
+
+  --color-grayblue-50: hsl(218.18 52.38% 95.88%);
+  --color-grayblue-100: hsl(217.89 52.78% 85.88%);
+  --color-grayblue-150: hsl(222.09 54.47% 75.88%);
+  --color-grayblue-200: hsl(217.83 52.87% 65.88%);
+  --color-grayblue-300: hsl(217.62 53.85% 45.88%);
+  --color-grayblue-400: hsl(217.96 53.26% 36.08%);
+  --color-grayblue-500: hsl(217.71 53.03% 25.88%);
+  --color-grayblue-600: hsl(220 52.94% 20%);
+  --color-grayblue-700: hsl(220.47 53.09% 15.88%);
+  --color-grayblue-800: hsl(221.14 52.24% 13.14%);
+  --color-grayblue-850: hsl(220 53.57% 10.98%);
+  --color-grayblue-900: hsl(220 52.94% 10%);
+  --color-grayblue-1000: hsl(218.82 54.84% 6.08%);
+
+  --color-darkblue-100: hsl(var(--darkblue-100));
+  --color-darkblue-200: hsl(var(--darkblue-200));
+  --color-darkblue-300: hsl(var(--darkblue-300));
+  --color-darkblue-400: hsl(var(--darkblue-400));
+  --color-darkblue-500: hsl(var(--darkblue-500));
+  --color-darkblue-600: hsl(var(--darkblue-600));
+  --color-darkblue-700: hsl(var(--darkblue-700));
+  --color-darkblue-800: hsl(var(--darkblue-800));
+  --color-darkblue-900: hsl(var(--darkblue-900));
+
+  --color-blue-100: hsl(var(--blue-100));
+  --color-blue-200: hsl(var(--blue-200));
+  --color-blue-300: hsl(var(--blue-300));
+  --color-blue-400: hsl(var(--blue-400));
+  --color-blue-500: hsl(var(--blue-500));
+  --color-blue-600: hsl(var(--blue-600));
+  --color-blue-700: hsl(var(--blue-700));
+  --color-blue-800: hsl(var(--blue-800));
+  --color-blue-900: hsl(var(--blue-900));
+
+  --color-turquoise-100: hsl(var(--turquoise-100));
+  --color-turquoise-200: hsl(var(--turquoise-200));
+  --color-turquoise-300: hsl(var(--turquoise-300));
+  --color-turquoise-400: hsl(var(--turquoise-400));
+  --color-turquoise-500: hsl(var(--turquoise-500));
+  --color-turquoise-600: hsl(var(--turquoise-600));
+  --color-turquoise-700: hsl(var(--turquoise-700));
+  --color-turquoise-800: hsl(var(--turquoise-800));
+  --color-turquoise-900: hsl(var(--turquoise-900));
+
+  --color-green-100: hsl(var(--green-100));
+  --color-green-200: hsl(var(--green-200));
+  --color-green-300: hsl(var(--green-300));
+  --color-green-400: hsl(var(--green-400));
+  --color-green-500: hsl(var(--green-500));
+  --color-green-600: hsl(var(--green-600));
+  --color-green-700: hsl(var(--green-700));
+  --color-green-800: hsl(var(--green-800));
+  --color-green-900: hsl(var(--green-900));
+
+  --color-red-100: hsl(var(--red-100));
+  --color-red-200: hsl(var(--red-200));
+  --color-red-300: hsl(var(--red-300));
+  --color-red-400: hsl(var(--red-400));
+  --color-red-500: hsl(var(--red-500));
+  --color-red-600: hsl(var(--red-600));
+  --color-red-700: hsl(var(--red-700));
+  --color-red-800: hsl(var(--red-800));
+  --color-red-900: hsl(var(--red-900));
+
+  --color-orange-100: hsl(var(--orange-100));
+  --color-orange-200: hsl(var(--orange-200));
+  --color-orange-300: hsl(var(--orange-300));
+  --color-orange-400: hsl(var(--orange-400));
+  --color-orange-500: hsl(var(--orange-500));
+  --color-orange-600: hsl(var(--orange-600));
+  --color-orange-700: hsl(var(--orange-700));
+  --color-orange-800: hsl(var(--orange-800));
+  --color-orange-900: hsl(var(--orange-900));
+
+  --color-yellow-100: hsl(var(--yellow-100));
+  --color-yellow-200: hsl(var(--yellow-200));
+  --color-yellow-300: hsl(var(--yellow-300));
+  --color-yellow-400: hsl(var(--yellow-400));
+  --color-yellow-500: hsl(var(--yellow-500));
+  --color-yellow-600: hsl(var(--yellow-600));
+  --color-yellow-700: hsl(var(--yellow-700));
+  --color-yellow-800: hsl(var(--yellow-800));
+  --color-yellow-900: hsl(var(--yellow-900));
+
+  --color-purple-100: hsl(var(--purple-100));
+  --color-purple-200: hsl(var(--purple-200));
+  --color-purple-300: hsl(var(--purple-300));
+  --color-purple-400: hsl(var(--purple-400));
+  --color-purple-500: hsl(var(--purple-500));
+  --color-purple-600: hsl(var(--purple-600));
+  --color-purple-700: hsl(var(--purple-700));
+  --color-purple-800: hsl(var(--purple-800));
+  --color-purple-900: hsl(var(--purple-900));
+
+  --color-black-100: hsl(0 0% 0% / 0.05);
+  --color-black-200: hsl(0 0% 0% / 0.1);
+  --color-black-300: hsl(0 0% 0% / 0.2);
+  --color-black-400: hsl(0 0% 0% / 0.4);
+  --color-black-500: hsl(0 0% 0% / 0.7);
+  --color-black-600: hsl(0 0% 0% / 0.8);
+  --color-black-700: hsl(0 0% 0% / 0.85);
+  --color-black-800: hsl(0 0% 0% / 0.9);
+  --color-black-900: hsl(0 0% 0% / 0.95);
+  --color-black-1000: hsl(0 0% 0%);
+
+  --color-white-100: hsl(0 0% 100% / 0.05);
+  --color-white-200: hsl(0 0% 100% / 0.1);
+  --color-white-300: hsl(0 0% 100% / 0.2);
+  --color-white-400: hsl(0 0% 100% / 0.4);
+  --color-white-500: hsl(0 0% 100% / 0.7);
+  --color-white-600: hsl(0 0% 100% / 0.8);
+  --color-white-700: hsl(0 0% 100% / 0.85);
+  --color-white-800: hsl(0 0% 100% / 0.9);
+  --color-white-900: hsl(0 0% 100% / 0.95);
+  --color-white-1000: hsl(0 0% 100%);
+
+  /* Semantic runtime tokens (light) */
+  --semantic-elevation-background-layer-0: var(--color-gray-100);
+  --semantic-elevation-background-layer-0-gradient: var(--color-white-1000);
+  --semantic-elevation-background-layer-1: var(--color-white-1000);
+  --semantic-elevation-background-layer-2: var(--color-gray-50);
+  --semantic-elevation-background-layer-3: var(--color-gray-150);
+  --semantic-elevation-surface-heading-layer-0: var(--color-gray-100);
+  --semantic-elevation-surface-heading-layer-1: var(--color-gray-100);
+  --semantic-elevation-surface-heading-layer-2: var(--color-gray-150);
+  --semantic-elevation-surface-heading-layer-3: var(--color-gray-200);
+  --semantic-elevation-surface-highlight-layer-0: var(--color-gray-150);
+  --semantic-elevation-surface-highlight-layer-1: var(--color-gray-100);
+  --semantic-elevation-surface-highlight-layer-2: var(--color-gray-150);
+  --semantic-elevation-surface-highlight-layer-3: var(--color-gray-50);
+  --semantic-elevation-surface-disabled-layer-0: var(--color-grayblue-100);
+  --semantic-elevation-surface-disabled-layer-1: var(--color-grayblue-50);
+  --semantic-elevation-surface-disabled-layer-2: var(--color-grayblue-100);
+  --semantic-elevation-surface-disabled-layer-3: var(--color-grayblue-100);
+  --semantic-elevation-border-subtle-layer-0: var(--color-gray-150);
+  --semantic-elevation-border-subtle-layer-1: var(--color-gray-100);
+  --semantic-elevation-border-subtle-layer-2: var(--color-gray-150);
+  --semantic-elevation-border-subtle-layer-3: var(--color-gray-200);
+  --semantic-elevation-border-default-layer-0: var(--color-gray-200);
+  --semantic-elevation-border-default-layer-1: var(--color-gray-150);
+  --semantic-elevation-border-default-layer-2: var(--color-gray-200);
+  --semantic-elevation-border-default-layer-3: var(--color-gray-300);
+  --semantic-elevation-border-strong-layer-0: var(--color-gray-300);
+  --semantic-elevation-border-strong-layer-1: var(--color-gray-200);
+  --semantic-elevation-border-strong-layer-2: var(--color-gray-300);
+  --semantic-elevation-border-strong-layer-3: var(--color-gray-400);
+
+  --semantic-text-default-primary: var(--color-gray-900);
+  --semantic-text-default-secondary: var(--color-gray-700);
+  --semantic-text-default-disabled: var(--color-grayblue-400);
+  --semantic-text-negative-primary: var(--color-gray-100);
+  --semantic-text-negative-secondary: var(--color-gray-300);
+  --semantic-text-negative-disabled: var(--color-grayblue-150);
+
+  --font-geologica: Geologica;
+  --font-ibm-plex-sans: IBM Plex Sans;
+
+  /* Runtime typography aliases used by utility classes */
+  --font-content-body-base: var(--font-ibm-plex-sans);
+  --font-content-body-base-medium: var(--font-ibm-plex-sans);
+  --font-content-body-base-bold: var(--font-ibm-plex-sans);
+  --font-content-body-base-link: var(--font-ibm-plex-sans);
+  --font-content-body-compact: var(--font-ibm-plex-sans);
+  --font-content-body-compact-medium: var(--font-ibm-plex-sans);
+  --font-content-body-compact-bold: var(--font-ibm-plex-sans);
+  --font-content-body-compact-link: var(--font-ibm-plex-sans);
+
+  --semantic-filigran-brand-primary: var(--color-darkblue-700);
+  --semantic-filigran-brand-primary-transparency: hsl(var(--darkblue-700) / 0.1);
+  --semantic-filigran-brand-secondary: var(--color-darkblue-300);
+  --semantic-filigran-brand-tertiary: var(--color-darkblue-900);
+  --semantic-filigran-tonic-primary: var(--color-turquoise-500);
+  --semantic-filigran-tonic-secondary: var(--color-turquoise-100);
+  --semantic-filigran-tonic-tertiary: var(--color-turquoise-700);
+  --semantic-filigran-ia-main: var(--color-purple-500);
+  --semantic-filigran-ia-secondary: var(--color-purple-700);
+  --semantic-filigran-ia-secondary-transparency: hsl(var(--purple-700) / 0.1);
+  --semantic-filigran-ia-tertiary: var(--color-purple-100);
+
+  --semantic-feedback-info-primary: var(--color-blue-600);
+  --semantic-feedback-info-secondary: var(--color-blue-400);
+  --semantic-feedback-info-secondary-transparency: hsl(var(--blue-400) / 0.3);
+  --semantic-feedback-info-tertiary: var(--color-blue-800);
+  --semantic-feedback-success-primary: var(--color-green-600);
+  --semantic-feedback-success-secondary: var(--color-green-300);
+  --semantic-feedback-success-secondary-transparency: hsl(var(--green-300) / 0.3);
+  --semantic-feedback-success-tertiary: var(--color-green-700);
+  --semantic-feedback-alert-primary: var(--color-yellow-400);
+  --semantic-feedback-alert-secondary: var(--color-yellow-200);
+  --semantic-feedback-alert-secondary-transparency: hsl(var(--yellow-200) / 0.3);
+  --semantic-feedback-alert-tertiary: var(--color-yellow-600);
+  --semantic-feedback-warning-primary: var(--color-orange-500);
+  --semantic-feedback-warning-secondary: var(--color-orange-200);
+  --semantic-feedback-warning-secondary-transparency: hsl(var(--orange-200) / 0.3);
+  --semantic-feedback-warning-tertiary: var(--color-orange-700);
+  --semantic-feedback-error-primary: var(--color-red-500);
+  --semantic-feedback-error-secondary: var(--color-red-200);
+  --semantic-feedback-error-secondary-transparency: hsl(var(--red-200) / 0.3);
+  --semantic-feedback-error-tertiary: var(--color-red-700);
+
+  --semantic-entities-analyses: hsl(var(--entity-analyse));
+  --semantic-entities-analyses-transparency: hsl(var(--entity-analyse) / 0.2);
+  --semantic-entities-cases: hsl(var(--entity-cases));
+  --semantic-entities-cases-transparency: hsl(var(--entity-cases) / 0.2);
+  --semantic-entities-events: hsl(var(--entity-events));
+  --semantic-entities-events-transparency: hsl(var(--entity-events) / 0.2);
+  --semantic-entities-observations: hsl(var(--entity-observations));
+  --semantic-entities-observations-transparency: hsl(var(--entity-observations) / 0.2);
+  --semantic-entities-all-threats: hsl(var(--entity-threats));
+  --semantic-entities-all-threats-transparency: hsl(var(--entity-threats) / 0.2);
+  --semantic-entities-arsenal: hsl(var(--entity-arsenal));
+  --semantic-entities-arsenal-transparency: hsl(var(--entity-arsenal) / 0.2);
+  --semantic-entities-techniques: hsl(var(--entity-techniques));
+  --semantic-entities-techniques-transparency: hsl(var(--entity-techniques) / 0.2);
+  --semantic-entities-victimology: hsl(var(--entity-victimology));
+  --semantic-entities-victimology-transparency: hsl(var(--entity-victimology) / 0.2);
+  --semantic-entities-location: hsl(var(--entity-locations));
+  --semantic-entities-location-transparency: hsl(var(--entity-locations) / 0.2);
+
+  --color-elevation-background-layer-0: var(--semantic-elevation-background-layer-0);
+  --color-elevation-background-layer-0-gradient: var(
+    --semantic-elevation-background-layer-0-gradient
+  );
+  --color-elevation-background-layer-1: var(--semantic-elevation-background-layer-1);
+  --color-elevation-background-layer-2: var(--semantic-elevation-background-layer-2);
+  --color-elevation-background-layer-3: var(--semantic-elevation-background-layer-3);
+  --color-elevation-surface-heading-layer-0: var(--semantic-elevation-surface-heading-layer-0);
+  --color-elevation-surface-heading-layer-1: var(--semantic-elevation-surface-heading-layer-1);
+  --color-elevation-surface-heading-layer-2: var(--semantic-elevation-surface-heading-layer-2);
+  --color-elevation-surface-heading-layer-3: var(--semantic-elevation-surface-heading-layer-3);
+  --color-elevation-surface-highlight-layer-0: var(
+    --semantic-elevation-surface-highlight-layer-0
+  );
+  --color-elevation-surface-highlight-layer-1: var(
+    --semantic-elevation-surface-highlight-layer-1
+  );
+  --color-elevation-surface-highlight-layer-2: var(
+    --semantic-elevation-surface-highlight-layer-2
+  );
+  --color-elevation-surface-highlight-layer-3: var(
+    --semantic-elevation-surface-highlight-layer-3
+  );
+  --color-elevation-surface-disabled-layer-0: var(
+    --semantic-elevation-surface-disabled-layer-0
+  );
+  --color-elevation-surface-disabled-layer-1: var(
+    --semantic-elevation-surface-disabled-layer-1
+  );
+  --color-elevation-surface-disabled-layer-2: var(
+    --semantic-elevation-surface-disabled-layer-2
+  );
+  --color-elevation-surface-disabled-layer-3: var(
+    --semantic-elevation-surface-disabled-layer-3
+  );
+  --color-elevation-border-subtle-layer-0: var(--semantic-elevation-border-subtle-layer-0);
+  --color-elevation-border-subtle-layer-1: var(--semantic-elevation-border-subtle-layer-1);
+  --color-elevation-border-subtle-layer-2: var(--semantic-elevation-border-subtle-layer-2);
+  --color-elevation-border-subtle-layer-3: var(--semantic-elevation-border-subtle-layer-3);
+  --color-elevation-border-default-layer-0: var(--semantic-elevation-border-default-layer-0);
+  --color-elevation-border-default-layer-1: var(--semantic-elevation-border-default-layer-1);
+  --color-elevation-border-default-layer-2: var(--semantic-elevation-border-default-layer-2);
+  --color-elevation-border-default-layer-3: var(--semantic-elevation-border-default-layer-3);
+  --color-elevation-border-strong-layer-0: var(--semantic-elevation-border-strong-layer-0);
+  --color-elevation-border-strong-layer-1: var(--semantic-elevation-border-strong-layer-1);
+  --color-elevation-border-strong-layer-2: var(--semantic-elevation-border-strong-layer-2);
+  --color-elevation-border-strong-layer-3: var(--semantic-elevation-border-strong-layer-3);
+  --color-text-default-primary: var(--semantic-text-default-primary);
+  --color-text-default-secondary: var(--semantic-text-default-secondary);
+  --color-text-default-disabled: var(--semantic-text-default-disabled);
+  --color-text-negative-primary: var(--semantic-text-negative-primary);
+  --color-text-negative-secondary: var(--semantic-text-negative-secondary);
+  --color-text-negative-disabled: var(--semantic-text-negative-disabled);
+  --color-filigran-brand-primary: var(--semantic-filigran-brand-primary);
+  --color-filigran-brand-primary-transparency: var(
+    --semantic-filigran-brand-primary-transparency
+  );
+  --color-filigran-brand-secondary: var(--semantic-filigran-brand-secondary);
+  --color-filigran-brand-tertiary: var(--semantic-filigran-brand-tertiary);
+  --color-filigran-tonic-primary: var(--semantic-filigran-tonic-primary);
+  --color-filigran-tonic-secondary: var(--semantic-filigran-tonic-secondary);
+  --color-filigran-tonic-tertiary: var(--semantic-filigran-tonic-tertiary);
+  --color-filigran-ia-main: var(--semantic-filigran-ia-main);
+  --color-filigran-ia-secondary: var(--semantic-filigran-ia-secondary);
+  --color-filigran-ia-secondary-transparency: var(
+    --semantic-filigran-ia-secondary-transparency
+  );
+  --color-filigran-ia-tertiary: var(--semantic-filigran-ia-tertiary);
+  --color-feedback-info-primary: var(--semantic-feedback-info-primary);
+  --color-feedback-info-secondary: var(--semantic-feedback-info-secondary);
+  --color-feedback-info-secondary-transparency: var(
+    --semantic-feedback-info-secondary-transparency
+  );
+  --color-feedback-info-tertiary: var(--semantic-feedback-info-tertiary);
+  --color-feedback-success-primary: var(--semantic-feedback-success-primary);
+  --color-feedback-success-secondary: var(--semantic-feedback-success-secondary);
+  --color-feedback-success-secondary-transparency: var(
+    --semantic-feedback-success-secondary-transparency
+  );
+  --color-feedback-success-tertiary: var(--semantic-feedback-success-tertiary);
+  --color-feedback-alert-primary: var(--semantic-feedback-alert-primary);
+  --color-feedback-alert-secondary: var(--semantic-feedback-alert-secondary);
+  --color-feedback-alert-secondary-transparency: var(
+    --semantic-feedback-alert-secondary-transparency
+  );
+  --color-feedback-alert-tertiary: var(--semantic-feedback-alert-tertiary);
+  --color-feedback-warning-primary: var(--semantic-feedback-warning-primary);
+  --color-feedback-warning-secondary: var(--semantic-feedback-warning-secondary);
+  --color-feedback-warning-secondary-transparency: var(
+    --semantic-feedback-warning-secondary-transparency
+  );
+  --color-feedback-warning-tertiary: var(--semantic-feedback-warning-tertiary);
+  --color-feedback-error-primary: var(--semantic-feedback-error-primary);
+  --color-feedback-error-secondary: var(--semantic-feedback-error-secondary);
+  --color-feedback-error-secondary-transparency: var(
+    --semantic-feedback-error-secondary-transparency
+  );
+  --color-feedback-error-tertiary: var(--semantic-feedback-error-tertiary);
+  --color-entities-analyses: var(--semantic-entities-analyses);
+  --color-entities-analyses-transparency: var(--semantic-entities-analyses-transparency);
+  --color-entities-cases: var(--semantic-entities-cases);
+  --color-entities-cases-transparency: var(--semantic-entities-cases-transparency);
+  --color-entities-events: var(--semantic-entities-events);
+  --color-entities-events-transparency: var(--semantic-entities-events-transparency);
+  --color-entities-observations: var(--semantic-entities-observations);
+  --color-entities-observations-transparency: var(
+    --semantic-entities-observations-transparency
+  );
+  --color-entities-all-threats: var(--semantic-entities-all-threats);
+  --color-entities-all-threats-transparency: var(
+    --semantic-entities-all-threats-transparency
+  );
+  --color-entities-arsenal: var(--semantic-entities-arsenal);
+  --color-entities-arsenal-transparency: var(--semantic-entities-arsenal-transparency);
+  --color-entities-techniques: var(--semantic-entities-techniques);
+  --color-entities-techniques-transparency: var(
+    --semantic-entities-techniques-transparency
+  );
+  --color-entities-victimology: var(--semantic-entities-victimology);
+  --color-entities-victimology-transparency: var(
+    --semantic-entities-victimology-transparency
+  );
+  --color-entities-location: var(--semantic-entities-location);
+  --color-entities-location-transparency: var(--semantic-entities-location-transparency);
 }
 
 .dark,
@@ -1142,6 +1465,96 @@ body[data-theme="Dark"] {
   --text-foreground: var(--light-100);
   --secondary-text-foreground: var(--gray-300);
   --text-inverted-foreground: var(--dark-100);
+
+  /* Semantic runtime tokens (dark override) */
+  --semantic-elevation-background-layer-0: var(--color-grayblue-1000);
+  --semantic-elevation-background-layer-0-gradient: var(--color-grayblue-900);
+  --semantic-elevation-background-layer-1: var(--color-grayblue-850);
+  --semantic-elevation-background-layer-2: var(--color-grayblue-700);
+  --semantic-elevation-background-layer-3: var(--color-grayblue-500);
+  --semantic-elevation-surface-heading-layer-0: var(--color-grayblue-1000);
+  --semantic-elevation-surface-heading-layer-1: var(--color-grayblue-1000);
+  --semantic-elevation-surface-heading-layer-2: var(--color-grayblue-800);
+  --semantic-elevation-surface-heading-layer-3: var(--color-grayblue-600);
+  --semantic-elevation-surface-highlight-layer-0: var(--color-grayblue-800);
+  --semantic-elevation-surface-highlight-layer-1: var(--color-grayblue-700);
+  --semantic-elevation-surface-highlight-layer-2: var(--color-grayblue-900);
+  --semantic-elevation-surface-highlight-layer-3: var(--color-grayblue-700);
+  --semantic-elevation-surface-disabled-layer-0: var(--color-gray-900);
+  --semantic-elevation-surface-disabled-layer-1: var(--color-gray-800);
+  --semantic-elevation-surface-disabled-layer-2: var(--color-gray-800);
+  --semantic-elevation-surface-disabled-layer-3: var(--color-gray-800);
+  --semantic-elevation-border-subtle-layer-0: var(--color-grayblue-800);
+  --semantic-elevation-border-subtle-layer-1: var(--color-grayblue-600);
+  --semantic-elevation-border-subtle-layer-2: var(--color-grayblue-500);
+  --semantic-elevation-border-subtle-layer-3: var(--color-grayblue-400);
+  --semantic-elevation-border-default-layer-0: var(--color-grayblue-700);
+  --semantic-elevation-border-default-layer-1: var(--color-grayblue-500);
+  --semantic-elevation-border-default-layer-2: var(--color-grayblue-400);
+  --semantic-elevation-border-default-layer-3: var(--color-grayblue-300);
+  --semantic-elevation-border-strong-layer-0: var(--color-grayblue-600);
+  --semantic-elevation-border-strong-layer-1: var(--color-grayblue-400);
+  --semantic-elevation-border-strong-layer-2: var(--color-grayblue-300);
+  --semantic-elevation-border-strong-layer-3: var(--color-grayblue-200);
+
+  --semantic-text-default-primary: var(--color-gray-100);
+  --semantic-text-default-secondary: var(--color-gray-300);
+  --semantic-text-default-disabled: var(--color-grayblue-150);
+  --semantic-text-negative-primary: var(--color-gray-900);
+  --semantic-text-negative-secondary: var(--color-gray-700);
+  --semantic-text-negative-disabled: var(--color-grayblue-400);
+
+  --semantic-filigran-brand-primary: var(--color-blue-500);
+  --semantic-filigran-brand-primary-transparency: hsl(var(--blue-500) / 0.1);
+  --semantic-filigran-brand-secondary: var(--color-blue-200);
+  --semantic-filigran-brand-tertiary: var(--color-blue-600);
+  --semantic-filigran-tonic-primary: var(--color-turquoise-500);
+  --semantic-filigran-tonic-secondary: var(--color-turquoise-100);
+  --semantic-filigran-tonic-tertiary: var(--color-turquoise-700);
+  --semantic-filigran-ia-main: var(--color-purple-300);
+  --semantic-filigran-ia-secondary: var(--color-purple-100);
+  --semantic-filigran-ia-secondary-transparency: hsl(var(--purple-100) / 0.1);
+  --semantic-filigran-ia-tertiary: var(--color-purple-500);
+
+  --semantic-feedback-info-primary: var(--color-blue-400);
+  --semantic-feedback-info-secondary: var(--color-blue-700);
+  --semantic-feedback-info-secondary-transparency: hsl(var(--blue-700) / 0.3);
+  --semantic-feedback-info-tertiary: var(--color-blue-200);
+  --semantic-feedback-success-primary: var(--color-green-600);
+  --semantic-feedback-success-secondary: var(--color-green-800);
+  --semantic-feedback-success-secondary-transparency: hsl(var(--green-800) / 0.3);
+  --semantic-feedback-success-tertiary: var(--color-green-200);
+  --semantic-feedback-alert-primary: var(--color-yellow-400);
+  --semantic-feedback-alert-secondary: var(--color-yellow-600);
+  --semantic-feedback-alert-secondary-transparency: hsl(var(--yellow-600) / 0.3);
+  --semantic-feedback-alert-tertiary: var(--color-yellow-200);
+  --semantic-feedback-warning-primary: var(--color-orange-500);
+  --semantic-feedback-warning-secondary: var(--color-orange-700);
+  --semantic-feedback-warning-secondary-transparency: hsl(var(--orange-700) / 0.3);
+  --semantic-feedback-warning-tertiary: var(--color-orange-200);
+  --semantic-feedback-error-primary: var(--color-red-400);
+  --semantic-feedback-error-secondary: var(--color-red-700);
+  --semantic-feedback-error-secondary-transparency: hsl(var(--red-700) / 0.3);
+  --semantic-feedback-error-tertiary: var(--color-red-200);
+
+  --semantic-entities-analyses: hsl(var(--entity-analyse));
+  --semantic-entities-analyses-transparency: hsl(var(--entity-analyse) / 0.2);
+  --semantic-entities-cases: hsl(var(--entity-cases));
+  --semantic-entities-cases-transparency: hsl(var(--entity-cases) / 0.2);
+  --semantic-entities-events: hsl(var(--entity-events));
+  --semantic-entities-events-transparency: hsl(var(--entity-events) / 0.2);
+  --semantic-entities-observations: hsl(var(--entity-observations));
+  --semantic-entities-observations-transparency: hsl(var(--entity-observations) / 0.2);
+  --semantic-entities-all-threats: hsl(var(--entity-threats));
+  --semantic-entities-all-threats-transparency: hsl(var(--entity-threats) / 0.2);
+  --semantic-entities-arsenal: hsl(var(--entity-arsenal));
+  --semantic-entities-arsenal-transparency: hsl(var(--entity-arsenal) / 0.2);
+  --semantic-entities-techniques: hsl(var(--entity-techniques));
+  --semantic-entities-techniques-transparency: hsl(var(--entity-techniques) / 0.2);
+  --semantic-entities-victimology: hsl(var(--entity-victimology));
+  --semantic-entities-victimology-transparency: hsl(var(--entity-victimology) / 0.2);
+  --semantic-entities-location: hsl(var(--entity-locations));
+  --semantic-entities-location-transparency: hsl(var(--entity-locations) / 0.2);
 
   --border-strong: var(--gray-150);
   --border-medium-strong: var(--gray-200);
@@ -1196,90 +1609,130 @@ body[data-theme="Dark"] {
   --gradient-background: linear-gradient(100.35deg, #070D19 0%, #08101D 100%);
   --gradient-ia: linear-gradient(90deg, #D6C2FA 0.67%, #B286FF 100.67%);
   --gradient-focus: linear-gradient(90deg, #0FBCFF -3.68%, #00F1BD 106.62%);
-  --color-elevation-background-layer-0: var(--color-grayblue-1000);
-  --color-elevation-background-layer-0-gradient: var(--color-grayblue-900);
-  --color-elevation-background-layer-1: var(--color-grayblue-850);
-  --color-elevation-background-layer-2: var(--color-grayblue-700);
-  --color-elevation-background-layer-3: var(--color-grayblue-500);
-  --color-elevation-surface-heading-layer-0: var(--color-grayblue-1000);
-  --color-elevation-surface-heading-layer-1: var(--color-grayblue-1000);
-  --color-elevation-surface-heading-layer-2: var(--color-grayblue-800);
-  --color-elevation-surface-heading-layer-3: var(--color-grayblue-600);
-  --color-elevation-surface-highlight-layer-0: var(--color-grayblue-800);
-  --color-elevation-surface-highlight-layer-1: var(--color-grayblue-700);
-  --color-elevation-surface-highlight-layer-2: var(--color-grayblue-900);
-  --color-elevation-surface-highlight-layer-3: var(--color-grayblue-700);
-  --color-elevation-surface-disabled-layer-0: var(--color-gray-900);
-  --color-elevation-surface-disabled-layer-1: var(--color-gray-800);
-  --color-elevation-surface-disabled-layer-2: var(--color-gray-800);
-  --color-elevation-surface-disabled-layer-3: var(--color-gray-800);
-  --color-elevation-border-subtle-layer-0: var(--color-grayblue-800);
-  --color-elevation-border-subtle-layer-1: var(--color-grayblue-600);
-  --color-elevation-border-subtle-layer-2: var(--color-grayblue-500);
-  --color-elevation-border-subtle-layer-3: var(--color-grayblue-400);
-  --color-elevation-border-default-layer-0: var(--color-grayblue-700);
-  --color-elevation-border-default-layer-1: var(--color-grayblue-500);
-  --color-elevation-border-default-layer-2: var(--color-grayblue-400);
-  --color-elevation-border-default-layer-3: var(--color-grayblue-300);
-  --color-elevation-border-strong-layer-0: var(--color-grayblue-600);
-  --color-elevation-border-strong-layer-1: var(--color-grayblue-400);
-  --color-elevation-border-strong-layer-2: var(--color-grayblue-300);
-  --color-elevation-border-strong-layer-3: var(--color-grayblue-200);
-  --color-text-default-primary: var(--color-gray-100);
-  --color-text-default-secondary: var(--color-gray-300);
-  --color-text-default-disabled: var(--color-grayblue-150);
-  --color-text-negative-primary: var(--color-gray-900);
-  --color-text-negative-secondary: var(--color-gray-700);
-  --color-text-negative-disabled: var(--color-grayblue-400);
-  --color-filigran-brand-primary: var(--color-blue-500);
-  --color-filigran-brand-primary-transparency: hsl(var(--blue-500) / 0.1);
-  --color-filigran-brand-secondary: var(--color-blue-200);
-  --color-filigran-brand-tertiary: var(--color-blue-600);
-  --color-filigran-tonic-primary: var(--color-turquoise-500);
-  --color-filigran-tonic-secondary: var(--color-turquoise-100);
-  --color-filigran-tonic-tertiary: var(--color-turquoise-700);
-  --color-filigran-ia-main: var(--color-purple-300);
-  --color-filigran-ia-secondary: var(--color-purple-100);
-  --color-filigran-ia-secondary-transparency: hsl(var(--purple-100) / 0.1);
-  --color-filigran-ia-tertiary: var(--color-purple-500);
-  --color-feedback-info-primary: var(--color-blue-400);
-  --color-feedback-info-secondary: var(--color-blue-700);
-  --color-feedback-info-secondary-transparency: hsl(var(--blue-700) / 0.3);
-  --color-feedback-info-tertiary: var(--color-blue-200);
-  --color-feedback-success-primary: var(--color-green-600);
-  --color-feedback-success-secondary: var(--color-green-800);
-  --color-feedback-success-secondary-transparency: hsl(var(--green-800) / 0.3);
-  --color-feedback-success-tertiary: var(--color-green-200);
-  --color-feedback-alert-primary: var(--color-yellow-400);
-  --color-feedback-alert-secondary: var(--color-yellow-600);
-  --color-feedback-alert-secondary-transparency: hsl(var(--yellow-600) / 0.3);
-  --color-feedback-alert-tertiary: var(--color-yellow-200);
-  --color-feedback-warning-primary: var(--color-orange-500);
-  --color-feedback-warning-secondary: var(--color-orange-700);
-  --color-feedback-warning-secondary-transparency: hsl(var(--orange-700) / 0.3);
-  --color-feedback-warning-tertiary: var(--color-orange-200);
-  --color-feedback-error-primary: var(--color-red-400);
-  --color-feedback-error-secondary: var(--color-red-700);
-  --color-feedback-error-secondary-transparency: hsl(var(--red-700) / 0.3);
-  --color-feedback-error-tertiary: var(--color-red-200);
-  --color-entities-analyses: hsl(var(--entity-analyse));
-  --color-entities-analyses-transparency: hsl(var(--entity-analyse) / 0.2);
-  --color-entities-cases: hsl(var(--entity-cases));
-  --color-entities-cases-transparency: hsl(var(--entity-cases) / 0.2);
-  --color-entities-events: hsl(var(--entity-events));
-  --color-entities-events-transparency: hsl(var(--entity-events) / 0.2);
-  --color-entities-observations: hsl(var(--entity-observations));
-  --color-entities-observations-transparency: hsl(var(--entity-observations) / 0.2);
-  --color-entities-all-threats: hsl(var(--entity-threats));
-  --color-entities-all-threats-transparency: hsl(var(--entity-threats) / 0.2);
-  --color-entities-arsenal: hsl(var(--entity-arsenal));
-  --color-entities-arsenal-transparency: hsl(var(--entity-arsenal) / 0.2);
-  --color-entities-techniques: hsl(var(--entity-techniques));
-  --color-entities-techniques-transparency: hsl(var(--entity-techniques) / 0.2);
-  --color-entities-victimology: hsl(var(--entity-victimology));
-  --color-entities-victimology-transparency: hsl(var(--entity-victimology) / 0.2);
-  --color-entities-location: hsl(var(--entity-locations));
-  --color-entities-location-transparency: hsl(var(--entity-locations) / 0.2);
+  --color-elevation-background-layer-0: var(--semantic-elevation-background-layer-0);
+  --color-elevation-background-layer-0-gradient: var(
+    --semantic-elevation-background-layer-0-gradient
+  );
+  --color-elevation-background-layer-1: var(--semantic-elevation-background-layer-1);
+  --color-elevation-background-layer-2: var(--semantic-elevation-background-layer-2);
+  --color-elevation-background-layer-3: var(--semantic-elevation-background-layer-3);
+  --color-elevation-surface-heading-layer-0: var(--semantic-elevation-surface-heading-layer-0);
+  --color-elevation-surface-heading-layer-1: var(--semantic-elevation-surface-heading-layer-1);
+  --color-elevation-surface-heading-layer-2: var(--semantic-elevation-surface-heading-layer-2);
+  --color-elevation-surface-heading-layer-3: var(--semantic-elevation-surface-heading-layer-3);
+  --color-elevation-surface-highlight-layer-0: var(
+    --semantic-elevation-surface-highlight-layer-0
+  );
+  --color-elevation-surface-highlight-layer-1: var(
+    --semantic-elevation-surface-highlight-layer-1
+  );
+  --color-elevation-surface-highlight-layer-2: var(
+    --semantic-elevation-surface-highlight-layer-2
+  );
+  --color-elevation-surface-highlight-layer-3: var(
+    --semantic-elevation-surface-highlight-layer-3
+  );
+  --color-elevation-surface-disabled-layer-0: var(
+    --semantic-elevation-surface-disabled-layer-0
+  );
+  --color-elevation-surface-disabled-layer-1: var(
+    --semantic-elevation-surface-disabled-layer-1
+  );
+  --color-elevation-surface-disabled-layer-2: var(
+    --semantic-elevation-surface-disabled-layer-2
+  );
+  --color-elevation-surface-disabled-layer-3: var(
+    --semantic-elevation-surface-disabled-layer-3
+  );
+  --color-elevation-border-subtle-layer-0: var(--semantic-elevation-border-subtle-layer-0);
+  --color-elevation-border-subtle-layer-1: var(--semantic-elevation-border-subtle-layer-1);
+  --color-elevation-border-subtle-layer-2: var(--semantic-elevation-border-subtle-layer-2);
+  --color-elevation-border-subtle-layer-3: var(--semantic-elevation-border-subtle-layer-3);
+  --color-elevation-border-default-layer-0: var(--semantic-elevation-border-default-layer-0);
+  --color-elevation-border-default-layer-1: var(--semantic-elevation-border-default-layer-1);
+  --color-elevation-border-default-layer-2: var(--semantic-elevation-border-default-layer-2);
+  --color-elevation-border-default-layer-3: var(--semantic-elevation-border-default-layer-3);
+  --color-elevation-border-strong-layer-0: var(--semantic-elevation-border-strong-layer-0);
+  --color-elevation-border-strong-layer-1: var(--semantic-elevation-border-strong-layer-1);
+  --color-elevation-border-strong-layer-2: var(--semantic-elevation-border-strong-layer-2);
+  --color-elevation-border-strong-layer-3: var(--semantic-elevation-border-strong-layer-3);
+  --color-text-default-primary: var(--semantic-text-default-primary);
+  --color-text-default-secondary: var(--semantic-text-default-secondary);
+  --color-text-default-disabled: var(--semantic-text-default-disabled);
+  --color-text-negative-primary: var(--semantic-text-negative-primary);
+  --color-text-negative-secondary: var(--semantic-text-negative-secondary);
+  --color-text-negative-disabled: var(--semantic-text-negative-disabled);
+  --color-filigran-brand-primary: var(--semantic-filigran-brand-primary);
+  --color-filigran-brand-primary-transparency: var(
+    --semantic-filigran-brand-primary-transparency
+  );
+  --color-filigran-brand-secondary: var(--semantic-filigran-brand-secondary);
+  --color-filigran-brand-tertiary: var(--semantic-filigran-brand-tertiary);
+  --color-filigran-tonic-primary: var(--semantic-filigran-tonic-primary);
+  --color-filigran-tonic-secondary: var(--semantic-filigran-tonic-secondary);
+  --color-filigran-tonic-tertiary: var(--semantic-filigran-tonic-tertiary);
+  --color-filigran-ia-main: var(--semantic-filigran-ia-main);
+  --color-filigran-ia-secondary: var(--semantic-filigran-ia-secondary);
+  --color-filigran-ia-secondary-transparency: var(
+    --semantic-filigran-ia-secondary-transparency
+  );
+  --color-filigran-ia-tertiary: var(--semantic-filigran-ia-tertiary);
+  --color-feedback-info-primary: var(--semantic-feedback-info-primary);
+  --color-feedback-info-secondary: var(--semantic-feedback-info-secondary);
+  --color-feedback-info-secondary-transparency: var(
+    --semantic-feedback-info-secondary-transparency
+  );
+  --color-feedback-info-tertiary: var(--semantic-feedback-info-tertiary);
+  --color-feedback-success-primary: var(--semantic-feedback-success-primary);
+  --color-feedback-success-secondary: var(--semantic-feedback-success-secondary);
+  --color-feedback-success-secondary-transparency: var(
+    --semantic-feedback-success-secondary-transparency
+  );
+  --color-feedback-success-tertiary: var(--semantic-feedback-success-tertiary);
+  --color-feedback-alert-primary: var(--semantic-feedback-alert-primary);
+  --color-feedback-alert-secondary: var(--semantic-feedback-alert-secondary);
+  --color-feedback-alert-secondary-transparency: var(
+    --semantic-feedback-alert-secondary-transparency
+  );
+  --color-feedback-alert-tertiary: var(--semantic-feedback-alert-tertiary);
+  --color-feedback-warning-primary: var(--semantic-feedback-warning-primary);
+  --color-feedback-warning-secondary: var(--semantic-feedback-warning-secondary);
+  --color-feedback-warning-secondary-transparency: var(
+    --semantic-feedback-warning-secondary-transparency
+  );
+  --color-feedback-warning-tertiary: var(--semantic-feedback-warning-tertiary);
+  --color-feedback-error-primary: var(--semantic-feedback-error-primary);
+  --color-feedback-error-secondary: var(--semantic-feedback-error-secondary);
+  --color-feedback-error-secondary-transparency: var(
+    --semantic-feedback-error-secondary-transparency
+  );
+  --color-feedback-error-tertiary: var(--semantic-feedback-error-tertiary);
+  --color-entities-analyses: var(--semantic-entities-analyses);
+  --color-entities-analyses-transparency: var(--semantic-entities-analyses-transparency);
+  --color-entities-cases: var(--semantic-entities-cases);
+  --color-entities-cases-transparency: var(--semantic-entities-cases-transparency);
+  --color-entities-events: var(--semantic-entities-events);
+  --color-entities-events-transparency: var(--semantic-entities-events-transparency);
+  --color-entities-observations: var(--semantic-entities-observations);
+  --color-entities-observations-transparency: var(
+    --semantic-entities-observations-transparency
+  );
+  --color-entities-all-threats: var(--semantic-entities-all-threats);
+  --color-entities-all-threats-transparency: var(
+    --semantic-entities-all-threats-transparency
+  );
+  --color-entities-arsenal: var(--semantic-entities-arsenal);
+  --color-entities-arsenal-transparency: var(--semantic-entities-arsenal-transparency);
+  --color-entities-techniques: var(--semantic-entities-techniques);
+  --color-entities-techniques-transparency: var(
+    --semantic-entities-techniques-transparency
+  );
+  --color-entities-victimology: var(--semantic-entities-victimology);
+  --color-entities-victimology-transparency: var(
+    --semantic-entities-victimology-transparency
+  );
+  --color-entities-location: var(--semantic-entities-location);
+  --color-entities-location-transparency: var(--semantic-entities-location-transparency);
 }
 
 .layer-0 {
