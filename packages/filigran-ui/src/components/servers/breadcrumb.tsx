@@ -1,5 +1,5 @@
 import {Slot} from '@radix-ui/react-slot'
-import {ChevronIcon, MoreHorizIcon} from '@filigran/icon'
+import {MoreHorizIcon} from '@filigran/icon'
 import * as React from 'react'
 import {cn} from '../../lib/utils'
 
@@ -24,7 +24,7 @@ const BreadcrumbList = React.forwardRef<
   <ol
     ref={ref}
     className={cn(
-      'flex list-none flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5',
+      'flex list-none flex-wrap items-center gap-xs break-words content-body-compact text-text-default-disabled',
       className
     )}
     {...props}
@@ -38,7 +38,7 @@ const BreadcrumbItem = React.forwardRef<
 >(({className, ...props}, ref) => (
   <li
     ref={ref}
-    className={cn('inline-flex items-center gap-1.5', className)}
+    className={cn('inline-flex items-center gap-xs', className)}
     {...props}
   />
 ))
@@ -71,7 +71,7 @@ const BreadcrumbPage = React.forwardRef<
     role="link"
     aria-disabled="true"
     aria-current="page"
-    className={cn('font-normal text-foreground', className)}
+    className={cn('content-body-compact-bold text-text-default-primary', className)}
     {...props}
   />
 ))
@@ -87,7 +87,7 @@ const BreadcrumbSeparator = ({
     aria-hidden="true"
     className={cn('[&>svg]:size-2.5', className)}
     {...props}>
-    {children ?? <ChevronIcon />}
+    {children ?? '/'}
   </li>
 )
 BreadcrumbSeparator.displayName = 'BreadcrumbSeparator'

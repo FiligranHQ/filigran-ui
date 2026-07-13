@@ -1,5 +1,5 @@
 import {cva, type VariantProps} from 'class-variance-authority'
-import {CheckIcon, CloseIcon, KeyboardArrowDownIcon} from '@filigran/icon'
+import {CheckIcon, CloseIcon, ArrowDropDownIcon} from '@filigran/icon'
 import * as React from 'react'
 import {useMemo} from 'react'
 import {
@@ -303,7 +303,7 @@ const MultiSelectFormField = React.forwardRef<
                       orientation="vertical"
                       className="h-6"
                     />
-                    <KeyboardArrowDownIcon className="mx-2 w-2.5 h-2.5 cursor-pointer text-muted-foreground" />
+                    <ArrowDropDownIcon className="ml-2 mr-1 size-5 cursor-pointer text-muted-foreground" />
                   </div>
                 </div>
               ) : (
@@ -314,8 +314,8 @@ const MultiSelectFormField = React.forwardRef<
                     aria-readonly="true">
                     {placeholder}
                   </span>
-                  <KeyboardArrowDownIcon
-                    className="mx-2 w-2.5 h-2.5 cursor-pointer text-muted-foreground"
+                  <ArrowDropDownIcon
+                    className="ml-2 mr-1 size-5 cursor-pointer text-muted-foreground"
                     aria-hidden="true"
                   />
                 </div>
@@ -327,15 +327,17 @@ const MultiSelectFormField = React.forwardRef<
             align="start"
             onEscapeKeyDown={() => setIsPopoverOpen(false)}>
             {/*ShouldFilter use to filter on client side or server side*/}
-            <Command onChange={handleSearchInputChange} shouldFilter={shouldFilter}>
+            <Command
+              onChange={handleSearchInputChange}
+              shouldFilter={shouldFilter}>
               <CommandInput
                 placeholder="Search..."
                 onKeyDown={handleInputKeyDown}
               />
               <CommandList
                 onWheel={(e) => {
-                  e.currentTarget.scrollTop += e.deltaY;
-                  e.stopPropagation();
+                  e.currentTarget.scrollTop += e.deltaY
+                  e.stopPropagation()
                 }}>
                 <CommandEmpty>{noResultString}</CommandEmpty>
                 <CommandGroup>
