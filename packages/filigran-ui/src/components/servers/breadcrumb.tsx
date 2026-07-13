@@ -85,7 +85,7 @@ const BreadcrumbSeparator = ({
   <li
     role="presentation"
     aria-hidden="true"
-    className={cn('[&>svg]:size-2.5', className)}
+    className={cn( className)}
     {...props}>
     {children ?? '/'}
   </li>
