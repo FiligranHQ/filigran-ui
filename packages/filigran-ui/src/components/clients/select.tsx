@@ -5,7 +5,7 @@ import * as React from 'react'
 
 import {
   CheckIcon,
-  KeyboardArrowDownIcon,
+  ArrowDropDownIcon,
   KeyboardArrowUpIcon,
 } from '@filigran/icon'
 import {cn} from '../../lib/utils'
@@ -28,7 +28,7 @@ const SelectTrigger = React.forwardRef<
     {...props}>
     {children}
     <SelectPrimitive.Icon asChild>
-      <KeyboardArrowDownIcon className="ml-s h-3 w-3 opacity-50" />
+      <ArrowDropDownIcon className="ml-s size-5 opacity-50" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ))
@@ -45,7 +45,7 @@ const SelectScrollUpButton = React.forwardRef<
       className
     )}
     {...props}>
-    <KeyboardArrowUpIcon className="h-6 w-6 p-s" />
+    <KeyboardArrowUpIcon className="size-6 p-s" />
   </SelectPrimitive.ScrollUpButton>
 ))
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
@@ -61,7 +61,7 @@ const SelectScrollDownButton = React.forwardRef<
       className
     )}
     {...props}>
-    <KeyboardArrowDownIcon className="h-6 w-6 p-s opacity-50" />
+    <ArrowDropDownIcon className="size-6 p-s" />
   </SelectPrimitive.ScrollDownButton>
 ))
 SelectScrollDownButton.displayName =
