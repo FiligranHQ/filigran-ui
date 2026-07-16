@@ -1793,7 +1793,7 @@ body[data-theme='Dark'] {
   --semantic-text-negative-disabled: var(--color-grayblue-400);
 
   --semantic-filigran-brand-primary: var(--color-blue-500);
-  --semantic-filigran-brand-primary-transparency: hsl(var(--blue-500) / 0.1);
+  --semantic-filigran-brand-primary-transparency: hsl(var(--blue-500) / 0.3);
   --semantic-filigran-brand-secondary: var(--color-blue-200);
   --semantic-filigran-brand-tertiary: var(--color-blue-600);
   --semantic-filigran-tonic-primary: var(--color-turquoise-500);
