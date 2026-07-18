@@ -36,7 +36,7 @@
   "resolutions": {
     "minimatch": "10.2.5",
     "postcss-svgo": "7.1.1",
-    "serialize-javascript": "7.0.5",
+    "serialize-javascript": "7.0.7",
     "svgo": "4.0.1"
   }
 }
