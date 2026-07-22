@@ -628,7 +628,7 @@
   --gradient-layer-0-layer-1: linear-gradient(
     100.35deg,
     var(--color-elevation-background-layer-0) 0%,
-    var(--color-elevation-background-layer-0) 100%
+    var(--color-elevation-background-layer-1) 100%
   );
   --gradient-layer-0-white: linear-gradient(
     100.35deg,
@@ -1139,7 +1139,7 @@
   --gradient-layer-0-layer-1: linear-gradient(
     100.35deg,
     var(--color-elevation-background-layer-0) 0%,
-    var(--color-elevation-background-layer-0) 100%
+    var(--color-elevation-background-layer-1) 100%
   );
   --gradient-layer-0-white: linear-gradient(
     100.35deg,
