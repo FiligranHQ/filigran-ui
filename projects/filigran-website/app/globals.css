@@ -1,9 +1,10 @@
+@import 'tailwindcss';
 @import '../../../packages/filigran-ui/src/theme.css';
 @import 'tw-animate-css';
-@import 'tailwindcss';
 @plugin "@tailwindcss/typography";
 
-@source '../../../packages/filigran-ui//**/*.{js,ts,jsx,tsx}';
+@source '../../../packages/filigran-ui/**/*.{js,ts,jsx,tsx}';
+
 
 @layer base {
   html {

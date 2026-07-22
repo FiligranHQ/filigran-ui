@@ -35,7 +35,7 @@ export type TreeSelectOption = {
 }
 
 const treeSelectVariants = cva(
-  'flex h-9 w-full items-center justify-between rounded border border-input bg-inherit p-1 hover:bg-hover',
+  'flex h-9 w-full items-center justify-between rounded bg-input-bg-default p-1 hover:bg-hover',
   {
     variants: {
       variant: {
@@ -505,7 +505,7 @@ const TreeSelect = React.forwardRef<HTMLButtonElement, TreeSelectProps>(
             className="w-[--radix-popover-trigger-width] p-0 drop-shadow-xs"
             align="start"
             onEscapeKeyDown={() => setOpen(false)}>
-            <div className="flex items-center border-b px-3">
+            <div className="flex items-center border-b border-elevation-border-strong-layer-2 px-3">
               <SearchIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <input
                 className="flex h-11 w-full rounded bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"

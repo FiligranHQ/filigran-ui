@@ -15,7 +15,7 @@ const Command = React.forwardRef<
   <CommandPrimitive
     ref={ref}
     className={cn(
-      'flex h-full w-full flex-col overflow-hidden rounded bg-popover text-popover-foreground',
+      'flex h-full w-full flex-col overflow-hidden rounded bg-elevation-background-layer-2 text-popover-foreground',
       className
     )}
     {...props}
@@ -42,7 +42,7 @@ const CommandInput = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({className, ...props}, ref) => (
   <div
-    className="flex items-center border-b px-3"
+    className="flex items-center border-b border-elevation-border-strong-layer-2 px-3"
     cmdk-input-wrapper="">
     <SearchIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
     <CommandPrimitive.Input

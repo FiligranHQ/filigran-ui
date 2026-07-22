@@ -78,7 +78,7 @@ function Combobox<T>({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            'normal-case w-full justify-between border-input',
+            'normal-case w-full justify-between bg-input-bg-default border-none',
             className
           )}
           onClick={() => setOpen(!open)}>
