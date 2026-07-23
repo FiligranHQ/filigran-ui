@@ -13,10 +13,10 @@ const Switch = React.forwardRef<
       'group peer inline-flex h-4 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors',
 
       // OFF
-      'bg-gray/50',
+      'bg-elevation-surface-disabled',
 
       // ON
-      'data-[state=checked]:bg-primary/50',
+      'data-[state=checked]:bg-feedback-info-secondary',
 
       // disabled
       'data-[disabled]:cursor-not-allowed',
@@ -25,17 +25,16 @@ const Switch = React.forwardRef<
       className
     )}
     {...props}
-    ref={ref}
-  >
+    ref={ref}>
     <SwitchPrimitives.Thumb
       className={cn(
         'pointer-events-none block h-5 w-5 rounded-full shadow-md transition-all',
 
         'translate-x-0 data-[state=checked]:translate-x-6',
 
-        'bg-gray',
+        'bg-text-default-primary',
 
-        'data-[state=checked]:bg-primary',
+        'data-[state=checked]:bg-feedback-info-primary',
 
         // disabled
 
@@ -55,7 +54,7 @@ const Switch = React.forwardRef<
         'group-hover:before:scale-[2]',
         'group-hover:before:opacity-100',
         'group-hover:before:scale-[2]',
-        'group-hover:before:opacity-100',
+        'group-hover:before:opacity-100'
       )}
     />
   </SwitchPrimitives.Root>

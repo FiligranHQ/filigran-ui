@@ -36,7 +36,7 @@
   --color-secondary-foreground: hsl(var(--secondary-foreground));
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-muted: hsl(var(--muted));
+  --color-muted: var(--hover-background);
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
@@ -424,6 +424,8 @@
     --semantic-entities-location-transparency
   );
 
+  --color-input-bg-default: var(--semantic-input-bg-default);
+
   --color-elevation-bg: var(--color-elevation-background-layer-0);
   --color-elevation-border-subtle: var(--color-elevation-border-subtle-layer-0);
   --color-elevation-border-default: var(
@@ -628,7 +630,7 @@
   --gradient-layer-0-layer-1: linear-gradient(
     100.35deg,
     var(--color-elevation-background-layer-0) 0%,
-    var(--color-elevation-background-layer-0) 100%
+    var(--color-elevation-background-layer-1) 100%
   );
   --gradient-layer-0-white: linear-gradient(
     100.35deg,
@@ -959,7 +961,7 @@
   --border-focus: var(--darkblue-300);
   --elevation-border-strong: 231, 5%, 70%;
 
-  --hover-background: var(--gray-150);
+  --hover-background: var(--color-gray-150);
   --menu-active: 207, 52%, 21%;
 
   --primary: var(--darkblue-700);
@@ -973,7 +975,7 @@
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --muted: var(--gray-default);
+  --muted: var(--hover-background);
   --muted-foreground: var(--gray-500);
 
   --border: var(--border-light);
@@ -1139,7 +1141,7 @@
   --gradient-layer-0-layer-1: linear-gradient(
     100.35deg,
     var(--color-elevation-background-layer-0) 0%,
-    var(--color-elevation-background-layer-0) 100%
+    var(--color-elevation-background-layer-1) 100%
   );
   --gradient-layer-0-white: linear-gradient(
     100.35deg,
@@ -1322,6 +1324,8 @@
   --semantic-elevation-border-strong-layer-1: var(--color-gray-200);
   --semantic-elevation-border-strong-layer-2: var(--color-gray-300);
   --semantic-elevation-border-strong-layer-3: var(--color-gray-400);
+
+  --semantic-input-bg-default: var(--color-gray-150);
 
   --semantic-text-default-primary: var(--color-gray-900);
   --semantic-text-default-secondary: var(--color-gray-700);
@@ -1737,7 +1741,6 @@ body[data-theme='Dark'] {
   --secondary-foreground: var(--dark-100);
   --destructive: var(--red-400);
   --destructive-foreground: var(--light-100);
-  --muted: 247 50% 12.9%;
   --muted-foreground: var(--gray-300);
   --popover: 247 45% 5.59%;
   --popover-foreground: 247 10% 97.15%;
@@ -1784,6 +1787,8 @@ body[data-theme='Dark'] {
   --semantic-elevation-border-strong-layer-1: var(--color-grayblue-400);
   --semantic-elevation-border-strong-layer-2: var(--color-grayblue-300);
   --semantic-elevation-border-strong-layer-3: var(--color-grayblue-200);
+
+  --semantic-input-bg-default: var(--color-grayblue-800);
 
   --semantic-text-default-primary: var(--color-gray-100);
   --semantic-text-default-secondary: var(--color-gray-300);
@@ -1865,7 +1870,7 @@ body[data-theme='Dark'] {
   --border-light: var(--gray-800);
   --border-focus: var(--blue-600);
   --elevation-border-strong: 220, 53%, 20%;
-  --hover-background: hsla(0, 0%, 100%, 0.1);
+  --hover-background: var(--color-filigran-brand-primary-transparency);
 
   --ai-main: 262 100% 76%;
   --ai-light: 261 85% 87%;
@@ -2165,28 +2170,21 @@ body[data-theme='Dark'] {
 }
 
 ::-webkit-scrollbar {
-  width: 1rem;
+  width: 0.4rem;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   border-radius: 100vh;
-  border: 0.25rem solid hsl(240 11% 96%);
-  background: #7a7c85b3;
+  border: 0.1rem solid var(
+          --semantic-elevation-background-layer-0
+  );
+  background: var(
+          --semantic-elevation-background-layer-3
+  );
 }
-.dark,
-body[data-theme='dark'],
-body[data-theme='Dark'] {
-  ::-webkit-scrollbar-thumb {
-    border-radius: 100vh;
-    border: 0.25rem solid hsl(230 100% 2.35%);
-    background: #7a7c85b3;
-  }
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #7a7c85;
-}
+
 ::-webkit-scrollbar-corner {
   background: transparent;
 }

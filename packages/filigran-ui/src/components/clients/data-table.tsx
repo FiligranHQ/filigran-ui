@@ -167,7 +167,7 @@ const DataTableSelectColumnVisibility = <TData,>() => {
           size="icon"
           className="h-9 w-9 rounded-none shrink-0"
           aria-label={t_i18n('Manage columns visibility')}>
-          <TableTuneIcon className="h-[1.125rem] w-[1.125rem]" />
+          <TableTuneIcon className="h-[1.125rem] w-[1.125rem] text-primary" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -422,7 +422,7 @@ const DataTableHeadBarOptions = () => {
   const pageSize = table.getState().pagination.pageSize
   return (
     <>
-      <div className="shrink-0 box-border inline-flex h-9 items-center rounded border border-border-light">
+      <div className="shrink-0 box-border inline-flex h-9 items-center rounded border border-elevation-border-strong-layer-2">
         <Button
           variant="ghost"
           size="icon"
@@ -430,7 +430,7 @@ const DataTableHeadBarOptions = () => {
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
           aria-label={t_i18n('Go to previous page')}>
-          <ArrowPreviousIcon className="size-3" />
+          <ArrowPreviousIcon className="size-3 text-primary" />
         </Button>
         <div className="px-s leading-none text-text-secondary txt-sub-content ">
           <span className="text-foreground">
@@ -447,7 +447,7 @@ const DataTableHeadBarOptions = () => {
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
           aria-label={t_i18n('Go to next page')}>
-          <ArrowNextIcon className="size-3" />
+          <ArrowNextIcon className="size-3 text-primary" />
         </Button>
 
         <DataTableSelectColumnVisibility />
