@@ -182,6 +182,11 @@ export const AutoFormTest = () => {
           color: {
             fieldType: 'radio',
           },
+          birthday: {
+            inputProps: {
+              popoverContentClassName: 'bg-red-900',
+            },
+          },
           document: {
             label: 'Add a file',
             fieldType: 'file',
@@ -191,6 +196,11 @@ export const AutoFormTest = () => {
               multiple: 'multiple',
             },
           },
+          userServiceEnum: {
+            inputProps:{
+              popoverContentClassName: 'bg-red-900'
+            }
+            },
           invitedGuests: {
             fieldType: ({field}) => (
               <FormItem>
@@ -207,6 +217,7 @@ export const AutoFormTest = () => {
                     value={field.value ?? []}
                     onValueChange={(val) => field.onChange(val)}
                     placeholder={'placeholder'}
+                    popoverContentClassName="bg-red-900"
                     variant="inverted"
                   />
                 </FormControl>

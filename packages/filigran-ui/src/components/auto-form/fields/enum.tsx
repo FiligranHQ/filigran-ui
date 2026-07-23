@@ -43,6 +43,8 @@ export default function AutoFormEnum({
     return values.find((item) => item[0] === value)
   }
 
+  const {popoverContentClassName, ...selectFieldProps} = fieldProps
+
   return (
     <FormItem>
       <AutoFormLabel
@@ -53,13 +55,13 @@ export default function AutoFormEnum({
         <Select
           onValueChange={field.onChange}
           defaultValue={field.value}
-          {...fieldProps}>
-          <SelectTrigger className={fieldProps.className}>
+          {...selectFieldProps}>
+          <SelectTrigger className={selectFieldProps.className}>
             <SelectValue placeholder={fieldConfigItem.inputProps?.placeholder}>
               {field.value ? findItem(field.value)?.[1] : 'Select an option'}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className={popoverContentClassName}>
             {values.map(([value, label]) => (
               <SelectItem
                 value={label}
