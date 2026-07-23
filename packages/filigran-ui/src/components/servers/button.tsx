@@ -8,17 +8,16 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-elevation-background-layer-1 hover:bg-tertiary focus-visible:ring-primary/50 disabled:bg-ds-bg-disabled disabled:text-text disabled:opacity-100',
+          'bg-primary text-text-negative-primary hover:bg-tertiary focus-visible:ring-primary/50 disabled:bg-ds-bg-disabled disabled:text-text disabled:opacity-100',
         destructive:
-          'bg-destructive text-elevation-background-layer-1 hover:bg-destructive/75 focus-visible:ring-destructive/50',
+          'bg-destructive text-text-negative-primary hover:bg-destructive/75 focus-visible:ring-destructive/50',
         secondary:
           'border-primary text-primary border bg-transparent hover:bg-hover focus-visible:ring-primary/50',
         'secondary-destructive':
           'border border-destructive/75 bg-transparent hover:bg-hover text-destructive focus-visible:ring-destructive/50',
         outline:
           'border-primary focus-visible:ring-primary/50 text-primary border bg-transparent hover:bg-hover',
-        'outline-primary':
-          'border',
+        'outline-primary': 'border',
         'outline-destructive':
           'border border-destructive/75 bg-transparent hover:bg-hover text-destructive focus-visible:ring-destructive/50',
         tertiary: 'hover:bg-hover text-primary focus-visible:ring-primary/50',
@@ -27,9 +26,8 @@ const buttonVariants = cva(
         'tertiary-secondary':
           'hover:bg-hover text-secondary focus-visible:ring-secondary/50',
         ghost:
-          'text-elevation-background-layer-1 focus-visible:ring-primary/50 text-filigran-brand-primary hover:bg-hover',
-        'ghost-primary':
-          'hover:bg-hover',
+          'text-text-negative-primary focus-visible:ring-primary/50 text-filigran-brand-primary hover:bg-hover',
+        'ghost-primary': 'hover:bg-hover',
         'ghost-destructive':
           'hover:bg-hover text-destructive focus-visible:ring-destructive/50',
         'ghost-secondary':
