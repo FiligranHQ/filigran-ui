@@ -19,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../clients'
+import {cn} from '../../lib/utils'
 import {Badge, Button} from '../servers'
 
 const multiSelectVariants = cva('', {
@@ -51,6 +52,7 @@ interface MultiSelectFormFieldProps<
   disabled?: boolean
   placeholder: string
   noResultString: string
+  popoverContentClassName?: string
   className?: string
   onValueChange: (value: string[]) => void
   onInputChange?: (value: string) => void
@@ -74,6 +76,7 @@ const MultiSelectFormField = React.forwardRef<
       onInputChange,
       placeholder,
       noResultString = 'No results found',
+      popoverContentClassName,
       ...props
     },
     ref
@@ -323,12 +326,12 @@ const MultiSelectFormField = React.forwardRef<
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-[300px] p-0 drop-shadow-xs"
+            className={cn('w-[300px] p-0 drop-shadow-xs', popoverContentClassName)}
             align="start"
             onEscapeKeyDown={() => setIsPopoverOpen(false)}>
             {/*ShouldFilter use to filter on client side or server side*/}
             <Command
-              className={className}
+              className={popoverContentClassName}
               onChange={handleSearchInputChange}
               shouldFilter={shouldFilter}>
               <CommandInput
