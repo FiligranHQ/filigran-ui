@@ -1,8 +1,22 @@
-import * as React from "react"
-import { Button, type ButtonProps } from "./button"
+import * as React from 'react'
+import {Button, type ButtonProps} from './button'
 import {cn} from '../../lib/utils'
 
-export interface GradientButtonProps extends Omit<ButtonProps, "variant"> {
+type GradientVariant = 'highlight' | 'ia'
+
+const gradientVariants: Record<GradientVariant, {from: string; to: string}> = {
+  highlight: {
+    from: 'hsl(var(--blue-default))',
+    to: 'hsl(var(--turquoise-300))',
+  },
+  ia: {
+    from: '#E3D6FA',
+    to: '#A47AF0',
+  },
+}
+
+export interface GradientButtonProps extends Omit<ButtonProps, 'variant'> {
+  variant?: GradientVariant
   gradientFrom?: string
   gradientTo?: string
   gradientBg?: string
@@ -10,23 +24,30 @@ export interface GradientButtonProps extends Omit<ButtonProps, "variant"> {
 }
 
 const GradientButton = React.forwardRef<HTMLButtonElement, GradientButtonProps>(
-  ({
+  (
+   {
      className,
-     gradientFrom = "hsl(var(--blue-default))", // Default blue
-     gradientTo = "hsl(var(--turquoise-300))", // Default turquoise-300
-     gradientBg = "hsl(var(--background))",
+     variant = 'highlight',
+     gradientFrom,
+     gradientTo,
+     gradientBg = 'hsl(var(--background))',
      textGradient = true,
      children,
      ...props
-   }, ref) => {
+   },
+   ref
+  ) => {
+   const selectedGradient = gradientVariants[variant]
+   const from = gradientFrom ?? selectedGradient.from
+   const to = gradientTo ?? selectedGradient.to
 
-    const customStyle = {
-      "--gradient-from": gradientFrom,
-      "--gradient-to": gradientTo,
-      "--gradient-bg": gradientBg,
-    } as React.CSSProperties
+   const customStyle = {
+     '--gradient-from': from,
+     '--gradient-to': to,
+     '--gradient-bg': gradientBg,
+   } as React.CSSProperties
 
-    return (
+   return (
       <Button
         ref={ref}
         className={cn(
@@ -54,6 +75,6 @@ const GradientButton = React.forwardRef<HTMLButtonElement, GradientButtonProps>(
     )
   }
 )
-GradientButton.displayName = "GradientButton"
+GradientButton.displayName = 'GradientButton'
 
-export { GradientButton }
+export {GradientButton}

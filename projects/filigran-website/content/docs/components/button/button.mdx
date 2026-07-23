@@ -42,32 +42,27 @@ Import \{Button\} from '@filigran/ui'
   codeExample={`
     <div className={'flex gap-2'}>
         <div className="flex flex-col gap-s items-center">
-          <Button> Primary/Default </Button>
-          <Button variant="outline-primary"> Outline </Button>
-          <Button variant="ghost-primary"> Ghost </Button>
+          <Button> Primary-default </Button>
+          <Button size="sm"> Primary-default sm </Button>
+          <Button variant="secondary"> Secondary-default </Button>
+          <Button variant="tertiary"> Tertiary </Button>
           <Button variant="link-primary"> Link </Button>
           <Button size="icon"><AddIcon className="size-4" /></Button>
+          <Button size="icon" variant="secondary"><AddIcon className="size-4" /></Button>
           <Button size="icon-rounded"><AddIcon className="size-4" /></Button>
-        </div>
-        <div className="flex flex-col gap-s items-center">
-          <Button variant="secondary"> Secondary </Button>
-          <Button variant="outline-secondary"> Outline </Button>
-          <Button variant="ghost-secondary"> Ghost </Button>
-          <Button variant="link-secondary"> Link </Button>
-          <Button variant="secondary" size="icon"><AddIcon className="size-4" /></Button>
-          <Button variant="secondary" size="icon-rounded"><AddIcon className="size-4" /></Button>
+          For retro compatibility:
+          <Button variant="ghost">Ghost </Button>
+                    <Button variant="outline">Outline </Button>
         </div>
         <div className="flex flex-col gap-s items-center">
           <Button variant="destructive"> Destructive </Button>
-          <Button variant="outline-destructive"> Outline </Button>
-          <Button variant="ghost-destructive"> Ghost </Button>
+          <Button variant="destructive" size="sm"> Destructive sm</Button>
+          <Button variant="secondary-destructive"> secondary-destructive </Button>
+          <Button variant="tertiary-destructive"> Tertiary destructive </Button>
           <Button variant="link-destructive"> Link </Button>
           <Button variant="destructive" size="icon"><AddIcon className="size-4" /></Button>
           <Button variant="destructive" size="icon-rounded"><AddIcon className="size-4" /></Button>
         </div>
-        <div className="flex flex-col gap-s">
-          <Button variant="outline"> Outline </Button>
-          <Button variant="ghost"> Ghost </Button>
-        </div>
+
       </div>`}
 />
