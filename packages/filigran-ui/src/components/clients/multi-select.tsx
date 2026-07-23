@@ -328,6 +328,7 @@ const MultiSelectFormField = React.forwardRef<
             onEscapeKeyDown={() => setIsPopoverOpen(false)}>
             {/*ShouldFilter use to filter on client side or server side*/}
             <Command
+              className={className}
               onChange={handleSearchInputChange}
               shouldFilter={shouldFilter}>
               <CommandInput

@@ -144,6 +144,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
       usePortal = false,
       addOnPaste = false,
       generateTagId = uuid,
+      className,
     } = props
 
     const [inputValue, setInputValue] = React.useState('')
@@ -504,6 +505,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
         {enableAutocomplete ? (
           <div className="w-full">
             <Autocomplete
+              className={className}
               tags={tags}
               setTags={setTags}
               setInputValue={setInputValue}

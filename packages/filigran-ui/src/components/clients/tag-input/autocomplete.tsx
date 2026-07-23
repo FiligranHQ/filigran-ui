@@ -19,6 +19,7 @@ type AutocompleteProps = {
   inlineTags?: boolean
   classStyleProps: TagInputStyleClassesProps['autoComplete']
   usePortal?: boolean
+  className?: string
 }
 
 export const Autocomplete: React.FC<AutocompleteProps> = ({
@@ -35,6 +36,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
   children,
   classStyleProps,
   usePortal,
+  className,
 }) => {
   const triggerContainerRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -248,7 +250,11 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
           side="bottom"
           align="start"
           forceMount
-          className={cn(`relative p-0`, classStyleProps?.popoverContent)}
+          className={cn(
+            `relative p-0`,
+            classStyleProps?.popoverContent,
+            className
+          )}
           style={{
             top: `${popooverContentTop}px`,
             marginLeft: `calc(-${popoverWidth}px + 45px)`,

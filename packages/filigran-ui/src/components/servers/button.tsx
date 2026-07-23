@@ -41,8 +41,8 @@ const buttonVariants = cva(
           'text-secondary underline-offset-4 hover:underline normal-case focus-visible:ring-secondary/50',
       },
       size: {
-        default: 'p-s',
-        sm: 'p-xs',
+        default: 'h-9 px-4 py-2',
+        sm: 'h-8 rounded px-3',
         lg: 'h-10 rounded px-8',
         icon: 'h-9 w-9',
         'icon-rounded': 'h-9 w-9 rounded-[100%]',
