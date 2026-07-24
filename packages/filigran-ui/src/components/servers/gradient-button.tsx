@@ -6,12 +6,12 @@ type GradientVariant = 'highlight' | 'ia'
 
 const gradientVariants: Record<GradientVariant, {from: string; to: string}> = {
   highlight: {
-    from: 'hsl(var(--blue-default))',
-    to: 'hsl(var(--turquoise-300))',
+    from: 'var(--color-filigran-brand-primary)',
+    to: 'var(--color-filigran-tonic-primary)',
   },
   ia: {
-    from: '#E3D6FA',
-    to: '#A47AF0',
+    from: 'var(--color-filigran-ia-main)',
+    to: 'var(--color-filigran-ia-secondary)',
   },
 }
 
