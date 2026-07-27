@@ -1768,7 +1768,7 @@ body[data-theme='Dark'] {
   --semantic-elevation-surface-heading-layer-2: var(--color-grayblue-800);
   --semantic-elevation-surface-heading-layer-3: var(--color-grayblue-600);
   --semantic-elevation-surface-highlight-layer-0: var(--color-grayblue-800);
-  --semantic-elevation-surface-highlight-layer-1: var(--color-grayblue-700);
+  --semantic-elevation-surface-highlight-layer-1: var(--color-grayblue-600);
   --semantic-elevation-surface-highlight-layer-2: var(--color-grayblue-900);
   --semantic-elevation-surface-highlight-layer-3: var(--color-grayblue-700);
   --semantic-elevation-surface-disabled-layer-0: var(--color-gray-900);
