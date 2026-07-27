@@ -1,6 +1,6 @@
 import type { SVGProps } from "react";
 import type { SVGRProps } from "../model/svgr";
-const SvgChessKnight = ({
+const SvgEventOutlined = ({
   title,
   titleId,
   ...props
@@ -14,7 +14,7 @@ const SvgChessKnight = ({
     {...props}
   >
     {title ? <title id={titleId}>{title}</title> : null}
-    <path d="M19 22H5v-2h14zM13 2c-1.25 0-2.42.62-3.11 1.66L7 8l2 2 2.06-1.37c.44-.31 1.08-.19 1.39.27.02.03.05.06.05.1.3.59.19 1.3-.28 1.77l-4.8 4.8c-.55.56-.55 1.46.01 2.01.26.26.62.42.99.42H17V6a4 4 0 0 0-4-4" />
+    <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2m0 16H5V10h14zm0-12H5V6h14zm-7 5h5v5h-5z" />
   </svg>
 );
-export default SvgChessKnight;
+export default SvgEventOutlined;

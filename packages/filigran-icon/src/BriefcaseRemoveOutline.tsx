@@ -1,6 +1,6 @@
 import type { SVGProps } from "react";
 import type { SVGRProps } from "../model/svgr";
-const SvgChessKnight = ({
+const SvgBriefcaseRemoveOutline = ({
   title,
   titleId,
   ...props
@@ -14,7 +14,7 @@ const SvgChessKnight = ({
     {...props}
   >
     {title ? <title id={titleId}>{title}</title> : null}
-    <path d="M19 22H5v-2h14zM13 2c-1.25 0-2.42.62-3.11 1.66L7 8l2 2 2.06-1.37c.44-.31 1.08-.19 1.39.27.02.03.05.06.05.1.3.59.19 1.3-.28 1.77l-4.8 4.8c-.55.56-.55 1.46.01 2.01.26.26.62.42.99.42H17V6a4 4 0 0 0-4-4" />
+    <path d="M10 2h4a2 2 0 0 1 2 2v2h4a2 2 0 0 1 2 2v5.53a5.7 5.7 0 0 0-2-1.19V8H4v11h8.08c.12.72.37 1.39.72 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4V4a2 2 0 0 1 2-2m4 4V4h-4v2zm.46 9.88 1.42-1.42L18 16.59l2.12-2.13 1.42 1.42L19.41 18l2.13 2.12-1.42 1.42L18 19.41l-2.12 2.13-1.42-1.42L16.59 18z" />
   </svg>
 );
-export default SvgChessKnight;
+export default SvgBriefcaseRemoveOutline;
