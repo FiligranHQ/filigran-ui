@@ -29,9 +29,10 @@ _You can use it in your component :_
   codeExample={`<Button
         onClick={() => {
           toast({
-            title: 'A title',
+            title: 'Error toast',
             description: 'My description',
-            variant: 'destructive',
+            variant: 'error',
+            label: 'Error',
             action: <Button variant="outline">Click me</Button>
           })
         }}>
