@@ -13,7 +13,7 @@ const Switch = React.forwardRef<
       'group peer inline-flex h-4 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors',
 
       // OFF
-      'bg-elevation-surface-disabled',
+      'bg-feedback-neutral-secondary',
 
       // ON
       'data-[state=checked]:bg-feedback-info-secondary',

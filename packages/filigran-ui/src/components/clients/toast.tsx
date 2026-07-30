@@ -28,13 +28,21 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        basic: 'bg-primary text-primary-foreground',
-        success: 'bg-green-900 text-green-100',
-        destructive: 'bg-red-900  text-red-100',
+        info: 'toast-info bg-feedback-info-secondary-transparency backdrop-blur-[20px]',
+        success:
+          'toast-success bg-feedback-success-secondary-transparency backdrop-blur-[20px]',
+        alert:
+          'toast-alert bg-feedback-alert-secondary-transparency backdrop-blur-[20px]',
+        warning:
+          'toast-warning bg-feedback-warning-secondary-transparency backdrop-blur-[20px]',
+        error:
+          'toast-error bg-feedback-error-secondary-transparency backdrop-blur-[20px]',
+        destructive:
+          'toast-error bg-feedback-error-secondary-transparency backdrop-blur-[20px]',
       },
     },
     defaultVariants: {
-      variant: 'basic',
+      variant: 'success',
     },
   }
 )
@@ -61,7 +69,12 @@ const ToastAction = React.forwardRef<
   <ToastPrimitives.Action
     ref={ref}
     className={cn(
-      'inline-flex h-8 shrink-0 rounded border border-border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive',
+      'inline-flex h-8 shrink-0 rounded border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+      'group-[.toast-info]:border-feedback-info-primary group-[.toast-info]:text-feedback-info-primary',
+      'group-[.toast-success]:border-feedback-success-primary group-[.toast-success]:text-feedback-success-primary',
+      'group-[.toast-alert]:border-feedback-alert-primary group-[.toast-alert]:text-feedback-alert-primary',
+      'group-[.toast-warning]:border-feedback-warning-primary group-[.toast-warning]:text-feedback-warning-primary',
+      'group-[.toast-error]:border-feedback-error-primary group-[.toast-error]:text-feedback-error-primary',
       className
     )}
     {...props}
@@ -75,7 +88,15 @@ const ToastClose = React.forwardRef<
 >(({className, ...props}, ref) => (
   <ToastPrimitives.Close
     ref={ref}
-    className={cn('absolute right-4 top-4', className)}
+    className={cn(
+      'inline-flex h-5 w-5 shrink-0 items-center justify-center',
+      'group-[.toast-info]:text-feedback-info-primary',
+      'group-[.toast-success]:text-feedback-success-primary',
+      'group-[.toast-alert]:text-feedback-alert-primary',
+      'group-[.toast-warning]:text-feedback-warning-primary',
+      'group-[.toast-error]:text-feedback-error-primary',
+      className
+    )}
     toast-close=""
     {...props}>
     <CloseIcon className="h-3 w-3" />
@@ -83,13 +104,33 @@ const ToastClose = React.forwardRef<
 ))
 ToastClose.displayName = ToastPrimitives.Close.displayName
 
+const ToastLabel = React.forwardRef<
+  HTMLSpanElement,
+  React.HTMLAttributes<HTMLSpanElement>
+>(({className, ...props}, ref) => (
+  <span
+    ref={ref}
+    className={cn(
+      'content-body-base-bold leading-normal',
+      'group-[.toast-info]:text-feedback-info-primary',
+      'group-[.toast-success]:text-feedback-success-primary',
+      'group-[.toast-alert]:text-feedback-alert-primary',
+      'group-[.toast-warning]:text-feedback-warning-primary',
+      'group-[.toast-error]:text-feedback-error-primary',
+      className
+    )}
+    {...props}
+  />
+))
+ToastLabel.displayName = 'ToastLabel'
+
 const ToastTitle = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Title>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Title>
 >(({className, ...props}, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn('txt-subtitle', className)}
+    className={cn('heading-xs text-text-default-primary', className)}
     {...props}
   />
 ))
@@ -101,7 +142,7 @@ const ToastDescription = React.forwardRef<
 >(({className, ...props}, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn('txt-default', className)}
+    className={cn('content-body-compact text-text-default-primary', className)}
     {...props}
   />
 ))
@@ -116,6 +157,7 @@ export {
   ToastAction,
   ToastClose,
   ToastDescription,
+  ToastLabel,
   ToastProvider,
   ToastTitle,
   ToastViewport,

@@ -208,19 +208,19 @@
   --color-yellow-900: hsl(var(--yellow-900));
 
   /* Additional primitive palette */
-  --color-grayblue-50: hsl(218.18 52.38% 95.88%);
-  --color-grayblue-100: hsl(217.89 52.78% 85.88%);
-  --color-grayblue-150: hsl(222.09 54.47% 75.88%);
-  --color-grayblue-200: hsl(217.83 52.87% 65.88%);
-  --color-grayblue-300: hsl(217.62 53.85% 45.88%);
-  --color-grayblue-400: hsl(217.96 53.26% 36.08%);
-  --color-grayblue-500: hsl(217.71 53.03% 25.88%);
-  --color-grayblue-600: hsl(220 52.94% 20%);
-  --color-grayblue-700: hsl(220.47 53.09% 15.88%);
-  --color-grayblue-800: hsl(221.14 52.24% 13.14%);
-  --color-grayblue-850: hsl(220 53.57% 10.98%);
-  --color-grayblue-900: hsl(220 52.94% 10%);
-  --color-grayblue-1000: hsl(218.82 54.84% 6.08%);
+  --color-grayblue-50: hsl(var(--grayblue-50));
+  --color-grayblue-100: hsl(var(--grayblue-100));
+  --color-grayblue-150: hsl(var(--grayblue-150));
+  --color-grayblue-200: hsl(var(--grayblue-200));
+  --color-grayblue-300: hsl(var(--grayblue-300));
+  --color-grayblue-400: hsl(var(--grayblue-400));
+  --color-grayblue-500: hsl(var(--grayblue-500));
+  --color-grayblue-600: hsl(var(--grayblue-600));
+  --color-grayblue-700: hsl(var(--grayblue-700));
+  --color-grayblue-800: hsl(var(--grayblue-800));
+  --color-grayblue-850: hsl(var(--grayblue-850));
+  --color-grayblue-900: hsl(var(--grayblue-900));
+  --color-grayblue-1000: hsl(var(--grayblue-1000));
 
   --color-black-100: hsl(0 0% 0% / 0.05);
   --color-black-200: hsl(0 0% 0% / 0.1);
@@ -387,6 +387,12 @@
     --semantic-feedback-error-secondary-transparency
   );
   --color-feedback-error-tertiary: var(--semantic-feedback-error-tertiary);
+  --color-feedback-neutral-primary: var(--semantic-feedback-neutral-primary);
+  --color-feedback-neutral-secondary: var(--semantic-feedback-neutral-secondary);
+  --color-feedback-neutral-secondary-transparency: var(
+    --semantic-feedback-neutral-secondary-transparency
+  );
+  --color-feedback-neutral-tertiary: var(--semantic-feedback-neutral-tertiary);
   --color-entities-analyses: var(--semantic-entities-analyses);
   --color-entities-analyses-transparency: var(
     --semantic-entities-analyses-transparency
@@ -996,6 +1002,19 @@
   --gray-800: 225 3.92% 20%;
   --gray-900: 220 5.88% 10%;
   --gray-1000: 230 100% 2.35%;
+  --grayblue-50: 218.18 52.38% 95.88%;
+  --grayblue-100: 217.89 52.78% 85.88%;
+  --grayblue-150: 222.09 54.47% 75.88%;
+  --grayblue-200: 217.83 52.87% 65.88%;
+  --grayblue-300: 217.62 53.85% 45.88%;
+  --grayblue-400: 217.96 53.26% 36.08%;
+  --grayblue-500: 217.71 53.03% 25.88%;
+  --grayblue-600: 220 52.94% 20%;
+  --grayblue-700: 220.47 53.09% 15.88%;
+  --grayblue-800: 221.14 52.24% 13.14%;
+  --grayblue-850: 220 53.57% 10.98%;
+  --grayblue-900: 220 52.94% 10%;
+  --grayblue-1000: 218.82 54.84% 6.08%;
 
   --darkblue-default: var(--darkblue-700);
   --darkblue-100: 231.67 100% 92.94%;
@@ -1178,19 +1197,19 @@
   --color-gray-900: hsl(var(--gray-900));
   --color-gray-1000: hsl(var(--gray-1000));
 
-  --color-grayblue-50: hsl(218.18 52.38% 95.88%);
-  --color-grayblue-100: hsl(217.89 52.78% 85.88%);
-  --color-grayblue-150: hsl(222.09 54.47% 75.88%);
-  --color-grayblue-200: hsl(217.83 52.87% 65.88%);
-  --color-grayblue-300: hsl(217.62 53.85% 45.88%);
-  --color-grayblue-400: hsl(217.96 53.26% 36.08%);
-  --color-grayblue-500: hsl(217.71 53.03% 25.88%);
-  --color-grayblue-600: hsl(220 52.94% 20%);
-  --color-grayblue-700: hsl(220.47 53.09% 15.88%);
-  --color-grayblue-800: hsl(221.14 52.24% 13.14%);
-  --color-grayblue-850: hsl(220 53.57% 10.98%);
-  --color-grayblue-900: hsl(220 52.94% 10%);
-  --color-grayblue-1000: hsl(218.82 54.84% 6.08%);
+  --color-grayblue-50: hsl(var(--grayblue-50));
+  --color-grayblue-100: hsl(var(--grayblue-100));
+  --color-grayblue-150: hsl(var(--grayblue-150));
+  --color-grayblue-200: hsl(var(--grayblue-200));
+  --color-grayblue-300: hsl(var(--grayblue-300));
+  --color-grayblue-400: hsl(var(--grayblue-400));
+  --color-grayblue-500: hsl(var(--grayblue-500));
+  --color-grayblue-600: hsl(var(--grayblue-600));
+  --color-grayblue-700: hsl(var(--grayblue-700));
+  --color-grayblue-800: hsl(var(--grayblue-800));
+  --color-grayblue-850: hsl(var(--grayblue-850));
+  --color-grayblue-900: hsl(var(--grayblue-900));
+  --color-grayblue-1000: hsl(var(--grayblue-1000));
 
   --color-darkblue-100: hsl(var(--darkblue-100));
   --color-darkblue-200: hsl(var(--darkblue-200));
@@ -1521,6 +1540,12 @@
   --semantic-feedback-error-secondary: var(--color-red-200);
   --semantic-feedback-error-secondary-transparency: hsl(var(--red-200) / 0.3);
   --semantic-feedback-error-tertiary: var(--color-red-700);
+  --semantic-feedback-neutral-primary: var(--color-gray-500);
+  --semantic-feedback-neutral-secondary: var(--color-gray-400);
+  --semantic-feedback-neutral-secondary-transparency: hsl(
+    var(--gray-400) / 0.2
+  );
+  --semantic-feedback-neutral-tertiary: var(--color-gray-600);
 
   --semantic-entities-analyses: hsl(var(--entity-analyse));
   --semantic-entities-analyses-transparency: hsl(var(--entity-analyse) / 0.2);
@@ -1691,6 +1716,12 @@
     --semantic-feedback-error-secondary-transparency
   );
   --color-feedback-error-tertiary: var(--semantic-feedback-error-tertiary);
+  --color-feedback-neutral-primary: var(--semantic-feedback-neutral-primary);
+  --color-feedback-neutral-secondary: var(--semantic-feedback-neutral-secondary);
+  --color-feedback-neutral-secondary-transparency: var(
+    --semantic-feedback-neutral-secondary-transparency
+  );
+  --color-feedback-neutral-tertiary: var(--semantic-feedback-neutral-tertiary);
   --color-entities-analyses: var(--semantic-entities-analyses);
   --color-entities-analyses-transparency: var(
     --semantic-entities-analyses-transparency
@@ -1835,6 +1866,12 @@ body[data-theme='Dark'] {
   --semantic-feedback-error-secondary: var(--color-red-700);
   --semantic-feedback-error-secondary-transparency: hsl(var(--red-700) / 0.3);
   --semantic-feedback-error-tertiary: var(--color-red-200);
+  --semantic-feedback-neutral-primary: var(--color-grayblue-200);
+  --semantic-feedback-neutral-secondary: var(--color-grayblue-400);
+  --semantic-feedback-neutral-secondary-transparency: hsl(
+    var(--grayblue-400) / 0.3
+  );
+  --semantic-feedback-neutral-tertiary: var(--color-grayblue-100);
 
   --semantic-entities-analyses: hsl(var(--entity-analyse));
   --semantic-entities-analyses-transparency: hsl(var(--entity-analyse) / 0.2);
@@ -2059,6 +2096,12 @@ body[data-theme='Dark'] {
     --semantic-feedback-error-secondary-transparency
   );
   --color-feedback-error-tertiary: var(--semantic-feedback-error-tertiary);
+  --color-feedback-neutral-primary: var(--semantic-feedback-neutral-primary);
+  --color-feedback-neutral-secondary: var(--semantic-feedback-neutral-secondary);
+  --color-feedback-neutral-secondary-transparency: var(
+    --semantic-feedback-neutral-secondary-transparency
+  );
+  --color-feedback-neutral-tertiary: var(--semantic-feedback-neutral-tertiary);
   --color-entities-analyses: var(--semantic-entities-analyses);
   --color-entities-analyses-transparency: var(
     --semantic-entities-analyses-transparency
