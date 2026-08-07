@@ -2145,8 +2145,8 @@ __metadata:
     "@vitejs/plugin-react": "npm:6.0.1"
     autoprefixer: "npm:10.4.27"
     postcss: "npm:8.5.10"
-    react: "npm:19.2.4"
-    react-dom: "npm:19.2.4"
+    react: "npm:19.2.7"
+    react-dom: "npm:19.2.7"
     react-markdown: "npm:10.1.0"
     remark-gfm: "npm:4.0.1"
     tailwindcss: "npm:4.2.2"
@@ -2356,8 +2356,8 @@ __metadata:
     postcss: "npm:8.5.10"
     prettier: "npm:3.8.1"
     prettier-plugin-tailwindcss: "npm:0.7.2"
-    react: "npm:19.2.4"
-    react-dom: "npm:19.2.4"
+    react: "npm:19.2.7"
+    react-dom: "npm:19.2.7"
     react-live: "npm:4.1.8"
     rehype-slug: "npm:6.0.0"
     remark-gfm: "npm:4.0.1"
@@ -14013,6 +14013,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-dom@npm:19.2.7":
+  version: 19.2.7
+  resolution: "react-dom@npm:19.2.7"
+  dependencies:
+    scheduler: "npm:^0.27.0"
+  peerDependencies:
+    react: ^19.2.7
+  checksum: 10c0/970ff600f6e80d47d39e2f226f12f226173b3cba3382efc97c5f0cd663de9af38c7a4c11c213fb936094faeac83060d660247accaa96b752180d5b951b9cfecb
+  languageName: node
+  linkType: hard
+
 "react-easy-sort@npm:1.8.0":
   version: 1.8.0
   resolution: "react-easy-sort@npm:1.8.0"
@@ -14161,6 +14172,13 @@ __metadata:
   version: 19.2.4
   resolution: "react@npm:19.2.4"
   checksum: 10c0/cd2c9ff67a720799cc3b38a516009986f7fc4cb8d3e15716c6211cf098d1357ee3e348ab05ad0600042bbb0fd888530ba92e329198c92eafa0994f5213396596
+  languageName: node
+  linkType: hard
+
+"react@npm:19.2.7":
+  version: 19.2.7
+  resolution: "react@npm:19.2.7"
+  checksum: 10c0/0bd0e2f1bbd4ba97561c6597bf8a5fec05e6476fe61e165c1065598d16668efc6715205599c94d3ddd49d36cb0f21cbf1b9bcc18ee840b805ce222c3e8d558ac
   languageName: node
   linkType: hard
 
