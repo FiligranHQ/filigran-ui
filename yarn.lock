@@ -2144,7 +2144,7 @@ __metadata:
     "@types/react-dom": "npm:19.2.3"
     "@vitejs/plugin-react": "npm:6.0.1"
     autoprefixer: "npm:10.4.27"
-    postcss: "npm:8.5.10"
+    postcss: "npm:8.5.18"
     react: "npm:19.2.4"
     react-dom: "npm:19.2.4"
     react-markdown: "npm:10.1.0"
@@ -2171,7 +2171,7 @@ __metadata:
     "@types/react-dom": "npm:19.2.3"
     eslint: "npm:10.1.0"
     eslint-config-prettier: "npm:10.1.8"
-    postcss: "npm:8.5.10"
+    postcss: "npm:8.5.18"
     prettier: "npm:3.8.1"
     react: "npm:19.2.4"
     react-dom: "npm:19.2.4"
@@ -2300,7 +2300,7 @@ __metadata:
     cmdk: "npm:1.1.1"
     date-fns: "npm:4.1.0"
     embla-carousel-react: "npm:8.6.0"
-    postcss: "npm:8.5.10"
+    postcss: "npm:8.5.18"
     prettier: "npm:3.8.1"
     prettier-plugin-organize-imports: "npm:4.3.0"
     prettier-plugin-tailwindcss: "npm:0.7.2"
@@ -2353,7 +2353,7 @@ __metadata:
     next: "npm:16.2.1"
     next-mdx-remote: "npm:6.0.0"
     next-themes: "npm:0.4.6"
-    postcss: "npm:8.5.10"
+    postcss: "npm:8.5.18"
     prettier: "npm:3.8.1"
     prettier-plugin-tailwindcss: "npm:0.7.2"
     react: "npm:19.2.4"
@@ -12014,6 +12014,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nanoid@npm:^3.3.12":
+  version: 3.3.17
+  resolution: "nanoid@npm:3.3.17"
+  bin:
+    nanoid: bin/nanoid.cjs
+  checksum: 10c0/06f7949c7cce5c92c6aea66022f29a1eae7f56e05acbfddf1e049e819b4bf234c44a765cc44da7163482b111677948514012e27acdfa56f95309295768bdae32
+  languageName: node
+  linkType: hard
+
 "napi-postinstall@npm:^0.3.0":
   version: 0.3.4
   resolution: "napi-postinstall@npm:0.3.4"
@@ -13312,14 +13321,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:8.5.10":
-  version: 8.5.10
-  resolution: "postcss@npm:8.5.10"
+"postcss@npm:8.5.18":
+  version: 8.5.18
+  resolution: "postcss@npm:8.5.18"
   dependencies:
-    nanoid: "npm:^3.3.11"
+    nanoid: "npm:^3.3.12"
     picocolors: "npm:^1.1.1"
     source-map-js: "npm:^1.2.1"
-  checksum: 10c0/c592dffa0c4873b401f01955b265538d9942f425040df5e2b8f0ad34c83773a792ea0fa5859ccc99cfb5b955b4ebff118ab7056315388dc83b107b0fa8313576
+  checksum: 10c0/6fbab24a457ca5b90d423c333d0bab13e6646fda646e83235eed892f9e4f2dc6c50689ddc5ac1632fc085be2e096d2e8e03779ac092de6353e1cfcbbc3681685
   languageName: node
   linkType: hard
 
