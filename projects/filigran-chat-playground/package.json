@@ -18,13 +18,13 @@
     "remark-gfm": "4.0.1"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "0.5.19",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "6.0.1",
-    "autoprefixer": "10.4.27",
+    "@tailwindcss/typography": "0.5.20",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "autoprefixer": "10.5.4",
     "postcss": "8.5.10",
-    "tailwindcss": "4.2.2",
+    "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
     "vite": "8.0.3"
   }
