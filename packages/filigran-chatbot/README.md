@@ -10,7 +10,10 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
 - 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose
-- 📝 **Full Markdown** — Tables, code blocks with copy button, lists, blockquotes
+- 📝 **Full Markdown** — Tables (mis-delimited ones repaired), code blocks with copy button, lists, blockquotes, soft line breaks, inline images with a lightbox
+- 🖼️ **Image Previews** — `data:image/*` charts and image attachments render inline, click to expand
+- 📋 **Copy & Rate** — Copy any answer; optional 👍/👎 feedback wired to the host
+- ✍️ **Draft Recovery** — Unsent composer text is kept per conversation and restored when the panel reopens
 - 🎨 **Customizable Theme** — Accent color and logo customization
 - 📱 **3 Display Modes** — Floating, sidebar (resizable), and fullscreen
 - 💾 **Persistence** — Conversation and sidebar width saved to localStorage
@@ -74,6 +77,8 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onWidthChange`     | `(width: number) => void`                 | —            | Called when sidebar width changes during resize                  |
 | `onResizeStart`     | `() => void`                              | —            | Called when resize drag starts                                   |
 | `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
+| `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Enables 👍/👎 on completed assistant answers and receives each rating (`null` clears it). Omit to hide the affordance — the panel stores nothing itself. |
+| `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
 
 #### Resizable Sidebar Example
 
@@ -478,11 +483,51 @@ import '@filigran/chatbot/styles.css';
 
 The component uses Tailwind CSS classes and CSS custom properties for theming. The accent color is applied via `--chat-accent` CSS variable.
 
+## Markdown Helpers
+
+A host that renders assistant prose with its **own** markdown component (its
+design tokens, its icon set) should still normalise the text the same way the
+panel does, rather than maintaining a divergent copy. These pure
+`string → string` helpers ship from the dedicated **`@filigran/chatbot/markdown`**
+entry point — ~2 kB, no React, no CSS. Import them from there and never from the
+package root, which is the full panel bundle:
+
+```tsx
+import {
+  hardenNestedCodeFences,
+  markdownUrlTransform,
+  normalizeImageMarkdown,
+  normalizeMarkdownTables,
+  wrapBareJson,
+} from '@filigran/chatbot/markdown';
+
+const processed = hardenNestedCodeFences(
+  normalizeMarkdownTables(wrapBareJson(normalizeImageMarkdown(content))),
+);
+
+<ReactMarkdown urlTransform={markdownUrlTransform}>{processed}</ReactMarkdown>;
+```
+
+Order matters: alt-text is flattened before anything reads line structure, and
+the JSON wrap must see the raw payload before fences are hardened.
+
+| Helper                    | Fixes                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `normalizeImageMarkdown`  | Multi-line `![alt](url)` alt text, which breaks the image into literal paragraphs plus a stray link             |
+| `wrapBareJson`            | A whole message that is raw JSON — fenced as ```json so it stays readable and copyable                          |
+| `normalizeMarkdownTables` | A delimiter row whose column count doesn't match the header, including tables nested in blockquotes / list items |
+| `hardenNestedCodeFences`  | A ```markdown block containing its own ``` fences, which shatters the snippet into alternating code and prose   |
+| `markdownUrlTransform`    | react-markdown's default sanitiser stripping `data:image/*` URIs (code-interpreter charts). Still blocks `javascript:` and non-image `data:` |
+
+None of them touch content they don't apply to — an already-valid document is
+returned byte-identical.
+
 ## Peer Dependencies
 
 - `react` >= 18
 - `react-dom` >= 18
 - `react-markdown` >= 10
+- `remark-breaks` >= 4
 - `remark-gfm` >= 4
 
 ---

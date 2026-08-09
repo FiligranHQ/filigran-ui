@@ -1,5 +1,7 @@
 export type ChatMode = 'sidebar' | 'floating' | 'fullscreen';
 export type BackendType = 'legacy' | 'rest' | 'ag-ui';
+/** A user's rating of one assistant answer. */
+export type MessageFeedback = 'up' | 'down';
 
 /**
  * Custom API endpoint configuration.
@@ -147,6 +149,20 @@ export interface ChatPanelProps {
    * Receives the already-translated `title` and `body`.
    */
   onTaskComplete?: (title: string, body: string) => void;
+  /**
+   * Enables the 👍/👎 affordance on completed assistant messages and receives
+   * each rating. `feedback` is `null` when the user clears a previous rating.
+   * Omit to hide the affordance entirely — the chatbot stores nothing itself,
+   * so a host without a feedback endpoint should not show the buttons.
+   */
+  onMessageFeedback?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
+  /**
+   * Disable the inline preview of image attachments (they render as ordinary
+   * download cards instead). Previews fetch the image through the host download
+   * proxy, so hosts that meter or restrict that endpoint can opt out.
+   * Default: false.
+   */
+  disableImagePreviews?: boolean;
 }
 
 export interface ChatToggleButtonProps {
@@ -238,6 +254,14 @@ export interface AgentStatusState {
    * so long executions (background tasks, consults) never look stuck.
    */
   elapsedS?: number;
+  /**
+   * Wall-clock instant (ms) at which the current tool batch started, derived
+   * from `elapsedS` on each heartbeat. Heartbeats only arrive every ~10s, so
+   * rendering `elapsedS` directly makes the timer sit still and then jump.
+   * Anchoring here lets the indicator tick once a second locally and
+   * re-synchronise on every beat.
+   */
+  elapsedStartMs?: number;
 }
 
 export interface ChatFile {

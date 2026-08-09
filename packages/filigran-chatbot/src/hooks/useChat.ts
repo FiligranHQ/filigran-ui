@@ -1,10 +1,43 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AgentStatusState, ApiEndpoints, BackendType, ChatFile, ChatMessage } from '../types';
 import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
 
 const STORAGE_KEY = 'filigranChatConversationId';
 const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
+
+/**
+ * Unsent composer text is kept per conversation so closing the panel (hosts
+ * unmount `<ChatPanel/>` when it is closed) or switching conversation doesn't
+ * discard a half-written question. `sessionStorage`, not `localStorage`: a
+ * draft is scoped to the tab and dies with it.
+ */
+const DRAFT_KEY_PREFIX = 'filigranChatDraft:';
+/** Debounce on draft writes so a fast typist doesn't hit storage per keystroke. */
+const DRAFT_PERSIST_DELAY_MS = 300;
+
+const draftKey = (conversationId: string | null): string => `${DRAFT_KEY_PREFIX}${conversationId ?? 'new'}`;
+
+function loadDraft(conversationId: string | null): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return sessionStorage.getItem(draftKey(conversationId)) ?? '';
+  } catch {
+    // Storage can throw in restricted/private browsing contexts — a chat
+    // without draft recovery is far better than a chat that fails to mount.
+    return '';
+  }
+}
+
+function persistDraft(conversationId: string | null, value: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (value) sessionStorage.setItem(draftKey(conversationId), value);
+    else sessionStorage.removeItem(draftKey(conversationId));
+  } catch {
+    /* ignore — see loadDraft */
+  }
+}
 
 /** Maximum number of files that can be attached to a single message. */
 const DEFAULT_MAX_FILE_COUNT = 10;
@@ -151,13 +184,15 @@ export function useChat({
 }: UseChatOptions): UseChatReturn {
   const isLegacy = backendType === 'legacy';
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [agentStatus, setAgentStatus] = useState<AgentStatusState | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem(STORAGE_KEY);
   });
+  // Seeded from the persisted draft of whichever conversation we mount into,
+  // so re-opening the panel restores what the user had typed.
+  const [inputValue, setInputValue] = useState(() => loadDraft(typeof window === 'undefined' ? null : localStorage.getItem(STORAGE_KEY)));
   const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
   const [transferredAgent, setTransferredAgent] = useState<TransferredAgent | null>(null);
   const [legacyChatId, setLegacyChatId] = useState<string | null>(() => {
@@ -569,8 +604,13 @@ export function useChat({
                   // elapsed counter but KEEP the current status label/tools —
                   // replacing the status would flip e.g. "Waiting for
                   // background task…" back to "Thinking…" mid-execution.
+                  // Re-anchor the elapsed origin on every beat so the local
+                  // 1s ticker in ChatThinking stays true to the server clock.
+                  const elapsedStartMs = typeof parsed.elapsedS === 'number' ? Date.now() - parsed.elapsedS * 1000 : undefined;
                   setAgentStatus((prev) =>
-                    prev ? { ...prev, elapsedS: parsed.elapsedS } : { status: 'tool_start', tools: parsed.tools, elapsedS: parsed.elapsedS },
+                    prev
+                      ? { ...prev, elapsedS: parsed.elapsedS, elapsedStartMs }
+                      : { status: 'tool_start', tools: parsed.tools, elapsedS: parsed.elapsedS, elapsedStartMs },
                   );
                 } else {
                   setAgentStatus((prev) => ({
@@ -702,6 +742,9 @@ export function useChat({
     handleNewChat();
     if (!isLegacy) {
       updateConversationId(id);
+      // `handleNewChat` blanked the composer; bring back this conversation's
+      // own unsent draft, if any.
+      setInputValue(loadDraft(id));
     }
   };
 
@@ -713,6 +756,27 @@ export function useChat({
     hasUsedToolsRef.current = false;
     setMessages((prev) => prev.filter((m) => !(m.role === 'assistant' && !m.content)));
   };
+
+  // Persist the composer draft against the conversation it belongs to. Writing
+  // an empty value removes the entry, so sending (which blanks the composer)
+  // also clears the draft — no explicit cleanup needed at the send sites.
+  useEffect(() => {
+    const id = window.setTimeout(() => persistDraft(conversationId, inputValue), DRAFT_PERSIST_DELAY_MS);
+    return () => window.clearTimeout(id);
+  }, [inputValue, conversationId]);
+
+  // Flush the pending draft on unmount. Hosts unmount the panel the instant it
+  // is closed, which would otherwise drop anything typed inside the debounce
+  // window — exactly the keystrokes the draft exists to protect.
+  const draftFlushRef = useRef({ conversationId, inputValue });
+  draftFlushRef.current = { conversationId, inputValue };
+  useEffect(
+    () => () => {
+      const { conversationId: id, inputValue: value } = draftFlushRef.current;
+      persistDraft(id, value);
+    },
+    [],
+  );
 
   // Steering affordances are only advertised when the typed text can actually
   // be dispatched mid-run: a response is streaming (isLoading), the REST steer

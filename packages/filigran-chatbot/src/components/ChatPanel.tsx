@@ -1,4 +1,4 @@
-import { type FunctionComponent, useCallback, useEffect, useRef, useState } from 'react';
+import { type FunctionComponent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatAttachment, ChatMessage, ChatPanelProps } from '../types';
 import { hexAlpha, identity } from '../utils';
 import { parseAttachments, parseToolCallTrace, parseTransferChain } from '../hooks/protocols/parseRestEvent';
@@ -54,6 +54,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   miniGameEnabled = true,
   notifyOnComplete = true,
   onTaskComplete,
+  onMessageFeedback,
+  disableImagePreviews = false,
 }) => {
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
@@ -172,7 +174,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     };
   }, [pushContentSelector, mode, sidebarWidth, defaultWidth, resizable, isResizing]);
 
-  const resolvedLogo = logoIcon ?? <DefaultLogoIcon size={24} />;
+  // Stable across renders so the memoized message rows (which take it as a
+  // prop) aren't invalidated on every streamed frame.
+  const resolvedLogo = useMemo(() => logoIcon ?? <DefaultLogoIcon size={24} />, [logoIcon]);
   const firstName = user.firstName;
   const agentName = transferredAgent?.name || selectedAgent?.name || 'Assistant';
 
@@ -232,10 +236,19 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   const downloadPathProvided = apiEndpoints?.download !== null && apiEndpoints?.download !== undefined;
   const canDownload = backendType === 'rest' && apiEndpoints?.download !== null && (!apiEndpoints?.singleEndpoint || downloadPathProvided);
 
+  // The host-proxied URL of an attachment. Shared by the download action and
+  // the inline image preview so both resolve against the same proxy route.
+  const resolveAttachmentUrl = useCallback(
+    (att: ChatAttachment) => {
+      const base = apiEndpoints?.download ?? '/chat/files';
+      return `${apiBaseUrl}${base}/${encodeURIComponent(att.fileId)}/download`;
+    },
+    [apiBaseUrl, apiEndpoints],
+  );
+
   const handleDownloadFile = useCallback(
     async (att: ChatAttachment) => {
-      const base = apiEndpoints?.download ?? '/chat/files';
-      const url = `${apiBaseUrl}${base}/${encodeURIComponent(att.fileId)}/download`;
+      const url = resolveAttachmentUrl(att);
       try {
         const res = await fetch(url, {
           method: 'GET',
@@ -260,7 +273,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         onDownloadError?.(err, att);
       }
     },
-    [apiBaseUrl, apiEndpoints, requestHeaders, onDownloadError],
+    [resolveAttachmentUrl, requestHeaders, onDownloadError],
   );
 
   const cssVars = {
@@ -480,7 +493,10 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           logoIcon={resolvedLogo}
           onRelativeLinkClick={onRelativeLinkClick}
           onDownloadFile={canDownload ? handleDownloadFile : undefined}
+          resolveAttachmentUrl={canDownload && !disableImagePreviews ? resolveAttachmentUrl : undefined}
+          requestHeaders={requestHeaders}
           miniGameEnabled={miniGameEnabled}
+          onMessageFeedback={onMessageFeedback}
           t={t}
         />
       )}

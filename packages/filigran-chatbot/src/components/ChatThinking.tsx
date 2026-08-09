@@ -240,7 +240,27 @@ function useStalled(signal: number, delayMs: number, enabled: boolean): boolean 
 export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true }: ChatThinkingProps) => {
   const { label, StatusIcon, showDots } = resolveStatusVisual(agentStatus, t);
   const thinkingContent = agentStatus?.thinkingContent;
-  const elapsedS = agentStatus?.elapsedS;
+
+  // Tick the elapsed counter every second. The backend only reports a fresh
+  // value once every ~10s (`tool_heartbeat`), so rendering that integer
+  // directly makes the timer sit still and then jump ~10s at a time. Each
+  // heartbeat re-anchors `elapsedStartMs` (the instant elapsed was zero); the
+  // displayed seconds are derived from that anchor plus a local 1s ticker, so
+  // the number moves smoothly and self-corrects on every beat. The interval
+  // only runs while an anchor is present, and this state is local to the
+  // indicator so the tick never re-renders the surrounding message list.
+  const elapsedStartMs = agentStatus?.elapsedStartMs;
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (elapsedStartMs == null) return;
+    setNowMs(Date.now());
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [elapsedStartMs]);
+
+  // Fall back to the raw heartbeat value for backends/protocols that report
+  // `elapsedS` without an anchor.
+  const elapsedS = elapsedStartMs != null ? Math.max(0, (nowMs - elapsedStartMs) / 1000) : agentStatus?.elapsedS;
   const showElapsed = typeof elapsedS === 'number' && elapsedS >= ELAPSED_DISPLAY_THRESHOLD_S;
   // Show the waiting game when reasoning is absent or has stalled for 5s; flip
   // back to the reasoning window the moment new reasoning text resumes (the
