@@ -5,39 +5,57 @@ Test playground for `@filigran/chatbot` component development.
 ## Getting Started
 
 ```bash
-# From monorepo root
 yarn install
-
-# Start the playground dev server
 yarn workspace @filigran/chat-playground dev
 ```
 
-The playground runs at `http://localhost:5173` by default.
+Open <http://localhost:3020>. **No backend needed** — the dev server answers the
+chat API itself (see [Mock backend](#mock-backend)).
 
-## Features
+The package is aliased to its **source**, so edits under
+`packages/filigran-chatbot/src` hot-reload straight into the panel.
 
-- Toggle between floating, sidebar, and fullscreen modes
-- Dark/light mode switching
-- Verification checklist for manual testing
+## What you can exercise
 
-## API Backend
+- Floating / sidebar / fullscreen modes, dark and light
+- Every host callback the panel exposes (`onMessageFeedback`, `onTaskComplete`,
+  `onDownloadError`, `onRelativeLinkClick`) — each one logs to the
+  **Host callbacks** card, which is the only way to see that the panel really
+  calls them
+- The verification checklist on the page
 
-The playground expects a chat API at `/api/xtmone`. For local development, you'll need to either:
+## Mock backend
 
-1. Run a mock server that implements the [API contract](../../packages/filigran-chatbot/README.md#api-contract)
-2. Configure Vite to proxy requests to a real backend
+The dev server implements the REST contract from the
+[package README](../../packages/filigran-chatbot/README.md#api-contract) —
+agents, session restore, conversation history, streaming messages, uploads and
+file downloads — in [`mock-api.ts`](./mock-api.ts). Conversations live in memory
+and reset when the server restarts.
 
-### Vite Proxy Example
+Type one of these into the panel to pick a scenario:
 
-Add to `vite.config.ts`:
+| Prompt              | What it exercises                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `render everything` | Multi-line image alt text, a fence with no info string, a mis-delimited table, a `javascript:` link, lists, soft breaks, an image attachment and a working-file chip |
+| `show me json`      | A whole message that is raw JSON — should render as a fenced `json` block            |
+| `nested fences`     | A ` ```markdown ` block containing its own fences, plus trailing prose that must survive |
+| `slow answer`       | A stalled turn: the elapsed counter ticks every second between heartbeats, then the waiting game takes over |
+| `long thread`       | 200 backfilled messages — reload after sending to hit the session-restore path and the render window |
 
-```ts
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    proxy: {
-      '/api': 'http://localhost:8000',
-    },
-  },
-});
+Anything else gets the `render everything` answer.
+
+### Pointing at a real backend
+
+```bash
+CHAT_API_PROXY=http://localhost:8000 yarn workspace @filigran/chat-playground dev
 ```
+
+The mock steps aside and `/api/xtmone` is proxied to that origin instead.
+
+## Styling note
+
+Two Tailwind builds run in this project: the playground's own, and the package's
+`src/assets/index.css` compiled from source. They stay consistent because the
+package stylesheet declares `@source '../'` (so it scans its own components no
+matter which project's PostCSS root compiles it) and both declare the same
+class-based `dark` variant. Change one and you must change the other.

@@ -1,6 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+/* Class-based dark mode. Declared exactly as the chatbot package declares it
+   (`@variant dark (.dark &)`) so the two Tailwind builds in this project emit
+   byte-identical dark rules for any class they both happen to see. */
+@custom-variant dark (.dark &);
 
 body {
   margin: 0;

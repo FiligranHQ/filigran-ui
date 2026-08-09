@@ -1,11 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChatPanel, ChatToggleButton } from '@filigran/chatbot';
-import type { ChatMode } from '@filigran/chatbot';
+import type { ChatMode, MessageFeedback } from '@filigran/chatbot';
+
+interface LogEntry {
+  at: string;
+  text: string;
+}
+
+/** Prompts that steer the built-in mock towards a specific scenario. */
+const SCENARIOS: { prompt: string; label: string; covers: string }[] = [
+  { prompt: 'render everything', label: 'Kitchen sink', covers: 'images, tables, code, lists, links, soft breaks' },
+  { prompt: 'show me json', label: 'Bare JSON', covers: 'a whole message that is raw JSON' },
+  { prompt: 'nested fences', label: 'Nested fences', covers: 'a ```markdown block containing its own fences' },
+  { prompt: 'slow answer', label: 'Slow turn', covers: 'elapsed counter, stall, waiting game' },
+  { prompt: 'long thread', label: 'Long thread', covers: '200 backfilled messages — render window' },
+];
 
 const App = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<ChatMode>('floating');
   const [isDark, setIsDark] = useState(true);
+  const [log, setLog] = useState<LogEntry[]>([]);
 
   // Put dark class on <html> so portal-based elements (tooltips, dropdowns) also get dark: styles
   // This one may need adaptation to work with any app
@@ -13,14 +28,30 @@ const App = () => {
     document.documentElement.classList.toggle('dark', isDark);
   }, [isDark]);
 
+  const push = useCallback((text: string) => {
+    setLog((prev) => [{ at: new Date().toLocaleTimeString(), text }, ...prev].slice(0, 8));
+  }, []);
+
+  // Host callbacks the panel expects to be wired. Logging them here is the
+  // point: it is the only way to see that the panel actually calls them.
+  const handleMessageFeedback = useCallback(
+    (id: string, feedback: MessageFeedback | null) => {
+      push(feedback ? `feedback ${feedback} on ${id}` : `feedback cleared on ${id}`);
+    },
+    [push],
+  );
+  const handleTaskComplete = useCallback((title: string, body: string) => push(`task complete — ${title}: ${body}`), [push]);
+  const handleDownloadError = useCallback((_err: unknown, att: { filename: string }) => push(`download failed — ${att.filename}`), [push]);
+  const handleRelativeLink = useCallback((href: string) => push(`internal link — ${href}`), [push]);
+
+  const card = 'bg-white dark:bg-[#1e1e2e] rounded-xl p-6 border border-gray-200 dark:border-white/10';
+
   return (
     <div>
       <div className="min-h-screen bg-gray-100 dark:bg-[#0d0d1a] transition-colors">
         {/* Top bar */}
         <header className="flex items-center justify-between px-6 py-3 bg-white dark:bg-[#1a1a2e] border-b border-gray-200 dark:border-white/10">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Filigran Chat Playground
-          </h1>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Filigran Chat Playground</h1>
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -29,18 +60,13 @@ const App = () => {
             >
               {isDark ? 'Light mode' : 'Dark mode'}
             </button>
-            <ChatToggleButton
-              isOpen={isOpen}
-              onToggle={() => setIsOpen((o) => !o)}
-              label="Ask Assistant"
-              accentColor="#7b5cff"
-            />
+            <ChatToggleButton isOpen={isOpen} onToggle={() => setIsOpen((o) => !o)} label="Ask Assistant" accentColor="#7b5cff" />
           </div>
         </header>
 
         {/* Main content area */}
-        <main className="p-8 max-w-3xl mx-auto">
-          <div className="bg-white dark:bg-[#1e1e2e] rounded-xl p-6 border border-gray-200 dark:border-white/10 mb-6">
+        <main className="p-8 max-w-3xl mx-auto space-y-6">
+          <div className={card}>
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Test Controls</h2>
 
             {/* Mode selector */}
@@ -65,7 +91,7 @@ const App = () => {
             </div>
 
             {/* Open/close */}
-            <div className="mb-4">
+            <div>
               <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Panel:</p>
               <button
                 type="button"
@@ -77,8 +103,47 @@ const App = () => {
             </div>
           </div>
 
+          {/* Scenarios understood by the built-in mock backend */}
+          <div className={card}>
+            <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Scenarios</h2>
+            <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
+              The dev server answers these itself — no backend needed. Type the prompt into the panel to trigger one.
+            </p>
+            <ul className="space-y-2 text-sm">
+              {SCENARIOS.map((s) => (
+                <li key={s.prompt} className="flex flex-wrap items-baseline gap-2">
+                  <code className="rounded bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 font-mono text-xs text-gray-900 dark:text-white">{s.prompt}</code>
+                  <span className="font-medium text-gray-900 dark:text-white">{s.label}</span>
+                  <span className="text-gray-500 dark:text-white/40">— {s.covers}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-xs text-gray-500 dark:text-white/40">
+              Point at a real backend instead with <code className="font-mono">CHAT_API_PROXY=http://localhost:8000 yarn dev</code>.
+            </p>
+          </div>
+
+          {/* Host callbacks — proof the panel actually calls them */}
+          <div className={card}>
+            <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Host callbacks</h2>
+            <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
+              Rate an answer, click an internal link, or let a long turn finish with the panel closed.
+            </p>
+            {log.length === 0 ? (
+              <p className="text-sm italic text-gray-400 dark:text-white/30">Nothing yet.</p>
+            ) : (
+              <ul className="space-y-1 font-mono text-xs">
+                {log.map((entry, i) => (
+                  <li key={i} className="text-gray-700 dark:text-white/70">
+                    <span className="text-gray-400 dark:text-white/30">{entry.at}</span> {entry.text}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           {/* Verification checklist */}
-          <div className="bg-white dark:bg-[#1e1e2e] rounded-xl p-6 border border-gray-200 dark:border-white/10">
+          <div className={card}>
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Verification Checklist</h2>
             <ul className="space-y-2 text-sm text-gray-700 dark:text-white/70">
               {[
@@ -86,12 +151,17 @@ const App = () => {
                 'Agent dropdown opens/closes, click-outside dismisses',
                 'Mode switcher transitions between modes',
                 'Send a message and verify SSE streaming renders progressively',
-                'Markdown rendering: code blocks, copy button, lists, tables, links',
+                'Markdown: tables (incl. the mis-delimited one), fenced code with and without a language, lists show bullets/numbers, soft line breaks',
+                'Images: inline chart and image attachment both preview; click opens the lightbox; Escape closes it',
+                'The javascript: link is inert, the https: one opens in a new tab',
+                'Hover an answer: copy button and 👍/👎 appear; ratings show up under "Host callbacks"',
+                'Reasoning details ("i") opens the tool trace',
+                'Long thread: "Load earlier messages" appears and walks the window back',
+                'Slow turn: elapsed counter ticks every second, then the waiting game appears',
+                'Draft: type, close the panel, reopen — the text is restored; sending clears it',
                 'File attachment via button click and paste',
-                'New chat clears state',
-                'Conversation restoration on reload',
-                'Dark/light mode toggle works correctly',
-                'Toggle button shows open/closed state',
+                'New chat clears state; conversation history lists and restores past chats',
+                'Dark/light mode toggle works correctly in both themes',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <input type="checkbox" className="mt-0.5 accent-[#7b5cff]" />
@@ -113,12 +183,11 @@ const App = () => {
             agentDashboardUrl="https://xtm.example.com"
             user={{ firstName: 'Tester' }}
             accentColor="#7b5cff"
-            promptSuggestions={[
-              'Help me create a new simulation scenario',
-              'What are the latest attack patterns?',
-              'How do I configure detection rules?',
-              'Summarize my recent findings',
-            ]}
+            promptSuggestions={SCENARIOS.map((s) => s.prompt)}
+            onMessageFeedback={handleMessageFeedback}
+            onTaskComplete={handleTaskComplete}
+            onDownloadError={handleDownloadError}
+            onRelativeLinkClick={handleRelativeLink}
           />
         )}
       </div>
