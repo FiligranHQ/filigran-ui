@@ -143,7 +143,14 @@ export const ChatHeader = ({
         </span>
         {/* Three distinct states, because an empty array alone cannot tell them
             apart — and treating "failed" as "still loading" is what left this
-            menu spinning forever against an unreachable backend. */}
+            menu spinning forever against an unreachable backend.
+
+            The last one is NOT "the catalogue is empty": XTM One always seeds
+            agents, so a working backend never answers with none. It is reached
+            when the fetch is skipped altogether — `apiEndpoints.agents: null`,
+            single-endpoint mode (OpenCTI) or the legacy backend — where there
+            is simply nothing to switch between. The menu still earns its place
+            there: it carries the agent-dashboard links below. */}
         {agents.length === 0 && agentsLoading && (
           <div className="px-4 py-2">
             <Spinner size={16} />
@@ -156,7 +163,7 @@ export const ChatHeader = ({
           </div>
         )}
         {agents.length === 0 && !agentsLoading && !agentsError && (
-          <div className="px-4 py-3 text-[0.75rem] text-gray-400 dark:text-white/40">{t('No agent is available')}</div>
+          <div className="px-4 py-3 text-[0.75rem] text-gray-400 dark:text-white/40">{t('Agent switching is not available here')}</div>
         )}
         {showAgentSearch && (
           <div className="px-3 pb-2 pt-1">
