@@ -89,9 +89,15 @@ const App = () => {
           A host that wants the whole shell to shrink should pass
           `topOffset={0}` and move `#app-content` up to wrap the header as well.
         */}
+        {/*
+          Sticky, like the real integration's header. The panel is pinned at
+          `topOffset={HEADER_HEIGHT}` and never scrolls, so a header that
+          scrolled away would leave the panel starting below a gap — and would
+          take the button that closes it out of reach.
+        */}
         <header
           style={{ height: HEADER_HEIGHT }}
-          className="flex items-center justify-between px-6 bg-white dark:bg-[#1a1a2e] border-b border-gray-200 dark:border-white/10"
+          className="sticky top-0 z-30 flex items-center justify-between px-6 bg-white dark:bg-[#1a1a2e] border-b border-gray-200 dark:border-white/10"
         >
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Filigran Chat Playground</h1>
           <div className="flex items-center gap-3">
