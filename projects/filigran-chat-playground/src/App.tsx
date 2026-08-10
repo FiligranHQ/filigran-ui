@@ -201,7 +201,8 @@ const App = () => {
                 {[
                   'Sidebar mode pushes the page aside (it must not overlay it) and the drag handle resizes it',
                   'Leaving sidebar mode — or closing the panel — removes the push completely',
-                  'All 3 modes render with correct positioning/dimensions',
+                  'Fullscreen shows the conversation sidebar: select switches thread, delete removes a row, the collapse toggle works, and the header history menu is gone',
+                'All 3 modes render with correct positioning/dimensions',
                   'Agent dropdown opens/closes, click-outside dismisses',
                   'Mode switcher transitions between modes',
                   'Send a message and verify SSE streaming renders progressively',

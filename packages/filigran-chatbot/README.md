@@ -6,7 +6,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 
 - 🔄 **SSE Message Streaming** — Real-time response streaming with status indicators
 - ⚡ **Mid-Run Steering** — Send messages while the agent is generating; they are injected into the running agentic loop instead of waiting for the turn to finish
-- 🗂️ **Conversation History** — Switch between (and delete) past conversations from a history menu in the header
+- 🗂️ **Conversation History** — Switch between (and delete) past conversations from a header menu, or from a permanent sidebar in fullscreen mode (collapsible, searchable past 7 entries)
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
 - 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose

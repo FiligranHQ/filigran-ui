@@ -13,6 +13,7 @@ import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
 import { ChatWelcome } from './ChatWelcome';
+import { ConversationSidebar } from './ConversationSidebar';
 
 const FLOATING_WIDTH = 380;
 const FLOATING_HEIGHT = 560;
@@ -110,12 +111,6 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
 
   // A finished turn has consumed allowance, so re-read it rather than leaving a
   // stale figure on screen until the panel is reopened.
-  const wasLoadingRef = useRef(false);
-  useEffect(() => {
-    if (wasLoadingRef.current && !isLoading) refreshQuota();
-    wasLoadingRef.current = isLoading;
-  }, [isLoading, refreshQuota]);
-
   const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation } = useConversations({
     apiBaseUrl,
     apiEndpoints,
@@ -123,6 +118,32 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     requestHeaders,
   });
   const [historyMenuOpen, setHistoryMenuOpen] = useState(false);
+
+  // Fullscreen shows the conversation list permanently, so it has to be
+  // fetched on entry rather than lazily when a menu opens. Kept collapsible:
+  // fullscreen is also the mode people use to read a long answer.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const showConversationSidebar = mode === 'fullscreen' && historyEnabled;
+
+  // Re-read on entry AND whenever the active conversation changes, so a chat
+  // created by the first send appears in the list. The header menu could fetch
+  // lazily on open; a permanent list has no such moment, and a stale sidebar
+  // that never shows the conversation you are in is worse than no sidebar.
+  useEffect(() => {
+    if (showConversationSidebar) void refreshConversations();
+  }, [showConversationSidebar, conversationId, refreshConversations]);
+
+  // A finished turn has consumed allowance and may have retitled the chat.
+  const wasLoadingRef = useRef(false);
+  useEffect(() => {
+    if (wasLoadingRef.current && !isLoading) {
+      refreshQuota();
+      // The backend titles a conversation from its first message, so the row
+      // stays "New conversation" until the turn is read back.
+      if (showConversationSidebar) void refreshConversations();
+    }
+    wasLoadingRef.current = isLoading;
+  }, [isLoading, refreshQuota, showConversationSidebar, refreshConversations]);
 
   const handleHistoryMenuToggle = () => {
     // Computed from the committed state in the event handler — NOT inside the
@@ -488,7 +509,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         onClose={onClose}
         logoIcon={resolvedLogo}
         agentDashboardUrl={agentDashboardUrl}
-        historyEnabled={historyEnabled}
+        historyEnabled={historyEnabled && !showConversationSidebar}
         historyMenuOpen={historyMenuOpen}
         onHistoryMenuToggle={handleHistoryMenuToggle}
         onHistoryMenuClose={() => setHistoryMenuOpen(false)}
@@ -499,6 +520,25 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         onDeleteConversation={(id) => void handleDeleteConversation(id)}
         t={t}
       />
+      {/* Fullscreen puts the conversation list beside the thread. The header
+          stays full width above both: it carries the agent picker, the mode
+          switcher and close, which belong to the panel rather than to either
+          column. `min-h-0` lets the thread scroll instead of growing the row. */}
+      <div className={showConversationSidebar ? 'flex flex-1 min-h-0' : 'contents'}>
+        {showConversationSidebar && (
+          <ConversationSidebar
+            conversations={conversations}
+            loading={conversationsLoading}
+            activeConversationId={conversationId}
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
+            onSelect={handleSelectConversation}
+            onDelete={(id) => void handleDeleteConversation(id)}
+            onNewChat={handleNewChat}
+            t={t}
+          />
+        )}
+        <div className={showConversationSidebar ? 'flex flex-1 flex-col min-w-0' : 'contents'}>
       {messages.length === 0 ? (
         <ChatWelcome firstName={firstName} logoIcon={resolvedLogo} promptSuggestions={promptSuggestions} onPromptClick={setInputValue} t={t} />
       ) : (
@@ -535,6 +575,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         quota={quota}
         composerToolbar={composerToolbar}
       />
+        </div>
+      </div>
     </div>
   );
 };
