@@ -103,36 +103,53 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 }
 
 export function realChatApi(config: RealApiConfig): Plugin {
-  const sessions = createSessionStore();
+  const sessions = createSessionStore(config.secret);
   // Derived once, at start-up: the JWKS must be servable before any trust is
   // established, because XTM One fetches it *during* the request that
   // establishes it.
   const identity = createIdentity(config.secret);
 
   /**
-   * The registration + proof, run once, on the first successful sign-in.
+   * The registration + proof.
    *
    * Deferred rather than done at start-up for two reasons: XTM One may not be
    * running yet (the dev server must still boot), and proving the chain needs
-   * an account known to exist — which is exactly what a successful sign-in
-   * gives us. `null` while unproven; the string form is the diagnosis.
+   * an account known to exist — which a signed-in session provides.
+   *
+   * Re-established on demand, not only at sign-in: this file is a Vite config
+   * dependency, so editing it restarts the server and clears `trust`, and an
+   * already-signed-in browser would otherwise get 401s until it signed in
+   * again. `null` while unproven; the string form is the diagnosis.
    */
   let trust: TrustSetup | null = null;
   let trustError: string | null = null;
+  let inFlight: Promise<TrustSetup | null> | null = null;
   let agentBootstrapped = false;
 
-  async function ensureTrust(probeEmail: string): Promise<TrustSetup | null> {
-    if (trust) return trust;
-    const result = await establishTrust({ ...config, identity, probeEmail });
-    if (typeof result === 'string') {
-      trustError = result;
-      console.warn(`  [real-api] platform trust not established — ${result}`);
-      return null;
-    }
-    trust = result;
-    trustError = null;
-    console.log(`  [real-api] registered as "${config.identifier}" (iss ${result.issuer}, aud ${result.audience})`);
-    return trust;
+  function ensureTrust(probeEmail: string): Promise<TrustSetup | null> {
+    if (trust) return Promise.resolve(trust);
+    // Deduped: a page reload fires several requests at once, and each one
+    // would otherwise start its own registration round.
+    if (inFlight) return inFlight;
+
+    inFlight = (async () => {
+      try {
+        const result = await establishTrust({ ...config, identity, probeEmail });
+        if (typeof result === 'string') {
+          trustError = result;
+          console.warn(`  [real-api] platform trust not established — ${result}`);
+          return null;
+        }
+        trust = result;
+        trustError = null;
+        console.log(`  [real-api] registered as "${config.identifier}" (iss ${result.issuer}, aud ${result.audience})`);
+        return trust;
+      } finally {
+        inFlight = null;
+      }
+    })();
+
+    return inFlight;
   }
 
   return {
@@ -158,7 +175,6 @@ export function realChatApi(config: RealApiConfig): Plugin {
         }
 
         if (path === `${AUTH_PREFIX}/logout`) {
-          sessions.destroy(sessionId);
           return sendJson(res, 200, { connected: false }, { 'Set-Cookie': `${SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax` });
         }
 
@@ -177,24 +193,30 @@ export function realChatApi(config: RealApiConfig): Plugin {
           const established = await ensureTrust(email);
           if (!established) return sendJson(res, 502, { error: trustError ?? 'Could not establish platform trust.' });
 
-          const id = sessions.create(email);
+          const cookie = sessions.create(email);
 
           if (config.bootstrapAgent && !agentBootstrapped) {
             agentBootstrapped = true;
             void ensurePlaygroundAgent({
               target: config.target,
-              resolveToken: async () => sessions.tokenFor(id, established),
+              resolveToken: async () => sessions.tokenFor(cookie, established),
             });
           }
 
           console.log(`  [real-api] signed in as ${email}`);
-          return sendJson(res, 200, { email, connected: true }, { 'Set-Cookie': `${SESSION_COOKIE}=${id}; Path=/; HttpOnly; SameSite=Lax` });
+          return sendJson(res, 200, { email, connected: true }, { 'Set-Cookie': `${SESSION_COOKIE}=${cookie}; Path=/; HttpOnly; SameSite=Lax` });
         }
 
         // ── Everything else the panel calls ────────────────────────────────
         if (!rawUrl.startsWith(PATH_PREFIX)) return next();
 
-        const token = trust && sessions.tokenFor(sessionId, trust);
+        // A cookie that survived a server restart still names a verified
+        // account, so re-registering off it is safe — and is what keeps an
+        // edit to this file from logging the browser out.
+        const email = sessions.emailFor(sessionId);
+        const established = email ? await ensureTrust(email) : null;
+
+        const token = established && sessions.tokenFor(sessionId, established);
         if (!token) {
           // A real 401 rather than an unauthenticated pass-through: the panel
           // then reports "could not reach the assistant service" instead of

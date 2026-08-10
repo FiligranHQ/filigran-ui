@@ -13,59 +13,77 @@
  * follow are signed with the playground's *own* platform key, which is the
  * path an embedded product actually takes.
  *
- * Sessions live in memory and die with the dev server. Nothing here is a
- * security boundary — it is a dev tool, bound to localhost — but no credential
- * and no signed token is ever handed to the browser.
+ * ## Why the session carries no server-side state
+ *
+ * `vite.config.ts` imports this file, which makes it a *config dependency*:
+ * touching it — or `real-api.ts`, or `xtm-auth.ts` — restarts the whole dev
+ * server. A `Map` of sessions held in the plugin's closure therefore died on
+ * every edit to the very files you iterate on, while the browser kept a cookie
+ * naming a session that no longer existed. The panel silently unmounted
+ * mid-conversation and the page fell back to the sign-in screen.
+ *
+ * So the cookie *is* the session: it carries the email and its own HMAC, keyed
+ * off the same deterministic secret the signing key comes from. Nothing to
+ * lose on restart, and a reload picks up exactly where it left off.
+ *
+ * Nothing here is a security boundary — it is a dev tool, bound to localhost —
+ * but no credential and no platform token is ever handed to the browser.
  */
 
 import crypto from 'node:crypto';
 import type { ServerResponse } from 'node:http';
-import { TOKEN_REFRESH_MARGIN_SECONDS, TOKEN_TTL_SECONDS, type TrustSetup } from './xtm-auth';
+import type { TrustSetup } from './xtm-auth';
 
 export const SESSION_COOKIE = 'playground_session';
 const LOGIN_PATH = '/api/v1/auth/login';
-
-interface Session {
-  email: string;
-  /** Cached platform JWT, reminted shortly before it expires. */
-  token?: string;
-  tokenExpiresAt?: number;
-}
+/** How long a sign-in lasts. Long enough to forget it is there. */
+const SESSION_TTL_SECONDS = 12 * 60 * 60;
 
 export interface SessionStore {
+  /** The cookie value standing for a signed-in *email*. */
   create: (email: string) => string;
-  emailFor: (id: string | undefined) => string | null;
-  destroy: (id: string | undefined) => void;
-  /** Mint (or reuse) the platform JWT this session's requests travel with. */
-  tokenFor: (id: string | undefined, trust: TrustSetup) => string | null;
+  /** The email a cookie attests to, or null if absent, tampered with or stale. */
+  emailFor: (cookie: string | undefined) => string | null;
+  /** Mint the platform JWT this session's requests travel with. */
+  tokenFor: (cookie: string | undefined, trust: TrustSetup) => string | null;
 }
 
-export function createSessionStore(): SessionStore {
-  const sessions = new Map<string, Session>();
+export function createSessionStore(secret: string): SessionStore {
+  const key = crypto.createHash('sha256').update(`${secret}:session`).digest();
+  const sign = (payload: string) => crypto.createHmac('sha256', key).update(payload).digest('base64url');
+
+  function emailFor(cookie: string | undefined): string | null {
+    if (!cookie) return null;
+    const [payload, signature] = cookie.split('.');
+    if (!payload || !signature) return null;
+
+    const expected = sign(payload);
+    // Constant-time compare. Not because a dev tool is under attack, but
+    // because a hand-rolled `===` on a MAC is the kind of thing that gets
+    // copied somewhere it does matter.
+    if (expected.length !== signature.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) return null;
+
+    try {
+      const { email, exp } = JSON.parse(Buffer.from(payload, 'base64url').toString('utf-8')) as { email?: string; exp?: number };
+      if (!email || !exp || exp < Math.floor(Date.now() / 1000)) return null;
+      return email;
+    } catch {
+      return null;
+    }
+  }
 
   return {
     create(email) {
-      const id = crypto.randomUUID();
-      sessions.set(id, { email });
-      return id;
+      const payload = Buffer.from(JSON.stringify({ email, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS })).toString('base64url');
+      return `${payload}.${sign(payload)}`;
     },
-    emailFor(id) {
-      return (id && sessions.get(id)?.email) || null;
-    },
-    destroy(id) {
-      if (id) sessions.delete(id);
-    },
-    tokenFor(id, trust) {
-      const session = id ? sessions.get(id) : undefined;
-      if (!session) return null;
-
-      const now = Math.floor(Date.now() / 1000);
-      if (session.token && session.tokenExpiresAt && session.tokenExpiresAt - TOKEN_REFRESH_MARGIN_SECONDS > now) {
-        return session.token;
-      }
-      session.token = trust.identity.mint({ email: session.email, issuer: trust.issuer, audience: trust.audience });
-      session.tokenExpiresAt = now + TOKEN_TTL_SECONDS;
-      return session.token;
+    emailFor,
+    tokenFor(cookie, trust) {
+      const email = emailFor(cookie);
+      if (!email) return null;
+      // Minted per request rather than cached: the JWT is short-lived, and a
+      // cache would be the one piece of state a restart could strand again.
+      return trust.identity.mint({ email, issuer: trust.issuer, audience: trust.audience });
     },
   };
 }

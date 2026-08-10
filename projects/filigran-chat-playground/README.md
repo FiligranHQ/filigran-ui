@@ -74,6 +74,15 @@ Sign-in is a hard gate: with no identity there is nothing to make requests as,
 and an unauthenticated panel would render an empty agent list indistinguishable
 from a real one.
 
+Being signed in survives a dev-server restart. That is not a nicety: this file,
+`real-api.ts` and `xtm-auth.ts` are all imported by `vite.config.ts`, which
+makes them **config dependencies** — editing any of them restarts the server.
+Session state kept in the plugin's closure therefore died on every edit to the
+files you iterate on, while the browser held a cookie naming a session that no
+longer existed, and the panel unmounted mid-conversation. So the cookie carries
+the email and its own HMAC instead, and trust is re-established on demand.
+Anything you are tempted to cache in that closure has the same problem.
+
 #### A real agent that stresses the renderer
 
 Add `CHAT_PLAYGROUND_AGENT=1` and the dev server creates (or refreshes) a

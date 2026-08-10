@@ -31,10 +31,8 @@ import crypto from 'node:crypto';
 /** PKCS#8 prefix for a raw Ed25519 private seed (RFC 8410 §7). */
 const PKCS8_ED25519_PREFIX = Buffer.from('302e020100300506032b657004220420', 'hex');
 
-/** How long a minted JWT stays valid. Short: it is reminted per request run. */
+/** How long a minted JWT stays valid. Short, because it is minted per request. */
 const TOKEN_TTL_SECONDS = 300;
-/** Remint this long before expiry so an in-flight request never races it. */
-const TOKEN_REFRESH_MARGIN_SECONDS = 60;
 
 const b64url = (input: Buffer | string): string =>
   (typeof input === 'string' ? Buffer.from(input) : input).toString('base64url');
@@ -244,4 +242,3 @@ export async function establishTrust(params: EstablishParams): Promise<TrustSetu
   );
 }
 
-export { TOKEN_TTL_SECONDS, TOKEN_REFRESH_MARGIN_SECONDS };
