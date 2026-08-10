@@ -7,6 +7,13 @@ interface LogEntry {
   text: string;
 }
 
+/**
+ * Height of the top bar, in pixels. Shared by the bar itself and the panel's
+ * `topOffset` so the two cannot drift apart — a hardcoded offset that no longer
+ * matches the bar leaves the panel overlapping it by the difference.
+ */
+const HEADER_HEIGHT = 56;
+
 /** Prompts that steer the built-in mock towards a specific scenario. */
 const SCENARIOS: { prompt: string; label: string; covers: string }[] = [
   { prompt: 'render everything', label: 'Kitchen sink', covers: 'images, tables, code, lists, links, soft breaks' },
@@ -48,20 +55,22 @@ const App = () => {
 
   return (
     <div>
-      {/*
-        `#app-content` is what `pushContentSelector` targets: in sidebar mode
-        the package sets an inline `padding-right` here so the page shrinks
-        beside the panel instead of being covered by it. This is the whole
-        point of sidebar mode, and it is the host's job to provide the element
-        — a panel with nowhere to push just overlays the page.
+      <div className="min-h-screen bg-gray-100 dark:bg-[#0d0d1a] transition-colors">
+        {/*
+          The header stays full width on purpose. The panel is given
+          `topOffset={HEADER_HEIGHT}`, so it starts *below* this bar and never
+          covers it — padding the header too would only open a dead band above
+          the panel, and would push the very button used to close it out of
+          reach.
 
-        The package also publishes the same measurement as a
-        `--chatbot-sidebar-width` custom property on `:root`, which a host can
-        consume instead if it would rather own the transition.
-      */}
-      <div id="app-content" className="min-h-screen bg-gray-100 dark:bg-[#0d0d1a] transition-colors">
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-6 py-3 bg-white dark:bg-[#1a1a2e] border-b border-gray-200 dark:border-white/10">
+          Rule of thumb: what you push must be what the panel actually overlaps.
+          A host that wants the whole shell to shrink should pass
+          `topOffset={0}` and move `#app-content` up to wrap the header as well.
+        */}
+        <header
+          style={{ height: HEADER_HEIGHT }}
+          className="flex items-center justify-between px-6 bg-white dark:bg-[#1a1a2e] border-b border-gray-200 dark:border-white/10"
+        >
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Filigran Chat Playground</h1>
           <div className="flex items-center gap-3">
             <button
@@ -75,8 +84,17 @@ const App = () => {
           </div>
         </header>
 
-        {/* Main content area */}
-        <main className="p-8 max-w-3xl mx-auto space-y-6">
+        {/*
+          `#app-content` is what `pushContentSelector` targets: in sidebar mode
+          the package sets an inline `padding-right` here so the content shrinks
+          beside the panel instead of sitting under it. Providing this element is
+          the host's job — a panel with nowhere to push just overlays the page.
+
+          The package also publishes the same measurement as a
+          `--chatbot-sidebar-width` custom property on `:root`, which a host can
+          consume instead if it would rather own the transition.
+        */}
+        <main id="app-content" className="p-8 max-w-3xl mx-auto space-y-6">
           <div className={card}>
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Test Controls</h2>
 
@@ -191,7 +209,7 @@ const App = () => {
             mode={mode}
             onClose={() => setIsOpen(false)}
             onModeChange={setMode}
-            topOffset={49}
+            topOffset={HEADER_HEIGHT}
             apiBaseUrl="/api/xtmone"
             agentDashboardUrl="https://xtm.example.com"
             user={{ firstName: 'Tester' }}
