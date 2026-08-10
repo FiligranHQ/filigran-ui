@@ -91,12 +91,15 @@ const MessageCopyButton = ({ text, t }: { text: string; t: (key: string) => stri
     <button
       type="button"
       onClick={handleCopy}
+      title={copied ? t('Copied!') : t('Copy response')}
+      aria-label={copied ? t('Copied!') : t('Copy response')}
       className={`p-1 rounded-lg transition-opacity ${
         copied
           ? 'opacity-100 text-green-500 dark:text-green-400'
           : 'opacity-0 group-hover/msg:opacity-100 focus-visible:opacity-100 hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]'
       }`}
     >
+      {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
     </button>
   );
 };
@@ -111,8 +114,14 @@ const MessageFeedbackButtons = ({
   onChange: (next: MessageFeedback | null) => void;
   t: (key: string) => string;
 }) => {
+  // Same focus-visible treatment as the copy button: these are hover-revealed,
+  // so without it a keyboard user tabs onto an invisible control.
   const buttonClass = (active: boolean) =>
-    `p-1 rounded-lg transition-opacity ${active ? 'opacity-100 text-[var(--chat-accent)]' : 'opacity-0 group-hover/msg:opacity-100 hover:text-[var(--chat-accent)]'}`;
+    `p-1 rounded-lg transition-opacity ${
+      active
+        ? 'opacity-100 text-[var(--chat-accent)]'
+        : 'opacity-0 group-hover/msg:opacity-100 focus-visible:opacity-100 hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]'
+    }`;
 
   return (
     <>
