@@ -2,13 +2,14 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { mockChatApi } from './mock-api';
+import { readRealApiConfig, realChatApi } from './real-api';
 
-// Point at a real chat backend instead of the built-in mock:
-//   CHAT_API_PROXY=http://localhost:8000 yarn dev
-const proxyTarget = process.env.CHAT_API_PROXY;
+// With CHAT_API_PROXY set the playground talks to a real XTM One (see
+// real-api.ts); otherwise the dev server answers the chat API itself.
+const realApi = readRealApiConfig(process.env);
 
 export default defineConfig({
-  plugins: [react(), ...(proxyTarget ? [] : [mockChatApi()])],
+  plugins: [react(), realApi ? realChatApi(realApi) : mockChatApi()],
   resolve: {
     // Order matters: string aliases match by prefix, so the subpath must come
     // before the bare package name or it would resolve to `…/index.ts/markdown`.
@@ -19,13 +20,6 @@ export default defineConfig({
   },
   server: {
     port: 3020,
-    ...(proxyTarget
-      ? {
-          proxy: {
-            '/api/xtmone': { target: proxyTarget, changeOrigin: true },
-          },
-        }
-      : {}),
     fs: {
       allow: [path.resolve(__dirname), path.resolve(__dirname, '../../packages')],
     },

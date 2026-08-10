@@ -44,13 +44,31 @@ Type one of these into the panel to pick a scenario:
 
 Anything else gets the `render everything` answer.
 
-### Pointing at a real backend
+### Pointing at a real XTM One
 
 ```bash
-CHAT_API_PROXY=http://localhost:8000 yarn workspace @filigran/chat-playground dev
+CHAT_API_PROXY=http://localhost:8100 \
+CHAT_API_EMAIL=admin@filigran.io CHAT_API_PASSWORD=… \
+yarn workspace @filigran/chat-playground dev
 ```
 
-The mock steps aside and `/api/xtmone` is proxied to that origin instead.
+The mock steps aside and the dev server forwards `/api/xtmone/*` to a real
+instance — real agents, real streaming, real data. Start XTM One with
+`./dev-podman.sh` from that repo.
+
+Two things the dev server does for you (see [`real-api.ts`](./real-api.ts)):
+
+- **Rewrites the path.** The panel calls `{apiBaseUrl}/chat/agents`, XTM One
+  serves the embedded chat under `/api/v1/platform`. Override with
+  `CHAT_API_PREFIX` (e.g. `/api/v1/chat` for the native router).
+- **Attaches the bearer token**, inside the dev server, so it never reaches the
+  browser. Pass `CHAT_API_TOKEN` if you already have one, or the email/password
+  pair and it logs in for you. Credentials come from the environment only —
+  none of this belongs in a committed file.
+
+The login is lazy and retried, so starting the playground before XTM One works:
+bring the backend up and the next request picks up a token. While it is down,
+the agent menu says so rather than spinning.
 
 ## Styling note
 
