@@ -26,10 +26,17 @@ const SAMPLE_PNG =
   'iVBORw0KGgoAAAANSUhEUgAAAKAAAABkCAIAAACO1KzYAAABd0lEQVR4nO3RMW5CQRBEQQ7KTXxBYu5C4sROHVkI8Zn+PSW9eNS7dXk8vlXcZXyBDg1weYDLA1we4PIAlwe4PMDlAS4PcHmAywNcHuDyAJcHuDzA5QEuD3B5gMsDXB7g8gCXB7g8wOUBLm878Nf154XGZz8fYMDVAS4PcHmAywNcHuDyAJcHuDzA5QEuD3B5gMsLB35t3t+FgAFXB7g8wOUBLg9weYDLA1we4OF9mT8YPg8w4Jh9mT8YPg8w4Jh9mT8YPg/wUcBvfy9gwIABp30fYMCAAQMGDBgw4M8ChxwMnwcYMOAzzwMMGPCZ5wEGDPjM8wADBnzmef8Bp+3LPBg+D/Ci9wKevwY47mD4PMCL3gt4/hrguIPh8wAvei/g+WuA4w6GzwO86L2A568BjjsYPg/wovcCnr8GOO5g+DzAi94LeP4a4LiD4fMAL3ov4PlrgOMOhs8DvOi9gOevAY47GD4P8KL3Ap6/dizw7XZXcYDLA1zeLwIf164Bx0MfAAAAAElFTkSuQmCC';
 const SAMPLE_PNG_URI = `data:image/png;base64,${SAMPLE_PNG}`;
 
+// Deliberately more than a handful: the header's agent picker only shows its
+// search field once the list is long enough to be worth scanning.
 const AGENTS = [
   { id: 'a1', name: 'General Assistant', slug: 'general', icon: null, description: 'Answers anything' },
   { id: 'a2', name: 'Threat Analyst', slug: 'threat', icon: null, description: 'CTI specialist' },
   { id: 'a3', name: 'Detection Engineer', slug: 'detection', icon: null, description: 'Writes and reviews detection rules' },
+  { id: 'a4', name: 'Incident Responder', slug: 'ir', icon: null, description: 'Triages and contains incidents' },
+  { id: 'a5', name: 'Malware Reverser', slug: 'malware', icon: null, description: 'Static and dynamic analysis' },
+  { id: 'a6', name: 'Report Writer', slug: 'reporting', icon: null, description: 'Drafts intelligence reports' },
+  { id: 'a7', name: 'Phishing Triage', slug: 'phishing', icon: null, description: 'Reviews reported emails' },
+  { id: 'a8', name: 'Exposure Manager', slug: 'exposure', icon: null, description: 'Tracks attack surface findings' },
 ];
 
 const KITCHEN_SINK = `Here is a **feature sweep** of the markdown pipeline.
