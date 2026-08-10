@@ -17,6 +17,8 @@ interface UseConversationsReturn {
   refreshConversations: () => Promise<void>;
   /** Delete a conversation server-side. Returns true on success. */
   deleteConversation: (id: string) => Promise<boolean>;
+  /** Rename a conversation server-side. Returns true on success. */
+  renameConversation: (id: string, title: string) => Promise<boolean>;
 }
 
 /**
@@ -105,5 +107,35 @@ export function useConversations({
     [historyEnabled, sessionsUrl, requestHeaders],
   );
 
-  return { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation };
+  const renameConversation = useCallback(
+    async (id: string, title: string): Promise<boolean> => {
+      const trimmed = title.trim();
+      // An empty title is a no-op rather than an error: the backend would name
+      // the conversation from its first message anyway, and silently wiping a
+      // title because the user cleared the field and hit Enter is worse.
+      if (!historyEnabled || !trimmed) return false;
+      // Optimistic: the row is being edited in place, so waiting for the
+      // round-trip would make it flicker back to the old title first.
+      const previous = conversations;
+      setConversations((prev) => prev.map((c) => (c.conversationId === id ? { ...c, title: trimmed } : c)));
+      try {
+        const res = await fetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+          body: JSON.stringify({ title: trimmed }),
+        });
+        if (!res.ok) {
+          setConversations(previous);
+          return false;
+        }
+        return true;
+      } catch {
+        setConversations(previous);
+        return false;
+      }
+    },
+    [historyEnabled, sessionsUrl, requestHeaders, conversations],
+  );
+
+  return { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation };
 }

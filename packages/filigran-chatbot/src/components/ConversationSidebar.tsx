@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary } from '../types';
 import { timeAgo } from '../utils';
 import { BotIcon, EditIcon, SearchIcon, SidebarIcon, TrashIcon } from './icons';
@@ -13,6 +13,8 @@ interface ConversationSidebarProps {
   onToggleCollapsed: () => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  /** Omit to hide the rename affordance (backend without the route). */
+  onRename?: (id: string, title: string) => void;
   onNewChat: () => void;
   t: (key: string) => string;
 }
@@ -36,10 +38,38 @@ export const ConversationSidebar = ({
   onToggleCollapsed,
   onSelect,
   onDelete,
+  onRename,
   onNewChat,
   t,
 }: ConversationSidebarProps) => {
   const [query, setQuery] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState('');
+  // Guards the input's onBlur: committing and then blurring would fire the
+  // commit twice, and cancelling via Escape blurs too.
+  const settledRef = useRef(false);
+
+  const startRename = (id: string, current: string) => {
+    settledRef.current = false;
+    setEditingId(id);
+    setDraftTitle(current);
+  };
+
+  const commitRename = () => {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    const id = editingId;
+    const next = draftTitle.trim();
+    setEditingId(null);
+    // Unchanged or emptied: leave the conversation alone rather than issuing a
+    // request that would either no-op or wipe the title.
+    if (id && next) onRename?.(id, next);
+  };
+
+  const cancelRename = () => {
+    settledRef.current = true;
+    setEditingId(null);
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -133,6 +163,7 @@ export const ConversationSidebar = ({
 
         {filtered.map((c) => {
           const isActive = c.conversationId === activeConversationId;
+          const isEditing = c.conversationId === editingId;
           return (
             <div
               key={c.conversationId}
@@ -158,25 +189,64 @@ export const ConversationSidebar = ({
                 <BotIcon size={13} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className={`block truncate text-[0.8125rem] ${isActive ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-white/70'}`}>
-                  {c.title || t('Untitled conversation')}
-                </span>
-                {c.updatedAt && <span className="block text-[0.65rem] text-gray-400 dark:text-white/30">{timeAgo(c.updatedAt, t)}</span>}
+                {isEditing ? (
+                  <input
+                    autoFocus
+                    value={draftTitle}
+                    onChange={(e) => setDraftTitle(e.target.value)}
+                    // The row selects on click and on Enter/Space; while editing
+                    // those belong to the field, not to navigation.
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter') commitRename();
+                      if (e.key === 'Escape') cancelRename();
+                    }}
+                    onBlur={commitRename}
+                    aria-label={t('Conversation title')}
+                    className="w-full rounded-md bg-white dark:bg-white/10 px-1.5 py-0.5 text-[0.8125rem] text-gray-900 dark:text-white outline-hidden ring-1 ring-[var(--chat-accent)]"
+                  />
+                ) : (
+                  <span className={`block truncate text-[0.8125rem] ${isActive ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-white/70'}`}>
+                    {c.title || t('Untitled conversation')}
+                  </span>
+                )}
+                {c.updatedAt && !isEditing && (
+                  <span className="block text-[0.65rem] text-gray-400 dark:text-white/30">{timeAgo(c.updatedAt, t)}</span>
+                )}
               </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  // The row is the click target for selection, so deleting must
-                  // not also open the conversation on its way out.
-                  e.stopPropagation();
-                  onDelete(c.conversationId);
-                }}
-                aria-label={t('Delete conversation')}
-                title={t('Delete conversation')}
-                className="shrink-0 self-center p-1 rounded-md opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-gray-400 dark:text-white/30 hover:text-red-500 dark:hover:text-red-400 transition-opacity"
-              >
-                <TrashIcon size={13} />
-              </button>
+              {!isEditing && (
+                <span className="flex shrink-0 self-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                  {onRename && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startRename(c.conversationId, c.title || '');
+                      }}
+                      aria-label={t('Rename conversation')}
+                      title={t('Rename conversation')}
+                      className="p-1 rounded-md text-gray-400 dark:text-white/30 hover:text-[var(--chat-accent)]"
+                    >
+                      <EditIcon size={13} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      // The row is the click target for selection, so deleting
+                      // must not also open the conversation on its way out.
+                      e.stopPropagation();
+                      onDelete(c.conversationId);
+                    }}
+                    aria-label={t('Delete conversation')}
+                    title={t('Delete conversation')}
+                    className="p-1 rounded-md text-gray-400 dark:text-white/30 hover:text-red-500 dark:hover:text-red-400"
+                  >
+                    <TrashIcon size={13} />
+                  </button>
+                </span>
+              )}
             </div>
           );
         })}

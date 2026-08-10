@@ -6,7 +6,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 
 - 🔄 **SSE Message Streaming** — Real-time response streaming with status indicators
 - ⚡ **Mid-Run Steering** — Send messages while the agent is generating; they are injected into the running agentic loop instead of waiting for the turn to finish
-- 🗂️ **Conversation History** — Switch between (and delete) past conversations from a header menu, or from a permanent sidebar in fullscreen mode (collapsible, searchable past 7 entries)
+- 🗂️ **Conversation History** — Switch between (and delete) past conversations from a header menu, or from a permanent sidebar in fullscreen mode (collapsible, searchable past 7 entries, rename in place)
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
 - 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose
@@ -226,6 +226,12 @@ yields an empty list, so the menu shows its empty state instead of breaking
 the chat. Set `apiEndpoints.history` to `null` to hide the history menu
 entirely, or point it at a dedicated path if your proxy can't route `GET` on
 the sessions path.
+
+### `PATCH {apiBaseUrl}/chat/sessions/{conversation_id}`
+
+Renames a conversation. Body: `{ "title": "..." }`. Only reached from the
+fullscreen sidebar; a backend without the route simply fails the request and
+the row reverts to its previous title.
 
 ### `DELETE {apiBaseUrl}/chat/sessions/{conversation_id}`
 

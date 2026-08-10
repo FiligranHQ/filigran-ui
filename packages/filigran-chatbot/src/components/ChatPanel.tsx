@@ -111,7 +111,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
 
   // A finished turn has consumed allowance, so re-read it rather than leaving a
   // stale figure on screen until the panel is reopened.
-  const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation } = useConversations({
+  const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation } = useConversations({
     apiBaseUrl,
     apiEndpoints,
     backendType,
@@ -534,6 +534,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
             onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
             onSelect={handleSelectConversation}
             onDelete={(id) => void handleDeleteConversation(id)}
+            onRename={(id, title) => void renameConversation(id, title)}
             onNewChat={handleNewChat}
             t={t}
           />

@@ -192,6 +192,13 @@ export function mockChatApi(): Plugin {
             .map((c) => ({ conversation_id: c.id, title: c.title, updated_at: c.updatedAt, message_count: c.messages.length }));
           return json(res, list);
         }
+        if (path.startsWith('/chat/sessions/') && method === 'PATCH') {
+          const body = await readBody(req);
+          const conv = conversations.get(decodeURIComponent(path.slice('/chat/sessions/'.length)));
+          if (!conv) return json(res, { error: 'not found' }, 404);
+          if (typeof body.title === 'string' && body.title.trim()) conv.title = body.title.trim();
+          return json(res, { conversation_id: conv.id, title: conv.title });
+        }
         if (path.startsWith('/chat/sessions/') && method === 'DELETE') {
           conversations.delete(decodeURIComponent(path.slice('/chat/sessions/'.length)));
           return json(res, { ok: true });
