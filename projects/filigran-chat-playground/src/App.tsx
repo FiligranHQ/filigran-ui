@@ -258,139 +258,149 @@ const App = () => {
         */}
         <main id="app-content">
           <div className="p-8 max-w-3xl mx-auto space-y-6">
-            {session.state === 'anonymous' && (
+            {/*
+              Signing in is the whole page until it is done. The controls below
+              drive a panel that cannot mount yet, and the checklist describes
+              behaviour nobody can reach — showing them greyed out only invites
+              clicking at something inert. `loading` renders nothing rather than
+              flashing the sign-in card at someone who turns out to be signed in
+              already.
+            */}
+            {session.state === 'loading' ? null : session.state === 'anonymous' ? (
               <div className={card}>
                 <SignIn target={session.target} onSignedIn={refresh} />
               </div>
-            )}
+            ) : (
+              <>
+                <div className={card}>
+                  <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Test Controls</h2>
 
-            <div className={card}>
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Test Controls</h2>
+                  {/* Mode selector */}
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Display mode:</p>
+                    <div className="flex gap-2">
+                      {(['floating', 'sidebar', 'fullscreen'] as ChatMode[]).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setMode(m)}
+                          className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                            mode === m
+                              ? 'border-[#7b5cff] bg-[#7b5cff]/10 text-[#7b5cff]'
+                              : 'border-gray-300 dark:border-white/20 text-gray-700 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/10'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Mode selector */}
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Display mode:</p>
-                <div className="flex gap-2">
-                  {(['floating', 'sidebar', 'fullscreen'] as ChatMode[]).map((m) => (
+                  {/* Open/close */}
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Panel:</p>
                     <button
-                      key={m}
                       type="button"
-                      onClick={() => setMode(m)}
-                      className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                        mode === m
-                          ? 'border-[#7b5cff] bg-[#7b5cff]/10 text-[#7b5cff]'
-                          : 'border-gray-300 dark:border-white/20 text-gray-700 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/10'
-                      }`}
+                      onClick={() => setIsOpen((o) => !o)}
+                      disabled={!canChat}
+                      title={canChat ? undefined : 'Sign in first'}
+                      className="px-4 py-2 text-sm rounded-md bg-[#7b5cff] text-white hover:bg-[#6a4de0] transition-colors disabled:opacity-40 disabled:hover:bg-[#7b5cff]"
                     >
-                      {m}
+                      {isOpen ? 'Close chat' : 'Open chat'}
                     </button>
-                  ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Open/close */}
-              <div>
-                <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Panel:</p>
-                <button
-                  type="button"
-                  onClick={() => setIsOpen((o) => !o)}
-                  disabled={!canChat}
-                  title={canChat ? undefined : 'Sign in first'}
-                  className="px-4 py-2 text-sm rounded-md bg-[#7b5cff] text-white hover:bg-[#6a4de0] transition-colors disabled:opacity-40 disabled:hover:bg-[#7b5cff]"
-                >
-                  {isOpen ? 'Close chat' : 'Open chat'}
-                </button>
-              </div>
-            </div>
+                {/* Scenarios understood by the built-in mock backend */}
+                {session.state === 'mock' && (
+                  <div className={card}>
+                    <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Scenarios</h2>
+                    <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
+                      The dev server answers these itself — no backend needed. Type the prompt into the panel to trigger one.
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      {SCENARIOS.map((s) => (
+                        <li key={s.prompt} className="flex flex-wrap items-baseline gap-2">
+                          <code className="rounded bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 font-mono text-xs text-gray-900 dark:text-white">{s.prompt}</code>
+                          <span className="font-medium text-gray-900 dark:text-white">{s.label}</span>
+                          <span className="text-gray-500 dark:text-white/40">— {s.covers}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-4 text-xs text-gray-500 dark:text-white/40">
+                      These are mock answers. Drop <code className="font-mono">CHAT_API_MOCK=1</code> to talk to a real XTM One instead.
+                    </p>
+                  </div>
+                )}
 
-            {/* Scenarios understood by the built-in mock backend */}
-            {session.state === 'mock' && (
-              <div className={card}>
-                <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Scenarios</h2>
-                <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
-                  The dev server answers these itself — no backend needed. Type the prompt into the panel to trigger one.
-                </p>
-                <ul className="space-y-2 text-sm">
-                  {SCENARIOS.map((s) => (
-                    <li key={s.prompt} className="flex flex-wrap items-baseline gap-2">
-                      <code className="rounded bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 font-mono text-xs text-gray-900 dark:text-white">{s.prompt}</code>
-                      <span className="font-medium text-gray-900 dark:text-white">{s.label}</span>
-                      <span className="text-gray-500 dark:text-white/40">— {s.covers}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-4 text-xs text-gray-500 dark:text-white/40">
-                  These are mock answers. Drop <code className="font-mono">CHAT_API_MOCK=1</code> to talk to a real XTM One instead.
-                </p>
-              </div>
+                {session.state === 'signed-in' && (
+                  <div className={card}>
+                    <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Connected to XTM One</h2>
+                    <p className="text-sm text-gray-600 dark:text-white/50">
+                      Agents, conversations and answers below are real, and scoped to <strong className="text-gray-900 dark:text-white">{session.email}</strong> — the
+                      playground signs its own EdDSA tokens as a registered platform, exactly as an embedded product does. Nothing here is mocked, so what
+                      another user sees may legitimately differ.
+                    </p>
+                    <p className="mt-3 text-xs text-gray-500 dark:text-white/40">
+                      Add <code className="font-mono">CHAT_PLAYGROUND_AGENT=1</code> for a “Rendering Playground” agent whose persona emits the markdown
+                      shapes that have broken the renderer before.
+                    </p>
+                  </div>
+                )}
+
+                {/* Host callbacks — proof the panel actually calls them */}
+                <div className={card}>
+                  <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Host callbacks</h2>
+                  <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
+                    Rate an answer, click an internal link, or let a long turn finish with the panel closed.
+                  </p>
+                  {log.length === 0 ? (
+                    <p className="text-sm italic text-gray-400 dark:text-white/30">Nothing yet.</p>
+                  ) : (
+                    <ul className="space-y-1 font-mono text-xs">
+                      {log.map((entry, i) => (
+                        <li key={i} className="text-gray-700 dark:text-white/70">
+                          <span className="text-gray-400 dark:text-white/30">{entry.at}</span> {entry.text}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Verification checklist */}
+                <div className={card}>
+                  <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Verification Checklist</h2>
+                  <ul className="space-y-2 text-sm text-gray-700 dark:text-white/70">
+                    {[
+                      'Sidebar mode pushes the page aside (it must not overlay it) and the drag handle resizes it',
+                      'Leaving sidebar mode — or closing the panel — removes the push completely',
+                      'Fullscreen shows the conversation sidebar: select switches thread, delete removes a row, the collapse toggle works, and the header history menu is gone',
+                    'All 3 modes render with correct positioning/dimensions',
+                      'Agent dropdown opens/closes, click-outside dismisses',
+                      'Mode switcher transitions between modes',
+                      'Send a message and verify SSE streaming renders progressively',
+                      'Markdown: tables (incl. the mis-delimited one), fenced code with and without a language, lists show bullets/numbers, soft line breaks',
+                      'Images: inline chart and image attachment both preview; click opens the lightbox; Escape closes it',
+                      'The javascript: link is inert, the https: one opens in a new tab',
+                      'Hover an answer: copy button and 👍/👎 appear; ratings show up under "Host callbacks"',
+                      'Reasoning details ("i") opens the tool trace',
+                      'Long thread: "Load earlier messages" appears and walks the window back',
+                      'Slow turn: elapsed counter ticks every second, then the waiting game appears',
+                      'Draft: type, close the panel, reopen — the text is restored; sending clears it',
+                      'File attachment via button click and paste',
+                      'New chat clears state; conversation history lists and restores past chats',
+                      'Context gauge: absent before the first turn, then 21/42/63/84/100% over five turns (mock) — amber at 84%, red at 100%; reload restores it, "New conversation" clears it',
+                      'Dark/light mode toggle works correctly in both themes',
+                    ].map((item) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <input type="checkbox" className="mt-0.5 accent-[#7b5cff]" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
             )}
-
-            {session.state === 'signed-in' && (
-              <div className={card}>
-                <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Connected to XTM One</h2>
-                <p className="text-sm text-gray-600 dark:text-white/50">
-                  Agents, conversations and answers below are real, and scoped to <strong className="text-gray-900 dark:text-white">{session.email}</strong> — the
-                  playground signs its own EdDSA tokens as a registered platform, exactly as an embedded product does. Nothing here is mocked, so what
-                  another user sees may legitimately differ.
-                </p>
-                <p className="mt-3 text-xs text-gray-500 dark:text-white/40">
-                  Add <code className="font-mono">CHAT_PLAYGROUND_AGENT=1</code> for a “Rendering Playground” agent whose persona emits the markdown
-                  shapes that have broken the renderer before.
-                </p>
-              </div>
-            )}
-
-            {/* Host callbacks — proof the panel actually calls them */}
-            <div className={card}>
-              <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Host callbacks</h2>
-              <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
-                Rate an answer, click an internal link, or let a long turn finish with the panel closed.
-              </p>
-              {log.length === 0 ? (
-                <p className="text-sm italic text-gray-400 dark:text-white/30">Nothing yet.</p>
-              ) : (
-                <ul className="space-y-1 font-mono text-xs">
-                  {log.map((entry, i) => (
-                    <li key={i} className="text-gray-700 dark:text-white/70">
-                      <span className="text-gray-400 dark:text-white/30">{entry.at}</span> {entry.text}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {/* Verification checklist */}
-            <div className={card}>
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Verification Checklist</h2>
-              <ul className="space-y-2 text-sm text-gray-700 dark:text-white/70">
-                {[
-                  'Sidebar mode pushes the page aside (it must not overlay it) and the drag handle resizes it',
-                  'Leaving sidebar mode — or closing the panel — removes the push completely',
-                  'Fullscreen shows the conversation sidebar: select switches thread, delete removes a row, the collapse toggle works, and the header history menu is gone',
-                'All 3 modes render with correct positioning/dimensions',
-                  'Agent dropdown opens/closes, click-outside dismisses',
-                  'Mode switcher transitions between modes',
-                  'Send a message and verify SSE streaming renders progressively',
-                  'Markdown: tables (incl. the mis-delimited one), fenced code with and without a language, lists show bullets/numbers, soft line breaks',
-                  'Images: inline chart and image attachment both preview; click opens the lightbox; Escape closes it',
-                  'The javascript: link is inert, the https: one opens in a new tab',
-                  'Hover an answer: copy button and 👍/👎 appear; ratings show up under "Host callbacks"',
-                  'Reasoning details ("i") opens the tool trace',
-                  'Long thread: "Load earlier messages" appears and walks the window back',
-                  'Slow turn: elapsed counter ticks every second, then the waiting game appears',
-                  'Draft: type, close the panel, reopen — the text is restored; sending clears it',
-                  'File attachment via button click and paste',
-                  'New chat clears state; conversation history lists and restores past chats',
-                  'Context gauge: absent before the first turn, then climbs ~26% per turn (mock) — amber past 80%, red past 95%; reload restores it, "New conversation" clears it',
-                  'Dark/light mode toggle works correctly in both themes',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <input type="checkbox" className="mt-0.5 accent-[#7b5cff]" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
         </main>
 
