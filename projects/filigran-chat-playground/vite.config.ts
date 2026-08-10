@@ -4,9 +4,14 @@ import path from 'node:path';
 import { mockChatApi } from './mock-api';
 import { readRealApiConfig, realChatApi } from './real-api';
 
-// With CHAT_API_PROXY set the playground talks to a real XTM One (see
-// real-api.ts); otherwise the dev server answers the chat API itself.
-const realApi = readRealApiConfig(process.env);
+const PORT = 3020;
+
+// A real XTM One is the default: the playground registers itself as a platform
+// and you sign in with a real account (see real-api.ts). `CHAT_API_MOCK=1`
+// swaps in the built-in mock instead — worth having for renderer work and for
+// working offline, but it proves nothing about the real contract, so it is not
+// what you get by default.
+const realApi = process.env.CHAT_API_MOCK === '1' ? null : readRealApiConfig(process.env, PORT);
 
 export default defineConfig({
   plugins: [react(), realApi ? realChatApi(realApi) : mockChatApi()],
@@ -19,7 +24,12 @@ export default defineConfig({
     ],
   },
   server: {
-    port: 3020,
+    port: PORT,
+    // Fail rather than fall back to the next free port. The port is baked into
+    // the issuer URL registered with XTM One, which then fetches the JWKS from
+    // it — a silent shift to 3021 would leave every request rejected with
+    // nothing on screen to explain why.
+    strictPort: true,
     fs: {
       allow: [path.resolve(__dirname), path.resolve(__dirname, '../../packages')],
     },

@@ -1,109 +1,73 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
 import { ensurePlaygroundAgent } from './playground-agent';
+import { createIdentity, establishTrust, type TrustSetup } from './xtm-auth';
+import { createSessionStore, readCookie, sendJson, verifyAccountExists, SESSION_COOKIE } from './playground-session';
 
 /**
- * Point the playground at a real XTM One instead of the built-in mock, so the
- * panel can be exercised against real agents, real streaming and real data.
+ * Run the playground as a genuine XTM One client — a registered platform with
+ * its own signing key and signed-in users — rather than a mock, or a proxy
+ * holding one shared admin token.
  *
- *   CHAT_API_PROXY=http://localhost:8100 \
- *   CHAT_API_EMAIL=admin@filigran.io CHAT_API_PASSWORD=… \
- *   yarn workspace @filigran/chat-playground dev
+ *   CHAT_API_PROXY=http://localhost:8100 yarn workspace @filigran/chat-playground dev
  *
- * Two things a bare Vite proxy could not do:
+ * Then sign in on the page with an XTM One account. From that point the panel
+ * shows *that user's* agents and *that user's* conversations, obtained over the
+ * same trusted-platform JWT path OpenCTI and OpenAEV use. Nothing is mocked and
+ * no credential reaches the browser.
  *
- * 1. **Path.** The panel calls `{apiBaseUrl}/chat/agents` and `apiBaseUrl` here
- *    is `/api/xtmone`, but XTM One serves the embedded chat under
- *    `/api/v1/platform`. Rewritten here rather than by changing `apiBaseUrl`,
- *    so one build works against both the mock and the real backend.
+ * Four jobs, none of which a bare Vite proxy could do:
  *
- * 2. **Auth.** Every route needs a bearer token, and obtaining one is async —
- *    which Vite's synchronous `proxyReq` hook cannot express. Hence a
- *    middleware that forwards the request itself. The token is attached inside
- *    the dev server, so it never reaches the browser: not in the bundle, not in
- *    devtools, not in a screenshot of the playground.
- *
- * Give it `CHAT_API_TOKEN` if you already have one, or
- * `CHAT_API_EMAIL` + `CHAT_API_PASSWORD` and it logs in for you. Read from the
- * environment only — nothing is written to disk, and no credential belongs in a
- * committed file.
+ * 1. **Publish a JWKS.** XTM One verifies our JWTs by fetching the public key
+ *    from `{iss}/xtm/auth/jwks` — so the dev server has to serve one.
+ * 2. **Sign in.** Credentials are checked against XTM One and discarded; see
+ *    `playground-session.ts` for why a password is asked for at all.
+ * 3. **Rewrite the path.** The panel calls `{apiBaseUrl}/chat/agents`; XTM One
+ *    serves the embedded chat under `/api/v1/platform`. Done here rather than
+ *    by changing `apiBaseUrl`, so one build works against mock and real alike.
+ * 4. **Attach the JWT.** Minted per signed-in user, inside the dev server, and
+ *    async — which Vite's synchronous `proxyReq` hook cannot express.
  */
 
 const PATH_PREFIX = '/api/xtmone';
 /** Where XTM One mounts the embedded chat API. */
 const DEFAULT_PREFIX = '/api/v1/platform';
-const LOGIN_PATH = '/api/v1/auth/login';
+/** Must match XTM One's own `PLATFORM_REGISTRATION_TOKEN`; this is its default. */
+const DEFAULT_REGISTRATION_TOKEN = 'xtm-default-registration-token';
+const JWKS_PATH = '/xtm/auth/jwks';
+const AUTH_PREFIX = '/api/playground';
 
 interface RealApiConfig {
   target: string;
   prefix: string;
-  token?: string;
-  email?: string;
-  password?: string;
+  registrationToken: string;
+  identifier: string;
+  secret: string;
+  issuer?: string;
+  audience?: string;
+  port: number;
   /** Create/refresh the renderer-stressing agent on the target instance. */
   bootstrapAgent: boolean;
 }
 
-export function readRealApiConfig(env: NodeJS.ProcessEnv): RealApiConfig | null {
-  const target = env.CHAT_API_PROXY;
-  if (!target) return null;
+/** Where XTM One listens under `./dev-podman.sh`. */
+const DEFAULT_TARGET = 'http://localhost:8100';
+
+export function readRealApiConfig(env: NodeJS.ProcessEnv, port: number): RealApiConfig {
+  const target = env.CHAT_API_PROXY ?? DEFAULT_TARGET;
   return {
     target: target.replace(/\/$/, ''),
     prefix: env.CHAT_API_PREFIX ?? DEFAULT_PREFIX,
-    token: env.CHAT_API_TOKEN,
-    email: env.CHAT_API_EMAIL,
-    password: env.CHAT_API_PASSWORD,
+    registrationToken: env.PLATFORM_REGISTRATION_TOKEN ?? DEFAULT_REGISTRATION_TOKEN,
+    identifier: env.CHAT_PLAYGROUND_IDENTIFIER ?? 'chat-playground',
+    // Any stable string works — it only has to stay the same across restarts so
+    // the published `kid` does too.
+    secret: env.CHAT_PLAYGROUND_JWT_SECRET ?? 'filigran-chat-playground-dev',
+    issuer: env.CHAT_PLAYGROUND_ISSUER,
+    audience: env.CHAT_PLAYGROUND_AUDIENCE,
+    port,
     // Opt-in: it writes to whichever instance you are pointed at.
     bootstrapAgent: env.CHAT_PLAYGROUND_AGENT === '1' || env.CHAT_PLAYGROUND_AGENT === 'true',
-  };
-}
-
-/**
- * Resolve a bearer token, once, and reuse it.
- *
- * Lazy on purpose: the dev server has to start even when XTM One is not running
- * yet, so a failure here is reported and retried on the next request rather
- * than aborting start-up — bringing the backend up afterwards then just works.
- */
-function createTokenResolver(config: RealApiConfig) {
-  let cached: string | null = config.token ?? null;
-  let inFlight: Promise<string | null> | null = null;
-
-  return async function resolveToken(): Promise<string | null> {
-    if (cached) return cached;
-    if (!config.email || !config.password) return null;
-    if (inFlight) return inFlight;
-
-    inFlight = (async () => {
-      try {
-        const res = await fetch(`${config.target}${LOGIN_PATH}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: config.email, password: config.password }),
-        });
-        if (!res.ok) {
-          console.warn(`  [real-api] login failed (${res.status}) — requests will go out unauthenticated`);
-          return null;
-        }
-        const body = (await res.json()) as Record<string, unknown>;
-        const token =
-          typeof body.access_token === 'string' ? body.access_token : typeof body.token === 'string' ? body.token : null;
-        if (!token) {
-          console.warn('  [real-api] login response carried no token');
-          return null;
-        }
-        cached = token;
-        console.log(`  [real-api] authenticated as ${config.email}`);
-        return token;
-      } catch (err) {
-        console.warn(`  [real-api] cannot reach ${config.target} — ${(err as Error).message}`);
-        return null;
-      } finally {
-        inFlight = null;
-      }
-    })();
-
-    return inFlight;
   };
 }
 
@@ -128,44 +92,135 @@ function readBody(req: IncomingMessage): Promise<ArrayBuffer | undefined> {
   });
 }
 
+async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const body = await readBody(req);
+  if (!body) return {};
+  try {
+    return JSON.parse(Buffer.from(body).toString('utf-8')) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 export function realChatApi(config: RealApiConfig): Plugin {
-  const resolveToken = createTokenResolver(config);
+  const sessions = createSessionStore();
+  // Derived once, at start-up: the JWKS must be servable before any trust is
+  // established, because XTM One fetches it *during* the request that
+  // establishes it.
+  const identity = createIdentity(config.secret);
+
+  /**
+   * The registration + proof, run once, on the first successful sign-in.
+   *
+   * Deferred rather than done at start-up for two reasons: XTM One may not be
+   * running yet (the dev server must still boot), and proving the chain needs
+   * an account known to exist — which is exactly what a successful sign-in
+   * gives us. `null` while unproven; the string form is the diagnosis.
+   */
+  let trust: TrustSetup | null = null;
+  let trustError: string | null = null;
+  let agentBootstrapped = false;
+
+  async function ensureTrust(probeEmail: string): Promise<TrustSetup | null> {
+    if (trust) return trust;
+    const result = await establishTrust({ ...config, identity, probeEmail });
+    if (typeof result === 'string') {
+      trustError = result;
+      console.warn(`  [real-api] platform trust not established — ${result}`);
+      return null;
+    }
+    trust = result;
+    trustError = null;
+    console.log(`  [real-api] registered as "${config.identifier}" (iss ${result.issuer}, aud ${result.audience})`);
+    return trust;
+  }
 
   return {
     name: 'filigran-real-chat-api',
     apply: 'serve',
     configureServer(server) {
-      console.log(`  [real-api] proxying ${PATH_PREFIX} -> ${config.target}${config.prefix}`);
-      // Warm the token so the first chat request does not pay for the login.
-      void resolveToken().then(() => {
-        if (config.bootstrapAgent) void ensurePlaygroundAgent({ target: config.target, resolveToken });
-      });
+      console.log(`  [real-api] ${PATH_PREFIX} -> ${config.target}${config.prefix} — sign in on the page to start`);
 
       server.middlewares.use(async (req, res, next) => {
         const rawUrl = req.url ?? '/';
+        const path = rawUrl.split('?')[0];
+        const sessionId = readCookie(req.headers.cookie, SESSION_COOKIE);
+
+        // ── The JWKS XTM One fetches to verify our signatures ──────────────
+        if (path === JWKS_PATH) {
+          return sendJson(res, 200, identity.jwks, { 'Cache-Control': 'no-store' });
+        }
+
+        // ── Sign-in, session, sign-out ─────────────────────────────────────
+        if (path === `${AUTH_PREFIX}/session`) {
+          const email = sessions.emailFor(sessionId);
+          return sendJson(res, 200, { email, connected: Boolean(email), target: config.target, trustError });
+        }
+
+        if (path === `${AUTH_PREFIX}/logout`) {
+          sessions.destroy(sessionId);
+          return sendJson(res, 200, { connected: false }, { 'Set-Cookie': `${SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax` });
+        }
+
+        if (path === `${AUTH_PREFIX}/login`) {
+          if (req.method !== 'POST') return sendJson(res, 405, { error: 'POST only' });
+          const body = await readJson(req);
+          const email = typeof body.email === 'string' ? body.email.trim() : '';
+          const password = typeof body.password === 'string' ? body.password : '';
+          if (!email || !password) return sendJson(res, 400, { error: 'Email and password are required.' });
+
+          const verified = await verifyAccountExists(config.target, email, password);
+          if (!verified.ok) return sendJson(res, verified.status, { error: verified.reason });
+
+          // Only now — with an account proven to exist — is it safe to mint a
+          // JWT for this email: an unknown one would have XTM One provision it.
+          const established = await ensureTrust(email);
+          if (!established) return sendJson(res, 502, { error: trustError ?? 'Could not establish platform trust.' });
+
+          const id = sessions.create(email);
+
+          if (config.bootstrapAgent && !agentBootstrapped) {
+            agentBootstrapped = true;
+            void ensurePlaygroundAgent({
+              target: config.target,
+              resolveToken: async () => sessions.tokenFor(id, established),
+            });
+          }
+
+          console.log(`  [real-api] signed in as ${email}`);
+          return sendJson(res, 200, { email, connected: true }, { 'Set-Cookie': `${SESSION_COOKIE}=${id}; Path=/; HttpOnly; SameSite=Lax` });
+        }
+
+        // ── Everything else the panel calls ────────────────────────────────
         if (!rawUrl.startsWith(PATH_PREFIX)) return next();
 
-        const token = await resolveToken();
+        const token = trust && sessions.tokenFor(sessionId, trust);
+        if (!token) {
+          // A real 401 rather than an unauthenticated pass-through: the panel
+          // then reports "could not reach the assistant service" instead of
+          // rendering an empty agent list as if that were the truth.
+          return sendJson(res, 401, { error: 'Not signed in to the playground.' });
+        }
+
         const upstream = `${config.target}${config.prefix}${rawUrl.slice(PATH_PREFIX.length)}`;
 
         // Forward the client's headers minus the ones that describe *this* hop
         // (host, connection, and any length that no longer matches once the
-        // body is re-sent).
+        // body is re-sent). The session cookie is dropped too — it means
+        // nothing upstream, and the JWT below is the real credential.
         const headers: Record<string, string> = {};
         for (const [k, v] of Object.entries(req.headers)) {
           const key = k.toLowerCase();
-          if (key === 'host' || key === 'connection' || key === 'content-length' || key === 'accept-encoding') continue;
+          if (key === 'host' || key === 'connection' || key === 'content-length' || key === 'accept-encoding' || key === 'cookie') continue;
           if (typeof v === 'string') headers[k] = v;
         }
-        if (token) headers.Authorization = `Bearer ${token}`;
+        headers.Authorization = `Bearer ${token}`;
 
         try {
           const upstreamRes = await fetch(upstream, {
             method: req.method,
             headers,
             body: await readBody(req),
-            // Node's fetch buffers by default only when the body is read as a
-            // whole; streaming it below is what keeps SSE incremental.
             redirect: 'manual',
           });
 

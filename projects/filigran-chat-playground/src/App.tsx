@@ -29,6 +29,118 @@ const SCENARIOS: { prompt: string; label: string; covers: string }[] = [
  * Any host that passes nothing simply has no such control — that is the whole
  * "product mode", with no flag to keep in step.
  */
+/**
+ * Whether the playground is talking to a real XTM One, and to whom.
+ *
+ * `mock` is not a failure: with `CHAT_API_MOCK=1` the dev server answers the
+ * chat API itself and there is nobody to sign in as. Detected rather than
+ * configured — the mock has no `/api/playground/session` route, so Vite's SPA
+ * fallback answers with HTML and the JSON parse fails.
+ */
+type Session =
+  | { state: 'loading' }
+  | { state: 'mock' }
+  | { state: 'anonymous'; target: string }
+  | { state: 'signed-in'; email: string };
+
+const useSession = () => {
+  const [session, setSession] = useState<Session>({ state: 'loading' });
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch('/api/playground/session', { headers: { Accept: 'application/json' } });
+      const body = (await res.json()) as { connected?: boolean; email?: string; target?: string };
+      setSession(
+        body.connected && body.email
+          ? { state: 'signed-in', email: body.email }
+          : { state: 'anonymous', target: body.target ?? 'XTM One' },
+      );
+    } catch {
+      setSession({ state: 'mock' });
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  return { session, refresh };
+};
+
+/**
+ * The sign-in gate.
+ *
+ * Deliberately blocking: until someone signs in there is no identity to make
+ * requests as, and rendering the panel anyway would show an empty agent list
+ * that looks like data. The password is spent once against XTM One to prove
+ * the account exists — see `playground-session.ts`.
+ */
+const SignIn = ({ target, onSignedIn }: { target: string; onSignedIn: () => void }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/playground/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const body = (await res.json()) as { error?: string };
+      if (!res.ok) setError(body.error ?? `Sign-in failed (${res.status}).`);
+      else onSignedIn();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field =
+    'w-full rounded-md border border-gray-300 dark:border-white/20 bg-white dark:bg-[#0d0d1a] px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30';
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Sign in to XTM One</h2>
+        <p className="mt-1 text-sm text-gray-600 dark:text-white/50">
+          The playground registers itself as a platform and calls <code className="font-mono text-xs">{target}</code> on your behalf, over the
+          same trusted-JWT path OpenCTI and OpenAEV use. Your account must already exist there.
+        </p>
+      </div>
+      <label className="block">
+        <span className="mb-1 block text-sm text-gray-600 dark:text-white/50">Email</span>
+        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={field} placeholder="admin@filigran.io" autoComplete="username" />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-sm text-gray-600 dark:text-white/50">Password</span>
+        <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className={field} autoComplete="current-password" />
+      </label>
+      {error && (
+        <p role="alert" className="rounded-md bg-red-50 dark:bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+          {error}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={busy}
+        className="rounded-md bg-[#7b5cff] px-4 py-2 text-sm text-white transition-colors hover:bg-[#6a4de0] disabled:opacity-50"
+      >
+        {busy ? 'Signing in…' : 'Sign in'}
+      </button>
+      <p className="text-xs text-gray-500 dark:text-white/40">
+        Start XTM One with <code className="font-mono">./dev-podman.sh</code>, or run the playground offline with{' '}
+        <code className="font-mono">CHAT_API_MOCK=1 yarn dev</code>.
+      </p>
+    </form>
+  );
+};
+
 const HostToolbarSlot = ({ onClick, active }: { onClick: () => void; active: boolean }) => (
   <button
     type="button"
@@ -50,6 +162,12 @@ const App = () => {
   const [isDark, setIsDark] = useState(true);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [hostToolActive, setHostToolActive] = useState(false);
+  const { session, refresh } = useSession();
+
+  // The panel may only mount once there is an identity behind it: against a
+  // real backend an unauthenticated panel renders an empty agent list that is
+  // indistinguishable from a real one.
+  const canChat = session.state === 'signed-in' || session.state === 'mock';
 
   // Put dark class on <html> so portal-based elements (tooltips, dropdowns) also get dark: styles
   // This one may need adaptation to work with any app
@@ -108,7 +226,23 @@ const App = () => {
             >
               {isDark ? 'Light mode' : 'Dark mode'}
             </button>
-            <ChatToggleButton isOpen={isOpen} onToggle={() => setIsOpen((o) => !o)} label="Ask Assistant" accentColor="#7b5cff" />
+            {session.state === 'signed-in' && (
+              <>
+                <span className="text-sm text-gray-500 dark:text-white/40">{session.email}</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await fetch('/api/playground/logout');
+                    setIsOpen(false);
+                    void refresh();
+                  }}
+                  className="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                >
+                  Sign out
+                </button>
+              </>
+            )}
+            {canChat && <ChatToggleButton isOpen={isOpen} onToggle={() => setIsOpen((o) => !o)} label="Ask Assistant" accentColor="#7b5cff" />}
           </div>
         </header>
 
@@ -124,6 +258,12 @@ const App = () => {
         */}
         <main id="app-content">
           <div className="p-8 max-w-3xl mx-auto space-y-6">
+            {session.state === 'anonymous' && (
+              <div className={card}>
+                <SignIn target={session.target} onSignedIn={refresh} />
+              </div>
+            )}
+
             <div className={card}>
               <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Test Controls</h2>
 
@@ -154,7 +294,9 @@ const App = () => {
                 <button
                   type="button"
                   onClick={() => setIsOpen((o) => !o)}
-                  className="px-4 py-2 text-sm rounded-md bg-[#7b5cff] text-white hover:bg-[#6a4de0] transition-colors"
+                  disabled={!canChat}
+                  title={canChat ? undefined : 'Sign in first'}
+                  className="px-4 py-2 text-sm rounded-md bg-[#7b5cff] text-white hover:bg-[#6a4de0] transition-colors disabled:opacity-40 disabled:hover:bg-[#7b5cff]"
                 >
                   {isOpen ? 'Close chat' : 'Open chat'}
                 </button>
@@ -162,24 +304,41 @@ const App = () => {
             </div>
 
             {/* Scenarios understood by the built-in mock backend */}
-            <div className={card}>
-              <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Scenarios</h2>
-              <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
-                The dev server answers these itself — no backend needed. Type the prompt into the panel to trigger one.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {SCENARIOS.map((s) => (
-                  <li key={s.prompt} className="flex flex-wrap items-baseline gap-2">
-                    <code className="rounded bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 font-mono text-xs text-gray-900 dark:text-white">{s.prompt}</code>
-                    <span className="font-medium text-gray-900 dark:text-white">{s.label}</span>
-                    <span className="text-gray-500 dark:text-white/40">— {s.covers}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-4 text-xs text-gray-500 dark:text-white/40">
-                Point at a real backend instead with <code className="font-mono">CHAT_API_PROXY=http://localhost:8000 yarn dev</code>.
-              </p>
-            </div>
+            {session.state === 'mock' && (
+              <div className={card}>
+                <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Scenarios</h2>
+                <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
+                  The dev server answers these itself — no backend needed. Type the prompt into the panel to trigger one.
+                </p>
+                <ul className="space-y-2 text-sm">
+                  {SCENARIOS.map((s) => (
+                    <li key={s.prompt} className="flex flex-wrap items-baseline gap-2">
+                      <code className="rounded bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 font-mono text-xs text-gray-900 dark:text-white">{s.prompt}</code>
+                      <span className="font-medium text-gray-900 dark:text-white">{s.label}</span>
+                      <span className="text-gray-500 dark:text-white/40">— {s.covers}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-4 text-xs text-gray-500 dark:text-white/40">
+                  These are mock answers. Drop <code className="font-mono">CHAT_API_MOCK=1</code> to talk to a real XTM One instead.
+                </p>
+              </div>
+            )}
+
+            {session.state === 'signed-in' && (
+              <div className={card}>
+                <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Connected to XTM One</h2>
+                <p className="text-sm text-gray-600 dark:text-white/50">
+                  Agents, conversations and answers below are real, and scoped to <strong className="text-gray-900 dark:text-white">{session.email}</strong> — the
+                  playground signs its own EdDSA tokens as a registered platform, exactly as an embedded product does. Nothing here is mocked, so what
+                  another user sees may legitimately differ.
+                </p>
+                <p className="mt-3 text-xs text-gray-500 dark:text-white/40">
+                  Add <code className="font-mono">CHAT_PLAYGROUND_AGENT=1</code> for a “Rendering Playground” agent whose persona emits the markdown
+                  shapes that have broken the renderer before.
+                </p>
+              </div>
+            )}
 
             {/* Host callbacks — proof the panel actually calls them */}
             <div className={card}>
@@ -235,7 +394,7 @@ const App = () => {
         </main>
 
         {/* Chat panel */}
-        {isOpen && (
+        {isOpen && canChat && (
           <ChatPanel
             mode={mode}
             onClose={() => setIsOpen(false)}
@@ -243,9 +402,11 @@ const App = () => {
             topOffset={HEADER_HEIGHT}
             apiBaseUrl="/api/xtmone"
             agentDashboardUrl="https://xtm.example.com"
-            user={{ firstName: 'Tester' }}
+            user={{ firstName: session.state === 'signed-in' ? session.email.split('@')[0] : 'Tester' }}
             accentColor="#7b5cff"
-            promptSuggestions={SCENARIOS.map((s) => s.prompt)}
+            // Only the mock understands these; against a real backend the
+            // agent's own suggestions are the ones worth exercising.
+            promptSuggestions={session.state === 'mock' ? SCENARIOS.map((s) => s.prompt) : undefined}
             // Sidebar mode is only half-implemented without these two: the
             // panel must push the page aside, and be draggable to resize.
             pushContentSelector="#app-content"
