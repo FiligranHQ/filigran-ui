@@ -8,6 +8,7 @@ import { useConversations } from '../hooks/useConversations';
 import { useSidebarResize } from '../hooks/useSidebarResize';
 import { useAwayCompletionNotice } from '../hooks/useAwayCompletionNotice';
 import { useComposerExtras } from '../hooks/useComposerExtras';
+import { useAgentSuggestions } from '../hooks/useAgentSuggestions';
 import { DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
@@ -102,6 +103,14 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     maxTotalSize,
   });
 
+  const { suggestions: agentSuggestions, loading: suggestionsLoading } = useAgentSuggestions({
+    apiBaseUrl,
+    apiEndpoints,
+    backendType,
+    requestHeaders,
+    agentSlug: selectedAgent?.slug,
+  });
+
   const { prompts, quota, refreshQuota } = useComposerExtras({
     apiBaseUrl,
     apiEndpoints,
@@ -109,8 +118,6 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     requestHeaders,
   });
 
-  // A finished turn has consumed allowance, so re-read it rather than leaving a
-  // stale figure on screen until the panel is reopened.
   const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation } = useConversations({
     apiBaseUrl,
     apiEndpoints,
@@ -541,7 +548,18 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         )}
         <div className={showConversationSidebar ? 'flex flex-1 flex-col min-w-0' : 'contents'}>
       {messages.length === 0 ? (
-        <ChatWelcome firstName={firstName} logoIcon={resolvedLogo} promptSuggestions={promptSuggestions} onPromptClick={setInputValue} t={t} />
+        <ChatWelcome
+          firstName={firstName}
+          logoIcon={resolvedLogo}
+          // The agent's own suggestions when the backend serves them, the
+          // host's list otherwise — never an empty section.
+          promptSuggestions={agentSuggestions ?? promptSuggestions}
+          suggestionsLoading={suggestionsLoading}
+          agentName={selectedAgent?.name}
+          agentDescription={selectedAgent?.description}
+          onPromptClick={setInputValue}
+          t={t}
+        />
       ) : (
         <ChatMessages
           messages={messages}

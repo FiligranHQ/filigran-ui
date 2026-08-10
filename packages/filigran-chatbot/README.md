@@ -502,10 +502,17 @@ backend cannot answer, and there is no mode flag to keep in step.
 | --- | --- | --- |
 | Prompt library | `GET {apiBaseUrl}/chat/prompts` | `[{ id, title, content, description? }]` (or `{ prompts: [...] }`) |
 | Quota status | `GET {apiBaseUrl}/chat/quota` | `{ used: number, limit: number \| null, period: string }` |
+| Agent suggestions | `GET {apiBaseUrl}/chat/suggestions?agent_slug=<slug>` | `["..."]` (or `{ suggestions: [...] }`, or objects with `prompt`/`label`/`text`) |
 
 Set either to `null` in `apiEndpoints` to hide it. `limit: null` means no
 ceiling — the indicator then shows consumption without a bar. The quota is
 re-read whenever a turn finishes.
+
+The welcome screen names the selected agent and shows its own suggestions —
+which is also how switching agent is confirmed: the thread resets to that
+screen, so without it nothing tells you who the next message will reach. When
+the suggestions route is unavailable the host's `promptSuggestions` prop is used
+instead, so the section is never empty.
 
 Dictation needs no configuration at all: it uses the browser's own Web Speech
 API, so the mic button appears wherever the API exists and is simply absent

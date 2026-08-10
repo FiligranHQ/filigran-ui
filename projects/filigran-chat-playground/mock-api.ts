@@ -156,6 +156,19 @@ const PROMPTS = [
   { id: 'p6', title: 'Explain an attack path', content: 'Explain this attack path step by step, then propose mitigations:\n\n' },
 ];
 
+/** Suggested opening actions, keyed by agent slug with a generic fallback. */
+const SUGGESTIONS: Record<string, string[]> = {
+  default: ['Summarise my recent findings', 'What changed since yesterday?', 'Help me get started'],
+  general: ['Summarise my recent findings', 'What changed since yesterday?', 'Help me get started'],
+  threat: ['Profile a threat actor', 'What are the latest attack patterns?', 'Correlate these indicators'],
+  detection: ['Review this detection rule', 'Where are my coverage gaps?', 'Convert this rule to Sigma'],
+  ir: ['Triage this alert', 'Draft an incident timeline', 'What should I contain first?'],
+  malware: ['Analyse this sample', 'Extract indicators from this binary', 'Explain this obfuscation'],
+  reporting: ['Draft an intelligence report', 'Summarise this campaign for an exec', 'Build a briefing outline'],
+  phishing: ['Triage this reported email', 'Is this sender spoofed?', 'Draft a user response'],
+  exposure: ['What is newly exposed?', 'Prioritise my attack surface', 'Which assets need patching?'],
+};
+
 const QUOTA_LIMIT = 500;
 
 export function mockChatApi(): Plugin {
@@ -179,6 +192,11 @@ export function mockChatApi(): Plugin {
 
         // ---- composer toolbar: prompt library + quota ----
         if (path === '/chat/prompts') return json(res, PROMPTS);
+        if (path === '/chat/suggestions') {
+          // Per-agent today, per-user later — the parameter is the seam.
+          const slug = url.searchParams.get('agent_slug') ?? '';
+          return json(res, SUGGESTIONS[slug] ?? SUGGESTIONS.default);
+        }
         if (path === '/chat/quota') {
           // Creeps up as turns are spent, so the indicator visibly moves and
           // eventually crosses the amber and red thresholds.

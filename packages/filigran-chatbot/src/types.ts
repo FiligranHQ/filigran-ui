@@ -66,6 +66,16 @@ export interface ApiEndpoints {
    * Default: '/chat/quota'. Set to null to hide the affordance.
    */
   quota?: string | null;
+  /**
+   * Path for per-agent suggested actions shown on the welcome screen.
+   * Default: '/chat/suggestions'. Set to null to always use the host's
+   * `promptSuggestions` prop instead.
+   *
+   * Called as `GET {suggestions}?agent_slug=<slug>`. A backend that ignores
+   * the parameter still answers with a generic set, so the same route carries
+   * both today's generic suggestions and per-agent (later per-user) ones.
+   */
+  suggestions?: string | null;
 }
 
 /** A reusable prompt the user can insert into the composer. */
