@@ -24,12 +24,6 @@ const SCENARIOS: { prompt: string; label: string; covers: string }[] = [
 ];
 
 /**
- * Stand-in for a host-owned composer control. XTM One passes its session-tool
- * picker here; the package never learns what integrations or MCP servers are.
- * Any host that passes nothing simply has no such control — that is the whole
- * "product mode", with no flag to keep in step.
- */
-/**
  * Whether the playground is talking to a real XTM One, and to whom.
  *
  * `mock` is not a failure: with `CHAT_API_MOCK=1` the dev server answers the
@@ -141,6 +135,12 @@ const SignIn = ({ target, onSignedIn }: { target: string; onSignedIn: () => void
   );
 };
 
+/**
+ * Stand-in for a host-owned composer control. XTM One passes its session-tool
+ * picker here; the package never learns what integrations or MCP servers are.
+ * Any host that passes nothing simply has no such control — that is the whole
+ * "product mode", with no flag to keep in step.
+ */
 const HostToolbarSlot = ({ onClick, active }: { onClick: () => void; active: boolean }) => (
   <button
     type="button"
@@ -381,6 +381,7 @@ const App = () => {
                   'Draft: type, close the panel, reopen — the text is restored; sending clears it',
                   'File attachment via button click and paste',
                   'New chat clears state; conversation history lists and restores past chats',
+                  'Context gauge: absent before the first turn, then climbs ~26% per turn (mock) — amber past 80%, red past 95%; reload restores it, "New conversation" clears it',
                   'Dark/light mode toggle works correctly in both themes',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
