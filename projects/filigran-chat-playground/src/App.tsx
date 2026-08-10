@@ -48,7 +48,18 @@ const App = () => {
 
   return (
     <div>
-      <div className="min-h-screen bg-gray-100 dark:bg-[#0d0d1a] transition-colors">
+      {/*
+        `#app-content` is what `pushContentSelector` targets: in sidebar mode
+        the package sets an inline `padding-right` here so the page shrinks
+        beside the panel instead of being covered by it. This is the whole
+        point of sidebar mode, and it is the host's job to provide the element
+        — a panel with nowhere to push just overlays the page.
+
+        The package also publishes the same measurement as a
+        `--chatbot-sidebar-width` custom property on `:root`, which a host can
+        consume instead if it would rather own the transition.
+      */}
+      <div id="app-content" className="min-h-screen bg-gray-100 dark:bg-[#0d0d1a] transition-colors">
         {/* Top bar */}
         <header className="flex items-center justify-between px-6 py-3 bg-white dark:bg-[#1a1a2e] border-b border-gray-200 dark:border-white/10">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Filigran Chat Playground</h1>
@@ -147,6 +158,8 @@ const App = () => {
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Verification Checklist</h2>
             <ul className="space-y-2 text-sm text-gray-700 dark:text-white/70">
               {[
+                'Sidebar mode pushes the page aside (it must not overlay it) and the drag handle resizes it',
+                'Leaving sidebar mode — or closing the panel — removes the push completely',
                 'All 3 modes render with correct positioning/dimensions',
                 'Agent dropdown opens/closes, click-outside dismisses',
                 'Mode switcher transitions between modes',
@@ -184,6 +197,10 @@ const App = () => {
             user={{ firstName: 'Tester' }}
             accentColor="#7b5cff"
             promptSuggestions={SCENARIOS.map((s) => s.prompt)}
+            // Sidebar mode is only half-implemented without these two: the
+            // panel must push the page aside, and be draggable to resize.
+            pushContentSelector="#app-content"
+            resizable
             onMessageFeedback={handleMessageFeedback}
             onTaskComplete={handleTaskComplete}
             onDownloadError={handleDownloadError}
