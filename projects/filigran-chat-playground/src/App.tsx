@@ -94,112 +94,114 @@ const App = () => {
           `--chatbot-sidebar-width` custom property on `:root`, which a host can
           consume instead if it would rather own the transition.
         */}
-        <main id="app-content" className="p-8 max-w-3xl mx-auto space-y-6">
-          <div className={card}>
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Test Controls</h2>
+        <main id="app-content">
+          <div className="p-8 max-w-3xl mx-auto space-y-6">
+            <div className={card}>
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Test Controls</h2>
 
-            {/* Mode selector */}
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Display mode:</p>
-              <div className="flex gap-2">
-                {(['floating', 'sidebar', 'fullscreen'] as ChatMode[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setMode(m)}
-                    className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                      mode === m
-                        ? 'border-[#7b5cff] bg-[#7b5cff]/10 text-[#7b5cff]'
-                        : 'border-gray-300 dark:border-white/20 text-gray-700 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/10'
-                    }`}
-                  >
-                    {m}
-                  </button>
-                ))}
+              {/* Mode selector */}
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Display mode:</p>
+                <div className="flex gap-2">
+                  {(['floating', 'sidebar', 'fullscreen'] as ChatMode[]).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMode(m)}
+                      className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                        mode === m
+                          ? 'border-[#7b5cff] bg-[#7b5cff]/10 text-[#7b5cff]'
+                          : 'border-gray-300 dark:border-white/20 text-gray-700 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/10'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Open/close */}
+              <div>
+                <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Panel:</p>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen((o) => !o)}
+                  className="px-4 py-2 text-sm rounded-md bg-[#7b5cff] text-white hover:bg-[#6a4de0] transition-colors"
+                >
+                  {isOpen ? 'Close chat' : 'Open chat'}
+                </button>
               </div>
             </div>
 
-            {/* Open/close */}
-            <div>
-              <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Panel:</p>
-              <button
-                type="button"
-                onClick={() => setIsOpen((o) => !o)}
-                className="px-4 py-2 text-sm rounded-md bg-[#7b5cff] text-white hover:bg-[#6a4de0] transition-colors"
-              >
-                {isOpen ? 'Close chat' : 'Open chat'}
-              </button>
-            </div>
-          </div>
-
-          {/* Scenarios understood by the built-in mock backend */}
-          <div className={card}>
-            <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Scenarios</h2>
-            <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
-              The dev server answers these itself — no backend needed. Type the prompt into the panel to trigger one.
-            </p>
-            <ul className="space-y-2 text-sm">
-              {SCENARIOS.map((s) => (
-                <li key={s.prompt} className="flex flex-wrap items-baseline gap-2">
-                  <code className="rounded bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 font-mono text-xs text-gray-900 dark:text-white">{s.prompt}</code>
-                  <span className="font-medium text-gray-900 dark:text-white">{s.label}</span>
-                  <span className="text-gray-500 dark:text-white/40">— {s.covers}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4 text-xs text-gray-500 dark:text-white/40">
-              Point at a real backend instead with <code className="font-mono">CHAT_API_PROXY=http://localhost:8000 yarn dev</code>.
-            </p>
-          </div>
-
-          {/* Host callbacks — proof the panel actually calls them */}
-          <div className={card}>
-            <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Host callbacks</h2>
-            <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
-              Rate an answer, click an internal link, or let a long turn finish with the panel closed.
-            </p>
-            {log.length === 0 ? (
-              <p className="text-sm italic text-gray-400 dark:text-white/30">Nothing yet.</p>
-            ) : (
-              <ul className="space-y-1 font-mono text-xs">
-                {log.map((entry, i) => (
-                  <li key={i} className="text-gray-700 dark:text-white/70">
-                    <span className="text-gray-400 dark:text-white/30">{entry.at}</span> {entry.text}
+            {/* Scenarios understood by the built-in mock backend */}
+            <div className={card}>
+              <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Scenarios</h2>
+              <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
+                The dev server answers these itself — no backend needed. Type the prompt into the panel to trigger one.
+              </p>
+              <ul className="space-y-2 text-sm">
+                {SCENARIOS.map((s) => (
+                  <li key={s.prompt} className="flex flex-wrap items-baseline gap-2">
+                    <code className="rounded bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 font-mono text-xs text-gray-900 dark:text-white">{s.prompt}</code>
+                    <span className="font-medium text-gray-900 dark:text-white">{s.label}</span>
+                    <span className="text-gray-500 dark:text-white/40">— {s.covers}</span>
                   </li>
                 ))}
               </ul>
-            )}
-          </div>
+              <p className="mt-4 text-xs text-gray-500 dark:text-white/40">
+                Point at a real backend instead with <code className="font-mono">CHAT_API_PROXY=http://localhost:8000 yarn dev</code>.
+              </p>
+            </div>
 
-          {/* Verification checklist */}
-          <div className={card}>
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Verification Checklist</h2>
-            <ul className="space-y-2 text-sm text-gray-700 dark:text-white/70">
-              {[
-                'Sidebar mode pushes the page aside (it must not overlay it) and the drag handle resizes it',
-                'Leaving sidebar mode — or closing the panel — removes the push completely',
-                'All 3 modes render with correct positioning/dimensions',
-                'Agent dropdown opens/closes, click-outside dismisses',
-                'Mode switcher transitions between modes',
-                'Send a message and verify SSE streaming renders progressively',
-                'Markdown: tables (incl. the mis-delimited one), fenced code with and without a language, lists show bullets/numbers, soft line breaks',
-                'Images: inline chart and image attachment both preview; click opens the lightbox; Escape closes it',
-                'The javascript: link is inert, the https: one opens in a new tab',
-                'Hover an answer: copy button and 👍/👎 appear; ratings show up under "Host callbacks"',
-                'Reasoning details ("i") opens the tool trace',
-                'Long thread: "Load earlier messages" appears and walks the window back',
-                'Slow turn: elapsed counter ticks every second, then the waiting game appears',
-                'Draft: type, close the panel, reopen — the text is restored; sending clears it',
-                'File attachment via button click and paste',
-                'New chat clears state; conversation history lists and restores past chats',
-                'Dark/light mode toggle works correctly in both themes',
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <input type="checkbox" className="mt-0.5 accent-[#7b5cff]" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
+            {/* Host callbacks — proof the panel actually calls them */}
+            <div className={card}>
+              <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Host callbacks</h2>
+              <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
+                Rate an answer, click an internal link, or let a long turn finish with the panel closed.
+              </p>
+              {log.length === 0 ? (
+                <p className="text-sm italic text-gray-400 dark:text-white/30">Nothing yet.</p>
+              ) : (
+                <ul className="space-y-1 font-mono text-xs">
+                  {log.map((entry, i) => (
+                    <li key={i} className="text-gray-700 dark:text-white/70">
+                      <span className="text-gray-400 dark:text-white/30">{entry.at}</span> {entry.text}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Verification checklist */}
+            <div className={card}>
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Verification Checklist</h2>
+              <ul className="space-y-2 text-sm text-gray-700 dark:text-white/70">
+                {[
+                  'Sidebar mode pushes the page aside (it must not overlay it) and the drag handle resizes it',
+                  'Leaving sidebar mode — or closing the panel — removes the push completely',
+                  'All 3 modes render with correct positioning/dimensions',
+                  'Agent dropdown opens/closes, click-outside dismisses',
+                  'Mode switcher transitions between modes',
+                  'Send a message and verify SSE streaming renders progressively',
+                  'Markdown: tables (incl. the mis-delimited one), fenced code with and without a language, lists show bullets/numbers, soft line breaks',
+                  'Images: inline chart and image attachment both preview; click opens the lightbox; Escape closes it',
+                  'The javascript: link is inert, the https: one opens in a new tab',
+                  'Hover an answer: copy button and 👍/👎 appear; ratings show up under "Host callbacks"',
+                  'Reasoning details ("i") opens the tool trace',
+                  'Long thread: "Load earlier messages" appears and walks the window back',
+                  'Slow turn: elapsed counter ticks every second, then the waiting game appears',
+                  'Draft: type, close the panel, reopen — the text is restored; sending clears it',
+                  'File attachment via button click and paste',
+                  'New chat clears state; conversation history lists and restores past chats',
+                  'Dark/light mode toggle works correctly in both themes',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <input type="checkbox" className="mt-0.5 accent-[#7b5cff]" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </main>
 
