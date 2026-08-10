@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
+import { ensurePlaygroundAgent } from './playground-agent';
 
 /**
  * Point the playground at a real XTM One instead of the built-in mock, so the
@@ -39,6 +40,8 @@ interface RealApiConfig {
   token?: string;
   email?: string;
   password?: string;
+  /** Create/refresh the renderer-stressing agent on the target instance. */
+  bootstrapAgent: boolean;
 }
 
 export function readRealApiConfig(env: NodeJS.ProcessEnv): RealApiConfig | null {
@@ -50,6 +53,8 @@ export function readRealApiConfig(env: NodeJS.ProcessEnv): RealApiConfig | null 
     token: env.CHAT_API_TOKEN,
     email: env.CHAT_API_EMAIL,
     password: env.CHAT_API_PASSWORD,
+    // Opt-in: it writes to whichever instance you are pointed at.
+    bootstrapAgent: env.CHAT_PLAYGROUND_AGENT === '1' || env.CHAT_PLAYGROUND_AGENT === 'true',
   };
 }
 
@@ -132,7 +137,9 @@ export function realChatApi(config: RealApiConfig): Plugin {
     configureServer(server) {
       console.log(`  [real-api] proxying ${PATH_PREFIX} -> ${config.target}${config.prefix}`);
       // Warm the token so the first chat request does not pay for the login.
-      void resolveToken();
+      void resolveToken().then(() => {
+        if (config.bootstrapAgent) void ensurePlaygroundAgent({ target: config.target, resolveToken });
+      });
 
       server.middlewares.use(async (req, res, next) => {
         const rawUrl = req.url ?? '/';

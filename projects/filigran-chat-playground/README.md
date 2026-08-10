@@ -66,6 +66,23 @@ Two things the dev server does for you (see [`real-api.ts`](./real-api.ts)):
   pair and it logs in for you. Credentials come from the environment only —
   none of this belongs in a committed file.
 
+#### A real agent that stresses the renderer
+
+Against a real backend the scenarios above are gone — the agents answer for
+real. To get both, add `CHAT_PLAYGROUND_AGENT=1` and the dev server creates (or
+refreshes) a **Rendering Playground** agent on the instance you are pointed at,
+whose persona tells it to weave the renderer-breaking shapes into every reply:
+a mis-delimited table, a fence with no language, nested fences, an inert
+`javascript:` link, soft breaks. Pick it from the agent menu.
+
+Being a real agent, it exercises the real path — token pacing, tool statuses,
+transfers — which the mock can only imitate.
+
+It is created through the ordinary API rather than added to XTM One's seeded
+built-ins on purpose: agents have no per-agent platform gating, so a seeded
+entry would ship to every deployment. Opt-in, because it writes to whichever
+instance you chose.
+
 The login is lazy and retried, so starting the playground before XTM One works:
 bring the backend up and the next request picks up a token. While it is down,
 the agent menu says so rather than spinning.
