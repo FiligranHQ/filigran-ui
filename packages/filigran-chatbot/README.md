@@ -14,6 +14,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - 🖼️ **Image Previews** — `data:image/*` charts and image attachments render inline, click to expand
 - 📋 **Copy & Rate** — Copy any answer; optional 👍/👎 feedback wired to the host
 - 🧰 **Composer Toolbar** — Prompt library and quota indicator, both driven by whether the host serves the route; plus a slot for the host's own controls
+- 🎙️ **Dictation** — Speech-to-text via the browser's own Web Speech API; no endpoint, no key, hidden where unsupported
 - ✍️ **Draft Recovery** — Unsent composer text is kept per conversation and restored when the panel reopens
 - 🎨 **Customizable Theme** — Accent color and logo customization
 - 📱 **3 Display Modes** — Floating, sidebar (resizable), and fullscreen
@@ -499,6 +500,12 @@ backend cannot answer, and there is no mode flag to keep in step.
 Set either to `null` in `apiEndpoints` to hide it. `limit: null` means no
 ceiling — the indicator then shows consumption without a bar. The quota is
 re-read whenever a turn finishes.
+
+Dictation needs no configuration at all: it uses the browser's own Web Speech
+API, so the mic button appears wherever the API exists and is simply absent
+elsewhere. Finalised phrases are appended to the composer (never replacing a
+draft), interim words preview beside the button, and sending stops the mic so
+the next words cannot land in a composer the user just emptied.
 
 Anything host-specific goes through `composerToolbar`:
 

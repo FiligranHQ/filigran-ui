@@ -24,6 +24,7 @@ export * from './ImageIcon';
 export * from './InfoIcon';
 export * from './MailIcon';
 export * from './MaximizeIcon';
+export * from './MicIcon';
 export * from './SearchIcon';
 export * from './SendIcon';
 export * from './SidebarIcon';
