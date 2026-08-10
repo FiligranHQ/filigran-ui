@@ -1,6 +1,8 @@
 import { useRef, type KeyboardEvent } from 'react';
-import type { ChatFile, ChatMode } from '../types';
+import type { ChatFile, ChatMode, ChatPromptTemplate, ChatQuotaStatus } from '../types';
 import { AttachFileIcon, FileIcon, SendIcon, StopCircleIcon } from './icons';
+import { PromptPicker } from './PromptPicker';
+import { QuotaIndicator } from './QuotaIndicator';
 import { Tooltip } from './Tooltip';
 
 interface ChatInputProps {
@@ -23,6 +25,12 @@ interface ChatInputProps {
   t: (key: string) => string;
   mode?: ChatMode;
   separatorColor?: string;
+  /** Saved prompt templates; omitted entirely when the host serves none. */
+  prompts?: ChatPromptTemplate[] | null;
+  /** Agentic quota headroom; omitted entirely when the host serves none. */
+  quota?: ChatQuotaStatus | null;
+  /** Host-supplied controls appended to the toolbar (see `composerToolbar`). */
+  composerToolbar?: React.ReactNode;
 }
 
 export const ChatInput = ({
@@ -39,6 +47,9 @@ export const ChatInput = ({
   t,
   mode,
   separatorColor,
+  prompts,
+  quota,
+  composerToolbar,
 }: ChatInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -60,6 +71,17 @@ export const ChatInput = ({
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   };
+
+  // Append rather than replace: a user who has already started typing must not
+  // lose it to a template pick. The blank line keeps the two blocks distinct.
+  const handlePromptPick = (content: string) => {
+    onInputChange(inputValue.trim() ? `${inputValue.trimEnd()}\n\n${content}` : content);
+    textareaRef.current?.focus();
+  };
+
+  // The toolbar row costs vertical space, so it only exists when something
+  // actually occupies it.
+  const hasToolbar = Boolean((prompts && prompts.length > 0) || quota || composerToolbar);
 
   const isFileManagementEnabled = Boolean(onFileAdd && onFileRemove && onPaste);
   const hasContent = inputValue.trim() || (isFileManagementEnabled && attachedFiles.length > 0);
@@ -177,6 +199,16 @@ export const ChatInput = ({
           </button>
         </Tooltip>
       </div>
+
+      {hasToolbar && (
+        <div className="flex items-center gap-1.5 mt-1.5 px-0.5">
+          {prompts && prompts.length > 0 && <PromptPicker prompts={prompts} onPick={handlePromptPick} t={t} />}
+          {composerToolbar}
+          {/* Quota sits last and pushed right: it is a status readout, not a
+              control, so it should never sit between two clickable things. */}
+          {quota && <span className="ml-auto">{<QuotaIndicator quota={quota} t={t} />}</span>}
+        </div>
+      )}
 
       <p className="text-center text-[0.65rem] text-gray-400 dark:text-white/30 mt-1.5 opacity-70">{footerText}</p>
     </div>

@@ -52,6 +52,43 @@ export interface ApiEndpoints {
    * unless this path is set explicitly to a proxy route.
    */
   download?: string | null;
+  /**
+   * Path for the prompt library shown in the composer toolbar.
+   * Default: '/chat/prompts'. Set to null to hide the affordance.
+   *
+   * Visibility is data-driven on purpose: a host that does not serve this
+   * route simply has no prompt button, so there is no separate "mode" to keep
+   * in step with what the backend actually implements.
+   */
+  prompts?: string | null;
+  /**
+   * Path for the quota indicator shown in the composer toolbar.
+   * Default: '/chat/quota'. Set to null to hide the affordance.
+   */
+  quota?: string | null;
+}
+
+/** A reusable prompt the user can insert into the composer. */
+export interface ChatPromptTemplate {
+  id: string;
+  title: string;
+  /** The text inserted into the composer when picked. */
+  content: string;
+  description?: string;
+}
+
+/**
+ * Agentic quota headroom for the current user, as the composer indicator needs
+ * it — deliberately just the three numbers it renders. Where the limit comes
+ * from (user override, group, platform, licence) is the host platform's own
+ * business and has no place on an embedded surface.
+ */
+export interface ChatQuotaStatus {
+  used: number;
+  /** null means unlimited — the indicator then shows usage without a bar. */
+  limit: number | null;
+  /** Human-readable period label, e.g. "monthly". */
+  period: string;
 }
 
 export interface ChatPanelProps {
@@ -163,6 +200,16 @@ export interface ChatPanelProps {
    * Default: false.
    */
   disableImagePreviews?: boolean;
+  /**
+   * Rendered into the composer toolbar, after the built-in controls.
+   *
+   * The escape hatch for anything the package has no business knowing about —
+   * XTM One's session-tool picker (integrations, MCP servers, knowledge bases)
+   * being the motivating case. A host that passes nothing gets no extra
+   * controls, so this doubles as the "product" toolbar: there is no mode flag
+   * to keep in step, only the presence or absence of what a host provides.
+   */
+  composerToolbar?: React.ReactNode;
 }
 
 export interface ChatToggleButtonProps {

@@ -10,6 +10,8 @@ export type {
   ChatAttachment,
   ChatConversationSummary,
   ChatFile,
+  ChatPromptTemplate,
+  ChatQuotaStatus,
   MessageFeedback,
   XtmAgent,
   ApiEndpoints,

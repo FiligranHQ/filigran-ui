@@ -147,9 +147,22 @@ function scriptFor(prompt: string): { text: string; stall: boolean; history: num
   return { text: KITCHEN_SINK, stall: false, history: 0 };
 }
 
+const PROMPTS = [
+  { id: 'p1', title: 'Summarise an incident', content: 'Summarise the following incident for a non-technical reader:\n\n', description: 'Plain-language write-up' },
+  { id: 'p2', title: 'Draft detection rule', content: 'Write a Sigma rule detecting the behaviour described below:\n\n', description: 'Sigma, with a short rationale' },
+  { id: 'p3', title: 'Enrich an indicator', content: 'Enrich this indicator with everything the connected platforms know:\n\n' },
+  { id: 'p4', title: 'Compare two campaigns', content: 'Compare these two campaigns on TTPs, infrastructure and victimology:\n\n' },
+  { id: 'p5', title: 'Triage a phishing email', content: 'Triage the reported email below and recommend an action:\n\n' },
+  { id: 'p6', title: 'Explain an attack path', content: 'Explain this attack path step by step, then propose mitigations:\n\n' },
+];
+
+const QUOTA_LIMIT = 500;
+
 export function mockChatApi(): Plugin {
   const conversations = new Map<string, Conversation>();
   let seq = 0;
+  // Start close to the amber threshold so the indicator is worth looking at.
+  let quotaUsed = 360;
 
   return {
     name: 'filigran-mock-chat-api',
@@ -163,6 +176,14 @@ export function mockChatApi(): Plugin {
 
         // ---- agents ----
         if (path === '/chat/agents') return json(res, AGENTS);
+
+        // ---- composer toolbar: prompt library + quota ----
+        if (path === '/chat/prompts') return json(res, PROMPTS);
+        if (path === '/chat/quota') {
+          // Creeps up as turns are spent, so the indicator visibly moves and
+          // eventually crosses the amber and red thresholds.
+          return json(res, { used: quotaUsed, limit: QUOTA_LIMIT, period: 'monthly' });
+        }
 
         // ---- history list / delete ----
         if (path === '/chat/sessions' && method === 'GET') {
@@ -251,6 +272,7 @@ export function mockChatApi(): Plugin {
             await sleep(12);
           }
 
+          quotaUsed += 17;
           const answer = `${text}\n\n[[FILE:file-${seq}]]`;
           conv.messages.push({ role: 'assistant', content: answer });
           conv.updatedAt = new Date().toISOString();

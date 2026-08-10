@@ -23,11 +23,33 @@ const SCENARIOS: { prompt: string; label: string; covers: string }[] = [
   { prompt: 'long thread', label: 'Long thread', covers: '200 backfilled messages — render window' },
 ];
 
+/**
+ * Stand-in for a host-owned composer control. XTM One passes its session-tool
+ * picker here; the package never learns what integrations or MCP servers are.
+ * Any host that passes nothing simply has no such control — that is the whole
+ * "product mode", with no flag to keep in step.
+ */
+const HostToolbarSlot = ({ onClick, active }: { onClick: () => void; active: boolean }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title="Host-supplied control (stands in for the session-tool picker)"
+    className={`h-7 rounded-lg px-2 text-[0.7rem] transition-colors ${
+      active
+        ? 'bg-[#7b5cff]/10 text-[#7b5cff]'
+        : 'text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10'
+    }`}
+  >
+    Tools{active ? ' · 3' : ''}
+  </button>
+);
+
 const App = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<ChatMode>('floating');
   const [isDark, setIsDark] = useState(true);
   const [log, setLog] = useState<LogEntry[]>([]);
+  const [hostToolActive, setHostToolActive] = useState(false);
 
   // Put dark class on <html> so portal-based elements (tooltips, dropdowns) also get dark: styles
   // This one may need adaptation to work with any app
@@ -221,6 +243,7 @@ const App = () => {
             // panel must push the page aside, and be draggable to resize.
             pushContentSelector="#app-content"
             resizable
+            composerToolbar={<HostToolbarSlot active={hostToolActive} onClick={() => setHostToolActive((v) => !v)} />}
             onMessageFeedback={handleMessageFeedback}
             onTaskComplete={handleTaskComplete}
             onDownloadError={handleDownloadError}

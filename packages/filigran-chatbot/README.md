@@ -13,6 +13,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - 📝 **Full Markdown** — Tables (mis-delimited ones repaired), code blocks with copy button, lists, blockquotes, soft line breaks, inline images with a lightbox
 - 🖼️ **Image Previews** — `data:image/*` charts and image attachments render inline, click to expand
 - 📋 **Copy & Rate** — Copy any answer; optional 👍/👎 feedback wired to the host
+- 🧰 **Composer Toolbar** — Prompt library and quota indicator, both driven by whether the host serves the route; plus a slot for the host's own controls
 - ✍️ **Draft Recovery** — Unsent composer text is kept per conversation and restored when the panel reopens
 - 🎨 **Customizable Theme** — Accent color and logo customization
 - 📱 **3 Display Modes** — Floating, sidebar (resizable), and fullscreen
@@ -79,6 +80,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
 | `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Enables 👍/👎 on completed assistant answers and receives each rating (`null` clears it). Omit to hide the affordance — the panel stores nothing itself. |
 | `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
+| `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
 
 #### Resizable Sidebar Example
 
@@ -482,6 +484,30 @@ import '@filigran/chatbot/styles.css';
 ```
 
 The component uses Tailwind CSS classes and CSS custom properties for theming. The accent color is applied via `--chat-accent` CSS variable.
+
+### Composer toolbar
+
+Two toolbar items are **data-driven rather than mode-driven**: they appear only
+when the host serves the route, so the UI can never advertise something the
+backend cannot answer, and there is no mode flag to keep in step.
+
+| Endpoint | Default path | Response |
+| --- | --- | --- |
+| Prompt library | `GET {apiBaseUrl}/chat/prompts` | `[{ id, title, content, description? }]` (or `{ prompts: [...] }`) |
+| Quota status | `GET {apiBaseUrl}/chat/quota` | `{ used: number, limit: number \| null, period: string }` |
+
+Set either to `null` in `apiEndpoints` to hide it. `limit: null` means no
+ceiling — the indicator then shows consumption without a bar. The quota is
+re-read whenever a turn finishes.
+
+Anything host-specific goes through `composerToolbar`:
+
+```tsx
+<ChatPanel
+  composerToolbar={<MySessionToolPicker />}
+  {...rest}
+/>
+```
 
 ## Markdown Helpers
 

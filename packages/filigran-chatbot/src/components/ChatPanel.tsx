@@ -7,6 +7,7 @@ import { useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
 import { useSidebarResize } from '../hooks/useSidebarResize';
 import { useAwayCompletionNotice } from '../hooks/useAwayCompletionNotice';
+import { useComposerExtras } from '../hooks/useComposerExtras';
 import { DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
@@ -56,6 +57,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   onTaskComplete,
   onMessageFeedback,
   disableImagePreviews = false,
+  composerToolbar,
 }) => {
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
@@ -98,6 +100,21 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     maxFileCount,
     maxTotalSize,
   });
+
+  const { prompts, quota, refreshQuota } = useComposerExtras({
+    apiBaseUrl,
+    apiEndpoints,
+    backendType,
+    requestHeaders,
+  });
+
+  // A finished turn has consumed allowance, so re-read it rather than leaving a
+  // stale figure on screen until the panel is reopened.
+  const wasLoadingRef = useRef(false);
+  useEffect(() => {
+    if (wasLoadingRef.current && !isLoading) refreshQuota();
+    wasLoadingRef.current = isLoading;
+  }, [isLoading, refreshQuota]);
 
   const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation } = useConversations({
     apiBaseUrl,
@@ -514,6 +531,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         t={t}
         mode={mode}
         separatorColor={draftBorderColor}
+        prompts={prompts}
+        quota={quota}
+        composerToolbar={composerToolbar}
       />
     </div>
   );
