@@ -8,6 +8,8 @@ export type {
   ChatToggleButtonProps,
   ChatMessage,
   ChatAttachment,
+  ChatContextBreakdown,
+  ChatContextUsage,
   ChatConversationSummary,
   ChatFile,
   ChatPromptTemplate,

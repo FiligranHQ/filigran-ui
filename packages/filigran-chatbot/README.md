@@ -14,6 +14,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - 🖼️ **Image Previews** — `data:image/*` charts and image attachments render inline, click to expand
 - 📋 **Copy & Rate** — Copy any answer; optional 👍/👎 feedback wired to the host
 - 🧰 **Composer Toolbar** — Prompt library and quota indicator, both driven by whether the host serves the route; plus a slot for the host's own controls
+- 🧠 **Context Gauge** — Ring + percentage showing how full the model's context window is, so a long chat's silent summarising is visible before it happens
 - 🎙️ **Dictation** — Speech-to-text via the browser's own Web Speech API; no endpoint, no key, hidden where unsupported
 - ✍️ **Draft Recovery** — Unsent composer text is kept per conversation and restored when the panel reopens
 - 🎨 **Customizable Theme** — Accent color and logo customization
@@ -81,6 +82,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
 | `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Enables 👍/👎 on completed assistant answers and receives each rating (`null` clears it). Omit to hide the affordance — the panel stores nothing itself. |
 | `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
+| `contextUsageEnabled` | `boolean`                               | `true`       | Show how full the model's context window is for the current conversation (ring + percentage in the composer toolbar). Data-driven, so it stays absent until the backend reports occupancy — see [Context usage](#context-usage). |
 | `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
 
 #### Resizable Sidebar Example
@@ -519,6 +521,60 @@ API, so the mic button appears wherever the API exists and is simply absent
 elsewhere. Finalised phrases are appended to the composer (never replacing a
 draft), interim words preview beside the button, and sending stops the mic so
 the next words cannot land in a composer the user just emptied.
+
+### Context usage
+
+The composer also carries a context gauge — a small ring plus percentage
+showing how full the model's context window is for the current conversation,
+the affordance Cursor popularised. It answers one question: *is this
+conversation about to get shorter than I think?* Long chats do not fail at the
+window, they get silently summarised, and a user who cannot see that coming
+reads the summary's gaps as the assistant forgetting.
+
+Clicking it opens a breakdown: one stacked bar over the window plus a colour
+legend, so "why is this chat 84 % full" has an answer the user can act on —
+usually "the tool results", sometimes "the MCP tools you wired up".
+
+Unlike the items above it needs no endpoint of its own. The backend reports the
+occupancy on the frames it already sends:
+
+| Frame | Extra keys | When |
+| --- | --- | --- |
+| `status: "thinking"` | `context_tokens`, `context_window`, `context_breakdown?` | Each agent-loop iteration, so the gauge climbs during a long turn |
+| `done` | same | Closing value for the turn — a turn whose last iteration compacted ends lower than it peaked |
+| Restored message (`POST /chat/sessions`) | same | On the newest assistant message, so a reload or conversation switch restores the gauge |
+
+`context_tokens` and `context_window` are required together and the window must
+be positive: a token count with no window to measure it against is not a ratio.
+Anything else is ignored, so a backend that reports nothing simply has no gauge —
+and a host on an older backend needs no configuration change.
+
+`context_breakdown` is optional and validated independently, so a malformed one
+costs the gauge its detail but never its number. Keys, all optional, in tokens:
+
+| Key | Legend row |
+| --- | --- |
+| `system` | System prompt |
+| `tools` | Tool definitions |
+| `dynamic_tools` | MCP & dynamic tools |
+| `summary` | Summarized conversation |
+| `tool_results` | Tool results |
+| `conversation` | Conversation |
+
+Only positive values are shown, so a chat with no digest yet simply has no
+"Summarized conversation" row. **The values must sum to `context_tokens`** — the
+popover shows the lines and the headline together, and a breakdown whose parts
+do not add up reads as broken numbers rather than as rounding. A producer doing
+per-bucket integer division has to distribute the remainder rather than drop it.
+
+Colours track the backend's own thresholds, not a design choice: neutral below
+80 % (where XTM One's agent loop starts distilling older turns into a summary),
+amber past it, red past 95 % (where it emergency-prunes). `used` is a
+char-derived estimate of what the next call will carry — deliberately a forecast
+rather than a receipt for the turn that just ended, which is why the figures are
+prefixed with `~`.
+
+Only the `rest` backend carries the figures today.
 
 Anything host-specific goes through `composerToolbar`:
 

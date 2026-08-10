@@ -1,16 +1,10 @@
 import type { ChatQuotaStatus } from '../types';
+import { compactCount as compact } from '../utils';
 import { Tooltip } from './Tooltip';
 
 interface QuotaIndicatorProps {
   quota: ChatQuotaStatus;
   t: (key: string) => string;
-}
-
-/** Compact count: 1200 → 1.2k, so the indicator never widens the toolbar. */
-function compact(n: number): string {
-  if (n < 1000) return `${n}`;
-  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0).replace(/\.0$/, '')}k`;
-  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
 }
 
 /**

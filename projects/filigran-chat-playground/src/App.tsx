@@ -390,6 +390,7 @@ const App = () => {
                       'File attachment via button click and paste',
                       'New chat clears state; conversation history lists and restores past chats',
                       'Context gauge: absent before the first turn, then 21/42/63/84/100% over five turns (mock) — amber at 84%, red at 100%; reload restores it, "New conversation" clears it',
+                  'Context gauge detail: click it — stacked bar + legend, rows sum to the headline, "Summarized conversation" only appears past 80%',
                       'Dark/light mode toggle works correctly in both themes',
                     ].map((item) => (
                       <li key={item} className="flex items-start gap-2">

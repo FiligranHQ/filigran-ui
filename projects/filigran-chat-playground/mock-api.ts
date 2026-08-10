@@ -113,6 +113,34 @@ interface Conversation {
   title: string;
   updatedAt: string;
   messages: { role: 'user' | 'assistant'; content: string }[];
+  /** Context tokens the next turn would carry — drives the composer gauge. */
+  contextTokens: number;
+}
+
+/**
+ * Plausible composition of a context of *total* tokens, for the gauge's detail
+ * popover. Buckets sum to `total` exactly — the popover shows both the lines and
+ * the headline, so a breakdown that does not add up reads as a bug in the
+ * numbers. The `summary` line only appears past the compaction gate, which is
+ * where a real backend would first have a digest to show.
+ */
+function mockContextBreakdown(total: number): Record<string, number> {
+  // Fixed overheads first: the persona and the tool schemas do not grow with
+  // the thread, which is exactly what makes them worth showing separately.
+  const system = Math.min(6_000, total);
+  const tools = Math.min(14_000, total - system);
+  const dynamicTools = Math.min(9_000, total - system - tools);
+  const rest = total - system - tools - dynamicTools;
+  const toolResults = Math.round(rest * 0.45);
+  const summary = total >= CONTEXT_WINDOW * 0.8 ? Math.round(rest * 0.18) : 0;
+  return {
+    system,
+    tools,
+    dynamic_tools: dynamicTools,
+    conversation: rest - toolResults - summary,
+    tool_results: toolResults,
+    ...(summary ? { summary } : {}),
+  };
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -170,6 +198,14 @@ const SUGGESTIONS: Record<string, string[]> = {
 };
 
 const QUOTA_LIMIT = 500;
+
+// Context gauge: a 200k window filled 21 % per turn, so five turns land on
+// 21 / 42 / 63 / 84 / 100 % — deliberately stepped to hit every band the
+// indicator has, including the amber one between 80 % and 95 % (where the real
+// backend starts summarising older turns) that a coarser step jumps straight
+// over.
+const CONTEXT_WINDOW = 200_000;
+const CONTEXT_PER_TURN = 42_000;
 
 export function mockChatApi(): Plugin {
   const conversations = new Map<string, Conversation>();
@@ -230,12 +266,21 @@ export function mockChatApi(): Plugin {
           if (existing) {
             return json(res, {
               conversation_id: existing.id,
-              messages: existing.messages.map((m) => ({ role: m.role, content: m.content })),
+              // The real backend persists the occupancy on each assistant
+              // message; the panel reads the newest one that carries it, so
+              // the gauge survives a reload. Only the last one needs it here.
+              messages: existing.messages.map((m, i) => ({
+                role: m.role,
+                content: m.content,
+                ...(m.role === 'assistant' && i === existing.messages.length - 1 && existing.contextTokens > 0
+                  ? { context_tokens: existing.contextTokens, context_window: CONTEXT_WINDOW, context_breakdown: mockContextBreakdown(existing.contextTokens) }
+                  : {}),
+              })),
             });
           }
           // Mirror the real backend: a stale id transparently becomes a new one.
           const id = `conv-${++seq}`;
-          conversations.set(id, { id, title: 'New conversation', updatedAt: new Date().toISOString(), messages: [] });
+          conversations.set(id, { id, title: 'New conversation', updatedAt: new Date().toISOString(), messages: [], contextTokens: 0 });
           return json(res, { conversation_id: id, messages: [] });
         }
 
@@ -262,7 +307,7 @@ export function mockChatApi(): Plugin {
           let convId = typeof body.conversation_id === 'string' ? body.conversation_id : '';
           if (!convId || !conversations.has(convId)) {
             convId = `conv-${++seq}`;
-            conversations.set(convId, { id: convId, title: 'New conversation', updatedAt: new Date().toISOString(), messages: [] });
+            conversations.set(convId, { id: convId, title: 'New conversation', updatedAt: new Date().toISOString(), messages: [], contextTokens: 0 });
           }
           const conv = conversations.get(convId)!;
           // Backends rewrite the title from the first message.
@@ -281,7 +326,11 @@ export function mockChatApi(): Plugin {
           res.setHeader('Connection', 'keep-alive');
           const send = (obj: unknown) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
 
-          send({ type: 'status', status: 'thinking' });
+          // The window fills as the thread grows. The real backend hangs these
+          // on the per-iteration `thinking` frame, so the gauge climbs during
+          // the turn rather than jumping at the end.
+          conv.contextTokens = Math.min(conv.contextTokens + CONTEXT_PER_TURN, CONTEXT_WINDOW);
+          send({ type: 'status', status: 'thinking', iteration: 1, context_tokens: conv.contextTokens, context_window: CONTEXT_WINDOW, context_breakdown: mockContextBreakdown(conv.contextTokens) });
           await sleep(300);
           send({ type: 'status', status: 'thinking_text', content: 'Working out what the user wants, then checking how the answer will render.' });
           await sleep(400);
@@ -309,6 +358,9 @@ export function mockChatApi(): Plugin {
             tool_names: ['search_entities'],
             tool_call_count: 1,
             iterations: 2,
+            context_tokens: conv.contextTokens,
+            context_window: CONTEXT_WINDOW,
+            context_breakdown: mockContextBreakdown(conv.contextTokens),
             reasoning: 'Checked the rendering pipeline end to end, then wrote the answer.',
             tool_call_trace: [{ name: 'search_entities', input: '{"q":"apt"}', output: '{"hits":3}', success: true }],
             attachments: [

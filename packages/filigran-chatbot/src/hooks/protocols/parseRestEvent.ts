@@ -1,5 +1,55 @@
-import type { ChatAttachment, ToolCallTraceEntry, TransferChainEntry } from '../../types';
+import type { ChatAttachment, ChatContextBreakdown, ChatContextUsage, ToolCallTraceEntry, TransferChainEntry } from '../../types';
 import type { ParsedAction, ProtocolContext } from './types';
+
+/** Wire key → the breakdown field it populates. */
+const BREAKDOWN_KEYS: ReadonlyArray<[string, keyof ChatContextBreakdown]> = [
+  ['system', 'system'],
+  ['tools', 'tools'],
+  ['dynamic_tools', 'dynamicTools'],
+  ['summary', 'summary'],
+  ['conversation', 'conversation'],
+  ['tool_results', 'toolResults'],
+];
+
+/**
+ * Normalize the optional `context_breakdown` object.
+ *
+ * Only positive numbers for keys we know how to label survive: an unlabelled
+ * bucket cannot be rendered, and a zero one is noise in a list meant to show
+ * where the context actually went. Returns `undefined` when nothing usable is
+ * left, so the gauge keeps its number and simply has no detail to open.
+ */
+function parseBreakdown(raw: unknown): ChatContextBreakdown | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const src = raw as Record<string, unknown>;
+  const out: ChatContextBreakdown = {};
+  let any = false;
+  for (const [wireKey, field] of BREAKDOWN_KEYS) {
+    const value = src[wireKey];
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+      out[field] = value;
+      any = true;
+    }
+  }
+  return any ? out : undefined;
+}
+
+/**
+ * Read the context-window occupancy carried by a progress or `done` frame.
+ *
+ * Both halves are required and the window must be positive: a token count with
+ * no window to measure it against is not a ratio, and a zero window would make
+ * one out of a division by zero. Returns `undefined` for anything else, so a
+ * backend that reports nothing simply leaves the gauge as it was.
+ */
+export function parseContextUsage(evt: Record<string, unknown>): ChatContextUsage | undefined {
+  const used = evt.context_tokens;
+  const limit = evt.context_window;
+  if (typeof used !== 'number' || typeof limit !== 'number') return undefined;
+  if (!Number.isFinite(used) || !Number.isFinite(limit) || limit <= 0 || used < 0) return undefined;
+  const breakdown = parseBreakdown(evt.context_breakdown);
+  return breakdown ? { used, limit, breakdown } : { used, limit };
+}
 
 /**
  * Normalize the raw `attachments` array from a backend `done` event into
@@ -107,10 +157,14 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
         elapsedS: typeof evt.elapsed_s === 'number' ? evt.elapsed_s : undefined,
       };
     }
+    // Context occupancy rides on the per-iteration `thinking` frame, so the
+    // gauge climbs during a long turn. Read before the `analyzing` relabel
+    // below, which rewrites the status but not what the frame carries.
+    const contextUsage = parseContextUsage(evt);
     if (st === 'thinking' && ctx.hasUsedTools) {
-      return { action: 'status', status: 'analyzing' };
+      return { action: 'status', status: 'analyzing', contextUsage };
     }
-    return { action: 'status', status: st, tools: evt.tools as string[] | undefined };
+    return { action: 'status', status: st, tools: evt.tools as string[] | undefined, contextUsage };
   }
 
   if (type === 'stream') {
@@ -132,6 +186,7 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       toolCallTrace: parseToolCallTrace(evt.tool_call_trace),
       transferChain: parseTransferChain(evt.transfer_chain),
       isTruncated: evt.is_truncated === true || undefined,
+      contextUsage: parseContextUsage(evt),
     };
   }
 

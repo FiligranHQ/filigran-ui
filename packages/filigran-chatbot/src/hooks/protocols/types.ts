@@ -1,11 +1,24 @@
-import type { ChatAttachment, ToolCallTraceEntry, TransferChainEntry } from '../../types';
+import type { ChatAttachment, ChatContextUsage, ToolCallTraceEntry, TransferChainEntry } from '../../types';
 
 /**
  * Normalized action produced by all protocol parsers.
  * The SSE read loop is protocol-agnostic — only the JSON-to-action mapping differs.
  */
 export type ParsedAction =
-  | { action: 'status'; status: string; tools?: string[]; thinkingContent?: string; elapsedS?: number }
+  | {
+      action: 'status';
+      status: string;
+      tools?: string[];
+      thinkingContent?: string;
+      elapsedS?: number;
+      /**
+       * Context-window occupancy reported alongside a progress event, so the
+       * composer gauge climbs during a long turn instead of only at the end.
+       * Orthogonal to `status` — the consumer updates the gauge and applies the
+       * status label independently.
+       */
+      contextUsage?: ChatContextUsage;
+    }
   | { action: 'stream'; content: string }
   | {
       action: 'done';
@@ -25,6 +38,8 @@ export type ParsedAction =
       transferChain?: TransferChainEntry[];
       /** True when the agent's iteration budget was exhausted. */
       isTruncated?: boolean;
+      /** Closing context-window occupancy for the turn. */
+      contextUsage?: ChatContextUsage;
     }
   | { action: 'error'; content: string }
   | { action: 'set_chat_id'; chatId: string }
