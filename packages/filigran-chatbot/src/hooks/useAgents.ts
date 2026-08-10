@@ -12,6 +12,14 @@ interface UseAgentsOptions {
 
 interface UseAgentsReturn {
   agents: XtmAgent[];
+  /** True while the first fetch is in flight. */
+  agentsLoading: boolean;
+  /**
+   * Set when the agent list could not be retrieved — the backend is
+   * unreachable, or answered an error. Distinguishes "still loading" from
+   * "there is nothing to load", which an empty array alone cannot.
+   */
+  agentsError: boolean;
   selectedAgent: XtmAgent | null;
   setSelectedAgent: React.Dispatch<React.SetStateAction<XtmAgent | null>>;
   agentMenuOpen: boolean;
@@ -38,6 +46,8 @@ function parseAgents(data: unknown): XtmAgent[] {
 
 export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requestHeaders }: UseAgentsOptions): UseAgentsReturn {
   const [agents, setAgents] = useState<XtmAgent[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+  const [agentsError, setAgentsError] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<XtmAgent | null>(null);
   const [agentMenuOpen, setAgentMenuOpen] = useState(false);
 
@@ -47,8 +57,16 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
       return;
     }
     const agentsUrl = `${apiBaseUrl}${apiEndpoints?.agents ?? '/chat/agents'}`;
+    setAgentsLoading(true);
+    setAgentsError(false);
     fetch(agentsUrl, { headers: requestHeaders })
-      .then((res) => (res.ok ? res.json() : []))
+      .then((res) => {
+        // A non-2xx is a failure, not an empty catalogue. Mapping it to `[]`
+        // was why an unreachable backend left the menu spinning forever with
+        // nothing to explain it.
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data: unknown) => {
         const list = parseAgents(data);
         setAgents(list);
@@ -58,7 +76,11 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
           setSelectedAgent(match || list[0]);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setAgents([]);
+        setAgentsError(true);
+      })
+      .finally(() => setAgentsLoading(false));
   }, [apiBaseUrl, apiEndpoints, backendType, requestHeaders]);
 
   const handleSwitchAgent = (agent: XtmAgent, onSwitch?: () => void) => {
@@ -74,6 +96,8 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
 
   return {
     agents,
+    agentsLoading,
+    agentsError,
     selectedAgent,
     setSelectedAgent,
     agentMenuOpen,

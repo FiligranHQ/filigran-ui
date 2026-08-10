@@ -63,7 +63,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
 }) => {
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
-  const { agents, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({
+  const { agents, agentsLoading, agentsError, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({
     apiBaseUrl,
     apiEndpoints,
     backendType,
@@ -502,6 +502,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         mode={mode}
         agentName={agentName}
         agents={agents}
+        agentsLoading={agentsLoading}
+        agentsError={agentsError}
         selectedAgent={selectedAgent}
         transferredFrom={transferredAgent ? selectedAgent?.name : undefined}
         agentMenuOpen={agentMenuOpen}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, XtmAgent } from '../types';
 import { timeAgo } from '../utils';
 import {
+  AlertTriangleIcon,
   ChevronDownIcon,
   CloseIcon,
   EditIcon,
@@ -23,6 +24,8 @@ interface ChatHeaderProps {
   mode: ChatMode;
   agentName: string;
   agents: XtmAgent[];
+  agentsLoading?: boolean;
+  agentsError?: boolean;
   selectedAgent: XtmAgent | null;
   transferredFrom?: string;
   agentMenuOpen: boolean;
@@ -60,6 +63,8 @@ export const ChatHeader = ({
   mode,
   agentName,
   agents,
+  agentsLoading = false,
+  agentsError = false,
   selectedAgent,
   transferredFrom,
   agentMenuOpen,
@@ -136,10 +141,22 @@ export const ChatHeader = ({
         <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase text-gray-400 dark:text-white/40">
           {t('Switch to another agent')}
         </span>
-        {agents.length === 0 && (
+        {/* Three distinct states, because an empty array alone cannot tell them
+            apart — and treating "failed" as "still loading" is what left this
+            menu spinning forever against an unreachable backend. */}
+        {agents.length === 0 && agentsLoading && (
           <div className="px-4 py-2">
             <Spinner size={16} />
           </div>
+        )}
+        {agents.length === 0 && !agentsLoading && agentsError && (
+          <div className="px-4 py-3 flex items-start gap-2">
+            <AlertTriangleIcon size={14} className="mt-0.5 shrink-0 text-amber-500 dark:text-amber-400" />
+            <span className="text-[0.75rem] leading-5 text-gray-600 dark:text-white/60">{t('Could not reach the assistant service. Check the connection and try again.')}</span>
+          </div>
+        )}
+        {agents.length === 0 && !agentsLoading && !agentsError && (
+          <div className="px-4 py-3 text-[0.75rem] text-gray-400 dark:text-white/40">{t('No agent is available')}</div>
         )}
         {showAgentSearch && (
           <div className="px-3 pb-2 pt-1">
