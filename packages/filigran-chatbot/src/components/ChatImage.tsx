@@ -45,7 +45,13 @@ const ImageLightbox = ({ src, alt, onClose, t }: ImageLightboxProps) => {
     <span ref={hostRef} className="hidden">
       {root &&
         createPortal(
-          <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4" onClick={onClose} role="presentation">
+          <div
+            className="absolute inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4"
+            onClick={onClose}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('Image preview')}
+          >
             <button
               ref={closeButtonRef}
               type="button"
