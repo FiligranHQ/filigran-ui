@@ -167,7 +167,9 @@ async function register({ target, registrationToken, identifier, issuer }: Regis
     body: JSON.stringify({
       platform_identifier: identifier,
       platform_url: issuer,
-      platform_title: 'Chat Playground',
+      // What XTM One's dashboard shows on the pill, so it stands alone there
+      // rather than reading as a second chat product.
+      platform_title: 'Playground',
       platform_version: 'dev',
       contract: 'CE',
     }),
