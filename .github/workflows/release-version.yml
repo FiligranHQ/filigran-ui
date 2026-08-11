@@ -199,8 +199,10 @@ jobs:
             exit 0
           fi
           
+          RELEASE_BRANCH="release/version-bump-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git checkout -b "$RELEASE_BRANCH"
           git commit -m "chore: bump $PARTS"
-          git push
+          git push --set-upstream origin "$RELEASE_BRANCH"
       - name: Create Git tags
         run: |
           if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
