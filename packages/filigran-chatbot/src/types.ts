@@ -128,9 +128,9 @@ export interface ChatContextUsage {
  * what explain a long chat that seems to have forgotten things.
  *
  * Every key is optional and only non-zero ones are reported, so a backend that
- * measures a different set — or none — still renders. Tool *definitions* are
- * absent on purpose: XTM One's loop does not count them against the window it
- * budgets, so a line for them would not add up to the total.
+ * measures a different set — or none — still renders. Tool definitions are
+ * included even though some backends may not count them in their compaction
+ * gate; the gauge is meant to reflect what the prompt actually carries.
  */
 export interface ChatContextBreakdown {
   /** The agent's system prompt and any in-run instructions. */
