@@ -14,7 +14,12 @@ const PORT = 3020;
 const realApi = process.env.CHAT_API_MOCK === '1' ? null : readRealApiConfig(process.env, PORT);
 
 export default defineConfig({
-  plugins: [react(), realApi ? realChatApi(realApi) : mockChatApi()],
+  // The mock is registered *behind* the real API rather than instead of it.
+  // Signed in, the real one answers and the mock is never reached; signed out,
+  // it hands the request on, so the panel still works with nothing running.
+  // Making a reachable XTM One mandatory just to look at the panel defeated the
+  // point of a playground.
+  plugins: [react(), ...(realApi ? [realChatApi(realApi)] : []), mockChatApi()],
   resolve: {
     // Order matters: string aliases match by prefix, so the subpath must come
     // before the bare package name or it would resolve to `…/index.ts/markdown`.

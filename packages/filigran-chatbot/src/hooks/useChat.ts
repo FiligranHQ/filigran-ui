@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentStatusState, ApiEndpoints, BackendType, ChatFile, ChatMessage } from '../types';
+import type { AgentStatusState, ApiEndpoints, BackendType, ChatContextUsage, ChatFile, ChatMessage } from '../types';
 import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
 
@@ -70,6 +70,13 @@ interface UseChatReturn {
   agentStatus: AgentStatusState | null;
   attachedFiles: ChatFile[];
   conversationId: string | null;
+  /**
+   * Context-window occupancy for the active conversation, or `null` while the
+   * backend has reported none (a fresh chat, or a backend that does not carry
+   * the figures at all). Tracked live off the per-iteration progress frames and
+   * finalised on `done`.
+   */
+  contextUsage: ChatContextUsage | null;
   transferredAgent: TransferredAgent | null;
   /**
    * True while a response is streaming AND the typed text can be dispatched
@@ -95,6 +102,11 @@ interface UseChatReturn {
   handleStopGenerating: () => void;
   setAttachedFiles: React.Dispatch<React.SetStateAction<ChatFile[]>>;
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+  /**
+   * Seed the context gauge from outside a live turn — the history-restore path,
+   * which reads the newest restored assistant message's figures.
+   */
+  setContextUsage: React.Dispatch<React.SetStateAction<ChatContextUsage | null>>;
   /**
    * Set (or clear) the active conversation id, keeping React state, the
    * cross-async-boundary ref mirror, and localStorage all in sync. Pass
@@ -195,6 +207,10 @@ export function useChat({
   const [inputValue, setInputValue] = useState(() => loadDraft(typeof window === 'undefined' ? null : localStorage.getItem(STORAGE_KEY)));
   const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
   const [transferredAgent, setTransferredAgent] = useState<TransferredAgent | null>(null);
+  // How full the model's context window is for this conversation. Conversation
+  // state rather than per-message: it describes what the NEXT turn will carry,
+  // which is the only thing the user can still act on.
+  const [contextUsage, setContextUsage] = useState<ChatContextUsage | null>(null);
   const [legacyChatId, setLegacyChatId] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem(LEGACY_CHAT_ID_KEY);
@@ -581,6 +597,9 @@ export function useChat({
               case 'status': {
                 ensureSegment();
                 const segId = currentAssistantId;
+                // Orthogonal to the status label below: a progress frame can
+                // carry a fresh context reading whatever phase it announces.
+                if (parsed.contextUsage) setContextUsage(parsed.contextUsage);
                 if (parsed.status === 'tool_start') hasUsedToolsRef.current = true;
                 if (parsed.status === 'stream_retract') {
                   // Rare: text that streamed as a provisional answer turned
@@ -640,6 +659,9 @@ export function useChat({
                 if (parsed.conversationId) {
                   updateConversationId(parsed.conversationId);
                 }
+                // Closing reading wins: a turn whose last iteration compacted
+                // ends lower than it peaked mid-run.
+                if (parsed.contextUsage) setContextUsage(parsed.contextUsage);
                 if (parsed.transferAgentId && parsed.transferAgentName) {
                   setTransferredAgent({ id: parsed.transferAgentId, name: parsed.transferAgentName });
                 }
@@ -723,6 +745,10 @@ export function useChat({
     setIsLoading(false);
     setAgentStatus(null);
     setTransferredAgent(null);
+    // A fresh (or newly selected) conversation starts with no known occupancy;
+    // the restore or the first turn fills it back in. Carrying the previous
+    // conversation's reading over would be a plain lie.
+    setContextUsage(null);
     hasUsedToolsRef.current = false;
     historyLoadedRef.current = false;
     if (isLegacy) {
@@ -792,6 +818,7 @@ export function useChat({
     agentStatus,
     attachedFiles,
     conversationId,
+    contextUsage,
     transferredAgent,
     canSteer,
     historyLoadedRef,
@@ -803,6 +830,7 @@ export function useChat({
     handleStopGenerating,
     setAttachedFiles,
     setMessages,
+    setContextUsage,
     updateConversationId,
     handleSwitchConversation,
   };

@@ -101,6 +101,52 @@ export interface ChatQuotaStatus {
   period: string;
 }
 
+/**
+ * How full the model's context window is for the current conversation, as the
+ * composer gauge needs it — a ratio, so both halves are required.
+ *
+ * `used` is the backend's own estimate of what the next turn will carry, not a
+ * billed token count: it is the figure the agent loop budgets its compaction
+ * against, which is what makes the gauge predictive of the summarising the user
+ * is about to see rather than a receipt for the turn that just ended.
+ */
+export interface ChatContextUsage {
+  /** Estimated tokens currently occupying the window. */
+  used: number;
+  /** The model's context window, in tokens. Always > 0. */
+  limit: number;
+  /** Where those tokens went, when the backend reports it. */
+  breakdown?: ChatContextBreakdown;
+}
+
+/**
+ * What the context is being spent on, in tokens.
+ *
+ * Buckets are grouped by what the user can *do* about each: they can start a new
+ * chat (`conversation`), they cannot shrink the agent's persona (`system`), and
+ * the two the backend manages on their behalf (`summary`, `toolResults`) are
+ * what explain a long chat that seems to have forgotten things.
+ *
+ * Every key is optional and only non-zero ones are reported, so a backend that
+ * measures a different set — or none — still renders. Tool definitions are
+ * included even though some backends may not count them in their compaction
+ * gate; the gauge is meant to reflect what the prompt actually carries.
+ */
+export interface ChatContextBreakdown {
+  /** The agent's system prompt and any in-run instructions. */
+  system?: number;
+  /** Schemas of the platform's built-in tools. */
+  tools?: number;
+  /** Schemas of the agent's own integrations, MCP servers and custom tools. */
+  dynamicTools?: number;
+  /** Digests of earlier turns produced by the backend's compaction. */
+  summary?: number;
+  /** The user's and assistant's own messages. */
+  conversation?: number;
+  /** Output of tool calls still held verbatim in the context. */
+  toolResults?: number;
+}
+
 export interface ChatPanelProps {
   mode: ChatMode;
   onClose: () => void;
@@ -210,6 +256,18 @@ export interface ChatPanelProps {
    * Default: false.
    */
   disableImagePreviews?: boolean;
+  /**
+   * Show how full the model's context window is for the current conversation
+   * — a small ring plus percentage in the composer toolbar, so the user can
+   * see a long chat approaching the point where the agent starts summarising
+   * older turns and decide to split the work instead. Default: true.
+   *
+   * A host-level master switch, not a mode flag: the gauge is data-driven and
+   * simply absent until the backend reports occupancy (only the XTM One REST
+   * backend does today), so leaving this on costs nothing on a backend that
+   * says nothing.
+   */
+  contextUsageEnabled?: boolean;
   /**
    * Rendered into the composer toolbar, after the built-in controls.
    *

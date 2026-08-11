@@ -1,7 +1,8 @@
 import { useRef, type KeyboardEvent } from 'react';
-import type { ChatFile, ChatMode, ChatPromptTemplate, ChatQuotaStatus } from '../types';
+import type { ChatContextUsage, ChatFile, ChatMode, ChatPromptTemplate, ChatQuotaStatus } from '../types';
 import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
 import { useDictation } from '../hooks/useDictation';
+import { ContextUsageIndicator } from './ContextUsageIndicator';
 import { PromptPicker } from './PromptPicker';
 import { QuotaIndicator } from './QuotaIndicator';
 import { Tooltip } from './Tooltip';
@@ -30,6 +31,8 @@ interface ChatInputProps {
   prompts?: ChatPromptTemplate[] | null;
   /** Agentic quota headroom; omitted entirely when the host serves none. */
   quota?: ChatQuotaStatus | null;
+  /** Context-window occupancy; omitted until the backend reports it. */
+  contextUsage?: ChatContextUsage | null;
   /** Host-supplied controls appended to the toolbar (see `composerToolbar`). */
   composerToolbar?: React.ReactNode;
 }
@@ -50,6 +53,7 @@ export const ChatInput = ({
   separatorColor,
   prompts,
   quota,
+  contextUsage,
   composerToolbar,
 }: ChatInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -91,7 +95,7 @@ export const ChatInput = ({
 
   // The toolbar row costs vertical space, so it only exists when something
   // actually occupies it.
-  const hasToolbar = Boolean((prompts && prompts.length > 0) || quota || composerToolbar || dictation.supported);
+  const hasToolbar = Boolean((prompts && prompts.length > 0) || quota || contextUsage || composerToolbar || dictation.supported);
 
   const isFileManagementEnabled = Boolean(onFileAdd && onFileRemove && onPaste);
   const hasContent = inputValue.trim() || (isFileManagementEnabled && attachedFiles.length > 0);
@@ -234,9 +238,16 @@ export const ChatInput = ({
             <span className="text-[0.7rem] italic text-gray-400 dark:text-white/30 truncate max-w-[45%]">{dictation.interim}</span>
           )}
           {composerToolbar}
-          {/* Quota sits last and pushed right: it is a status readout, not a
-              control, so it should never sit between two clickable things. */}
-          {quota && <span className="ml-auto">{<QuotaIndicator quota={quota} t={t} />}</span>}
+          {/* Status readouts sit last and pushed right, together: they are not
+              controls, so neither should ever land between two clickable
+              things. Context before quota — "how full is this chat" is the one
+              the user can still act on by starting a new one. */}
+          {(contextUsage || quota) && (
+            <span className="ml-auto flex items-center gap-2.5">
+              {contextUsage && <ContextUsageIndicator usage={contextUsage} t={t} />}
+              {quota && <QuotaIndicator quota={quota} t={t} />}
+            </span>
+          )}
         </div>
       )}
 

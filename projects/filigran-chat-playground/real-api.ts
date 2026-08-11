@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
-import { ensurePlaygroundAgent } from './playground-agent';
+import { ensurePlaygroundAgent, playgroundAgentState } from './playground-agent';
 import { createIdentity, establishTrust, type TrustSetup } from './xtm-auth';
 import { createSessionStore, readCookie, sendJson, verifyAccountExists, SESSION_COOKIE } from './playground-session';
 
@@ -46,8 +46,6 @@ interface RealApiConfig {
   issuer?: string;
   audience?: string;
   port: number;
-  /** Create/refresh the renderer-stressing agent on the target instance. */
-  bootstrapAgent: boolean;
 }
 
 /** Where XTM One listens under `./dev-podman.sh`. */
@@ -66,8 +64,6 @@ export function readRealApiConfig(env: NodeJS.ProcessEnv, port: number): RealApi
     issuer: env.CHAT_PLAYGROUND_ISSUER,
     audience: env.CHAT_PLAYGROUND_AUDIENCE,
     port,
-    // Opt-in: it writes to whichever instance you are pointed at.
-    bootstrapAgent: env.CHAT_PLAYGROUND_AGENT === '1' || env.CHAT_PLAYGROUND_AGENT === 'true',
   };
 }
 
@@ -124,7 +120,6 @@ export function realChatApi(config: RealApiConfig): Plugin {
   let trust: TrustSetup | null = null;
   let trustError: string | null = null;
   let inFlight: Promise<TrustSetup | null> | null = null;
-  let agentBootstrapped = false;
 
   function ensureTrust(probeEmail: string): Promise<TrustSetup | null> {
     if (trust) return Promise.resolve(trust);
@@ -194,17 +189,20 @@ export function realChatApi(config: RealApiConfig): Plugin {
           if (!established) return sendJson(res, 502, { error: trustError ?? 'Could not establish platform trust.' });
 
           const cookie = sessions.create(email);
-
-          if (config.bootstrapAgent && !agentBootstrapped) {
-            agentBootstrapped = true;
-            void ensurePlaygroundAgent({
-              target: config.target,
-              resolveToken: async () => sessions.tokenFor(cookie, established),
-            });
-          }
-
           console.log(`  [real-api] signed in as ${email}`);
           return sendJson(res, 200, { email, connected: true }, { 'Set-Cookie': `${SESSION_COOKIE}=${cookie}; Path=/; HttpOnly; SameSite=Lax` });
+        }
+
+        // ── The renderer-stressing agent, installed from a button ─────────
+        if (path === `${AUTH_PREFIX}/agent`) {
+          const email = sessions.emailFor(sessionId);
+          const established = email ? await ensureTrust(email) : null;
+          if (!established) {
+            return sendJson(res, 200, { state: 'unknown', message: trustError ?? 'Sign in first — the agent is created as you.' });
+          }
+          const agentConfig = { target: config.target, resolveToken: async () => sessions.tokenFor(sessionId, established) };
+          const outcome = req.method === 'POST' ? await ensurePlaygroundAgent(agentConfig) : await playgroundAgentState(agentConfig);
+          return sendJson(res, 200, outcome);
         }
 
         // ── Everything else the panel calls ────────────────────────────────
@@ -218,10 +216,12 @@ export function realChatApi(config: RealApiConfig): Plugin {
 
         const token = established && sessions.tokenFor(sessionId, established);
         if (!token) {
-          // A real 401 rather than an unauthenticated pass-through: the panel
-          // then reports "could not reach the assistant service" instead of
-          // rendering an empty agent list as if that were the truth.
-          return sendJson(res, 401, { error: 'Not signed in to the playground.' });
+          // Hand the request to the mock rather than refusing it. Requiring a
+          // reachable XTM One just to look at the panel made the playground
+          // unusable exactly when you most want it — no backend, or none of
+          // your business. The page states plainly that the data is mock, and
+          // the panel only mounts here once someone has chosen that.
+          return next();
         }
 
         const upstream = `${config.target}${config.prefix}${rawUrl.slice(PATH_PREFIX.length)}`;

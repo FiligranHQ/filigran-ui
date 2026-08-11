@@ -69,7 +69,7 @@ const useSession = () => {
  * that looks like data. The password is spent once against XTM One to prove
  * the account exists — see `playground-session.ts`.
  */
-const SignIn = ({ target, onSignedIn }: { target: string; onSignedIn: () => void }) => {
+const SignIn = ({ target, onSignedIn, onSkip }: { target: string; onSignedIn: () => void; onSkip: () => void }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -120,18 +120,89 @@ const SignIn = ({ target, onSignedIn }: { target: string; onSignedIn: () => void
           {error}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={busy}
-        className="rounded-md bg-[#7b5cff] px-4 py-2 text-sm text-white transition-colors hover:bg-[#6a4de0] disabled:opacity-50"
-      >
-        {busy ? 'Signing in…' : 'Sign in'}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          disabled={busy}
+          className="rounded-md bg-[#7b5cff] px-4 py-2 text-sm text-white transition-colors hover:bg-[#6a4de0] disabled:opacity-50"
+        >
+          {busy ? 'Signing in…' : 'Sign in'}
+        </button>
+        {/*
+          The way out. Signing in is what the playground is for, but requiring a
+          reachable XTM One before you may even look at the panel makes it
+          useless offline — which is when a component playground earns its keep.
+        */}
+        <button
+          type="button"
+          onClick={onSkip}
+          className="rounded-md border border-gray-300 dark:border-white/20 px-4 py-2 text-sm text-gray-700 dark:text-white/70 transition-colors hover:bg-gray-100 dark:hover:bg-white/10"
+        >
+          Skip — explore with mock data
+        </button>
+      </div>
       <p className="text-xs text-gray-500 dark:text-white/40">
-        Start XTM One with <code className="font-mono">./dev-podman.sh</code>, or run the playground offline with{' '}
-        <code className="font-mono">CHAT_API_MOCK=1 yarn dev</code>.
+        No XTM One running? Start it with <code className="font-mono">./dev-podman.sh</code>, or just skip — the dev server answers the chat
+        API itself.
       </p>
     </form>
+  );
+};
+
+/**
+ * Install the renderer-stressing agent, on demand.
+ *
+ * This used to happen by itself at start-up behind `CHAT_PLAYGROUND_AGENT=1`,
+ * which meant it never happened: nobody sets an env var they have not read
+ * about, and when it failed the reason went to the terminal rather than to the
+ * person waiting for an agent to appear. A button also makes the write
+ * deliberate — it lands on whichever instance you are pointed at.
+ */
+const PlaygroundAgentCard = ({ className }: { className: string }) => {
+  const [state, setState] = useState<'installed' | 'absent' | 'unknown' | 'loading'>('loading');
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async (method: 'GET' | 'POST') => {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/playground/agent', { method });
+      const body = (await res.json()) as { state?: typeof state; message?: string };
+      setState(body.state ?? 'unknown');
+      setMessage(body.message ?? null);
+    } catch (err) {
+      setState('unknown');
+      setMessage((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load('GET');
+  }, [load]);
+
+  return (
+    <div className={className}>
+      <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Rendering Playground agent</h2>
+      <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
+        A real agent whose persona tells it to weave the shapes that have broken the renderer before into every reply — a mis-delimited table,
+        a fence with no language, nested fences, an inert <code className="font-mono text-xs">javascript:</code> link, soft breaks. Being real,
+        it exercises token pacing and tool statuses the mock can only imitate.
+      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void load('POST')}
+          disabled={busy || state === 'loading'}
+          className="rounded-md bg-[#7b5cff] px-4 py-2 text-sm text-white transition-colors hover:bg-[#6a4de0] disabled:opacity-50"
+        >
+          {busy ? 'Working…' : state === 'installed' ? 'Refresh persona' : 'Install on this instance'}
+        </button>
+        {state === 'installed' && <span className="text-xs text-emerald-500 dark:text-emerald-400">Installed</span>}
+      </div>
+      {message && <p className="mt-3 text-xs text-gray-500 dark:text-white/40">{message}</p>}
+    </div>
   );
 };
 
@@ -163,11 +234,17 @@ const App = () => {
   const [log, setLog] = useState<LogEntry[]>([]);
   const [hostToolActive, setHostToolActive] = useState(false);
   const { session, refresh } = useSession();
+  // Chose to look around without signing in. The dev server then answers the
+  // chat API itself, so the panel works — against mock data, which the page
+  // says out loud, because mock agents that look real are worse than none.
+  const [skippedSignIn, setSkippedSignIn] = useState(false);
 
-  // The panel may only mount once there is an identity behind it: against a
-  // real backend an unauthenticated panel renders an empty agent list that is
-  // indistinguishable from a real one.
-  const canChat = session.state === 'signed-in' || session.state === 'mock';
+  const usingMock = session.state === 'mock' || (skippedSignIn && session.state !== 'signed-in');
+  // The panel needs *something* behind it: a signed-in identity, or the mock.
+  // What it must never do is mount with neither and render an empty agent list
+  // as though that were the answer.
+  const canChat = session.state === 'signed-in' || usingMock;
+  const showWorkbench = session.state !== 'loading' && (session.state !== 'anonymous' || skippedSignIn);
 
   // Put dark class on <html> so portal-based elements (tooltips, dropdowns) also get dark: styles
   // This one may need adaptation to work with any app
@@ -266,12 +343,28 @@ const App = () => {
               flashing the sign-in card at someone who turns out to be signed in
               already.
             */}
-            {session.state === 'loading' ? null : session.state === 'anonymous' ? (
+            {session.state === 'loading' ? null : !showWorkbench && session.state === 'anonymous' ? (
               <div className={card}>
-                <SignIn target={session.target} onSignedIn={refresh} />
+                <SignIn target={session.target} onSignedIn={refresh} onSkip={() => setSkippedSignIn(true)} />
               </div>
             ) : (
               <>
+                {skippedSignIn && session.state === 'anonymous' && (
+                  <div className={`${card} border-amber-400/40`}>
+                    <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Mock data</h2>
+                    <p className="text-sm text-gray-600 dark:text-white/50">
+                      You skipped signing in, so the dev server is answering the chat API itself. The agents and answers below are invented —
+                      good for renderer work, worthless for judging the real contract.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setSkippedSignIn(false)}
+                      className="mt-3 rounded-md border border-gray-300 dark:border-white/20 px-3 py-1.5 text-sm text-gray-700 dark:text-white/70 transition-colors hover:bg-gray-100 dark:hover:bg-white/10"
+                    >
+                      Sign in to XTM One instead
+                    </button>
+                  </div>
+                )}
                 <div className={card}>
                   <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Test Controls</h2>
 
@@ -312,7 +405,7 @@ const App = () => {
                 </div>
 
                 {/* Scenarios understood by the built-in mock backend */}
-                {session.state === 'mock' && (
+                {usingMock && (
                   <div className={card}>
                     <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">Scenarios</h2>
                     <p className="text-sm text-gray-600 dark:text-white/50 mb-4">
@@ -341,12 +434,10 @@ const App = () => {
                       playground signs its own EdDSA tokens as a registered platform, exactly as an embedded product does. Nothing here is mocked, so what
                       another user sees may legitimately differ.
                     </p>
-                    <p className="mt-3 text-xs text-gray-500 dark:text-white/40">
-                      Add <code className="font-mono">CHAT_PLAYGROUND_AGENT=1</code> for a “Rendering Playground” agent whose persona emits the markdown
-                      shapes that have broken the renderer before.
-                    </p>
                   </div>
                 )}
+
+                {session.state === 'signed-in' && <PlaygroundAgentCard className={card} />}
 
                 {/* Host callbacks — proof the panel actually calls them */}
                 <div className={card}>
@@ -390,6 +481,7 @@ const App = () => {
                       'File attachment via button click and paste',
                       'New chat clears state; conversation history lists and restores past chats',
                       'Context gauge: absent before the first turn, then 21/42/63/84/100% over five turns (mock) — amber at 84%, red at 100%; reload restores it, "New conversation" clears it',
+                  'Context gauge detail: click it — stacked bar + legend, rows sum to the headline, "Summarized conversation" only appears past 80%',
                       'Dark/light mode toggle works correctly in both themes',
                     ].map((item) => (
                       <li key={item} className="flex items-start gap-2">
@@ -417,7 +509,7 @@ const App = () => {
             accentColor="#7b5cff"
             // Only the mock understands these; against a real backend the
             // agent's own suggestions are the ones worth exercising.
-            promptSuggestions={session.state === 'mock' ? SCENARIOS.map((s) => s.prompt) : undefined}
+            promptSuggestions={usingMock ? SCENARIOS.map((s) => s.prompt) : undefined}
             // Sidebar mode is only half-implemented without these two: the
             // panel must push the page aside, and be draggable to resize.
             pushContentSelector="#app-content"

@@ -1,7 +1,7 @@
 import { type FunctionComponent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatAttachment, ChatMessage, ChatPanelProps } from '../types';
 import { hexAlpha, identity } from '../utils';
-import { parseAttachments, parseToolCallTrace, parseTransferChain } from '../hooks/protocols/parseRestEvent';
+import { parseAttachments, parseContextUsage, parseToolCallTrace, parseTransferChain } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
@@ -59,6 +59,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   onTaskComplete,
   onMessageFeedback,
   disableImagePreviews = false,
+  contextUsageEnabled = true,
   composerToolbar,
 }) => {
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
@@ -78,6 +79,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     agentStatus,
     attachedFiles,
     conversationId,
+    contextUsage,
     transferredAgent,
     canSteer,
     historyLoadedRef,
@@ -89,6 +91,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     handleStopGenerating,
     setAttachedFiles,
     setMessages,
+    setContextUsage,
     updateConversationId,
     handleSwitchConversation,
   } = useChat({
@@ -439,6 +442,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
               transfer_chain?: unknown;
               is_truncated?: unknown;
               agent_name?: unknown;
+              context_tokens?: unknown;
+              context_window?: unknown;
+              context_breakdown?: unknown;
             },
             i: number,
           ) => ({
@@ -471,6 +477,17 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           }),
         );
         setMessages(restored);
+        // The context gauge is conversation state, not per-message: the NEWEST
+        // entry that carries a reading is the current occupancy. Scanned from
+        // the end so a turn that predates the field (or a user message) falls
+        // through to the last one that has it, rather than blanking the gauge.
+        for (let i = data.messages.length - 1; i >= 0; i -= 1) {
+          const usage = parseContextUsage(data.messages[i] as Record<string, unknown>);
+          if (usage) {
+            setContextUsage(usage);
+            break;
+          }
+        }
       })
       .catch(() => {
         if (isStale()) return;
@@ -487,6 +504,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     isMountedRef,
     requestHeaders,
     setMessages,
+    setContextUsage,
     updateConversationId,
   ]);
 
@@ -623,6 +641,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         separatorColor={draftBorderColor}
         prompts={prompts}
         quota={quota}
+        contextUsage={contextUsageEnabled ? contextUsage : null}
         composerToolbar={composerToolbar}
       />
         </div>

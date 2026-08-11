@@ -261,6 +261,16 @@ export function findChatbotRoot(el: HTMLElement | null): HTMLElement {
 }
 
 /**
+ * Compact count for the composer's status readouts: 1200 → "1.2k", so neither
+ * the quota nor the context gauge can widen the toolbar as the numbers grow.
+ */
+export function compactCount(n: number): string {
+  if (n < 1000) return `${n}`;
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0).replace(/\.0$/, '')}k`;
+  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+}
+
+/**
  * Compact relative-time label for the conversation history menu
  * ("just now", "5m ago", "3h ago", "2d ago", then a short date).
  * Returns an empty string for missing/unparseable timestamps so the row
