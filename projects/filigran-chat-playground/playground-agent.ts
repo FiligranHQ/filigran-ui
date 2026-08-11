@@ -9,10 +9,12 @@
  * This gets both: a genuine agent, created through the normal API, told by its
  * persona to emit the shapes that have broken the renderer before.
  *
- * Opt-in, because it writes to whichever instance you are pointed at:
- *
- *   CHAT_API_PROXY=… CHAT_API_EMAIL=… CHAT_API_PASSWORD=… \
- *   CHAT_PLAYGROUND_AGENT=1 yarn dev
+ * Installed on demand, from a button on the page. It used to run itself at
+ * start-up behind `CHAT_PLAYGROUND_AGENT=1`, which meant it effectively never
+ * ran — nobody sets an env var they have not read about, and when it did fail
+ * the reason went to the terminal rather than to the person looking at the
+ * screen. Writing to whichever instance you are pointed at should be a
+ * deliberate click anyway.
  *
  * Deliberately created through `POST /agents` rather than added to XTM One's
  * seeded built-ins: agents have no per-agent platform gating, so a seeded entry
@@ -82,58 +84,76 @@ const PAYLOAD: AgentPayload = {
   tags: ['playground', 'development'],
 };
 
+export type AgentState = 'installed' | 'absent' | 'unknown';
+
+export interface AgentOutcome {
+  /** What the page should show once the dust settles. */
+  state: AgentState;
+  /** Plain sentence for the person looking at the screen, not a log line. */
+  message: string;
+}
+
+/** Is the agent already on the instance? Drives the button's label. */
+export async function playgroundAgentState(config: AgentBootstrapConfig): Promise<AgentOutcome> {
+  const found = await findAgent(config);
+  if (typeof found === 'string') return { state: 'unknown', message: found };
+  return found
+    ? { state: 'installed', message: `"${PAYLOAD.name}" is on this instance — pick it in the agent menu.` }
+    : { state: 'absent', message: `"${PAYLOAD.name}" is not on this instance yet.` };
+}
+
+/** The existing agent, `null` if absent, or a human-readable reason we cannot tell. */
+async function findAgent(config: AgentBootstrapConfig): Promise<Record<string, unknown> | null | string> {
+  const token = await config.resolveToken();
+  if (!token) return 'Sign in first — the agent is created as you.';
+  try {
+    const res = await fetch(`${config.target}/api/v1/agents`, {
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return `Could not list agents (HTTP ${res.status}).`;
+    const raw = (await res.json()) as unknown;
+    const list = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.agents as unknown[]) ?? [];
+    return (list.find((a) => (a as Record<string, unknown>)?.slug === AGENT_SLUG) as Record<string, unknown>) ?? null;
+  } catch (err) {
+    return `Could not reach ${config.target} — ${(err as Error).message}`;
+  }
+}
+
 /**
  * Create the agent, or refresh its persona if it is already there.
  *
- * Failure is reported and swallowed: the playground is perfectly usable
- * against the other agents, and an instance where agent creation is gated
- * (no licence, no permission) should not stop the dev server from starting.
+ * Never throws: an instance where agent creation is gated (no licence, no
+ * permission) should get a sentence explaining that, not a broken page.
  */
-export async function ensurePlaygroundAgent(config: AgentBootstrapConfig): Promise<void> {
+export async function ensurePlaygroundAgent(config: AgentBootstrapConfig): Promise<AgentOutcome> {
   const token = await config.resolveToken();
-  if (!token) {
-    console.warn('  [playground-agent] no token — skipping');
-    return;
-  }
+  if (!token) return { state: 'unknown', message: 'Sign in first — the agent is created as you.' };
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
-  try {
-    const listRes = await fetch(`${config.target}/api/v1/agents`, { headers });
-    if (!listRes.ok) {
-      console.warn(`  [playground-agent] cannot list agents (${listRes.status}) — skipping`);
-      return;
-    }
-    const raw = (await listRes.json()) as unknown;
-    const list = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.agents as unknown[]) ?? [];
-    const existing = list.find((a) => (a as Record<string, unknown>)?.slug === AGENT_SLUG) as Record<string, unknown> | undefined;
+  const existing = await findAgent(config);
+  if (typeof existing === 'string') return { state: 'unknown', message: existing };
 
+  try {
     if (existing?.id) {
       // Refresh rather than skip: the persona is the part being iterated on,
       // so a stale one would quietly defeat the whole exercise.
+      // PUT, not PATCH: XTM One exposes no PATCH on this route and answered
+      // 405. Every field of UpdateAgentRequest is optional, so a PUT carrying
+      // just these two is still a partial update.
       const res = await fetch(`${config.target}/api/v1/agents/${existing.id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers,
         body: JSON.stringify({ persona: PERSONA, description: PAYLOAD.description }),
       });
-      console.log(
-        res.ok
-          ? `  [playground-agent] refreshed "${PAYLOAD.name}"`
-          : `  [playground-agent] could not refresh (${res.status})`,
-      );
-      return;
+      return res.ok
+        ? { state: 'installed', message: `Refreshed "${PAYLOAD.name}" with the current persona.` }
+        : { state: 'installed', message: `It is already there, but the persona could not be refreshed (HTTP ${res.status}).` };
     }
 
-    const res = await fetch(`${config.target}/api/v1/agents`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(PAYLOAD),
-    });
-    if (res.ok) {
-      console.log(`  [playground-agent] created "${PAYLOAD.name}" — pick it in the agent menu`);
-    } else {
-      console.warn(`  [playground-agent] creation failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
-    }
+    const res = await fetch(`${config.target}/api/v1/agents`, { method: 'POST', headers, body: JSON.stringify(PAYLOAD) });
+    if (res.ok) return { state: 'installed', message: `Created "${PAYLOAD.name}" — pick it in the agent menu.` };
+    return { state: 'absent', message: `Creation failed (HTTP ${res.status}): ${(await res.text()).slice(0, 200)}` };
   } catch (err) {
-    console.warn(`  [playground-agent] ${(err as Error).message}`);
+    return { state: 'unknown', message: `Could not reach ${config.target} — ${(err as Error).message}` };
   }
 }

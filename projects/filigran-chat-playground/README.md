@@ -13,8 +13,9 @@ yarn workspace @filigran/chat-playground dev
 
 Open <http://localhost:3020> and **sign in with an XTM One account**. From then
 on the agents, conversations and answers are real — see
-[Connected to XTM One](#connected-to-xtm-one). No backend to hand? Use the
-[mock](#mock-backend).
+[Connected to XTM One](#connected-to-xtm-one). No backend to hand? **Skip** on
+that screen and the [mock](#mock-backend) answers instead; nothing is required
+to start.
 
 The package is aliased to its **source**, so edits under
 `packages/filigran-chatbot/src` hot-reload straight into the panel.
@@ -45,6 +46,7 @@ exercised outside a full product deployment.
 | `PLATFORM_REGISTRATION_TOKEN` | `xtm-default-registration-token` | Must match XTM One's own |
 | `CHAT_API_PREFIX` | `/api/v1/platform` | `/api/v1/chat` for the native router |
 | `CHAT_PLAYGROUND_ISSUER` | auto | Only if XTM One cannot reach the playground at the URL it picks |
+| `CHAT_API_MOCK=1` | off | Skip the real backend entirely — mock only, no sign-in |
 | `CHAT_PLAYGROUND_AUDIENCE` | discovered | Overrides XTM One's `base_url`, read from its OAuth discovery document |
 
 Three things the dev server handles for you (see [`real-api.ts`](./real-api.ts)):
@@ -70,9 +72,12 @@ the playground spends the credentials once against XTM One's ordinary
 away, along with the local JWT that login returns. Everything afterwards is
 signed with the playground's own platform key.
 
-Sign-in is a hard gate: with no identity there is nothing to make requests as,
-and an unauthenticated panel would render an empty agent list indistinguishable
-from a real one.
+Sign-in is the default path but not a wall: **Skip — explore with mock data**
+hands the chat API back to the built-in mock, so the panel still works with no
+XTM One in sight. The page then says so in as many words, because mock agents
+that look real are worse than none. What the panel never does is mount with
+neither identity nor mock and render an empty agent list as if that were the
+answer.
 
 Being signed in survives a dev-server restart. That is not a nicety: this file,
 `real-api.ts` and `xtm-auth.ts` are all imported by `vite.config.ts`, which
@@ -85,19 +90,23 @@ Anything you are tempted to cache in that closure has the same problem.
 
 #### A real agent that stresses the renderer
 
-Add `CHAT_PLAYGROUND_AGENT=1` and the dev server creates (or refreshes) a
-**Rendering Playground** agent on the instance you are pointed at, whose persona
-tells it to weave the renderer-breaking shapes into every reply: a mis-delimited
-table, a fence with no language, nested fences, an inert `javascript:` link,
-soft breaks. Pick it from the agent menu.
+Signed in, the page offers **Install on this instance**: a **Rendering
+Playground** agent whose persona tells it to weave the renderer-breaking shapes
+into every reply — a mis-delimited table, a fence with no language, nested
+fences, an inert `javascript:` link, soft breaks. Pick it from the agent menu.
+
+A button rather than the old `CHAT_PLAYGROUND_AGENT=1` bootstrap, which in
+practice never ran — nobody sets an env var they have not read about — and
+reported its failures to a terminal instead of to the person waiting for an
+agent to appear.
 
 Being a real agent, it exercises the real path — token pacing, tool statuses,
 transfers — which the mock can only imitate.
 
 It is created through the ordinary API rather than added to XTM One's seeded
 built-ins on purpose: agents have no per-agent platform gating, so a seeded
-entry would ship to every deployment. Opt-in, because it writes to whichever
-instance you chose.
+entry would ship to every deployment. Behind a button, because it writes to
+whichever instance you chose.
 
 ## Mock backend
 
