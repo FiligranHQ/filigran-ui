@@ -211,8 +211,19 @@ export const ConversationSidebar = ({
                     {c.title || t('Untitled conversation')}
                   </span>
                 )}
-                {c.updatedAt && !isEditing && (
-                  <span className="block text-[0.65rem] text-gray-400 dark:text-white/30">{timeAgo(c.updatedAt, t)}</span>
+                {/*
+                  Agent before time, on one line: which agent a thread is with
+                  is what tells two similarly-titled conversations apart, and
+                  knowing it before opening one is the point. Omitted entirely
+                  when the backend does not report it, rather than padded with
+                  a placeholder.
+                */}
+                {(c.agentName || c.updatedAt) && !isEditing && (
+                  <span className="block text-[0.65rem] text-gray-400 dark:text-white/30 truncate">
+                    {c.agentName}
+                    {c.agentName && c.updatedAt ? ' · ' : ''}
+                    {c.updatedAt ? timeAgo(c.updatedAt, t) : ''}
+                  </span>
                 )}
               </span>
               {!isEditing && (

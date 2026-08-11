@@ -37,7 +37,8 @@ function parseConversation(raw: unknown): ChatConversationSummary | null {
   const title = typeof c.title === 'string' ? c.title.trim() : '';
   const updatedAt = typeof c.updated_at === 'string' ? c.updated_at : typeof c.created_at === 'string' ? c.created_at : undefined;
   const messageCount = typeof c.message_count === 'number' ? c.message_count : undefined;
-  return { conversationId: id, title, updatedAt, messageCount };
+  const agentName = typeof c.agent_name === 'string' && c.agent_name ? c.agent_name : undefined;
+  return { conversationId: id, title, updatedAt, messageCount, agentName };
 }
 
 /**

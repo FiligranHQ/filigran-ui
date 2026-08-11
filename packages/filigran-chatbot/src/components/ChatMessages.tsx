@@ -346,7 +346,13 @@ const MessageRow = memo(
             <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
               <span className="text-[var(--chat-accent)] [&>svg]:w-3 [&>svg]:h-3">{logoIcon}</span>
             </div>
-            <span className="font-semibold text-xs text-gray-900 dark:text-white">{agentName}</span>
+            {/*
+              The message's own agent wins over the panel-wide one. That name is
+              whoever is selected right now, which is simply wrong for history —
+              a thread that changed hands mid-way must keep each answer under
+              the agent that wrote it.
+            */}
+            <span className="font-semibold text-xs text-gray-900 dark:text-white">{msg.agentName ?? agentName}</span>
           </div>
         )}
 

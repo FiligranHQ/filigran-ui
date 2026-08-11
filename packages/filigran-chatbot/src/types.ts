@@ -235,6 +235,16 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  /**
+   * The agent that produced *this* message, when the backend says so.
+   *
+   * Takes precedence over the panel-wide name, which is the currently selected
+   * agent and therefore wrong for history: reopening a thread used to relabel
+   * every past answer with whoever happened to be picked in the menu. Optional,
+   * because no backend records per-message attribution yet — the panel falls
+   * back to the conversation's agent, then to the selected one.
+   */
+  agentName?: string;
   files?: ChatFile[];
   /** Agent-generated downloadable files attached to an assistant message. */
   attachments?: ChatAttachment[];
@@ -345,6 +355,13 @@ export interface ChatConversationSummary {
   /** ISO timestamp of the last activity, used for the relative-time label. */
   updatedAt?: string;
   messageCount?: number;
+  /**
+   * The agent this conversation belongs to, when the backend reports it — so
+   * the history list can say which agent a thread is with before you open it.
+   * Undefined on backends that do not send it, null-ish for conversations that
+   * genuinely have no agent.
+   */
+  agentName?: string;
 }
 
 export interface XtmAgent {

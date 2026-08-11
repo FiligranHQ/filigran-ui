@@ -223,7 +223,17 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   // prop) aren't invalidated on every streamed frame.
   const resolvedLogo = useMemo(() => logoIcon ?? <DefaultLogoIcon size={24} />, [logoIcon]);
   const firstName = user.firstName;
-  const agentName = transferredAgent?.name || selectedAgent?.name || 'Assistant';
+  /**
+   * The agent a *restored* conversation belongs to, as the backend reports it.
+   *
+   * Sits between the live transfer and the menu selection on purpose. Reopening
+   * a past thread used to relabel it — and its new replies — with whichever
+   * agent was selected, while the backend went on routing the conversation to
+   * its own stored agent. The label named someone who had not spoken. This is
+   * the same agent that will answer, so the two now agree.
+   */
+  const [conversationAgentName, setConversationAgentName] = useState<string | null>(null);
+  const agentName = transferredAgent?.name || conversationAgentName || selectedAgent?.name || 'Assistant';
 
   // "Viewing the chat" must mean the panel is on screen in the active tab —
   // NOT that an element inside it currently holds focus. In sidebar (and
@@ -350,7 +360,14 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   useEffect(() => {
     // Skip session history if disabled, using single endpoint mode, or non-REST backend
     if (apiEndpoints?.sessions === null || apiEndpoints?.singleEndpoint || backendType === 'legacy' || backendType === 'ag-ui') return;
-    if (!conversationId || historyLoadedRef.current || !selectedAgent) return;
+    // No conversation means a fresh chat — "New conversation", or an agent
+    // switch, both of which null the id. Drop the restored thread's agent with
+    // it, or the new chat would keep wearing the old one's name.
+    if (!conversationId) {
+      setConversationAgentName(null);
+      return;
+    }
+    if (historyLoadedRef.current || !selectedAgent) return;
     historyLoadedRef.current = true;
     const sessionsUrl = `${apiBaseUrl}${apiEndpoints?.sessions ?? '/chat/sessions'}`;
 
@@ -401,6 +418,12 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         if (typeof data.conversation_id === 'string' && data.conversation_id && data.conversation_id !== requestedConversationId) {
           updateConversationId(data.conversation_id);
         }
+        // Null is meaningful and different from absent: it says the backend
+        // knows this conversation has no agent (one predating per-conversation
+        // routing), where a missing key means an older backend that cannot
+        // tell us. Both land on the selected-agent fallback, but only the
+        // first is a deliberate answer.
+        setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
         if (!data.messages?.length) return;
         const restored: ChatMessage[] = data.messages.map(
           (
@@ -415,6 +438,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
               tool_call_trace?: unknown;
               transfer_chain?: unknown;
               is_truncated?: unknown;
+              agent_name?: unknown;
             },
             i: number,
           ) => ({
@@ -422,6 +446,11 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
             role: m.role as 'user' | 'assistant',
             content: m.content,
             timestamp: new Date(),
+            // Per-message attribution when the backend keeps it — the only way
+            // a thread that changed hands mid-way reads correctly. Nothing
+            // records it today, so this is normally undefined and the
+            // conversation's agent applies to the whole thread.
+            agentName: typeof m.agent_name === 'string' ? m.agent_name : undefined,
             // Re-surface downloadable file chips on conversation restore for
             // both roles: agent-generated deliverables on assistant messages
             // (the [[FILE:…]] markers in content are stripped at render time by
