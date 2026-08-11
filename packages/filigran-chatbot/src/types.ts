@@ -1,5 +1,7 @@
 export type ChatMode = 'sidebar' | 'floating' | 'fullscreen';
 export type BackendType = 'legacy' | 'rest' | 'ag-ui';
+/** A user's rating of one assistant answer. */
+export type MessageFeedback = 'up' | 'down';
 
 /**
  * Custom API endpoint configuration.
@@ -50,6 +52,53 @@ export interface ApiEndpoints {
    * unless this path is set explicitly to a proxy route.
    */
   download?: string | null;
+  /**
+   * Path for the prompt library shown in the composer toolbar.
+   * Default: '/chat/prompts'. Set to null to hide the affordance.
+   *
+   * Visibility is data-driven on purpose: a host that does not serve this
+   * route simply has no prompt button, so there is no separate "mode" to keep
+   * in step with what the backend actually implements.
+   */
+  prompts?: string | null;
+  /**
+   * Path for the quota indicator shown in the composer toolbar.
+   * Default: '/chat/quota'. Set to null to hide the affordance.
+   */
+  quota?: string | null;
+  /**
+   * Path for per-agent suggested actions shown on the welcome screen.
+   * Default: '/chat/suggestions'. Set to null to always use the host's
+   * `promptSuggestions` prop instead.
+   *
+   * Called as `GET {suggestions}?agent_slug=<slug>`. A backend that ignores
+   * the parameter still answers with a generic set, so the same route carries
+   * both today's generic suggestions and per-agent (later per-user) ones.
+   */
+  suggestions?: string | null;
+}
+
+/** A reusable prompt the user can insert into the composer. */
+export interface ChatPromptTemplate {
+  id: string;
+  title: string;
+  /** The text inserted into the composer when picked. */
+  content: string;
+  description?: string;
+}
+
+/**
+ * Agentic quota headroom for the current user, as the composer indicator needs
+ * it — deliberately just the three numbers it renders. Where the limit comes
+ * from (user override, group, platform, licence) is the host platform's own
+ * business and has no place on an embedded surface.
+ */
+export interface ChatQuotaStatus {
+  used: number;
+  /** null means unlimited — the indicator then shows usage without a bar. */
+  limit: number | null;
+  /** Human-readable period label, e.g. "monthly". */
+  period: string;
 }
 
 export interface ChatPanelProps {
@@ -147,6 +196,30 @@ export interface ChatPanelProps {
    * Receives the already-translated `title` and `body`.
    */
   onTaskComplete?: (title: string, body: string) => void;
+  /**
+   * Enables the 👍/👎 affordance on completed assistant messages and receives
+   * each rating. `feedback` is `null` when the user clears a previous rating.
+   * Omit to hide the affordance entirely — the chatbot stores nothing itself,
+   * so a host without a feedback endpoint should not show the buttons.
+   */
+  onMessageFeedback?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
+  /**
+   * Disable the inline preview of image attachments (they render as ordinary
+   * download cards instead). Previews fetch the image through the host download
+   * proxy, so hosts that meter or restrict that endpoint can opt out.
+   * Default: false.
+   */
+  disableImagePreviews?: boolean;
+  /**
+   * Rendered into the composer toolbar, after the built-in controls.
+   *
+   * The escape hatch for anything the package has no business knowing about —
+   * XTM One's session-tool picker (integrations, MCP servers, knowledge bases)
+   * being the motivating case. A host that passes nothing gets no extra
+   * controls, so this doubles as the "product" toolbar: there is no mode flag
+   * to keep in step, only the presence or absence of what a host provides.
+   */
+  composerToolbar?: React.ReactNode;
 }
 
 export interface ChatToggleButtonProps {
@@ -162,6 +235,16 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  /**
+   * The agent that produced *this* message, when the backend says so.
+   *
+   * Takes precedence over the panel-wide name, which is the currently selected
+   * agent and therefore wrong for history: reopening a thread used to relabel
+   * every past answer with whoever happened to be picked in the menu. Optional,
+   * because no backend records per-message attribution yet — the panel falls
+   * back to the conversation's agent, then to the selected one.
+   */
+  agentName?: string;
   files?: ChatFile[];
   /** Agent-generated downloadable files attached to an assistant message. */
   attachments?: ChatAttachment[];
@@ -238,6 +321,14 @@ export interface AgentStatusState {
    * so long executions (background tasks, consults) never look stuck.
    */
   elapsedS?: number;
+  /**
+   * Wall-clock instant (ms) at which the current tool batch started, derived
+   * from `elapsedS` on each heartbeat. Heartbeats only arrive every ~10s, so
+   * rendering `elapsedS` directly makes the timer sit still and then jump.
+   * Anchoring here lets the indicator tick once a second locally and
+   * re-synchronise on every beat.
+   */
+  elapsedStartMs?: number;
 }
 
 export interface ChatFile {
@@ -264,6 +355,13 @@ export interface ChatConversationSummary {
   /** ISO timestamp of the last activity, used for the relative-time label. */
   updatedAt?: string;
   messageCount?: number;
+  /**
+   * The agent this conversation belongs to, when the backend reports it — so
+   * the history list can say which agent a thread is with before you open it.
+   * Undefined on backends that do not send it, null-ish for conversations that
+   * genuinely have no agent.
+   */
+  agentName?: string;
 }
 
 export interface XtmAgent {

@@ -10,7 +10,14 @@ export type {
   ChatAttachment,
   ChatConversationSummary,
   ChatFile,
+  ChatPromptTemplate,
+  ChatQuotaStatus,
+  MessageFeedback,
   XtmAgent,
   ApiEndpoints,
 } from './types';
 export type { TransferredAgent } from './hooks/useChat';
+
+// The markdown normalisation helpers are NOT re-exported here on purpose: they
+// live at `@filigran/chatbot/markdown`, a React-free entry point, so a host can
+// share them without risking the whole panel landing in an eager chunk.

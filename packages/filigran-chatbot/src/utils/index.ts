@@ -166,6 +166,83 @@ export function normalizeMarkdownTables(raw: string): string {
   return lines.join('\n');
 }
 
+/**
+ * When the ENTIRE message is a raw JSON object/array (and not already fenced),
+ * wrap it in a ```json fence so it renders as a proper, copyable code block
+ * instead of one long line of mangled prose — markdown collapses the newlines
+ * and eats the `*`/`_` inside string values otherwise.
+ *
+ * Deliberately conservative: it parses the payload first, so a message that
+ * merely *starts* with `{` (e.g. prose about an object) is left untouched.
+ */
+export function wrapBareJson(raw: string): string {
+  const trimmed = raw.trim();
+  if ((!trimmed.startsWith('{') && !trimmed.startsWith('[')) || trimmed.startsWith('```')) return raw;
+  try {
+    JSON.parse(trimmed);
+    return '```json\n' + trimmed + '\n```';
+  } catch {
+    return raw;
+  }
+}
+
+/**
+ * Models routinely emit markdown images whose alt text is the whole generation
+ * prompt, spread over several lines. CommonMark has no multi-line `![…](…)`, so
+ * the image syntax breaks apart and the prompt renders as literal paragraphs
+ * followed by a stray link.
+ *
+ * This collapses the alt text of such an image onto a single line (whitespace
+ * runs → one space) so the parser emits a real `<img>` node. Single-line images
+ * are returned byte-identical, and the URL is never rewritten — the URL may
+ * contain anything, and only the alt text is at fault.
+ *
+ * The URL part excludes `)` and whitespace, so a link title
+ * (`![alt](url "title")`) or a parenthesised URL is left alone rather than
+ * mis-parsed.
+ */
+export function normalizeImageMarkdown(raw: string): string {
+  if (!raw.includes('![')) return raw;
+  return raw.replace(/!\[([^\]]*?\n[^\]]*?)\]\(([^)\s]+)\)/g, (_match, alt: string, url: string) => {
+    const flat = alt.replace(/\s+/g, ' ').trim();
+    return `![${flat}](${url})`;
+  });
+}
+
+/** Schemes react-markdown's own sanitizer allows, minus the `data:` special case below. */
+const SAFE_URL_PROTOCOLS = new Set(['http', 'https', 'mailto', 'tel']);
+
+/**
+ * URL sanitizer for react-markdown that additionally preserves `data:image/*`
+ * URIs.
+ *
+ * react-markdown v9+ ships a default `urlTransform` allowing only
+ * http / https / mailto / tel. Agents with a code interpreter return charts as
+ * `data:image/png;base64,…`, which that default strips — leaving a broken
+ * `<img>`. Every other scheme (notably `javascript:` / `vbscript:`) is still
+ * blocked, and non-image `data:` URIs are blocked too, so this widens the
+ * allow-list by exactly one safe, inert case.
+ */
+export function markdownUrlTransform(url: string): string {
+  const colon = url.indexOf(':');
+  if (colon < 0) return url; // relative URL — always safe
+
+  const slash = url.indexOf('/');
+  const question = url.indexOf('?');
+  const hash = url.indexOf('#');
+
+  // A `/`, `?` or `#` before the colon means this is a path, not a scheme
+  // (e.g. `./a:b`), so there is nothing to sanitize.
+  if ((slash > -1 && colon > slash) || (question > -1 && colon > question) || (hash > -1 && colon > hash)) {
+    return url;
+  }
+
+  const protocol = url.slice(0, colon).toLowerCase();
+  if (SAFE_URL_PROTOCOLS.has(protocol)) return url;
+  if (protocol === 'data' && /^data:image\//i.test(url)) return url;
+  return '';
+}
+
 export const identity = (key: string) => key;
 
 /**

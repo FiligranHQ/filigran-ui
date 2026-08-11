@@ -6,11 +6,16 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 
 - 🔄 **SSE Message Streaming** — Real-time response streaming with status indicators
 - ⚡ **Mid-Run Steering** — Send messages while the agent is generating; they are injected into the running agentic loop instead of waiting for the turn to finish
-- 🗂️ **Conversation History** — Switch between (and delete) past conversations from a history menu in the header
+- 🗂️ **Conversation History** — Switch between (and delete) past conversations from a header menu, or from a permanent sidebar in fullscreen mode (collapsible, searchable past 7 entries, rename in place)
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
 - 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose
-- 📝 **Full Markdown** — Tables, code blocks with copy button, lists, blockquotes
+- 📝 **Full Markdown** — Tables (mis-delimited ones repaired), code blocks with copy button, lists, blockquotes, soft line breaks, inline images with a lightbox
+- 🖼️ **Image Previews** — `data:image/*` charts and image attachments render inline, click to expand
+- 📋 **Copy & Rate** — Copy any answer; optional 👍/👎 feedback wired to the host
+- 🧰 **Composer Toolbar** — Prompt library and quota indicator, both driven by whether the host serves the route; plus a slot for the host's own controls
+- 🎙️ **Dictation** — Speech-to-text via the browser's own Web Speech API; no endpoint, no key, hidden where unsupported
+- ✍️ **Draft Recovery** — Unsent composer text is kept per conversation and restored when the panel reopens
 - 🎨 **Customizable Theme** — Accent color and logo customization
 - 📱 **3 Display Modes** — Floating, sidebar (resizable), and fullscreen
 - 💾 **Persistence** — Conversation and sidebar width saved to localStorage
@@ -74,6 +79,9 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onWidthChange`     | `(width: number) => void`                 | —            | Called when sidebar width changes during resize                  |
 | `onResizeStart`     | `() => void`                              | —            | Called when resize drag starts                                   |
 | `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
+| `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Enables 👍/👎 on completed assistant answers and receives each rating (`null` clears it). Omit to hide the affordance — the panel stores nothing itself. |
+| `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
+| `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
 
 #### Resizable Sidebar Example
 
@@ -218,6 +226,12 @@ yields an empty list, so the menu shows its empty state instead of breaking
 the chat. Set `apiEndpoints.history` to `null` to hide the history menu
 entirely, or point it at a dedicated path if your proxy can't route `GET` on
 the sessions path.
+
+### `PATCH {apiBaseUrl}/chat/sessions/{conversation_id}`
+
+Renames a conversation. Body: `{ "title": "..." }`. Only reached from the
+fullscreen sidebar; a backend without the route simply fails the request and
+the row reverts to its previous title.
 
 ### `DELETE {apiBaseUrl}/chat/sessions/{conversation_id}`
 
@@ -478,11 +492,88 @@ import '@filigran/chatbot/styles.css';
 
 The component uses Tailwind CSS classes and CSS custom properties for theming. The accent color is applied via `--chat-accent` CSS variable.
 
+### Composer toolbar
+
+Two toolbar items are **data-driven rather than mode-driven**: they appear only
+when the host serves the route, so the UI can never advertise something the
+backend cannot answer, and there is no mode flag to keep in step.
+
+| Endpoint | Default path | Response |
+| --- | --- | --- |
+| Prompt library | `GET {apiBaseUrl}/chat/prompts` | `[{ id, title, content, description? }]` (or `{ prompts: [...] }`) |
+| Quota status | `GET {apiBaseUrl}/chat/quota` | `{ used: number, limit: number \| null, period: string }` |
+| Agent suggestions | `GET {apiBaseUrl}/chat/suggestions?agent_slug=<slug>` | `["..."]` (or `{ suggestions: [...] }`, or objects with `prompt`/`label`/`text`) |
+
+Set either to `null` in `apiEndpoints` to hide it. `limit: null` means no
+ceiling — the indicator then shows consumption without a bar. The quota is
+re-read whenever a turn finishes.
+
+The welcome screen names the selected agent and shows its own suggestions —
+which is also how switching agent is confirmed: the thread resets to that
+screen, so without it nothing tells you who the next message will reach. When
+the suggestions route is unavailable the host's `promptSuggestions` prop is used
+instead, so the section is never empty.
+
+Dictation needs no configuration at all: it uses the browser's own Web Speech
+API, so the mic button appears wherever the API exists and is simply absent
+elsewhere. Finalised phrases are appended to the composer (never replacing a
+draft), interim words preview beside the button, and sending stops the mic so
+the next words cannot land in a composer the user just emptied.
+
+Anything host-specific goes through `composerToolbar`:
+
+```tsx
+<ChatPanel
+  composerToolbar={<MySessionToolPicker />}
+  {...rest}
+/>
+```
+
+## Markdown Helpers
+
+A host that renders assistant prose with its **own** markdown component (its
+design tokens, its icon set) should still normalise the text the same way the
+panel does, rather than maintaining a divergent copy. These pure
+`string → string` helpers ship from the dedicated **`@filigran/chatbot/markdown`**
+entry point — ~2 kB, no React, no CSS. Import them from there and never from the
+package root, which is the full panel bundle:
+
+```tsx
+import {
+  hardenNestedCodeFences,
+  markdownUrlTransform,
+  normalizeImageMarkdown,
+  normalizeMarkdownTables,
+  wrapBareJson,
+} from '@filigran/chatbot/markdown';
+
+const processed = hardenNestedCodeFences(
+  normalizeMarkdownTables(wrapBareJson(normalizeImageMarkdown(content))),
+);
+
+<ReactMarkdown urlTransform={markdownUrlTransform}>{processed}</ReactMarkdown>;
+```
+
+Order matters: alt-text is flattened before anything reads line structure, and
+the JSON wrap must see the raw payload before fences are hardened.
+
+| Helper                    | Fixes                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `normalizeImageMarkdown`  | Multi-line `![alt](url)` alt text, which breaks the image into literal paragraphs plus a stray link             |
+| `wrapBareJson`            | A whole message that is raw JSON — fenced as ```json so it stays readable and copyable                          |
+| `normalizeMarkdownTables` | A delimiter row whose column count doesn't match the header, including tables nested in blockquotes / list items |
+| `hardenNestedCodeFences`  | A ```markdown block containing its own ``` fences, which shatters the snippet into alternating code and prose   |
+| `markdownUrlTransform`    | react-markdown's default sanitiser stripping `data:image/*` URIs (code-interpreter charts). Still blocks `javascript:` and non-image `data:` |
+
+None of them touch content they don't apply to — an already-valid document is
+returned byte-identical.
+
 ## Peer Dependencies
 
 - `react` >= 18
 - `react-dom` >= 18
 - `react-markdown` >= 10
+- `remark-breaks` >= 4
 - `remark-gfm` >= 4
 
 ---

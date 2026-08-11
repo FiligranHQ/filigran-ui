@@ -1,7 +1,8 @@
-import { useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, XtmAgent } from '../types';
 import { timeAgo } from '../utils';
 import {
+  AlertTriangleIcon,
   ChevronDownIcon,
   CloseIcon,
   EditIcon,
@@ -10,6 +11,7 @@ import {
   FullscreenExitIcon,
   FullscreenIcon,
   HistoryIcon,
+  SearchIcon,
   SidebarIcon,
   TrashIcon,
   UserPlusIcon,
@@ -22,6 +24,8 @@ interface ChatHeaderProps {
   mode: ChatMode;
   agentName: string;
   agents: XtmAgent[];
+  agentsLoading?: boolean;
+  agentsError?: boolean;
   selectedAgent: XtmAgent | null;
   transferredFrom?: string;
   agentMenuOpen: boolean;
@@ -59,6 +63,8 @@ export const ChatHeader = ({
   mode,
   agentName,
   agents,
+  agentsLoading = false,
+  agentsError = false,
   selectedAgent,
   transferredFrom,
   agentMenuOpen,
@@ -88,6 +94,25 @@ export const ChatHeader = ({
   const modeAnchorRef = useRef<HTMLButtonElement>(null);
   const historyAnchorRef = useRef<HTMLButtonElement>(null);
 
+  // Agent filter, mirroring the XTM One web chat's picker. Reset whenever the
+  // menu closes so re-opening never starts on a stale query with most agents
+  // hidden — which reads as "my agents disappeared".
+  const [agentQuery, setAgentQuery] = useState('');
+  useEffect(() => {
+    if (!agentMenuOpen) setAgentQuery('');
+  }, [agentMenuOpen]);
+
+  // Match on name AND description: descriptions are what distinguish agents
+  // whose names are near-identical, and they are already shown on every row.
+  const filteredAgents = useMemo(() => {
+    const q = agentQuery.trim().toLowerCase();
+    if (!q) return agents;
+    return agents.filter((a) => a.name.toLowerCase().includes(q) || (a.description ?? '').toLowerCase().includes(q));
+  }, [agents, agentQuery]);
+
+  // Only worth the vertical space once the list is long enough to scan for.
+  const showAgentSearch = agents.length > 5;
+
   const CurrentModeIcon = mode === 'sidebar' ? SidebarIcon : mode === 'fullscreen' ? FullscreenExitIcon : FloatingIcon;
 
   return (
@@ -116,13 +141,56 @@ export const ChatHeader = ({
         <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase text-gray-400 dark:text-white/40">
           {t('Switch to another agent')}
         </span>
-        {agents.length === 0 && (
+        {/* Three distinct states, because an empty array alone cannot tell them
+            apart — and treating "failed" as "still loading" is what left this
+            menu spinning forever against an unreachable backend.
+
+            The last one is NOT "the catalogue is empty": XTM One always seeds
+            agents, so a working backend never answers with none. It is reached
+            when the fetch is skipped altogether — `apiEndpoints.agents: null`,
+            single-endpoint mode (OpenCTI) or the legacy backend — where there
+            is simply nothing to switch between. The menu still earns its place
+            there: it carries the agent-dashboard links below. */}
+        {agents.length === 0 && agentsLoading && (
           <div className="px-4 py-2">
             <Spinner size={16} />
           </div>
         )}
-        <div>
-          {agents.map((agent) => (
+        {agents.length === 0 && !agentsLoading && agentsError && (
+          <div className="px-4 py-3 flex items-start gap-2">
+            <AlertTriangleIcon size={14} className="mt-0.5 shrink-0 text-amber-500 dark:text-amber-400" />
+            <span className="text-[0.75rem] leading-5 text-gray-600 dark:text-white/60">{t('Could not reach the assistant service. Check the connection and try again.')}</span>
+          </div>
+        )}
+        {agents.length === 0 && !agentsLoading && !agentsError && (
+          <div className="px-4 py-3 text-[0.75rem] text-gray-400 dark:text-white/40">{t('Agent switching is not available here')}</div>
+        )}
+        {showAgentSearch && (
+          <div className="px-3 pb-2 pt-1">
+            <div className="relative">
+              <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/40" />
+              <input
+                autoFocus
+                type="text"
+                value={agentQuery}
+                onChange={(e) => setAgentQuery(e.target.value)}
+                // Escape closes the whole menu rather than only clearing the
+                // query — the same key the rest of the panel uses to dismiss.
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') onAgentMenuClose();
+                }}
+                placeholder={t('Search agents...')}
+                aria-label={t('Search agents...')}
+                className="w-full h-7 pl-7 pr-2 rounded-md bg-gray-100 dark:bg-white/[0.06] text-[0.75rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+              />
+            </div>
+          </div>
+        )}
+        <div className="max-h-[240px] overflow-y-auto filigran-chat-scrollable">
+          {agents.length > 0 && filteredAgents.length === 0 && (
+            <div className="px-4 py-3 text-[0.75rem] text-gray-400 dark:text-white/40">{t('No agent matches')}</div>
+          )}
+          {filteredAgents.map((agent) => (
             <button
               key={agent.id}
               type="button"
