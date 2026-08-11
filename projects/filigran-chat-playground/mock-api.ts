@@ -112,7 +112,12 @@ interface Conversation {
   id: string;
   title: string;
   updatedAt: string;
-  messages: { role: 'user' | 'assistant'; content: string }[];
+  /**
+   * `meta` is whatever the turn's `done` frame carried (tool names, reasoning,
+   * trace, attachments, context figures). Stored so a restore can re-surface
+   * it exactly as the real backend does — see the note at the `done` frame.
+   */
+  messages: { role: 'user' | 'assistant'; content: string; meta?: Record<string, unknown> }[];
   /** Context tokens the next turn would carry — drives the composer gauge. */
   contextTokens: number;
 }
@@ -266,15 +271,15 @@ export function mockChatApi(): Plugin {
           if (existing) {
             return json(res, {
               conversation_id: existing.id,
-              // The real backend persists the occupancy on each assistant
-              // message; the panel reads the newest one that carries it, so
-              // the gauge survives a reload. Only the last one needs it here.
-              messages: existing.messages.map((m, i) => ({
+              // Each assistant message comes back with the metadata its turn
+              // produced, exactly as the real backend re-surfaces it — so a
+              // restored turn keeps its reasoning-details button, download
+              // cards, tool trace and context reading instead of degrading to
+              // bare prose.
+              messages: existing.messages.map((m) => ({
                 role: m.role,
                 content: m.content,
-                ...(m.role === 'assistant' && i === existing.messages.length - 1 && existing.contextTokens > 0
-                  ? { context_tokens: existing.contextTokens, context_window: CONTEXT_WINDOW, context_breakdown: mockContextBreakdown(existing.contextTokens) }
-                  : {}),
+                ...(m.meta ?? {}),
               })),
             });
           }
@@ -348,13 +353,19 @@ export function mockChatApi(): Plugin {
 
           quotaUsed += 17;
           const answer = `${text}\n\n[[FILE:file-${seq}]]`;
-          conv.messages.push({ role: 'assistant', content: answer });
-          conv.updatedAt = new Date().toISOString();
 
-          send({
-            type: 'done',
-            content: answer,
-            conversation_id: convId,
+          // The turn's metadata, built ONCE and both streamed and stored.
+          //
+          // Storing it is not optional detail: the panel re-fetches the session
+          // the moment the first turn hands it a conversation id, and replaces
+          // the live transcript with what comes back. A restore that returns
+          // only role+content therefore ERASES the reasoning-details button, the
+          // download cards and the tool trace seconds after they appear — which
+          // is a mock artefact, since the real backend re-surfaces these keys
+          // (``_restored_assistant_meta_keys`` in XTM One's platform.py). Kept
+          // as one object so the two paths cannot drift apart and re-introduce
+          // that phantom regression.
+          const turnMeta: Record<string, unknown> = {
             tool_names: ['search_entities'],
             tool_call_count: 1,
             iterations: 2,
@@ -367,7 +378,12 @@ export function mockChatApi(): Plugin {
               { file_id: `file-${seq}`, filename: 'coverage.png', type: 'png', size: 4096, content_type: 'image/png', file_tag: 'download_file' },
               { file_id: `scratch-${seq}`, filename: 'notes.txt', type: 'txt', size: 512, content_type: 'text/plain', file_tag: 'working_file' },
             ],
-          });
+          };
+
+          conv.messages.push({ role: 'assistant', content: answer, meta: turnMeta });
+          conv.updatedAt = new Date().toISOString();
+
+          send({ type: 'done', content: answer, conversation_id: convId, ...turnMeta });
           return res.end();
         }
 
