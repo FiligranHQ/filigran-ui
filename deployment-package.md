@@ -1,15 +1,22 @@
 # Deploying a new package version
 
-Releases for all Filigran packages are handled via the GitHub Actions workflow [**Release and Publish to NPM**](.github/workflows/release-version.yml).  
-It is triggered **manually** from the GitHub Actions tab — no push or tag is required to start it.
+Releases run in **two stages**, because `main` accepts neither unsigned commits
+nor direct pushes:
+
+1. [**Release — prepare version bump**](.github/workflows/release-prepare.yml) — triggered manually. Bumps the version and opens a pull request.
+2. [**Release — publish on merge**](.github/workflows/release-publish.yml) — triggered by **merging** that pull request. Tags, builds, publishes to npm and cuts the GitHub Release.
+
+Nothing is published until the release pull request is merged. Closing it
+instead releases nothing and leaves no tag behind.
 
 ---
 
 ## How to trigger a release
 
-1. Go to **Actions → Release and Publish to NPM** in the GitHub repository.
+1. Go to **Actions → Release — prepare version bump** in the GitHub repository.
 2. Click **Run workflow**.
 3. Fill in the two inputs described below, then click **Run workflow**.
+4. **Review and merge the pull request it opens.** That merge is what publishes.
 
 ---
 
@@ -49,14 +56,43 @@ The workflow follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PA
 
 ---
 
-## What the workflow does
+## What the workflows do
+
+**Stage 1 — prepare** (`release-prepare.yml`)
 
 1. Bumps the version in the relevant `package.json` with `yarn version <type>`.
-2. Commits and pushes the change (`chore: bump <package> to vX.Y.Z`).
-3. Creates a Git tag (`<package>-vX.Y.Z`).
-4. Builds the package (`yarn workspace <package> run build`).
-5. Publishes to **NPM** (`yarn npm publish --access public`).
-6. Creates a **GitHub Release** with installation instructions.
+2. Commits it to a `release/<run-id>` branch and opens a pull request labelled `release`.
+
+**Stage 2 — publish** (`release-publish.yml`, on merge of that pull request)
+
+3. Works out which packages were released from the `package.json` files the pull request touched.
+4. Creates a Git tag (`<package>-vX.Y.Z`).
+5. Builds the package (`yarn workspace <package> run build`).
+6. Publishes to **NPM** (`yarn npm publish --access public`).
+7. Creates a **GitHub Release** with the changelog and installation instructions.
+8. Closes the issues shipped by the release and updates their project status.
+
+---
+
+## Publishing from a local checkout
+
+Only for the rare case where CI cannot do it. Use `release:<package>`, **not**
+`publish:<package>` — the latter passes `--provenance`, which npm can only
+generate inside GitHub Actions or GitLab CI and which fails locally with
+`YN0091`:
+
+```bash
+yarn release:filigran-chatbot     # from the repository root
+```
+
+Two caveats. It publishes the version already in `package.json` **as-is** — it
+does not bump — and it creates no tag, no GitHub Release and no provenance
+attestation. Tag it by hand afterwards so the next changelog has a starting
+point:
+
+```bash
+git tag "@filigran/chatbot-v<version>" <commit> && git push origin "@filigran/chatbot-v<version>"
+```
 
 ---
 

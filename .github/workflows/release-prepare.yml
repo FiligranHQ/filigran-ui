@@ -1,0 +1,153 @@
+name: Release — prepare version bump
+
+# Stage 1 of 2. Bumps the selected package(s) and opens a PR; merging that PR
+# is what publishes (see release-publish.yml).
+#
+# Why this is a PR and not a push
+# -------------------------------
+# The `main` ruleset requires every commit to be signed AND every change to
+# arrive through a pull request. A bot pushing straight to `main` violates both
+# at once, which is exactly how the single-workflow release died:
+#
+#   remote: - Commits must have verified signatures.
+#   remote: - Changes must be made through a pull request.
+#   remote: ! [remote rejected] main -> main
+#
+# Pushing a *branch* is unconstrained (the ruleset targets ~DEFAULT_BRANCH
+# only), and the commit that ultimately lands on `main` is the squash commit
+# GitHub itself creates and signs with its web-flow key — so the signature
+# requirement is satisfied without ever handing a GPG key to the bot.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version type (patch/minor/major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      package:
+        description: 'Package to release'
+        required: true
+        default: '@filigran/ui'
+        type: choice
+        options:
+          - '@filigran/chatbot'
+          - '@filigran/icon'
+          - '@filigran/rich-text-editor'
+          - '@filigran/ui'
+          - all
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          app-id: ${{ vars.FILIGRANHQ_PROJECT_APP_ID }}
+          private-key: ${{ secrets.FILIGRANHQ_PROJECT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Enable Corepack
+        run: npm install -g corepack
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Update version for @filigran/chatbot
+        if: github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all'
+        working-directory: ./packages/filigran-chatbot
+        run: |
+          yarn version ${{ github.event.inputs.version_type }}
+          echo "FILIGRAN_CHATBOT_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+      - name: Update version for @filigran/icon
+        if: github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all'
+        working-directory: ./packages/filigran-icon
+        run: |
+          yarn version ${{ github.event.inputs.version_type }}
+          echo "FILIGRAN_ICON_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+      - name: Update version for @filigran/rich-text-editor
+        if: github.event.inputs.package == '@filigran/rich-text-editor' || github.event.inputs.package == 'all'
+        working-directory: ./packages/filigran-rich-text-editor
+        run: |
+          yarn version ${{ github.event.inputs.version_type }}
+          echo "FILIGRAN_RTE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+      - name: Update version for @filigran/ui
+        if: github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all'
+        working-directory: ./packages/filigran-ui
+        run: |
+          yarn version ${{ github.event.inputs.version_type }}
+          echo "FILIGRAN_UI_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Open the release pull request
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          PARTS=""
+          BODY_LINES=""
+          add() {
+            [ -n "$PARTS" ] && PARTS="$PARTS, "
+            PARTS="${PARTS}$1 to v$2"
+            BODY_LINES="${BODY_LINES}- \`$1\` → **v$2**"$'\n'
+          }
+          [ -n "${FILIGRAN_CHATBOT_VERSION:-}" ] && add "@filigran/chatbot" "$FILIGRAN_CHATBOT_VERSION"
+          [ -n "${FILIGRAN_UI_VERSION:-}" ] && add "@filigran/ui" "$FILIGRAN_UI_VERSION"
+          [ -n "${FILIGRAN_ICON_VERSION:-}" ] && add "@filigran/icon" "$FILIGRAN_ICON_VERSION"
+          [ -n "${FILIGRAN_RTE_VERSION:-}" ] && add "@filigran/rich-text-editor" "$FILIGRAN_RTE_VERSION"
+
+          if [ -z "$PARTS" ]; then
+            echo "::error::No version was bumped — nothing to release."
+            exit 1
+          fi
+
+          # The run id keeps concurrent or retried dispatches from colliding on
+          # one branch name; `release/` is the prefix release-publish.yml keys on.
+          BRANCH="release/${{ github.run_id }}"
+          git checkout -b "$BRANCH"
+          git add .
+          git commit -m "chore(release): bump $PARTS"
+          git push origin "$BRANCH"
+
+          # No issue reference in the title on purpose: a release is mechanical
+          # and closes nothing. validate-pr-title.yml exempts `release/*` heads
+          # from the "(#123)" requirement for exactly this reason.
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore(release): bump $PARTS" \
+            --label release \
+            --body "$(printf '%s\n' \
+              "Automated release preparation." \
+              "" \
+              "$BODY_LINES" \
+              "Merging this PR publishes the package(s) to npm, creates the git tag(s) and the GitHub Release(s) — see \`release-publish.yml\`. Closing it without merging releases nothing." \
+              "" \
+              "Triggered by @${{ github.actor }} via \`release-prepare.yml\` (\`${{ github.event.inputs.version_type }}\`, \`${{ github.event.inputs.package }}\`).")"
+
+      - name: Summary
+        run: |
+          echo "## Release prepared" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "A pull request was opened. **Merging it publishes.**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- [Open pull requests](https://github.com/${{ github.repository }}/pulls?q=is%3Apr+is%3Aopen+label%3Arelease)" >> $GITHUB_STEP_SUMMARY

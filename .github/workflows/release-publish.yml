@@ -1,35 +1,24 @@
-name: Release and Publish to NPM
+name: Release — publish on merge
+
+# Stage 2 of 2. Runs when a `release/*` pull request opened by
+# release-prepare.yml is MERGED, and does everything the old single-workflow
+# release did after the version bump: tag, build, publish to npm, cut the
+# GitHub Releases, and close the issues the release ships.
+#
+# Keyed on the merge rather than on a pushed tag: the tag cannot exist before
+# the PR is merged (nothing may be pushed to `main` directly), and keying on the
+# merge means a release PR that gets closed instead of merged leaves no orphan
+# tag behind. The versions are read back from `main` after the merge, so what is
+# published is exactly what the repository says.
 
 on:
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: 'Version type (patch/minor/major)'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-      package:
-        description: 'Package to release'
-        required: true
-        default: '@filigran/ui'
-        type: choice
-        options:
-          - '@filigran/chatbot'
-          - '@filigran/icon'
-          - '@filigran/rich-text-editor'
-          - '@filigran/ui'
-          - all
-
-env:
-  ORGANIZATION: 'FiligranHQ'
-  PROJECT_NUMBER: 30
+  pull_request:
+    types: [closed]
 
 jobs:
-  release:
+  publish:
+    # `merged == true` is what distinguishes a merge from a plain close.
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -47,10 +36,15 @@ jobs:
         uses: actions/checkout@v6
         with:
           token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          # Tags and full history are needed to compute "commits since the last
+          # release" for the changelog below.
+          fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
       - name: Enable Corepack
         run: npm install -g corepack
       - name: Configure Git
@@ -59,44 +53,43 @@ jobs:
           git config --global user.name "github-actions[bot]"
       - name: Install dependencies
         run: yarn install --immutable
-      - name: Get current versions
+
+      - name: Resolve released packages
+        # Which packages to publish is derived from the merge itself — the
+        # `package.json` files the release PR touched — rather than from an input
+        # this workflow never saw. That keeps the two stages from disagreeing,
+        # and makes a hand-edited release PR behave exactly as it reads.
         run: |
-          if [[ "${{ github.event.inputs.package }}" == "@filigran/chatbot" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
-            echo "FILIGRAN_CHATBOT_CURRENT_VERSION=$(node -p "require('./packages/filigran-chatbot/package.json').version")" >> $GITHUB_ENV
+          set -euo pipefail
+          CHANGED=$(git diff --name-only \
+            ${{ github.event.pull_request.base.sha }} \
+            ${{ github.event.pull_request.merge_commit_sha }} \
+            -- 'packages/*/package.json')
+          echo "Changed manifests:"
+          echo "$CHANGED"
+
+          version_of() { node -p "require('./$1/package.json').version"; }
+
+          for f in $CHANGED; do
+            case "$f" in
+              packages/filigran-chatbot/package.json)
+                echo "FILIGRAN_CHATBOT_VERSION=$(version_of packages/filigran-chatbot)" >> $GITHUB_ENV ;;
+              packages/filigran-icon/package.json)
+                echo "FILIGRAN_ICON_VERSION=$(version_of packages/filigran-icon)" >> $GITHUB_ENV ;;
+              packages/filigran-rich-text-editor/package.json)
+                echo "FILIGRAN_RTE_VERSION=$(version_of packages/filigran-rich-text-editor)" >> $GITHUB_ENV ;;
+              packages/filigran-ui/package.json)
+                echo "FILIGRAN_UI_VERSION=$(version_of packages/filigran-ui)" >> $GITHUB_ENV ;;
+            esac
+          done
+
+      - name: Fail if nothing was released
+        run: |
+          if [ -z "${FILIGRAN_CHATBOT_VERSION:-}${FILIGRAN_ICON_VERSION:-}${FILIGRAN_RTE_VERSION:-}${FILIGRAN_UI_VERSION:-}" ]; then
+            echo "::error::A release/* PR was merged but no package manifest changed — nothing to publish."
+            exit 1
           fi
-          if [[ "${{ github.event.inputs.package }}" == "@filigran/icon" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
-            echo "FILIGRAN_ICON_CURRENT_VERSION=$(node -p "require('./packages/filigran-icon/package.json').version")" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.package }}" == "@filigran/rich-text-editor" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
-            echo "FILIGRAN_RTE_CURRENT_VERSION=$(node -p "require('./packages/filigran-rich-text-editor/package.json').version")" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.package }}" == "@filigran/ui" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
-            echo "FILIGRAN_UI_CURRENT_VERSION=$(node -p "require('./packages/filigran-ui/package.json').version")" >> $GITHUB_ENV
-          fi
-      - name: Update version for @filigran/chatbot
-        if: github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all'
-        working-directory: ./packages/filigran-chatbot
-        run: |
-          yarn version ${{ github.event.inputs.version_type }}
-          echo "FILIGRAN_CHATBOT_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-      - name: Update version for @filigran/icon
-        if: github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all'
-        working-directory: ./packages/filigran-icon
-        run: |
-          yarn version ${{ github.event.inputs.version_type }}
-          echo "FILIGRAN_ICON_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-      - name: Update version for @filigran/rich-text-editor
-        if: github.event.inputs.package == '@filigran/rich-text-editor' || github.event.inputs.package == 'all'
-        working-directory: ./packages/filigran-rich-text-editor
-        run: |
-          yarn version ${{ github.event.inputs.version_type }}
-          echo "FILIGRAN_RTE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-      - name: Update version for @filigran/ui
-        if: github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all'
-        working-directory: ./packages/filigran-ui
-        run: |
-          yarn version ${{ github.event.inputs.version_type }}
-          echo "FILIGRAN_UI_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
       - name: Collect commits and issues for changelog
         id: changelog
         run: |
@@ -104,23 +97,24 @@ jobs:
           CHANGELOG=""
           UI_ISSUES=""
           ICON_ISSUES=""
-          
+          CHATBOT_ISSUES=""
+
           # Function to extract issue numbers from text
           extract_issues() {
             echo "$1" | grep -oE '#[0-9]+|[Cc]loses? #[0-9]+|[Ff]ixes? #[0-9]+|[Rr]esolves? #[0-9]+' | grep -oE '[0-9]+' | sort -u
           }
-          
+
           # Get commits since last tag for each package
-          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+          if [ -n "${FILIGRAN_UI_VERSION:-}" ]; then
             echo "Processing @filigran/ui commits..."
             LAST_UI_TAG=$(git tag -l "@filigran/ui-v*" | sort -V | tail -n 1)
             if [ -z "$LAST_UI_TAG" ]; then
               LAST_UI_TAG=$(git rev-list --max-parents=0 HEAD)
             fi
-          
+
             UI_COMMITS=$(git log $LAST_UI_TAG..HEAD --pretty=format:"%h %s" -- packages/filigran-ui/)
             UI_CHANGELOG="### Filigran UI Changes\n"
-          
+
             while IFS= read -r commit; do
               if [ -n "$commit" ]; then
                 UI_CHANGELOG="$UI_CHANGELOG- $commit\n"
@@ -130,23 +124,23 @@ jobs:
                 done
               fi
             done <<< "$UI_COMMITS"
-          
+
             CHANGELOG="$CHANGELOG$UI_CHANGELOG\n"
-          
+
             # Remove duplicates from UI issues list
             UI_ISSUES=$(echo $UI_ISSUES | tr ' ' '\n' | sort -u | tr '\n' ' ')
           fi
-          
-          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+
+          if [ -n "${FILIGRAN_ICON_VERSION:-}" ]; then
             echo "Processing @filigran/icon commits..."
             LAST_ICON_TAG=$(git tag -l "@filigran/icon-v*" | sort -V | tail -n 1)
             if [ -z "$LAST_ICON_TAG" ]; then
               LAST_ICON_TAG=$(git rev-list --max-parents=0 HEAD)
             fi
-          
+
             ICON_COMMITS=$(git log $LAST_ICON_TAG..HEAD --pretty=format:"%h %s" -- packages/filigran-icon/)
             ICON_CHANGELOG="### Filigran Icon Changes\n"
-          
+
             while IFS= read -r commit; do
               if [ -n "$commit" ]; then
                 ICON_CHANGELOG="$ICON_CHANGELOG- $commit\n"
@@ -156,118 +150,129 @@ jobs:
                 done
               fi
             done <<< "$ICON_COMMITS"
-          
+
             CHANGELOG="$CHANGELOG$ICON_CHANGELOG\n"
-          
+
             # Remove duplicates from ICON issues list
             ICON_ISSUES=$(echo $ICON_ISSUES | tr ' ' '\n' | sort -u | tr '\n' ' ')
           fi
-          
+
+          # The chatbot had no changelog at all: its GitHub Release shipped a
+          # bare install snippet while ui/icon got a commit list.
+          if [ -n "${FILIGRAN_CHATBOT_VERSION:-}" ]; then
+            echo "Processing @filigran/chatbot commits..."
+            LAST_CHATBOT_TAG=$(git tag -l "@filigran/chatbot-v*" | sort -V | tail -n 1)
+            if [ -z "$LAST_CHATBOT_TAG" ]; then
+              LAST_CHATBOT_TAG=$(git rev-list --max-parents=0 HEAD)
+            fi
+
+            CHATBOT_COMMITS=$(git log $LAST_CHATBOT_TAG..HEAD --pretty=format:"%h %s" -- packages/filigran-chatbot/)
+            CHATBOT_CHANGELOG="### Filigran Chatbot Changes\n"
+
+            while IFS= read -r commit; do
+              if [ -n "$commit" ]; then
+                CHATBOT_CHANGELOG="$CHATBOT_CHANGELOG- $commit\n"
+                ISSUES=$(extract_issues "$commit")
+                for issue in $ISSUES; do
+                  CHATBOT_ISSUES="$CHATBOT_ISSUES $issue"
+                done
+              fi
+            done <<< "$CHATBOT_COMMITS"
+
+            CHANGELOG="$CHANGELOG$CHATBOT_CHANGELOG\n"
+            CHATBOT_ISSUES=$(echo $CHATBOT_ISSUES | tr ' ' '\n' | sort -u | tr '\n' ' ')
+
+            echo "chatbot_changelog<<EOF" >> $GITHUB_OUTPUT
+            echo -e "$CHATBOT_CHANGELOG" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
           # Export for use in next steps
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo -e "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           echo "ui_issues=$UI_ISSUES" >> $GITHUB_OUTPUT
           echo "icon_issues=$ICON_ISSUES" >> $GITHUB_OUTPUT
-          
+          echo "chatbot_issues=$CHATBOT_ISSUES" >> $GITHUB_OUTPUT
+
           # Also save to environment for debugging
           echo "UI_ISSUES_TO_CLOSE=$UI_ISSUES" >> $GITHUB_ENV
           echo "ICON_ISSUES_TO_CLOSE=$ICON_ISSUES" >> $GITHUB_ENV
-      - name: Commit version changes
-        run: |
-          git add .
-          
-          PARTS=""
-          if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
-            PARTS="@filigran/chatbot to v$FILIGRAN_CHATBOT_VERSION"
-          fi
-          if [ -n "$FILIGRAN_UI_VERSION" ]; then
-            [ -n "$PARTS" ] && PARTS="$PARTS, "
-            PARTS="${PARTS}@filigran/ui to v$FILIGRAN_UI_VERSION"
-          fi
-          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            [ -n "$PARTS" ] && PARTS="$PARTS, "
-            PARTS="${PARTS}@filigran/icon to v$FILIGRAN_ICON_VERSION"
-          fi
-          if [ -n "$FILIGRAN_RTE_VERSION" ]; then
-            [ -n "$PARTS" ] && PARTS="$PARTS, "
-            PARTS="${PARTS}@filigran/rich-text-editor to v$FILIGRAN_RTE_VERSION"
-          fi
-          
-          if [ -z "$PARTS" ]; then
-            echo "No version changes to commit"
-            exit 0
-          fi
-          
-          git commit -m "chore: bump $PARTS"
-          git push
+          echo "CHATBOT_ISSUES_TO_CLOSE=$CHATBOT_ISSUES" >> $GITHUB_ENV
+
       - name: Create Git tags
         run: |
-          if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
-            git tag "@filigran/chatbot-$FILIGRAN_CHATBOT_VERSION"
-            echo "Created tag: @filigran/chatbot-$FILIGRAN_CHATBOT_VERSION"
+          # NOTE: the chatbot tag carries the `v` prefix, like every other
+          # package and like every chatbot tag already in the repo
+          # (@filigran/chatbot-v3.7.4). It used to be created without it, which
+          # disagreed with the tag its own GitHub Release step referenced — the
+          # release would have ended up with two tags for one version.
+          if [ -n "${FILIGRAN_CHATBOT_VERSION:-}" ]; then
+            git tag "@filigran/chatbot-v$FILIGRAN_CHATBOT_VERSION"
+            echo "Created tag: @filigran/chatbot-v$FILIGRAN_CHATBOT_VERSION"
           fi
-          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+          if [ -n "${FILIGRAN_ICON_VERSION:-}" ]; then
             git tag "@filigran/icon-v$FILIGRAN_ICON_VERSION"
             echo "Created tag: @filigran/icon-v$FILIGRAN_ICON_VERSION"
           fi
-          if [ -n "$FILIGRAN_RTE_VERSION" ]; then
+          if [ -n "${FILIGRAN_RTE_VERSION:-}" ]; then
             git tag "@filigran/rich-text-editor-v$FILIGRAN_RTE_VERSION"
             echo "Created tag: @filigran/rich-text-editor-v$FILIGRAN_RTE_VERSION"
           fi
-          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+          if [ -n "${FILIGRAN_UI_VERSION:-}" ]; then
             git tag "@filigran/ui-v$FILIGRAN_UI_VERSION"
             echo "Created tag: @filigran/ui-v$FILIGRAN_UI_VERSION"
           fi
           git push --tags
+
       - name: Build packages
         run: |
-          if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
+          if [ -n "${FILIGRAN_CHATBOT_VERSION:-}" ]; then
             echo "Building @filigran/chatbot..."
             yarn workspace @filigran/chatbot run build
           fi
-          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+          if [ -n "${FILIGRAN_ICON_VERSION:-}" ]; then
             echo "Building @filigran/icon..."
             yarn workspace @filigran/icon run build
           fi
-          if [ -n "$FILIGRAN_RTE_VERSION" ]; then
+          if [ -n "${FILIGRAN_RTE_VERSION:-}" ]; then
             echo "Building @filigran/rich-text-editor..."
             yarn workspace @filigran/rich-text-editor run build
           fi
-          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+          if [ -n "${FILIGRAN_UI_VERSION:-}" ]; then
             echo "Building @filigran/ui..."
             yarn workspace @filigran/ui run build
           fi
       - name: Publish @filigran/chatbot to NPM
-        if: (github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all') && env.FILIGRAN_CHATBOT_VERSION != ''
+        if: env.FILIGRAN_CHATBOT_VERSION != ''
         working-directory: ./packages/filigran-chatbot
         run: yarn npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish @filigran/icon to NPM
-        if: (github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all') && env.FILIGRAN_ICON_VERSION != ''
+        if: env.FILIGRAN_ICON_VERSION != ''
         working-directory: ./packages/filigran-icon
         run: yarn npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish @filigran/rich-text-editor to NPM
-        if: (github.event.inputs.package == '@filigran/rich-text-editor' || github.event.inputs.package == 'all') && env.FILIGRAN_RTE_VERSION != ''
+        if: env.FILIGRAN_RTE_VERSION != ''
         working-directory: ./packages/filigran-rich-text-editor
         run: yarn npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish @filigran/ui to NPM
-        if: (github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all') && env.FILIGRAN_UI_VERSION != ''
+        if: env.FILIGRAN_UI_VERSION != ''
         working-directory: ./packages/filigran-ui
         run: yarn npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create GitHub Release for @filigran/icon
-        if: (github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all') && env.FILIGRAN_ICON_VERSION != ''
+        if: env.FILIGRAN_ICON_VERSION != ''
         uses: softprops/action-gh-release@v3
         with:
           tag_name: '@filigran/icon-v${{ env.FILIGRAN_ICON_VERSION }}'
@@ -289,7 +294,7 @@ jobs:
           draft: false
           prerelease: false
       - name: Create GitHub Release for @filigran/rich-text-editor
-        if: (github.event.inputs.package == '@filigran/rich-text-editor' || github.event.inputs.package == 'all') && env.FILIGRAN_RTE_VERSION != ''
+        if: env.FILIGRAN_RTE_VERSION != ''
         uses: softprops/action-gh-release@v3
         with:
           tag_name: '@filigran/rich-text-editor-v${{ env.FILIGRAN_RTE_VERSION }}'
@@ -304,7 +309,7 @@ jobs:
           draft: false
           prerelease: false
       - name: Create GitHub Release for @filigran/ui
-        if: (github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all') && env.FILIGRAN_UI_VERSION != ''
+        if: env.FILIGRAN_UI_VERSION != ''
         uses: softprops/action-gh-release@v3
         with:
           tag_name: '@filigran/ui-v${{ env.FILIGRAN_UI_VERSION }}'
@@ -326,13 +331,15 @@ jobs:
           draft: false
           prerelease: false
       - name: Create GitHub Release for @filigran/chatbot
-        if: (github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all') && env.FILIGRAN_CHATBOT_VERSION != ''
+        if: env.FILIGRAN_CHATBOT_VERSION != ''
         uses: softprops/action-gh-release@v3
         with:
           tag_name: '@filigran/chatbot-v${{ env.FILIGRAN_CHATBOT_VERSION }}'
           name: 'Filigran Chatbot v${{ env.FILIGRAN_CHATBOT_VERSION }}'
           body: |
             ## Filigran Chatbot v${{ env.FILIGRAN_CHATBOT_VERSION }}
+            
+            ${{ steps.changelog.outputs.chatbot_changelog }}
             
             ### Installation
             ```bash

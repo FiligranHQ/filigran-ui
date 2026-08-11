@@ -11,7 +11,15 @@ jobs:
   validate-pr-title:
     name: Validate Conventional PR title
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login != 'renovate[bot]' && !startsWith(github.event.pull_request.title, '[Snyk]')
+    # `release/*` heads are the automated version bumps opened by
+    # release-prepare.yml. Their titles are conventional but carry no issue
+    # reference, because a release closes nothing — it ships what is already
+    # merged. Without this exemption the release PR can never be merged, and
+    # nothing can ever be published.
+    if: >-
+      github.event.pull_request.user.login != 'renovate[bot]'
+      && !startsWith(github.event.pull_request.title, '[Snyk]')
+      && !startsWith(github.event.pull_request.head.ref, 'release/')
     steps:
       - name: Check Conventional Commit title
         env:
