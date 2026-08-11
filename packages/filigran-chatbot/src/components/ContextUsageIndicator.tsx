@@ -159,10 +159,15 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
             own colours, so proportions are readable without matching numbers to
             rows. The trailing gap is the headroom left. */}
         <div className="px-3.5 pb-2.5 pt-1.5">
+          <span className="flex h-1.5 w-full gap-px rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
             {rows.map((row) => (
               <span
                 key={row.field}
                 className="h-full first:rounded-l-full"
+                /* Scaled through the clamped total rather than straight over the
+                   window, so a producer that reports buckets summing past the
+                   limit fills the track instead of overflowing it. Identical to
+                   value/limit whenever the two agree, which is the normal case. */
                 style={{
                   width: `${((breakdown?.[row.field] ?? 0) / Math.max(used, 1)) * Math.min(used / limit, 1) * 100}%`,
                   backgroundColor: row.color,
