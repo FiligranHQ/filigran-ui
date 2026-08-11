@@ -36,6 +36,7 @@ jobs:
       packages: write
       id-token: write
       issues: write
+      pull-requests: write
     steps:
       - uses: actions/create-github-app-token@v3
         id: app-token
@@ -200,6 +201,7 @@ jobs:
           fi
           
           RELEASE_BRANCH="release/version-bump-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "RELEASE_BRANCH=$RELEASE_BRANCH" >> $GITHUB_ENV
           git checkout -b "$RELEASE_BRANCH"
           git commit -m "chore: bump $PARTS"
           git push --set-upstream origin "$RELEASE_BRANCH"
@@ -595,6 +597,89 @@ jobs:
               } catch (error) {
                 console.error(`Failed to close Icon issue #${issue}: ${error.message}`);
               }
+            }
+      - name: Open and auto-merge release PR
+        if: env.RELEASE_BRANCH != ''
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const releaseBranch = process.env.RELEASE_BRANCH;
+            const base = context.ref.replace('refs/heads/', '');
+
+            const parts = [];
+            if (process.env.FILIGRAN_CHATBOT_VERSION) parts.push(`@filigran/chatbot v${process.env.FILIGRAN_CHATBOT_VERSION}`);
+            if (process.env.FILIGRAN_UI_VERSION) parts.push(`@filigran/ui v${process.env.FILIGRAN_UI_VERSION}`);
+            if (process.env.FILIGRAN_ICON_VERSION) parts.push(`@filigran/icon v${process.env.FILIGRAN_ICON_VERSION}`);
+            if (process.env.FILIGRAN_RTE_VERSION) parts.push(`@filigran/rich-text-editor v${process.env.FILIGRAN_RTE_VERSION}`);
+
+            if (parts.length === 0) {
+              core.info('No version updates found, skipping PR creation.');
+              return;
+            }
+
+            const title = `chore(release): bump ${parts.join(', ')} (#${context.runId})`;
+            const head = `${context.repo.owner}:${releaseBranch}`;
+
+            const existing = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head,
+              base
+            });
+
+            let pullNumber;
+            if (existing.data.length > 0) {
+              pullNumber = existing.data[0].number;
+              core.info(`Reusing existing PR #${pullNumber}`);
+            } else {
+              const created = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                head: releaseBranch,
+                base,
+                body: `Automated release version bump from workflow run ${context.runId}.`
+              });
+              pullNumber = created.data.number;
+              core.info(`Created PR #${pullNumber}`);
+            }
+
+            const prNodeId = (await github.graphql(
+              `query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    id
+                  }
+                }
+              }`,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                number: pullNumber
+              }
+            )).repository.pullRequest.id;
+
+            try {
+              await github.graphql(
+                `mutation($prId: ID!) {
+                  enablePullRequestAutoMerge(
+                    input: {
+                      pullRequestId: $prId
+                      mergeMethod: SQUASH
+                    }
+                  ) {
+                    pullRequest {
+                      number
+                    }
+                  }
+                }`,
+                {prId: prNodeId}
+              );
+              core.info(`Enabled auto-merge for PR #${pullNumber}`);
+            } catch (error) {
+              core.warning(`Could not enable auto-merge for PR #${pullNumber}: ${error.message}`);
             }
       - name: Summary
         run: |
