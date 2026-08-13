@@ -176,7 +176,7 @@ jobs:
           echo "ICON_ISSUES_TO_CLOSE=$ICON_ISSUES" >> $GITHUB_ENV
       - name: Create release branch
         run: |
-          RELEASE_BRANCH="release/version-bump-${{ github.run_id }}"
+          RELEASE_BRANCH="release/version-bump-${{ github.run_id }}-${{ github.run_attempt }}"
           git checkout -b "$RELEASE_BRANCH"
           echo "RELEASE_BRANCH=$RELEASE_BRANCH" >> $GITHUB_ENV
       - name: Commit version changes
@@ -223,8 +223,7 @@ jobs:
             --title "${{ steps.commit_version.outputs.commit_message }}" \
             --body "Automated version bump triggered by release workflow run ${{ github.run_id }}.
 
-          This PR is required because \`main\` enforces signed commits and pull-request review. It will auto-merge once required checks/approvals pass." \
-            --label "automated-release")
+          This PR is required because \`main\` enforces signed commits and pull-request review. It will auto-merge once required checks/approvals pass.")
           echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
           PR_NUMBER=$(basename "$PR_URL")
           echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
@@ -241,19 +240,21 @@ jobs:
         run: |
           PR_NUMBER="${{ steps.release_pr.outputs.pr_number }}"
           for i in $(seq 1 60); do
-            MERGED_AT=$(gh pr view "$PR_NUMBER" --json mergedAt -q '.mergedAt')
-            STATE=$(gh pr view "$PR_NUMBER" --json state -q '.state')
-            if [ -n "$MERGED_AT" ] && [ "$MERGED_AT" != "null" ]; then
+            STATUS=$(gh pr view "$PR_NUMBER" --json state,mergedAt \
+              -q 'if .mergedAt then "MERGED" else .state end' || echo "RETRY")
+            if [ "$STATUS" = "MERGED" ]; then
               echo "PR #$PR_NUMBER merged."
-              break
+              exit 0
             fi
-            if [ "$STATE" = "CLOSED" ]; then
+            if [ "$STATUS" = "CLOSED" ]; then
               echo "PR #$PR_NUMBER was closed without merging. Failing release."
               exit 1
             fi
-            echo "Waiting for PR #$PR_NUMBER to merge (attempt $i/60)..."
+            echo "Waiting for PR #$PR_NUMBER to merge (attempt $i/60, status: $STATUS)..."
             sleep 15
           done
+          echo "PR #$PR_NUMBER not merged after 15 minutes. Failing release so tags/publish never run on an un-bumped main."
+          exit 1
       - name: Sync local main with merged release
         if: steps.commit_version.outputs.has_changes == 'true'
         run: |
