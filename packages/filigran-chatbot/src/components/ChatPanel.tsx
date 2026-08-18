@@ -82,6 +82,12 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     contextUsage,
     transferredAgent,
     canSteer,
+    pendingApprovals,
+    isSubmittingApproval,
+    approvalError,
+    submitApprovalDecisions,
+    isResumingAfterDecision,
+    historyReloadNonce,
     historyLoadedRef,
     conversationIdRef,
     handleFileAdd,
@@ -499,6 +505,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     apiBaseUrl,
     apiEndpoints,
     backendType,
+    // Re-runs the restore when the hook asks for one — the only way a turn
+    // resumed without a stream can ever show its answer.
+    historyReloadNonce,
     historyLoadedRef,
     conversationIdRef,
     isMountedRef,
@@ -622,6 +631,11 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           requestHeaders={requestHeaders}
           miniGameEnabled={miniGameEnabled}
           onMessageFeedback={onMessageFeedback}
+          isResumingAfterDecision={isResumingAfterDecision}
+          pendingApprovals={pendingApprovals}
+          onSubmitApprovalDecisions={submitApprovalDecisions}
+          isSubmittingApproval={isSubmittingApproval}
+          approvalError={approvalError}
           t={t}
         />
       )}

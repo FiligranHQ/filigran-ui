@@ -15,6 +15,9 @@ export type {
   ChatPromptTemplate,
   ChatQuotaStatus,
   MessageFeedback,
+  ToolApprovalDecision,
+  ToolApprovalProposal,
+  ToolApprovalVerdict,
   XtmAgent,
   ApiEndpoints,
 } from './types';

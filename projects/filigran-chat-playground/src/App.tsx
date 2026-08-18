@@ -230,6 +230,13 @@ const HostToolbarSlot = ({ onClick, active }: { onClick: () => void; active: boo
 const App = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<ChatMode>('floating');
+  // Whether this "host" claims it can answer a tool-approval prompt. Off is not
+  // a broken configuration — it is what every host that has not adopted
+  // approvals looks like, and the degraded path it selects (the turn ends with
+  // a plain message naming the tool) is the one that must keep working when XTM
+  // One ships gating. Worth being able to see side by side, so it is a switch
+  // rather than an edit.
+  const [supportsApproval, setSupportsApproval] = useState(true);
   const [isDark, setIsDark] = useState(true);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [hostToolActive, setHostToolActive] = useState(false);
@@ -389,6 +396,27 @@ const App = () => {
                     </div>
                   </div>
 
+                  {/* Tool approval opt-in */}
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Tool approval:</p>
+                    <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-white/70">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-[#7b5cff]"
+                        checked={supportsApproval}
+                        onChange={(e) => setSupportsApproval(e.target.checked)}
+                      />
+                      <span>
+                        Host can answer approval prompts
+                        <span className="block text-xs text-gray-500 dark:text-white/40">
+                          {supportsApproval
+                            ? 'Sends supports_tool_approval — a gated tool pauses the turn and asks.'
+                            : 'Sends nothing — a gated tool ends the turn with a plain message instead. This is every host that has not adopted approvals.'}
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+
                   {/* Open/close */}
                   <div>
                     <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Panel:</p>
@@ -504,6 +532,18 @@ const App = () => {
             onModeChange={setMode}
             topOffset={HEADER_HEIGHT}
             apiBaseUrl="/api/xtmone"
+            // Tool approval is opt-in and has no default paths: naming them is
+            // how a host promises it can answer a paused turn, so a widget that
+            // cannot must never claim it. Both are plain passthroughs here —
+            // the dev server rewrites `/api/xtmone/*` onto XTM One's
+            // `/api/v1/platform/*` generically, so they need nothing of their
+            // own. Against the mock they simply 404 and the panel degrades,
+            // which is the un-opted-in behaviour every current host has.
+            apiEndpoints={
+              supportsApproval
+                ? { approve: '/chat/messages/approve', pendingApprovals: '/chat/conversations' }
+                : undefined
+            }
             agentDashboardUrl="https://xtm.example.com"
             user={{ firstName: session.state === 'signed-in' ? session.email.split('@')[0] : 'Tester' }}
             accentColor="#7b5cff"
