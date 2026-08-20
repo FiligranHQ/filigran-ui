@@ -36,6 +36,7 @@ jobs:
       packages: write
       id-token: write
       issues: write
+      pull-requests: write
     steps:
       - uses: actions/create-github-app-token@v3
         id: app-token
@@ -173,7 +174,13 @@ jobs:
           # Also save to environment for debugging
           echo "UI_ISSUES_TO_CLOSE=$UI_ISSUES" >> $GITHUB_ENV
           echo "ICON_ISSUES_TO_CLOSE=$ICON_ISSUES" >> $GITHUB_ENV
+      - name: Create release branch
+        run: |
+          RELEASE_BRANCH="release/version-bump-${{ github.run_id }}-${{ github.run_attempt }}"
+          git checkout -b "$RELEASE_BRANCH"
+          echo "RELEASE_BRANCH=$RELEASE_BRANCH" >> $GITHUB_ENV
       - name: Commit version changes
+        id: commit_version
         run: |
           git add .
           
@@ -196,11 +203,64 @@ jobs:
           
           if [ -z "$PARTS" ]; then
             echo "No version changes to commit"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
             exit 0
           fi
           
           git commit -m "chore: bump $PARTS"
-          git push
+          git push --set-upstream origin "$RELEASE_BRANCH"
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "commit_message=chore: bump $PARTS" >> $GITHUB_OUTPUT
+      - name: Open release PR
+        if: steps.commit_version.outputs.has_changes == 'true'
+        id: release_pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          PR_URL=$(gh pr create \
+            --base main \
+            --head "$RELEASE_BRANCH" \
+            --title "${{ steps.commit_version.outputs.commit_message }}" \
+            --body "Automated version bump triggered by release workflow run ${{ github.run_id }}.
+
+          This PR is required because \`main\` enforces signed commits and pull-request review. It will auto-merge once required checks/approvals pass.")
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          PR_NUMBER=$(basename "$PR_URL")
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+      - name: Enable auto-merge on release PR
+        if: steps.commit_version.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh pr merge "${{ steps.release_pr.outputs.pr_number }}" --auto --squash
+      - name: Wait for release PR to merge
+        if: steps.commit_version.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          PR_NUMBER="${{ steps.release_pr.outputs.pr_number }}"
+          for i in $(seq 1 60); do
+            STATUS=$(gh pr view "$PR_NUMBER" --json state,mergedAt \
+              -q 'if .mergedAt then "MERGED" else .state end' || echo "RETRY")
+            if [ "$STATUS" = "MERGED" ]; then
+              echo "PR #$PR_NUMBER merged."
+              exit 0
+            fi
+            if [ "$STATUS" = "CLOSED" ]; then
+              echo "PR #$PR_NUMBER was closed without merging. Failing release."
+              exit 1
+            fi
+            echo "Waiting for PR #$PR_NUMBER to merge (attempt $i/60, status: $STATUS)..."
+            sleep 15
+          done
+          echo "PR #$PR_NUMBER not merged after 15 minutes. Failing release so tags/publish never run on an un-bumped main."
+          exit 1
+      - name: Sync local main with merged release
+        if: steps.commit_version.outputs.has_changes == 'true'
+        run: |
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
       - name: Create Git tags
         run: |
           if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
