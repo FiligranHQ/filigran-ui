@@ -24,6 +24,46 @@ export interface ApiEndpoints {
    * disable mid-run steering entirely.
    */
   steer?: string | null;
+  /**
+   * Path for submitting tool-approval decisions when the agent pauses on a
+   * gated tool call. The widget POSTs
+   * `{ conversation_id, decisions: [{ tool_call_id, decision, rejection_reason }] }`
+   * and the paused turn resumes on the same stream with the tool result.
+   *
+   * **No default, unlike every sibling entry, and that is deliberate.** Setting
+   * this is what makes the widget advertise `supports_tool_approval` to the
+   * backend, and advertising it is a promise to answer: a backend that pauses a
+   * turn waits indefinitely for a decision, with no timeout and no safe default
+   * action to take on the reviewer's behalf. If this path defaulted to XTM
+   * One's own route, a host proxying the chat (OpenCTI, OpenAEV, OpenGRC) could
+   * upgrade the widget without adding the matching proxy route, claim support,
+   * receive the pause, POST the decision into a 404 — and hang the turn with
+   * the user watching a spinner.
+   *
+   * While unset the widget never claims support and the backend degrades to a
+   * plain assistant message explaining what it could not run, which is why an
+   * un-updated host keeps working untouched.
+   *
+   * REST backend only: `legacy` and `ag-ui` never meet this gate.
+   */
+  approve?: string | null;
+  /**
+   * Base path for recovering what a paused turn is still waiting on, read as
+   * `GET {apiBaseUrl}{pendingApprovals}/{conversation_id}/pending-approvals`
+   * (the same base-plus-suffix idiom as {@link ApiEndpoints.download}). XTM
+   * One serves it at `/chat/conversations`.
+   *
+   * `approval_required` is a single event on a stream, so a reload loses it —
+   * including the `tool_call_id`s a decision has to name. The turn is left
+   * waiting for an answer nobody can give, which reads as a chat that simply
+   * stopped replying. The panel therefore asks once per conversation on mount;
+   * an empty list is the ordinary answer.
+   *
+   * No default, for the same reason as {@link ApiEndpoints.approve}: a proxied
+   * host has to expose the route before the panel starts calling it. Unset, the
+   * live flow still works and only reload recovery is absent.
+   */
+  pendingApprovals?: string | null;
   /** Path for fetching agents. Default: '/chat/agents'. Set to null to disable. */
   agents?: string | null;
   /** Path for fetching session history. Default: '/chat/sessions'. Set to null to disable. */
@@ -99,6 +139,54 @@ export interface ChatQuotaStatus {
   limit: number | null;
   /** Human-readable period label, e.g. "monthly". */
   period: string;
+}
+
+/**
+ * One tool call the agent wants to make and is waiting on a human to approve.
+ *
+ * `inputSchema` travels alongside `arguments` so each value can be rendered
+ * with the tool's own description of what it means. That pairing is the whole
+ * point: `cascade: true` is unjudgeable on its own, while "cascade — also
+ * delete linked entities" is a decision someone can actually make. A prompt
+ * that shows names and values alone is a rubber stamp wearing the costume of a
+ * safety control.
+ */
+export interface ToolApprovalProposal {
+  /**
+   * Identity of the proposed call, and the key every decision is sent back on.
+   * Never the tool name: one turn can propose the same tool twice with
+   * different arguments.
+   */
+  toolCallId: string;
+  toolName: string;
+  toolDescription?: string;
+  arguments: Record<string, unknown>;
+  /** JSON Schema the arguments came from, used to label each one. */
+  inputSchema?: Record<string, unknown>;
+  /** Where the tool comes from, e.g. `integration:opencti`. */
+  source?: string;
+}
+
+/**
+ * A reviewer's verdict on one proposed call.
+ *
+ * There is deliberately no "edit the arguments" verdict. Rewriting a call under
+ * the agent's name would leave a transcript crediting it with arguments it
+ * never chose, and turn a yes/no judgement into authoring. A wrong proposal is
+ * corrected by rejecting it with a reason the agent can act on.
+ */
+export type ToolApprovalVerdict = 'approve' | 'approve_always' | 'reject';
+
+/** One decision, ready to be sent back to the paused turn. */
+export interface ToolApprovalDecision {
+  toolCallId: string;
+  verdict: ToolApprovalVerdict;
+  /**
+   * Why the call was declined. Optional, and the agent's only signal to correct
+   * itself — with argument editing gone, a rejection *is* the correction
+   * channel.
+   */
+  rejectionReason?: string;
 }
 
 /**

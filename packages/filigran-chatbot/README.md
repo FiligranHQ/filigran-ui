@@ -6,6 +6,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 
 - 🔄 **SSE Message Streaming** — Real-time response streaming with status indicators
 - ⚡ **Mid-Run Steering** — Send messages while the agent is generating; they are injected into the running agentic loop instead of waiting for the turn to finish
+- ✋ **Tool Approval** — When the agent stops at a tool that needs a human's consent, the turn pauses mid-answer and the reviewer approves, declines with a reason, or approves always — opt-in per host, see [Tool approval](#post-apibaseurlapiendpointsapprove)
 - 🗂️ **Conversation History** — Switch between (and delete) past conversations from a header menu, or from a permanent sidebar in fullscreen mode (collapsible, searchable past 7 entries, rename in place)
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
@@ -394,6 +395,134 @@ data: {"type": "stream", "content": "Follow-up answer to the steering message"}
 data: {"type": "done", "content": "Follow-up answer to the steering message", "conversation_id": "uuid"}
 ```
 
+### `POST {apiBaseUrl}{apiEndpoints.approve}`
+
+Answers a turn that paused because the agent proposed a tool call requiring a
+human's consent. **Opt-in: there is no default path.** The widget advertises
+approval support to the backend only when `apiEndpoints.approve` is set, and
+that flag is a promise — a backend that pauses a turn waits indefinitely for a
+decision, with no timeout. A host that names a path it cannot route would
+receive the pause, POST the decision into a 404, and hang the turn with the
+user watching a spinner. Leave it unset and the backend degrades to an ordinary
+assistant message explaining what it could not run, so an un-updated host keeps
+working untouched.
+
+When set, `supports_tool_approval: true` is sent on every `rest` message body.
+
+**Server → client**, on the existing SSE stream, alongside `stream` / `status` /
+`done`:
+
+```
+data: {"type": "approval_required", "conversation_id": "uuid-here", "proposals": [
+  {
+    "tool_call_id": "call_abc123",
+    "tool_name": "opencti_delete_entity",
+    "tool_description": "Permanently delete an entity from the platform.",
+    "arguments": {"entity_id": "e-123", "cascade": true},
+    "input_schema": {"type": "object", "properties": {
+      "entity_id": {"type": "string", "description": "Entity to delete"},
+      "cascade": {"type": "boolean", "description": "Also delete linked entities"}
+    }},
+    "source": "integration:opencti"
+  }
+]}
+```
+
+The turn is **not** over: no `done` arrives, the stream stays open and silent
+(kept alive by SSE `: keepalive` comment lines, which the reader drops), and the
+rest of the turn continues on it once a decision is sent. The progress bubble is
+replaced by the prompt, which renders each argument next to its description from
+`input_schema` — `cascade: true` is unjudgeable on its own, so a prompt showing
+only names and values would be a rubber stamp.
+
+**Client → server**, one decision per proposed call:
+
+```json
+{
+  "conversation_id": "uuid-here",
+  "decisions": [
+    { "tool_call_id": "call_abc123", "decision": "approve" },
+    { "tool_call_id": "call_ghi789", "decision": "reject", "rejection_reason": "Wrong target environment." },
+    { "tool_call_id": "call_jkl012", "decision": "approve_always" }
+  ]
+}
+```
+
+| `decision`       | Effect                                                              |
+| ---------------- | ------------------------------------------------------------------- |
+| `approve`        | Runs with the arguments exactly as proposed                          |
+| `reject`         | Does not run; the agent receives `rejection_reason` and can adapt    |
+| `approve_always` | Runs, **and** saves a standing approval for this user                |
+
+Every proposed `tool_call_id` must appear exactly once — the backend refuses a
+partial set, because resuming with an undecided call leaves a `tool_use` block
+without its `tool_result`, which the model providers reject outright. The prompt
+therefore submits itself once the last card is decided. A set containing
+`approve_always` waits for an explicit Confirm instead: it is the only verdict
+whose reach outlives the turn (it applies to the user's unattended scheduled
+runs too), so the warning has to be read before it is committed.
+
+A decision carries no arguments. Correcting a wrong proposal is what
+`reject` with a reason is for — rewriting a call under the agent's name would
+leave a transcript crediting it with arguments it never chose.
+
+On a non-2xx the prompt stays on screen with the failure noted and the controls
+re-armed: the turn is still paused either way, so clearing the prompt would
+strand it with nothing able to answer. A `409` means nothing is waiting any more
+(the turn finished, was cancelled, or was answered elsewhere); the stream ending
+then clears the prompt on its own. Stopping the turn also dismisses it — the
+backend waits indefinitely by design, so abandoning the stream is the reviewer's
+only other way out.
+
+**Proxied hosts:** the decision goes through the same fetch path as every other
+endpoint — relative to `apiBaseUrl` and honouring `requestHeaders` — so CSRF
+wrappers and per-request context headers keep working. A proxy in front of the
+chat must forward the request body whole (a proxy rebuilding it from a fixed
+field list silently drops `supports_tool_approval`), never time out the
+streaming turn, and pass SSE keepalives through untouched.
+
+#### Recovering a prompt after a page reload
+
+`approval_required` is a single event on a stream, so a reload loses it —
+including the `tool_call_id`s a decision has to name — while the turn goes on
+waiting for an answer that can no longer be given. To the user that is a chat
+which simply stopped replying.
+
+Set `apiEndpoints.pendingApprovals` (XTM One: `/chat/conversations`) and the
+panel asks once per conversation, on mount and on every conversation switch:
+
+```
+GET {apiBaseUrl}{apiEndpoints.pendingApprovals}/{conversation_id}/pending-approvals
+→ {
+    "conversation_id": "uuid-here",
+    "proposals": [ /* as the event carried */ ],
+    "turn": "running" | "idle"
+  }
+```
+
+An empty `proposals` is the ordinary answer. A non-empty one re-renders the same
+prompt, and the decision is POSTed exactly as before. Like `approve` this has no
+default and is skipped when unset, leaving the live flow untouched.
+
+The recovered turn resumes with the reasoning and tool results it had already
+produced — but **not on a stream**: the one it would have reported on died with
+the old page, so the backend persists the answer and suppresses the live `done`
+frame. So after a decision on a recovered prompt the panel shows its ordinary
+working indicator and polls this route every 5s, using `turn` as the stop
+condition: while it reads `running` it keeps waiting, and the moment it reads
+`idle` it re-reads the conversation once — the answer is there. A resumed turn
+that pauses *again* on a second gated call is picked up by the same poll, which
+is the only way that prompt could reach the user with no stream open.
+
+One bound applies server-side: after 30 minutes with **no sign of a client** and
+no decision, the turn stops waiting and the pause is discarded. Any request about
+the conversation counts as a sign, so while a recovered prompt is displayed the
+panel re-reads this route every 10 minutes purely to say someone is still there —
+a tab left open makes no requests of its own, and the bound is meant to limit
+abandonment, never the person deciding.
+
+REST backend only: `legacy` and `ag-ui` never meet this gate.
+
 ## Customization
 
 ### Custom Logo
@@ -480,6 +609,18 @@ function App() {
 - `'Uses AI. Verify results.'`
 - `'How can I help you, '`
 - `'Suggestions'`
+- `'Waiting for your approval…'`
+- `'The agent needs your approval to run a tool:'` / `'The agent needs your approval to run these tools:'`
+- `'Yes'` / `'No'` / `'Yes, always'` / `'Back'` / `'Confirm'` / `'Sending…'` / `'decided'`
+- `'Approved'` / `'Declined'` / `'Always allowed'`
+- `'Decline this call'`
+- `'Why not? The agent sees this and can adapt (optional)'`
+- `'e.g. wrong environment — use staging instead'`
+- `'Also applies to your scheduled runs, until you revoke it'`
+- `'“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.'`
+- `'This turn is no longer waiting for a decision.'`
+- `'Could not send your decision. Please try again.'`
+- `'This decision could not be sent. Reload the chat and try again.'`
 - `'Floating'`
 - `'Sidebar'`
 - `'Full screen'`

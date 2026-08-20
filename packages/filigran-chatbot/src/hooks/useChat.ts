@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentStatusState, ApiEndpoints, BackendType, ChatContextUsage, ChatFile, ChatMessage } from '../types';
+import type {
+  AgentStatusState,
+  ApiEndpoints,
+  BackendType,
+  ChatContextUsage,
+  ChatFile,
+  ChatMessage,
+  ToolApprovalDecision,
+  ToolApprovalProposal,
+} from '../types';
 import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
+import { parseToolApprovalProposals } from './protocols/parseRestEvent';
 
 const STORAGE_KEY = 'filigranChatConversationId';
 const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
@@ -38,6 +48,34 @@ function persistDraft(conversationId: string | null, value: string): void {
     /* ignore — see loadDraft */
   }
 }
+
+/**
+ * How often to check on a turn resumed by a decision made on a recovered
+ * (streamless) prompt, and the backstop that ends the watch regardless.
+ *
+ * Such a turn has no stream left to write to — the backend persists the answer
+ * and suppresses the live `done` frame — so the panel watches the pause-recovery
+ * route instead, which reports whether the turn is still running. That is a
+ * definite stop condition rather than a guess at how long an agent might take,
+ * and each poll doubles as the sign of life that keeps the turn from being
+ * abandoned. The deadline is only a backstop against a turn-state marker that
+ * somehow never clears; the ordinary end is the turn reporting itself idle.
+ */
+const RESUME_POLL_MS = 5000;
+const RESUME_WATCH_MS = 900000;
+
+/**
+ * How often to re-assert that somebody is still here while a recovered prompt
+ * is on screen.
+ *
+ * A paused turn gives up after 30 minutes with no sign of a client, and after a
+ * reload the stream that would have vouched for the reviewer is gone for good —
+ * so presence is inferred from requests about the conversation instead. A tab
+ * left open on the prompt IS a client present, but it makes no requests, so
+ * without this the turn would abandon a reviewer who is simply taking their
+ * time. Well inside the server's window, since missing it costs the whole turn.
+ */
+const APPROVAL_PRESENCE_INTERVAL_MS = 600000;
 
 /** Maximum number of files that can be attached to a single message. */
 const DEFAULT_MAX_FILE_COUNT = 10;
@@ -85,6 +123,39 @@ interface UseChatReturn {
    * the composer (accent Send next to Stop, "Enter to send now" copy).
    */
   canSteer: boolean;
+  /**
+   * Tool calls the running turn has stopped on, or `null` when nothing is
+   * waiting. While set, the turn is paused mid-answer: the stream is open and
+   * silent, and only a decision (or aborting the turn) moves it on.
+   */
+  pendingApprovals: ToolApprovalProposal[] | null;
+  /** True while a decision set is in flight to the approve endpoint. */
+  isSubmittingApproval: boolean;
+  /**
+   * Why the last decision submission failed, or `null`. Kept alongside the
+   * still-visible prompt rather than replacing it: the turn is paused either
+   * way, so the reviewer needs the retry as much as the explanation.
+   */
+  approvalError: string | null;
+  /**
+   * Answer a paused turn. Every proposed call must appear exactly once — the
+   * backend refuses a partial set, because resuming with an undecided call
+   * leaves a `tool_use` block without its `tool_result`, which the model
+   * providers reject outright.
+   */
+  submitApprovalDecisions: (decisions: ToolApprovalDecision[]) => Promise<void>;
+  /**
+   * True while waiting for the answer to a decision made on a recovered prompt.
+   * The turn resumed without a stream to report on, so the panel shows the
+   * working indicator itself and re-reads the conversation until the answer
+   * lands.
+   */
+  isResumingAfterDecision: boolean;
+  /**
+   * Bumped whenever the conversation must be re-read from the server. The panel
+   * owns the restore, so this is how the hook asks for one.
+   */
+  historyReloadNonce: number;
   historyLoadedRef: React.MutableRefObject<boolean>;
   /**
    * Ref mirror of {@link conversationId}, always current across async
@@ -143,6 +214,8 @@ function buildRequestBody(
     conversationId: string | null;
     agentSlug: string | null | undefined;
     pageContext?: Record<string, unknown>;
+    /** See {@link ApiEndpoints.approve} — derived, never a prop of its own. */
+    supportsToolApproval?: boolean;
   },
 ): Record<string, unknown> {
   switch (backendType) {
@@ -160,6 +233,15 @@ function buildRequestBody(
       };
     default: {
       const body: Record<string, unknown> = { content, conversation_id: opts.conversationId, agent_slug: opts.agentSlug };
+      // Tell the backend this turn may pause on a gated tool call and that we
+      // will answer. Sent only when the host named an approve path, because
+      // the flag is a promise: a backend that pauses waits indefinitely, so a
+      // client that cannot answer must never claim it can. Omitted rather than
+      // sent false, so a proxy that rebuilds the body from a fixed field list
+      // drops nothing meaningful.
+      if (opts.supportsToolApproval) {
+        body.supports_tool_approval = true;
+      }
       // Forward arbitrary host page context (e.g. current URL) so the agent
       // knows where the user is. Omitted when empty to keep payloads lean.
       // Guard serialization: the whole body is later JSON.stringify'd, so a
@@ -211,6 +293,18 @@ export function useChat({
   // state rather than per-message: it describes what the NEXT turn will carry,
   // which is the only thing the user can still act on.
   const [contextUsage, setContextUsage] = useState<ChatContextUsage | null>(null);
+  // Tool calls the running turn is paused on. Conversation-level rather than
+  // per-message: the pause belongs to the turn, not to any one bubble, and the
+  // prompt outlives the segment that was streaming when it arrived.
+  const [pendingApprovals, setPendingApprovals] = useState<ToolApprovalProposal[] | null>(null);
+  const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+  // A prompt recovered after a reload is answered the same way, but resumes
+  // differently: there is no stream left to carry the rest of the turn.
+  const [isResumingAfterDecision, setIsResumingAfterDecision] = useState(false);
+  const [historyReloadNonce, setHistoryReloadNonce] = useState(0);
+  // Drives the resume watch's next poll: each tick re-arms the effect.
+  const [resumeTick, setResumeTick] = useState(0);
   const [legacyChatId, setLegacyChatId] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem(LEGACY_CHAT_ID_KEY);
@@ -221,10 +315,29 @@ export function useChat({
   const hasUsedToolsRef = useRef(false);
   // Ref mirror of conversationId — always current across async boundaries
   const conversationIdRef = useRef(conversationId);
+  // Ref mirror of isLoading, so the recovery probe can tell at apply time
+  // whether a live turn has started owning the prompt since it was issued.
+  const isLoadingRef = useRef(isLoading);
+  isLoadingRef.current = isLoading;
   // Ref mirror of pageContext so the value sent reflects the page the user is
   // on at send time, regardless of when the send handler closure was created.
   const pageContextRef = useRef(pageContext);
   pageContextRef.current = pageContext;
+  // Conversation id as the paused turn itself reported it. The decision POST
+  // needs an id, and the first turn of a fresh conversation has none yet —
+  // `conversationId` is normally learned from `done`, which a paused turn has
+  // by definition not reached. Kept separate from `conversationIdRef` rather
+  // than adopted into it: a pause should not quietly switch on the affordances
+  // (steering, history) that having an id unlocks.
+  const approvalConversationIdRef = useRef<string | null>(null);
+  // True when the pending prompt was recovered from the server rather than read
+  // off a live stream — the turn is running, but nothing is listening to it.
+  const approvalDetachedRef = useRef(false);
+  // Conversations already asked about a pause, so the recovery probe runs once
+  // per conversation instead of on every render that settles.
+  const probedConversationRef = useRef<string | null>(null);
+  // When the resume watch stops regardless of what the turn reports.
+  const resumeDeadlineRef = useRef(0);
   // Mutex to prevent concurrent session creation
   const creatingSessionRef = useRef<Promise<string | null> | null>(null);
   // Abort controller for in-flight file uploads (cancelled on new chat)
@@ -249,6 +362,73 @@ export function useChat({
     }
     return `${apiBaseUrl}${apiEndpoints?.steer ?? '/chat/messages/steer'}`;
   };
+
+  /**
+   * Determine the tool-approval endpoint URL, or null when this host has not
+   * opted in.
+   *
+   * Unlike its siblings there is no default path — see {@link ApiEndpoints.approve}.
+   * Whether this returns a URL is exactly what decides if the widget advertises
+   * `supports_tool_approval`, so "configured" and "able to answer" are the same
+   * fact rather than two that can drift apart.
+   */
+  const getApproveUrl = (): string | null => {
+    if (isLegacy || backendType === 'ag-ui' || apiEndpoints?.singleEndpoint) return null;
+    const path = apiEndpoints?.approve;
+    if (!path) return null;
+    return `${apiBaseUrl}${path}`;
+  };
+
+  /**
+   * Determine the pause-recovery URL for one conversation, or null when the
+   * host has not exposed the route. See {@link ApiEndpoints.pendingApprovals}.
+   */
+  const getPendingApprovalsUrl = (convId: string): string | null => {
+    if (isLegacy || backendType === 'ag-ui' || apiEndpoints?.singleEndpoint) return null;
+    const base = apiEndpoints?.pendingApprovals;
+    if (!base) return null;
+    return `${apiBaseUrl}${base}/${convId}/pending-approvals`;
+  };
+
+  /**
+   * Read what a conversation is paused on, and whether its turn is still going.
+   *
+   * One request serves three purposes: recovering a prompt the page never saw,
+   * telling a resumed turn's watcher when to stop, and counting as the sign of
+   * life that keeps a paused turn from being abandoned. Returns null on any
+   * failure — every caller treats that as "learned nothing" and tries again or
+   * leaves the panel as it was.
+   */
+  const readPendingApprovals = async (convId: string): Promise<{ proposals?: ToolApprovalProposal[]; turnRunning: boolean } | null> => {
+    const url = getPendingApprovalsUrl(convId);
+    if (!url) return null;
+    try {
+      const res = await fetch(url, { headers: { ...(requestHeaders ?? {}) } });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return {
+        proposals: parseToolApprovalProposals(data?.proposals),
+        // Anything but an explicit `running` ends the watch. A backend that
+        // omits the field is one that cannot say, and waiting forever on a
+        // turn nobody can report on is the worse failure.
+        turnRunning: data?.turn === 'running',
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  /**
+   * Ask the panel to re-read the conversation from the server.
+   *
+   * Clearing the guard alone would not do it — the restore effect lives in the
+   * panel and only re-runs when something in its dependencies changes, which is
+   * what the nonce is for.
+   */
+  const reloadHistory = useCallback(() => {
+    historyLoadedRef.current = false;
+    setHistoryReloadNonce((n) => n + 1);
+  }, []);
 
   // Determine upload endpoint URL (null disables file upload proxying)
   const getUploadUrl = (): string | null => {
@@ -473,6 +653,90 @@ export function useChat({
     }
   };
 
+  /**
+   * Answer a turn that paused on a gated tool call.
+   *
+   * The decision travels the same way a steering message does — a POST beside
+   * the open stream — and for the same reason: the turn is still running, so
+   * the answer cannot ride on a new one. The paused turn is polling for it and
+   * resumes on the stream that is already open, with no lost context.
+   *
+   * Deliberately not carried on the turn's own AbortController: the two are
+   * independent requests, and aborting the turn must not look like a decision.
+   *
+   * A failure leaves the prompt on screen. The alternative — clearing it —
+   * would strand the turn paused with nothing to answer it, which is the exact
+   * state this whole opt-in exists to avoid.
+   */
+  const submitApprovalDecisions = async (decisions: ToolApprovalDecision[]) => {
+    const approveUrl = getApproveUrl();
+    const convId = approvalConversationIdRef.current ?? conversationIdRef.current;
+    // Nothing decided is a no-op, not a failure — the prompt only submits a
+    // full set, so this is unreachable from the UI.
+    if (decisions.length === 0) return;
+    // Missing prerequisites must be VISIBLE. The prompt is on screen, the turn
+    // is paused behind it, and a silent return would leave the reviewer
+    // clicking a control that does nothing — the exact failure this feature
+    // exists to prevent, reintroduced at the last step. Reachable if the host
+    // never named an approve path, or if a paused turn arrived without a
+    // conversation id on the first turn of a fresh conversation, where the id
+    // is otherwise only learned from `done`.
+    if (!approveUrl || !convId) {
+      setApprovalError(t('This decision could not be sent. Reload the chat and try again.'));
+      return;
+    }
+
+    setApprovalError(null);
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(approveUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+        body: JSON.stringify({
+          conversation_id: convId,
+          decisions: decisions.map((d) => ({
+            tool_call_id: d.toolCallId,
+            decision: d.verdict,
+            // Only ever sent with a rejection, and only when the reviewer
+            // actually wrote something — an empty string reaches the agent as
+            // a reason that says nothing.
+            ...(d.verdict === 'reject' && d.rejectionReason ? { rejection_reason: d.rejectionReason } : {}),
+          })),
+        }),
+      });
+      if (res.ok) {
+        setPendingApprovals(null);
+        if (approvalDetachedRef.current) {
+          // Answered after a reload: the turn resumes, but the stream it would
+          // have reported on died with the old page. The backend persists the
+          // answer and suppresses the live `done`, so re-reading the
+          // conversation is the only way it can ever appear — and without this
+          // the click would look like it did nothing at all.
+          approvalDetachedRef.current = false;
+          resumeDeadlineRef.current = Date.now() + RESUME_WATCH_MS;
+          setIsResumingAfterDecision(true);
+          return;
+        }
+        // The turn is moving again; show that immediately rather than leaving
+        // the composer looking idle until the next server event lands.
+        setAgentStatus((prev) => (prev ? { ...prev, status: 'thinking' } : { status: 'thinking' }));
+        return;
+      }
+      // 409: nothing is waiting any more — the turn finished, was cancelled, or
+      // somebody else answered it. Distinguished from a transient failure
+      // because retrying cannot help; the stream ending clears the prompt.
+      setApprovalError(
+        res.status === 409
+          ? t('This turn is no longer waiting for a decision.')
+          : t('Could not send your decision. Please try again.'),
+      );
+    } catch {
+      setApprovalError(t('Could not send your decision. Please try again.'));
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     const steerText = inputValue.trim();
     if (isLoading) {
@@ -529,6 +793,7 @@ export function useChat({
         conversationId: conversationIdRef.current,
         agentSlug,
         pageContext: pageContextRef.current,
+        supportsToolApproval: getApproveUrl() !== null,
       });
       if (fileIds.length > 0) {
         (requestBody as Record<string, unknown>).file_ids = fileIds;
@@ -656,6 +921,11 @@ export function useChat({
 
               case 'done': {
                 doneReceived = true;
+                // A completed segment cannot still be waiting on a decision, so
+                // any prompt left standing (a submission that failed against a
+                // turn somebody else already answered) is stale.
+                setPendingApprovals(null);
+                setApprovalError(null);
                 if (parsed.conversationId) {
                   updateConversationId(parsed.conversationId);
                 }
@@ -685,6 +955,22 @@ export function useChat({
                       : m,
                   ),
                 );
+                break;
+              }
+
+              case 'approval_required': {
+                // The turn stops here and the stream goes silent until a
+                // decision is POSTed back. Not an end state: no segment is
+                // opened or closed, `isLoading` stays true, and the rest of
+                // the turn arrives on this same reader afterwards.
+                approvalConversationIdRef.current = parsed.conversationId ?? conversationIdRef.current;
+                setApprovalError(null);
+                setPendingApprovals(parsed.proposals);
+                // Keep whatever reasoning the turn had already streamed: the
+                // pause interrupts the turn, it does not start a new one, and
+                // the prose leading up to the proposed call is exactly the
+                // context the reviewer is about to judge it on.
+                setAgentStatus((prev) => (prev ? { ...prev, status: 'awaiting_approval' } : { status: 'awaiting_approval' }));
                 break;
               }
 
@@ -729,6 +1015,16 @@ export function useChat({
       setIsLoading(false);
       setAgentStatus(null);
       hasUsedToolsRef.current = false;
+      // The stream is gone, so nothing can carry a decision any more —
+      // whether the turn finished, errored, or was stopped. Leaving the prompt
+      // up would offer an answer to a question nobody is listening for.
+      setPendingApprovals(null);
+      setApprovalError(null);
+      approvalConversationIdRef.current = null;
+      approvalDetachedRef.current = false;
+      // We watched this turn end, so there is nothing for the recovery probe to
+      // find — including on a fresh conversation, whose id only just arrived.
+      probedConversationRef.current = conversationIdRef.current;
     }
   };
 
@@ -749,6 +1045,13 @@ export function useChat({
     // the restore or the first turn fills it back in. Carrying the previous
     // conversation's reading over would be a plain lie.
     setContextUsage(null);
+    setPendingApprovals(null);
+    setApprovalError(null);
+    setIsResumingAfterDecision(false);
+    approvalConversationIdRef.current = null;
+    approvalDetachedRef.current = false;
+    // Re-arm the probe: the conversation being switched to may well be paused.
+    probedConversationRef.current = null;
     hasUsedToolsRef.current = false;
     historyLoadedRef.current = false;
     if (isLegacy) {
@@ -780,6 +1083,14 @@ export function useChat({
     setIsLoading(false);
     setAgentStatus(null);
     hasUsedToolsRef.current = false;
+    // Stopping IS the way out of a pause the reviewer does not want to answer:
+    // the backend waits indefinitely by design, so abandoning the stream is
+    // the client's only other move.
+    setPendingApprovals(null);
+    setApprovalError(null);
+    setIsResumingAfterDecision(false);
+    approvalConversationIdRef.current = null;
+    approvalDetachedRef.current = false;
     setMessages((prev) => prev.filter((m) => !(m.role === 'assistant' && !m.content)));
   };
 
@@ -804,6 +1115,138 @@ export function useChat({
     [],
   );
 
+  /**
+   * Recover a prompt the page never saw, or lost to a reload.
+   *
+   * `approval_required` is one event on one stream: reload while it is showing
+   * and the panel holds nothing — not even the `tool_call_id`s a decision has
+   * to name — while the turn goes on waiting for an answer that can no longer
+   * be given. Asked once per conversation; an empty list is the ordinary
+   * answer, and the whole probe is best-effort, since a host that has not
+   * exposed the route simply keeps the pre-recovery behaviour.
+   *
+   * Skipped while a turn is live: that prompt arrives on the stream, and the
+   * stream is the more current of the two.
+   */
+  useEffect(() => {
+    const convId = conversationId;
+    if (!convId || isLoading) return;
+    if (probedConversationRef.current === convId) return;
+    // Recovering a prompt there is no way to answer would only strand the
+    // reviewer differently, so both routes have to be configured.
+    const url = getPendingApprovalsUrl(convId);
+    if (!url || !getApproveUrl()) return;
+    probedConversationRef.current = convId;
+
+    (async () => {
+      // Best-effort: a failure leaves the panel exactly as it was, which is the
+      // pre-recovery behaviour.
+      const state = await readPendingApprovals(convId);
+      if (!state?.proposals) return;
+      // Validate at apply time against the live refs rather than dropping the
+      // response on effect teardown — the same reasoning as the panel's
+      // history restore. A StrictMode double-invoke or a host re-render tears
+      // this effect down while the request is in flight without the
+      // conversation having changed, and a teardown flag would discard the
+      // recovery in exactly the case it is needed. Only a genuinely superseded
+      // response is dropped: another conversation, or a live turn that has
+      // since started and will carry its own prompt.
+      if (conversationIdRef.current !== convId || isLoadingRef.current) return;
+      approvalConversationIdRef.current = convId;
+      approvalDetachedRef.current = true;
+      setApprovalError(null);
+      setPendingApprovals(state.proposals);
+    })();
+    // Keyed on the conversation and whether a turn is live; the endpoint
+    // getters read current props on each run and must not re-trigger a probe.
+  }, [conversationId, isLoading]);
+
+  /**
+   * Keep a recovered prompt answerable for as long as it is displayed.
+   *
+   * Only for prompts recovered after a reload: a live one is held open by its
+   * own stream, which vouches for the reviewer on its own. Re-reading the
+   * pending approvals is the lightest request that counts as a sign of life,
+   * and its result is deliberately ignored — this is a heartbeat, not a poll,
+   * and a prompt that has since gone stale is better answered with the 409 the
+   * reviewer can see than made to vanish under them.
+   */
+  useEffect(() => {
+    if (!pendingApprovals?.length || !approvalDetachedRef.current) return;
+    const convId = approvalConversationIdRef.current;
+    const url = convId ? getPendingApprovalsUrl(convId) : null;
+    if (!url) return;
+    const id = window.setInterval(() => {
+      fetch(url, { headers: { ...(requestHeaders ?? {}) } }).catch(() => {
+        /* A missed heartbeat is survivable: the next one is well inside the
+           server's window. */
+      });
+    }, APPROVAL_PRESENCE_INTERVAL_MS);
+    return () => window.clearInterval(id);
+    // Re-armed whenever the prompt itself changes; the endpoint getter reads
+    // current props on each run.
+  }, [pendingApprovals]);
+
+  /**
+   * Watch a turn resumed by a decision made on a recovered prompt.
+   *
+   * The turn has no stream left to announce itself on, so its state is read
+   * from the pause-recovery route: keep watching while it reports `running`,
+   * and re-read the conversation once — the answer is there — when it reports
+   * idle. Polling that route rather than the transcript is what makes the stop
+   * condition definite instead of a guess, and it keeps the turn alive as a
+   * side effect.
+   *
+   * A resumed turn can also pause *again* on a second gated call. With no
+   * stream, this poll is the only way that prompt could ever reach the user, so
+   * finding proposals puts the panel straight back into deciding.
+   */
+  useEffect(() => {
+    if (!isResumingAfterDecision) return;
+    const convId = approvalConversationIdRef.current;
+    if (!convId) {
+      setIsResumingAfterDecision(false);
+      return;
+    }
+    if (Date.now() >= resumeDeadlineRef.current) {
+      // Backstop only, for a turn-state marker that never clears. Re-read once
+      // on the way out so a finished answer still lands.
+      setIsResumingAfterDecision(false);
+      reloadHistory();
+      return;
+    }
+
+    let cancelled = false;
+    const id = window.setTimeout(async () => {
+      const state = await readPendingApprovals(convId);
+      if (cancelled) return;
+      if (!state) {
+        // Learned nothing — a transient failure. Try again rather than
+        // declaring a running turn finished.
+        setResumeTick((n) => n + 1);
+        return;
+      }
+      if (state.proposals) {
+        approvalDetachedRef.current = true;
+        setApprovalError(null);
+        setPendingApprovals(state.proposals);
+        setIsResumingAfterDecision(false);
+        return;
+      }
+      if (!state.turnRunning) {
+        setIsResumingAfterDecision(false);
+        reloadHistory();
+        return;
+      }
+      setResumeTick((n) => n + 1);
+    }, RESUME_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [isResumingAfterDecision, resumeTick, reloadHistory]);
+
   // Steering affordances are only advertised when the typed text can actually
   // be dispatched mid-run: a response is streaming (isLoading), the REST steer
   // endpoint is configured, and the conversation already has a server id (the
@@ -821,6 +1264,12 @@ export function useChat({
     contextUsage,
     transferredAgent,
     canSteer,
+    pendingApprovals,
+    isSubmittingApproval,
+    approvalError,
+    submitApprovalDecisions,
+    isResumingAfterDecision,
+    historyReloadNonce,
     historyLoadedRef,
     conversationIdRef,
     handleFileAdd,

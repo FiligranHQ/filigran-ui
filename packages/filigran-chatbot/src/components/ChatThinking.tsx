@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AgentStatusState, IconProps } from '../types';
 import {
+  AlertTriangleIcon,
   BrainIcon,
   DatabaseIcon,
   ExternalLinkIcon,
@@ -78,6 +79,12 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
       }
       return { label, StatusIcon, showDots: false };
     }
+    case 'awaiting_approval':
+      // Not progress: the turn has stopped and the stream is held open while a
+      // person decides. Shown only when the prompt itself is not rendered (a
+      // host wiring `ChatMessages` without a decision handler) — otherwise the
+      // prompt replaces this bubble entirely.
+      return { label: t('Waiting for your approval…'), StatusIcon: AlertTriangleIcon, showDots: false };
     case 'analyzing':
       return { label: t('Analyzing results…'), StatusIcon: SparklesIcon, showDots: false };
     case 'steering':

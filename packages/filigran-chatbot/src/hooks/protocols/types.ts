@@ -1,4 +1,4 @@
-import type { ChatAttachment, ChatContextUsage, ToolCallTraceEntry, TransferChainEntry } from '../../types';
+import type { ChatAttachment, ChatContextUsage, ToolApprovalProposal, ToolCallTraceEntry, TransferChainEntry } from '../../types';
 
 /**
  * Normalized action produced by all protocol parsers.
@@ -40,6 +40,22 @@ export type ParsedAction =
       isTruncated?: boolean;
       /** Closing context-window occupancy for the turn. */
       contextUsage?: ChatContextUsage;
+    }
+  | {
+      /**
+       * The turn has stopped at a gated tool call and is holding the stream
+       * open, silent, until a decision is POSTed back. Not a terminal action:
+       * the same stream carries the rest of the turn once the answer arrives.
+       */
+      action: 'approval_required';
+      proposals: ToolApprovalProposal[];
+      /**
+       * The conversation the paused turn belongs to, as the backend knows it.
+       * Carried on the event because the very first turn of a fresh
+       * conversation has not yet learned its own id — that normally arrives on
+       * `done`, which a paused turn has not reached.
+       */
+      conversationId?: string;
     }
   | { action: 'error'; content: string }
   | { action: 'set_chat_id'; chatId: string }

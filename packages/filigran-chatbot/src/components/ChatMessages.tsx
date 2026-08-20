@@ -1,7 +1,15 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { AgentStatusState, ChatAttachment, ChatMessage, MessageFeedback } from '../types';
+import type {
+  AgentStatusState,
+  ChatAttachment,
+  ChatMessage,
+  MessageFeedback,
+  ToolApprovalDecision,
+  ToolApprovalProposal,
+} from '../types';
 import { splitFileMarkers, stripFileMarkers } from '../utils';
 import { AlertTriangleIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, FileIcon, InfoIcon, ThumbsDownIcon, ThumbsUpIcon } from './icons';
+import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
 import { ChatThinking } from './ChatThinking';
 import { MarkdownMessage } from './MarkdownMessage';
@@ -39,6 +47,22 @@ interface ChatMessagesProps {
   miniGameEnabled?: boolean;
   /** Enables the 👍/👎 affordance on completed assistant messages. */
   onMessageFeedback?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
+  /**
+   * True while a turn answered after a reload is finishing without a stream.
+   * Rendered as the ordinary working indicator: from the user's side nothing
+   * about it is unusual, and a decision that visibly leads nowhere reads as a
+   * broken button.
+   */
+  isResumingAfterDecision?: boolean;
+  /**
+   * Tool calls the running turn has paused on, awaiting a decision. Rendered
+   * below the transcript, since the pause belongs to the turn rather than to
+   * any one bubble.
+   */
+  pendingApprovals?: ToolApprovalProposal[] | null;
+  onSubmitApprovalDecisions?: (decisions: ToolApprovalDecision[]) => void;
+  isSubmittingApproval?: boolean;
+  approvalError?: string | null;
   t: (key: string) => string;
 }
 
@@ -419,6 +443,11 @@ export const ChatMessages = ({
   requestHeaders,
   miniGameEnabled = true,
   onMessageFeedback,
+  isResumingAfterDecision,
+  pendingApprovals,
+  onSubmitApprovalDecisions,
+  isSubmittingApproval,
+  approvalError,
   t,
 }: ChatMessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -484,6 +513,10 @@ export const ChatMessages = ({
     }
   }
 
+  // Only a prompt something can actually answer counts: without a submit
+  // handler the controls would collect verdicts with nowhere to send them.
+  const awaitingApproval = !!pendingApprovals?.length && !!onSubmitApprovalDecisions;
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable">
       {hasEarlierMessages && (
@@ -504,6 +537,10 @@ export const ChatMessages = ({
         // An assistant message with no content yet is the "agent is working"
         // placeholder, replaced by the live status bubble.
         if (msg.role === 'assistant' && !msg.content && isStreamingMessage) {
+          // A turn paused for approval is not working, it is waiting on the
+          // person reading it — so the progress bubble (and the waiting game
+          // it grows into) gives way to the prompt rendered below.
+          if (awaitingApproval) return null;
           return (
             <div key={msg.id}>
               <ChatThinking agentStatus={agentStatus} logoIcon={logoIcon} t={t} miniGameEnabled={miniGameEnabled} />
@@ -528,6 +565,25 @@ export const ChatMessages = ({
           />
         );
       })}
+      {/* Not tied to a placeholder message like the streaming indicator: a
+          restore replaces the whole transcript on every poll, so there is no
+          bubble of ours left to hang it on. */}
+      {isResumingAfterDecision && !awaitingApproval && (
+        <ChatThinking agentStatus={agentStatus} logoIcon={logoIcon} t={t} miniGameEnabled={miniGameEnabled} />
+      )}
+      {awaitingApproval && (
+        <ChatApprovalPrompt
+          // A second pause in the same turn is a new question, not a continuation
+          // of the answered one: remounting drops the verdicts and the
+          // already-submitted guard the previous set left behind.
+          key={pendingApprovals!.map((p) => p.toolCallId).join('|')}
+          proposals={pendingApprovals!}
+          onSubmit={onSubmitApprovalDecisions!}
+          isSubmitting={isSubmittingApproval}
+          error={approvalError}
+          t={t}
+        />
+      )}
       <div ref={messagesEndRef} />
     </div>
   );

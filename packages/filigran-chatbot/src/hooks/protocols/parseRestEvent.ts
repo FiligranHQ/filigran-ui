@@ -1,4 +1,11 @@
-import type { ChatAttachment, ChatContextBreakdown, ChatContextUsage, ToolCallTraceEntry, TransferChainEntry } from '../../types';
+import type {
+  ChatAttachment,
+  ChatContextBreakdown,
+  ChatContextUsage,
+  ToolApprovalProposal,
+  ToolCallTraceEntry,
+  TransferChainEntry,
+} from '../../types';
 import type { ParsedAction, ProtocolContext } from './types';
 
 /** Wire key → the breakdown field it populates. */
@@ -122,6 +129,40 @@ export function parseTransferChain(raw: unknown): TransferChainEntry[] | undefin
 }
 
 /**
+ * Normalize the `proposals` array of an `approval_required` event.
+ *
+ * Only `tool_call_id` is load-bearing — it is what a decision is keyed on, so
+ * an entry without one could never be answered and is dropped. Everything else
+ * degrades: a proposal with no name still renders under a placeholder rather
+ * than vanishing, because a call silently hidden from the reviewer is a call
+ * that stalls the turn with nothing on screen to explain it.
+ *
+ * Returns `undefined` when nothing decidable is left, so the consumer can treat
+ * an unusable pause as one it must not claim to have prompted for.
+ */
+export function parseToolApprovalProposals(raw: unknown): ToolApprovalProposal[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: ToolApprovalProposal[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const p = item as Record<string, unknown>;
+    const toolCallId = p.tool_call_id;
+    if (typeof toolCallId !== 'string' || !toolCallId) continue;
+    const args = p.arguments;
+    const schema = p.input_schema;
+    out.push({
+      toolCallId,
+      toolName: typeof p.tool_name === 'string' && p.tool_name ? p.tool_name : 'unknown tool',
+      toolDescription: typeof p.tool_description === 'string' ? p.tool_description : undefined,
+      arguments: args && typeof args === 'object' && !Array.isArray(args) ? (args as Record<string, unknown>) : {},
+      inputSchema: schema && typeof schema === 'object' && !Array.isArray(schema) ? (schema as Record<string, unknown>) : undefined,
+      source: typeof p.source === 'string' ? p.source : undefined,
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/**
  * Parse an XTM One (REST) SSE event into a normalized action.
  */
 export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContext): ParsedAction {
@@ -165,6 +206,20 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       return { action: 'status', status: 'analyzing', contextUsage };
     }
     return { action: 'status', status: st, tools: evt.tools as string[] | undefined, contextUsage };
+  }
+
+  // The turn has paused on a gated tool call. Deliberately NOT terminal: the
+  // stream stays open (kept warm by SSE `: keepalive` comment lines, which the
+  // reader below drops as non-`data:` lines) and the rest of the turn arrives
+  // on it once a decision is POSTed back.
+  if (type === 'approval_required') {
+    const proposals = parseToolApprovalProposals(evt.proposals);
+    if (!proposals) return { action: 'noop' };
+    return {
+      action: 'approval_required',
+      proposals,
+      conversationId: typeof evt.conversation_id === 'string' ? evt.conversation_id : undefined,
+    };
   }
 
   if (type === 'stream') {
