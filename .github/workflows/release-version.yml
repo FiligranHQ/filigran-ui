@@ -182,6 +182,15 @@ jobs:
             const fs = require('fs');
             const { execSync } = require('child_process');
 
+            // A release commits the bump to the branch it was dispatched from, so a tag or
+            // any other ref cannot work. Refuse it here rather than letting updateRef fail
+            // on a nonsensical `heads/refs/tags/...`.
+            const branchPrefix = 'refs/heads/';
+            if (!context.ref.startsWith(branchPrefix)) {
+              throw new Error(`This workflow must be dispatched from a branch, but got ${context.ref}.`);
+            }
+            const branch = context.ref.slice(branchPrefix.length);
+
             const packages = [
               { label: '@filigran/chatbot', version: process.env.FILIGRAN_CHATBOT_VERSION },
               { label: '@filigran/ui', version: process.env.FILIGRAN_UI_VERSION },
@@ -213,7 +222,6 @@ jobs:
 
             console.log(`Changed files:\n${changed.map((path) => `  ${path}`).join('\n')}`);
 
-            const branch = context.ref.replace('refs/heads/', '');
             const parent = process.env.GITHUB_SHA;
             const message = `chore: bump ${packages.map((pkg) => `${pkg.label} to v${pkg.version}`).join(', ')}`;
 
