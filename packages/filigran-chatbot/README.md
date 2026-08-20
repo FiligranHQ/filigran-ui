@@ -620,6 +620,7 @@ function App() {
 - `'“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.'`
 - `'This turn is no longer waiting for a decision.'`
 - `'Could not send your decision. Please try again.'`
+- `'This decision could not be sent. Reload the chat and try again.'`
 - `'Floating'`
 - `'Sidebar'`
 - `'Full screen'`

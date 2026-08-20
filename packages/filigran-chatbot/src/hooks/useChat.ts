@@ -671,7 +671,20 @@ export function useChat({
   const submitApprovalDecisions = async (decisions: ToolApprovalDecision[]) => {
     const approveUrl = getApproveUrl();
     const convId = approvalConversationIdRef.current ?? conversationIdRef.current;
-    if (!approveUrl || !convId || decisions.length === 0) return;
+    // Nothing decided is a no-op, not a failure — the prompt only submits a
+    // full set, so this is unreachable from the UI.
+    if (decisions.length === 0) return;
+    // Missing prerequisites must be VISIBLE. The prompt is on screen, the turn
+    // is paused behind it, and a silent return would leave the reviewer
+    // clicking a control that does nothing — the exact failure this feature
+    // exists to prevent, reintroduced at the last step. Reachable if the host
+    // never named an approve path, or if a paused turn arrived without a
+    // conversation id on the first turn of a fresh conversation, where the id
+    // is otherwise only learned from `done`.
+    if (!approveUrl || !convId) {
+      setApprovalError(t('This decision could not be sent. Reload the chat and try again.'));
+      return;
+    }
 
     setApprovalError(null);
     setIsSubmittingApproval(true);

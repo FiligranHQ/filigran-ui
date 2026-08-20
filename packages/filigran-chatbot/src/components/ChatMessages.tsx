@@ -48,17 +48,17 @@ interface ChatMessagesProps {
   /** Enables the 👍/👎 affordance on completed assistant messages. */
   onMessageFeedback?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
   /**
-   * Tool calls the running turn has paused on, awaiting a decision. Rendered
-   * below the transcript, since the pause belongs to the turn rather than to
-   * any one bubble.
-   */
-  /**
    * True while a turn answered after a reload is finishing without a stream.
    * Rendered as the ordinary working indicator: from the user's side nothing
    * about it is unusual, and a decision that visibly leads nowhere reads as a
    * broken button.
    */
   isResumingAfterDecision?: boolean;
+  /**
+   * Tool calls the running turn has paused on, awaiting a decision. Rendered
+   * below the transcript, since the pause belongs to the turn rather than to
+   * any one bubble.
+   */
   pendingApprovals?: ToolApprovalProposal[] | null;
   onSubmitApprovalDecisions?: (decisions: ToolApprovalDecision[]) => void;
   isSubmittingApproval?: boolean;

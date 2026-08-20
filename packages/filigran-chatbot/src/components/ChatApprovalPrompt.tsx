@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ToolApprovalDecision, ToolApprovalProposal, ToolApprovalVerdict } from '../types';
 import { AlertTriangleIcon, CheckIcon, WrenchIcon, XCircleIcon } from './icons';
 
@@ -95,6 +95,9 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
   // signal to adapt. Optional, so a reviewer with nothing to add just confirms.
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
+  // Every proposal in a batch renders its own reason box, so the association
+  // needs an id unique to this card rather than a constant.
+  const reasonId = useId();
   const rejectPanelRef = useRevealIntoView<HTMLDivElement>(rejecting);
 
   const verdict = decision?.verdict;
@@ -152,8 +155,11 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
 
       {!verdict && rejecting && (
         <div ref={rejectPanelRef} className="flex flex-col gap-1.5">
-          <label className="text-[0.7rem] text-gray-500 dark:text-white/45">{t('Why not? The agent sees this and can adapt (optional)')}</label>
+          <label htmlFor={reasonId} className="text-[0.7rem] text-gray-500 dark:text-white/45">
+            {t('Why not? The agent sees this and can adapt (optional)')}
+          </label>
           <textarea
+            id={reasonId}
             autoFocus
             rows={2}
             value={reason}
