@@ -5,11 +5,43 @@ It is triggered **manually** from the GitHub Actions tab — no push or tag is r
 
 ---
 
-## How to trigger a release
+The workflow publishes **the version already committed in `package.json`**. It does not bump
+anything, so releasing is a two-step process: bump the version in a pull request, then run the
+workflow.
+
+---
+
+## Step 1 — bump the version in a pull request
+
+Edit the `version` field in the package's `package.json` as part of a normal reviewed PR,
+following [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`):
+
+| Change | When to use | Example |
+|--------|-------------|---------|
+| `patch` | Bug fixes, internal changes — **no API change** | `1.2.3` → `1.2.4` |
+| `minor` | New features — **backward compatible** | `1.2.3` → `1.3.0` |
+| `major` | Breaking changes — **not backward compatible** | `1.2.3` → `2.0.0` |
+
+You can bump in the PR that makes the change, or in a small dedicated PR afterwards.
+
+> [!IMPORTANT]
+> **Bumping `@filigran/icon` needs a second edit.** `@filigran/ui` declares `@filigran/icon` in
+> its `peerDependencies`. When you bump the icon version, update that range in
+> `packages/filigran-ui/package.json` too and run `yarn install` so `yarn.lock` follows —
+> otherwise `yarn install --immutable` fails in CI. This used to be done automatically by
+> `yarn version`, which the release workflow no longer runs.
+
+> [!NOTE]
+> **First release of a new package.** Set `version` to whatever you want published — the
+> workflow publishes it verbatim. To ship `1.0.0` first, commit `"version": "1.0.0"`.
+
+---
+
+## Step 2 — run the release workflow
 
 1. Go to **Actions → Release and Publish to NPM** in the GitHub repository.
 2. Click **Run workflow**.
-3. Fill in the two inputs described below, then click **Run workflow**.
+3. Choose the `package` input described below, then click **Run workflow**.
 
 ---
 
@@ -29,34 +61,24 @@ It is triggered **manually** from the GitHub Actions tab — no push or tag is r
 
 ---
 
-### `version_type` — how to bump the version
-
-The workflow follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`):
-
-| Option | When to use | Example (`1.2.3` → ?) |
-|--------|-------------|------------------------|
-| `patch` | Bug fixes, internal changes — **no API change** | `1.2.3` → `1.2.4` |
-| `minor` | New features — **backward compatible** | `1.2.3` → `1.3.0` |
-| `major` | Breaking changes — **not backward compatible** | `1.2.3` → `2.0.0` |
-
- [!WARNING]
- **First release of a new package**
- The deployment workflow **always** bumps the version using `yarn version` before publishing. It cannot publish the version defined in `package.json` as-is.
- 
- If you want the first published version to be `1.0.0`:
- 1. In your PR adding the package, set `"version": "0.0.0"` in its `package.json`.
- 2. When triggering the manual release workflow, select **`major`** to bump the version to `1.0.0`.
-
----
-
 ## What the workflow does
 
-1. Bumps the version in the relevant `package.json` with `yarn version <type>`.
-2. Commits and pushes the change (`chore: bump <package> to vX.Y.Z`).
-3. Creates a Git tag (`<package>-vX.Y.Z`).
-4. Builds the package (`yarn workspace <package> run build`).
-5. Publishes to **NPM** (`yarn npm publish --access public`).
-6. Creates a **GitHub Release** with installation instructions.
+1. Reads the version from each selected `package.json`, and checks it against the registry.
+   A package whose version is already on NPM is **skipped with a warning** rather than
+   failing the run, so one up-to-date package cannot block the others when releasing `all`.
+   If nothing is left to release, the run fails with an explanatory message.
+2. Builds each package to be released (`yarn workspace <package> run build`).
+3. Publishes to **NPM** (`yarn npm publish --access public`).
+4. Creates a Git tag (`<package>-vX.Y.Z`) — **after** publishing succeeds.
+5. Creates a **GitHub Release** with installation instructions.
+
+The workflow never writes to `main`. That is deliberate: the default branch requires signed
+commits and pull-request review, so a workflow that pushed its own version bump could not
+complete (see #383).
+
+Tagging after publishing is also deliberate. Tagging first meant a failed publish left a tag
+pointing at a version that was never released, and that stale tag then blocked re-running the
+release.
 
 ---
 

@@ -3,15 +3,6 @@ name: Release and Publish to NPM
 on:
   workflow_dispatch:
     inputs:
-      version_type:
-        description: 'Version type (patch/minor/major)'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
       package:
         description: 'Package to release'
         required: true
@@ -36,7 +27,6 @@ jobs:
       packages: write
       id-token: write
       issues: write
-      pull-requests: write
     steps:
       - uses: actions/create-github-app-token@v3
         id: app-token
@@ -60,44 +50,52 @@ jobs:
           git config --global user.name "github-actions[bot]"
       - name: Install dependencies
         run: yarn install --immutable
-      - name: Get current versions
+      - name: Resolve versions to release
+        env:
+          PACKAGE: ${{ github.event.inputs.package }}
         run: |
-          if [[ "${{ github.event.inputs.package }}" == "@filigran/chatbot" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
-            echo "FILIGRAN_CHATBOT_CURRENT_VERSION=$(node -p "require('./packages/filigran-chatbot/package.json').version")" >> $GITHUB_ENV
+          set -euo pipefail
+
+          # The release publishes the version already committed in package.json. It does not
+          # bump anything, so nothing here writes to the default branch — see #383. Version
+          # bumps arrive through ordinary reviewed pull requests instead.
+          #
+          # A package whose version is already on npm is skipped rather than failed, so one
+          # up-to-date package cannot block the others when releasing `all`. Every skip is
+          # logged. Setting FILIGRAN_*_VERSION is what marks a package for release: the
+          # build, publish, tag and GitHub release steps are all gated on it being non-empty.
+          SELECTED=0
+
+          resolve() {
+            local name="$1" dir="$2" var="$3"
+
+            if [ "$PACKAGE" != "$name" ] && [ "$PACKAGE" != "all" ]; then
+              return 0
+            fi
+
+            local version published
+            version=$(node -p "require('./packages/$dir/package.json').version")
+            published=$(npm view "$name@$version" version 2>/dev/null || true)
+
+            if [ -n "$published" ]; then
+              echo "::warning title=Already published::$name $version is already on npm — skipping. Bump the version in a pull request first."
+              return 0
+            fi
+
+            echo "$var=$version" >> "$GITHUB_ENV"
+            echo "Will release $name $version"
+            SELECTED=$((SELECTED + 1))
+          }
+
+          resolve '@filigran/chatbot'          filigran-chatbot          FILIGRAN_CHATBOT_VERSION
+          resolve '@filigran/icon'             filigran-icon             FILIGRAN_ICON_VERSION
+          resolve '@filigran/rich-text-editor' filigran-rich-text-editor FILIGRAN_RTE_VERSION
+          resolve '@filigran/ui'               filigran-ui               FILIGRAN_UI_VERSION
+
+          if [ "$SELECTED" -eq 0 ]; then
+            echo "::error title=Nothing to release::Every selected package is already published at the version in its package.json. Bump the version in a pull request, then run this workflow again."
+            exit 1
           fi
-          if [[ "${{ github.event.inputs.package }}" == "@filigran/icon" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
-            echo "FILIGRAN_ICON_CURRENT_VERSION=$(node -p "require('./packages/filigran-icon/package.json').version")" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.package }}" == "@filigran/rich-text-editor" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
-            echo "FILIGRAN_RTE_CURRENT_VERSION=$(node -p "require('./packages/filigran-rich-text-editor/package.json').version")" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.package }}" == "@filigran/ui" ]] || [[ "${{ github.event.inputs.package }}" == "all" ]]; then
-            echo "FILIGRAN_UI_CURRENT_VERSION=$(node -p "require('./packages/filigran-ui/package.json').version")" >> $GITHUB_ENV
-          fi
-      - name: Update version for @filigran/chatbot
-        if: github.event.inputs.package == '@filigran/chatbot' || github.event.inputs.package == 'all'
-        working-directory: ./packages/filigran-chatbot
-        run: |
-          yarn version ${{ github.event.inputs.version_type }}
-          echo "FILIGRAN_CHATBOT_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-      - name: Update version for @filigran/icon
-        if: github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all'
-        working-directory: ./packages/filigran-icon
-        run: |
-          yarn version ${{ github.event.inputs.version_type }}
-          echo "FILIGRAN_ICON_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-      - name: Update version for @filigran/rich-text-editor
-        if: github.event.inputs.package == '@filigran/rich-text-editor' || github.event.inputs.package == 'all'
-        working-directory: ./packages/filigran-rich-text-editor
-        run: |
-          yarn version ${{ github.event.inputs.version_type }}
-          echo "FILIGRAN_RTE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-      - name: Update version for @filigran/ui
-        if: github.event.inputs.package == '@filigran/ui' || github.event.inputs.package == 'all'
-        working-directory: ./packages/filigran-ui
-        run: |
-          yarn version ${{ github.event.inputs.version_type }}
-          echo "FILIGRAN_UI_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
       - name: Collect commits and issues for changelog
         id: changelog
         run: |
@@ -174,112 +172,6 @@ jobs:
           # Also save to environment for debugging
           echo "UI_ISSUES_TO_CLOSE=$UI_ISSUES" >> $GITHUB_ENV
           echo "ICON_ISSUES_TO_CLOSE=$ICON_ISSUES" >> $GITHUB_ENV
-      - name: Create release branch
-        run: |
-          RELEASE_BRANCH="release/version-bump-${{ github.run_id }}-${{ github.run_attempt }}"
-          git checkout -b "$RELEASE_BRANCH"
-          echo "RELEASE_BRANCH=$RELEASE_BRANCH" >> $GITHUB_ENV
-      - name: Commit version changes
-        id: commit_version
-        run: |
-          git add .
-          
-          PARTS=""
-          if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
-            PARTS="@filigran/chatbot to v$FILIGRAN_CHATBOT_VERSION"
-          fi
-          if [ -n "$FILIGRAN_UI_VERSION" ]; then
-            [ -n "$PARTS" ] && PARTS="$PARTS, "
-            PARTS="${PARTS}@filigran/ui to v$FILIGRAN_UI_VERSION"
-          fi
-          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            [ -n "$PARTS" ] && PARTS="$PARTS, "
-            PARTS="${PARTS}@filigran/icon to v$FILIGRAN_ICON_VERSION"
-          fi
-          if [ -n "$FILIGRAN_RTE_VERSION" ]; then
-            [ -n "$PARTS" ] && PARTS="$PARTS, "
-            PARTS="${PARTS}@filigran/rich-text-editor to v$FILIGRAN_RTE_VERSION"
-          fi
-          
-          if [ -z "$PARTS" ]; then
-            echo "No version changes to commit"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          git commit -m "chore: bump $PARTS"
-          git push --set-upstream origin "$RELEASE_BRANCH"
-          echo "has_changes=true" >> $GITHUB_OUTPUT
-          echo "commit_message=chore: bump $PARTS" >> $GITHUB_OUTPUT
-      - name: Open release PR
-        if: steps.commit_version.outputs.has_changes == 'true'
-        id: release_pr
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          PR_URL=$(gh pr create \
-            --base main \
-            --head "$RELEASE_BRANCH" \
-            --title "${{ steps.commit_version.outputs.commit_message }}" \
-            --body "Automated version bump triggered by release workflow run ${{ github.run_id }}.
-
-          This PR is required because \`main\` enforces signed commits and pull-request review. It will auto-merge once required checks/approvals pass.")
-          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
-          PR_NUMBER=$(basename "$PR_URL")
-          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-      - name: Enable auto-merge on release PR
-        if: steps.commit_version.outputs.has_changes == 'true'
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          gh pr merge "${{ steps.release_pr.outputs.pr_number }}" --auto --squash
-      - name: Wait for release PR to merge
-        if: steps.commit_version.outputs.has_changes == 'true'
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          PR_NUMBER="${{ steps.release_pr.outputs.pr_number }}"
-          for i in $(seq 1 60); do
-            STATUS=$(gh pr view "$PR_NUMBER" --json state,mergedAt \
-              -q 'if .mergedAt then "MERGED" else .state end' || echo "RETRY")
-            if [ "$STATUS" = "MERGED" ]; then
-              echo "PR #$PR_NUMBER merged."
-              exit 0
-            fi
-            if [ "$STATUS" = "CLOSED" ]; then
-              echo "PR #$PR_NUMBER was closed without merging. Failing release."
-              exit 1
-            fi
-            echo "Waiting for PR #$PR_NUMBER to merge (attempt $i/60, status: $STATUS)..."
-            sleep 15
-          done
-          echo "PR #$PR_NUMBER not merged after 15 minutes. Failing release so tags/publish never run on an un-bumped main."
-          exit 1
-      - name: Sync local main with merged release
-        if: steps.commit_version.outputs.has_changes == 'true'
-        run: |
-          git fetch origin main
-          git checkout main
-          git reset --hard origin/main
-      - name: Create Git tags
-        run: |
-          if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
-            git tag "@filigran/chatbot-$FILIGRAN_CHATBOT_VERSION"
-            echo "Created tag: @filigran/chatbot-$FILIGRAN_CHATBOT_VERSION"
-          fi
-          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
-            git tag "@filigran/icon-v$FILIGRAN_ICON_VERSION"
-            echo "Created tag: @filigran/icon-v$FILIGRAN_ICON_VERSION"
-          fi
-          if [ -n "$FILIGRAN_RTE_VERSION" ]; then
-            git tag "@filigran/rich-text-editor-v$FILIGRAN_RTE_VERSION"
-            echo "Created tag: @filigran/rich-text-editor-v$FILIGRAN_RTE_VERSION"
-          fi
-          if [ -n "$FILIGRAN_UI_VERSION" ]; then
-            git tag "@filigran/ui-v$FILIGRAN_UI_VERSION"
-            echo "Created tag: @filigran/ui-v$FILIGRAN_UI_VERSION"
-          fi
-          git push --tags
       - name: Build packages
         run: |
           if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
@@ -326,6 +218,43 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Create Git tags
+        run: |
+          set -euo pipefail
+
+          # Tags are created after a successful publish, not before. Tagging first left a
+          # pushed tag with nothing on npm whenever publishing failed, and that stale tag
+          # then blocked re-running the release — see @filigran/chatbot-v3.9.0.
+          #
+          # An existing tag is left alone rather than failing the run: by this point the
+          # package is on npm, and refusing to finish would be worse than reusing the tag.
+          # Guarding against republishing is the registry check's job, not the tag's. The
+          # remote is queried because the checkout is shallow and carries no tags.
+          tag_release() {
+            local tag="$1"
+
+            if [ -n "$(git ls-remote --tags origin "refs/tags/$tag")" ]; then
+              echo "::warning title=Tag already exists::$tag is already on the remote — leaving it untouched."
+              return 0
+            fi
+
+            git tag "$tag"
+            echo "Created tag: $tag"
+          }
+
+          if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
+            tag_release "@filigran/chatbot-v$FILIGRAN_CHATBOT_VERSION"
+          fi
+          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+            tag_release "@filigran/icon-v$FILIGRAN_ICON_VERSION"
+          fi
+          if [ -n "$FILIGRAN_RTE_VERSION" ]; then
+            tag_release "@filigran/rich-text-editor-v$FILIGRAN_RTE_VERSION"
+          fi
+          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+            tag_release "@filigran/ui-v$FILIGRAN_UI_VERSION"
+          fi
+          git push --tags
       - name: Create GitHub Release for @filigran/icon
         if: (github.event.inputs.package == '@filigran/icon' || github.event.inputs.package == 'all') && env.FILIGRAN_ICON_VERSION != ''
         uses: softprops/action-gh-release@v3
