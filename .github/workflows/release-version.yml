@@ -42,20 +42,16 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - name: Enable Corepack
-        run: npm install -g corepack
-      - name: Configure Git
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-      - name: Install dependencies
-        run: yarn install --immutable
       - name: Resolve versions to release
         env:
           PACKAGE: ${{ github.event.inputs.package }}
         run: |
           set -euo pipefail
 
+          # Runs before the dependency install: it only reads package.json and queries the
+          # registry, so a run with nothing to publish fails here without paying for a full
+          # `yarn install`.
+          #
           # The release publishes the version already committed in package.json. It does not
           # bump anything, so nothing here writes to the default branch — see #383. Version
           # bumps arrive through ordinary reviewed pull requests instead.
@@ -96,6 +92,14 @@ jobs:
             echo "::error title=Nothing to release::Every selected package is already published at the version in its package.json. Bump the version in a pull request, then run this workflow again."
             exit 1
           fi
+      - name: Enable Corepack
+        run: npm install -g corepack
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+      - name: Install dependencies
+        run: yarn install --immutable
       - name: Collect commits and issues for changelog
         id: changelog
         run: |
@@ -242,16 +246,19 @@ jobs:
             echo "Created tag: $tag"
           }
 
-          if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
+          # `:-` is required: a package that was not selected, or was skipped as already
+          # published, has no FILIGRAN_*_VERSION in the environment at all, and `set -u`
+          # treats reading an unset variable as fatal.
+          if [ -n "${FILIGRAN_CHATBOT_VERSION:-}" ]; then
             tag_release "@filigran/chatbot-v$FILIGRAN_CHATBOT_VERSION"
           fi
-          if [ -n "$FILIGRAN_ICON_VERSION" ]; then
+          if [ -n "${FILIGRAN_ICON_VERSION:-}" ]; then
             tag_release "@filigran/icon-v$FILIGRAN_ICON_VERSION"
           fi
-          if [ -n "$FILIGRAN_RTE_VERSION" ]; then
+          if [ -n "${FILIGRAN_RTE_VERSION:-}" ]; then
             tag_release "@filigran/rich-text-editor-v$FILIGRAN_RTE_VERSION"
           fi
-          if [ -n "$FILIGRAN_UI_VERSION" ]; then
+          if [ -n "${FILIGRAN_UI_VERSION:-}" ]; then
             tag_release "@filigran/ui-v$FILIGRAN_UI_VERSION"
           fi
           git push --tags
