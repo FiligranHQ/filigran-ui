@@ -40,25 +40,69 @@ export function hardenNestedCodeFences(raw: string): string {
   }
   if (openerIdx === -1) return raw;
 
-  let maxRun = 3;
-  let nestedCount = 0;
-  let lastBareFence = -1;
+  // Find the outer block's *matching* closer rather than the last bare fence in
+  // the message. Same-length fences are ambiguous — an inner ``` looks exactly
+  // like the outer closer — so inner fences are paired off with two structural
+  // signals:
+  //   • a labelled fence (```lang) opens a nested block, and the next bare
+  //     fence closes it (depth tracking); and
+  //   • two consecutive *bare* fences wrapping a non-blank body form an
+  //     unlabelled nested code block — a ``` … ``` example inside the document.
+  // A bare fence at depth 0 is the outer closer when the next fence is
+  // labelled, absent, or bare-but-separated-by-only-blank-lines: that last case
+  // is a block boundary (this closer followed by a *separate* block), not
+  // nesting, so the separate block is never absorbed.
+  //
+  // Taking the last bare fence instead swallowed everything up to it — trailing
+  // prose and unrelated code blocks alike — whenever a later block followed the
+  // markdown one.
+  const fences: { idx: number; run: number; bare: boolean }[] = [];
   for (let i = openerIdx + 1; i < lines.length; i++) {
     const m = lines[i].match(fenceRe);
-    if (!m) continue;
-    nestedCount++;
-    maxRun = Math.max(maxRun, m[2].length);
-    if (m[3].trim() === '') lastBareFence = i;
+    if (m) fences.push({ idx: i, run: m[2].length, bare: m[3].trim() === '' });
   }
-  if (nestedCount === 0) return raw;
+
+  // True when every line strictly between two fence lines is blank — which
+  // separates a nested code block (real body) from a mere block boundary.
+  const blankBetween = (a: number, b: number): boolean => {
+    for (let k = a + 1; k < b; k++) {
+      if (lines[k].trim() !== '') return false;
+    }
+    return true;
+  };
+
+  let depth = 0;
+  let maxRun = 3;
+  let nestedCount = 0;
+  let closerIdx = -1;
+  for (let j = 0; j < fences.length; j++) {
+    const f = fences[j];
+    if (f.bare && depth === 0) {
+      const next = fences[j + 1];
+      if (!next || !next.bare || blankBetween(f.idx, next.idx)) {
+        closerIdx = f.idx;
+        break;
+      }
+      depth++; // opens an unlabelled nested code block
+    } else {
+      // A labelled fence opens a nested block; a bare fence at depth > 0 closes
+      // the innermost one.
+      depth = f.bare ? Math.max(0, depth - 1) : depth + 1;
+    }
+    nestedCount++;
+    maxRun = Math.max(maxRun, f.run);
+  }
+
+  // Only harden when the block really contains nested fences AND its own closer
+  // was found — otherwise leave the text alone rather than extending the block
+  // over whatever follows.
+  if (closerIdx === -1 || nestedCount === 0) return raw;
 
   const fence = '`'.repeat(Math.max(maxRun + 1, 4));
   const om = lines[openerIdx].match(fenceRe)!;
   lines[openerIdx] = `${om[1]}${fence}${om[3]}`;
-  if (lastBareFence > openerIdx) {
-    const cm = lines[lastBareFence].match(fenceRe)!;
-    lines[lastBareFence] = `${cm[1]}${fence}`;
-  }
+  const cm = lines[closerIdx].match(fenceRe)!;
+  lines[closerIdx] = `${cm[1]}${fence}`;
   return lines.join('\n');
 }
 
