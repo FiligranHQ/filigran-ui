@@ -62,6 +62,33 @@ jobs:
           # build, publish, tag and GitHub release steps are all gated on it being non-empty.
           SELECTED=0
 
+          # Commit a tag points at, or empty when the tag does not exist. The glob is
+          # required: querying the exact ref returns only the tag object for an annotated
+          # tag, while the glob also returns the peeled `^{}` line carrying the commit.
+          tag_commit() {
+            local tag="$1" refs status
+
+            set +e
+            refs=$(git ls-remote --tags origin "refs/tags/$tag*" 2>&1)
+            status=$?
+            set -e
+
+            if [ "$status" -ne 0 ]; then
+              echo "::error title=Tag lookup failed::Could not query $tag on the remote: $refs"
+              exit 1
+            fi
+
+            # Prefer the peeled commit; fall back to the ref itself for lightweight tags.
+            printf '%s\n' "$refs" \
+              | awk -v peeled="refs/tags/$tag^{}" -v plain="refs/tags/$tag" '
+                  $2 == peeled { peeled_sha = $1 }
+                  $2 == plain  { plain_sha = $1 }
+                  END {
+                    if (peeled_sha != "") print peeled_sha
+                    else if (plain_sha != "") print plain_sha
+                  }'
+          }
+
           resolve() {
             local name="$1" dir="$2" var="$3"
 
@@ -69,13 +96,38 @@ jobs:
               return 0
             fi
 
-            local version published
+            local version
             version=$(node -p "require('./packages/$dir/package.json').version")
-            published=$(npm view "$name@$version" version 2>/dev/null || true)
 
-            if [ -n "$published" ]; then
+            # Only a 404 means the version is free. A 5xx, DNS failure or timeout must stop
+            # the run: treating it as "not published" would let the release proceed and fail
+            # at publish time, possibly after earlier packages of an `all` run already shipped.
+            local view status
+            set +e
+            view=$(npm view "$name@$version" version 2>&1)
+            status=$?
+            set -e
+
+            if [ "$status" -eq 0 ]; then
               echo "::warning title=Already published::$name $version is already on npm — skipping. Bump the version in a pull request first."
               return 0
+            fi
+
+            if ! printf '%s' "$view" | grep -q 'E404'; then
+              echo "::error title=Registry check failed::Could not determine whether $name $version is published: $view"
+              exit 1
+            fi
+
+            # A tag for this version must not already exist at a different commit, or the
+            # release would publish this commit while the tag and GitHub release notes
+            # describe older code.
+            local tag existing
+            tag="$name-v$version"
+            existing=$(tag_commit "$tag")
+
+            if [ -n "$existing" ] && [ "$existing" != "$GITHUB_SHA" ]; then
+              echo "::error title=Stale tag::$tag already exists at $existing, but this run would publish $GITHUB_SHA. Delete the tag, or bump the version in a pull request."
+              exit 1
             fi
 
             echo "$var=$version" >> "$GITHUB_ENV"
@@ -232,12 +284,23 @@ jobs:
           #
           # An existing tag is left alone rather than failing the run: by this point the
           # package is on npm, and refusing to finish would be worse than reusing the tag.
-          # Guarding against republishing is the registry check's job, not the tag's. The
-          # remote is queried because the checkout is shallow and carries no tags.
+          # This is only safe because `Resolve versions to release` already rejected any tag
+          # sitting at a different commit, so anything found here points at what we published.
+          # The remote is queried because the checkout is shallow and carries no tags.
           tag_release() {
-            local tag="$1"
+            local tag="$1" existing status
 
-            if [ -n "$(git ls-remote --tags origin "refs/tags/$tag")" ]; then
+            set +e
+            existing=$(git ls-remote --tags origin "refs/tags/$tag" 2>&1)
+            status=$?
+            set -e
+
+            if [ "$status" -ne 0 ]; then
+              echo "::error title=Tag lookup failed::Could not query $tag on the remote: $existing"
+              exit 1
+            fi
+
+            if [ -n "$existing" ]; then
               echo "::warning title=Tag already exists::$tag is already on the remote — leaving it untouched."
               return 0
             fi

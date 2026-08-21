@@ -25,11 +25,12 @@ following [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`):
 You can bump in the PR that makes the change, or in a small dedicated PR afterwards.
 
 > [!IMPORTANT]
-> **Bumping `@filigran/icon` needs a second edit.** `@filigran/ui` declares `@filigran/icon` in
-> its `peerDependencies`. When you bump the icon version, update that range in
-> `packages/filigran-ui/package.json` too and run `yarn install` so `yarn.lock` follows —
-> otherwise `yarn install --immutable` fails in CI. This used to be done automatically by
-> `yarn version`, which the release workflow no longer runs.
+> **A minor or major `@filigran/icon` bump needs a second edit.** `@filigran/ui` declares a
+> range for `@filigran/icon` in its `peerDependencies` (e.g. `^0.24.3`). A patch bump still
+> satisfies it and needs nothing further; a minor or major bump means widening that range in
+> `packages/filigran-ui/package.json`. Because the range is recorded in `yarn.lock`, run
+> `yarn install` in the same PR or `yarn install --immutable` fails in CI. `yarn version` used
+> to keep these aligned, and the release workflow no longer runs it.
 
 > [!NOTE]
 > **First release of a new package.** Set `version` to whatever you want published — the
