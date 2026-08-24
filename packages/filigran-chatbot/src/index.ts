@@ -18,6 +18,7 @@ export type {
   ToolApprovalDecision,
   ToolApprovalProposal,
   ToolApprovalVerdict,
+  Translate,
   XtmAgent,
   ApiEndpoints,
 } from './types';

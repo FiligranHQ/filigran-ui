@@ -726,9 +726,7 @@ export function useChat({
       // somebody else answered it. Distinguished from a transient failure
       // because retrying cannot help; the stream ending clears the prompt.
       setApprovalError(
-        res.status === 409
-          ? t('This turn is no longer waiting for a decision.')
-          : t('Could not send your decision. Please try again.'),
+        res.status === 409 ? t('This turn is no longer waiting for a decision.') : t('Could not send your decision. Please try again.'),
       );
     } catch {
       setApprovalError(t('Could not send your decision. Please try again.'));
@@ -979,7 +977,10 @@ export function useChat({
                 const segId = currentAssistantId;
                 setMessages((prev) =>
                   prev.map((m) =>
-                    m.id === segId ? { ...m, content: parsed.content || t('Unable to connect. Please check the configuration.') } : m,
+                    // The backend reported a failure of its own, so the generic
+                    // apology rather than "check the configuration": the
+                    // connection plainly worked.
+                    m.id === segId ? { ...m, content: parsed.content || t('Sorry, an error occurred. Please try again.') } : m,
                   ),
                 );
                 return;
@@ -1004,7 +1005,7 @@ export function useChat({
       if (accumulated && !doneReceived) {
         const segId = currentAssistantId;
         const text = accumulated;
-        setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: text || 'No response.' } : m)));
+        setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: text || t('No response.') } : m)));
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;

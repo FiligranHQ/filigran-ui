@@ -152,7 +152,9 @@ export function parseToolApprovalProposals(raw: unknown): ToolApprovalProposal[]
     const schema = p.input_schema;
     out.push({
       toolCallId,
-      toolName: typeof p.tool_name === 'string' && p.tool_name ? p.tool_name : 'unknown tool',
+      // Left empty for the UI to label: a parser has no `t`, and a placeholder
+      // baked in here would reach the reviewer untranslated.
+      toolName: typeof p.tool_name === 'string' && p.tool_name ? p.tool_name : '',
       toolDescription: typeof p.tool_description === 'string' ? p.tool_description : undefined,
       arguments: args && typeof args === 'object' && !Array.isArray(args) ? (args as Record<string, unknown>) : {},
       inputSchema: schema && typeof schema === 'object' && !Array.isArray(schema) ? (schema as Record<string, unknown>) : undefined,

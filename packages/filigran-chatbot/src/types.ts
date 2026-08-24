@@ -1,4 +1,13 @@
 export type ChatMode = 'sidebar' | 'floating' | 'fullscreen';
+
+/**
+ * The host's translation lookup, passed down to every component that renders
+ * text. Key in, translated string out — the package never owns a dictionary of
+ * its own, and never asks the host's `t` for more than a lookup: values are
+ * spliced into the *translated* sentence by `translate()` in `utils`, so a key
+ * is always a whole sentence and a locale stays free to reorder it.
+ */
+export type Translate = (key: string) => string;
 export type BackendType = 'legacy' | 'rest' | 'ag-ui';
 /** A user's rating of one assistant answer. */
 export type MessageFeedback = 'up' | 'down';
@@ -158,6 +167,7 @@ export interface ToolApprovalProposal {
    * different arguments.
    */
   toolCallId: string;
+  /** Empty when the backend named no tool; the UI labels that case itself. */
   toolName: string;
   toolDescription?: string;
   arguments: Record<string, unknown>;
@@ -245,7 +255,7 @@ export interface ChatPanelProps {
   apiEndpoints?: ApiEndpoints;
   agentDashboardUrl?: string;
   user: { firstName: string };
-  t?: (key: string) => string;
+  t?: Translate;
   accentColor?: string;
   logoIcon?: React.ReactNode;
   promptSuggestions?: string[];
@@ -371,7 +381,9 @@ export interface ChatPanelProps {
 export interface ChatToggleButtonProps {
   isOpen: boolean;
   onToggle: () => void;
+  /** Overrides the built-in label; already translated by the host. */
   label?: string;
+  t?: Translate;
   accentColor?: string;
   icon?: React.ReactNode;
 }

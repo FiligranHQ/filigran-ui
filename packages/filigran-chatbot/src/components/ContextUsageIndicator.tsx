@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
-import type { ChatContextBreakdown, ChatContextUsage } from '../types';
-import { compactCount } from '../utils';
+import type { ChatContextBreakdown, ChatContextUsage, Translate } from '../types';
+import { compactCount, translate } from '../utils';
 import { Dropdown } from './Dropdown';
 import { Tooltip } from './Tooltip';
 
 interface ContextUsageIndicatorProps {
   usage: ChatContextUsage;
-  t: (key: string) => string;
+  t: Translate;
 }
 
 // Thresholds are the agent loop's own gates, not design choices: at 80 %
@@ -34,13 +34,13 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * without a legend lookup. Labels name what the user can act on, not the
  * backend's internals: "Tool results" rather than "role=tool messages".
  */
-const ROWS: ReadonlyArray<{ field: keyof ChatContextBreakdown; label: string; color: string }> = [
-  { field: 'system', label: 'System prompt', color: '#9ca3af' },
-  { field: 'tools', label: 'Tool definitions', color: '#a78bfa' },
-  { field: 'dynamicTools', label: 'MCP & dynamic tools', color: '#f0abfc' },
-  { field: 'summary', label: 'Summarized conversation', color: '#fb7185' },
-  { field: 'toolResults', label: 'Tool results', color: '#34d399' },
-  { field: 'conversation', label: 'Conversation', color: '#a1a1aa' },
+const ROWS: ReadonlyArray<{ field: keyof ChatContextBreakdown; label: (t: Translate) => string; color: string }> = [
+  { field: 'system', label: (t) => t('System prompt'), color: '#9ca3af' },
+  { field: 'tools', label: (t) => t('Tool definitions'), color: '#a78bfa' },
+  { field: 'dynamicTools', label: (t) => t('MCP & dynamic tools'), color: '#f0abfc' },
+  { field: 'summary', label: (t) => t('Summarized conversation'), color: '#fb7185' },
+  { field: 'toolResults', label: (t) => t('Tool results'), color: '#34d399' },
+  { field: 'conversation', label: (t) => t('Conversation'), color: '#a1a1aa' },
 ];
 
 /**
@@ -81,7 +81,10 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
     : compacting
       ? t('Context nearly full — older turns are being summarized')
       : t('Context used');
-  const summary = `${headline} · ${counts} ${t('tokens')}`;
+  const tokens = translate(t, '{counts} tokens', { counts });
+  // Separator only — nothing to translate, so no key of its own: both halves
+  // are already whole translated readouts.
+  const summary = `${headline} · ${tokens}`;
 
   const rows = breakdown ? ROWS.filter((r) => (breakdown[r.field] ?? 0) > 0) : [];
   // Without a breakdown there is nothing to open, so the readout stays inert
@@ -91,14 +94,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
   const gauge = (
     <span className="flex items-center gap-1.5">
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className={ringColor} aria-hidden="true">
-        <circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={RADIUS}
-          fill="none"
-          strokeWidth={STROKE}
-          className="stroke-gray-200 dark:stroke-white/15"
-        />
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} className="stroke-gray-200 dark:stroke-white/15" />
         <circle
           cx={SIZE / 2}
           cy={SIZE / 2}
@@ -131,7 +127,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
 
   return (
     <>
-      <Tooltip title={open ? '' : `${summary} — ${t('click for details')}`}>
+      <Tooltip title={open ? '' : translate(t, '{summary} — click for details', { summary })}>
         <button
           ref={anchorRef}
           type="button"
@@ -147,12 +143,10 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
 
       <Dropdown open={open} onClose={() => setOpen(false)} anchorRef={anchorRef} placement="bottom-end" width={296}>
         <div className="px-3.5 pt-3 pb-1 flex items-baseline justify-between gap-3">
-          <span className={`text-[0.8125rem] tabular-nums ${textColor}`}>{t('{percent}% full').replace('{percent}', String(percent))}</span>
+          <span className={`text-[0.8125rem] tabular-nums ${textColor}`}>{translate(t, '{percent}% full', { percent })}</span>
           {/* The tilde is load-bearing: these are char-derived estimates, and a
               bare "168k/200k" would read as a measured count. */}
-          <span className="text-[0.7rem] tabular-nums text-gray-400 dark:text-white/40 shrink-0">
-            ~{counts} {t('tokens')}
-          </span>
+          <span className="text-[0.7rem] tabular-nums text-gray-400 dark:text-white/40 shrink-0">~{tokens}</span>
         </div>
 
         {/* One stacked bar over the whole window: the segments are the legend's
@@ -184,8 +178,10 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
                   pill, which turns the swatches into dots that read as bullets
                   rather than as keys to the bar's segments. */}
               <span className="h-2 w-2 shrink-0" style={{ backgroundColor: row.color, borderRadius: 2 }} aria-hidden="true" />
-              <span className="text-[0.75rem] text-gray-700 dark:text-white/70 truncate">{t(row.label)}</span>
-              <span className="ml-auto text-[0.7rem] tabular-nums text-gray-500 dark:text-white/40 shrink-0">{compactCount(breakdown?.[row.field] ?? 0)}</span>
+              <span className="text-[0.75rem] text-gray-700 dark:text-white/70 truncate">{row.label(t)}</span>
+              <span className="ml-auto text-[0.7rem] tabular-nums text-gray-500 dark:text-white/40 shrink-0">
+                {compactCount(breakdown?.[row.field] ?? 0)}
+              </span>
             </div>
           ))}
         </div>

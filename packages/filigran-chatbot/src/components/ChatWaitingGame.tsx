@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Translate } from '../types';
 import { GamepadIcon } from './icons';
 
 /**
@@ -8,17 +9,17 @@ import { GamepadIcon } from './icons';
  * fades in. Kept short and upbeat so they fit on one line in the narrow
  * floating panel and read as a sense of progress rather than noise.
  */
-const DEFAULT_MESSAGES = [
-  'Crunching the data',
-  'Connecting the dots',
-  'Consulting the sources',
-  'Thinking it through',
-  'Reticulating splines',
-  'Analyzing the details',
-  'Almost there',
-  'Putting it together',
-  'Polishing the answer',
-  'Wrapping things up',
+const defaultMessages = (t: Translate) => [
+  t('Crunching the data'),
+  t('Connecting the dots'),
+  t('Consulting the sources'),
+  t('Thinking it through'),
+  t('Reticulating splines'),
+  t('Analyzing the details'),
+  t('Almost there'),
+  t('Putting it together'),
+  t('Polishing the answer'),
+  t('Wrapping things up'),
 ];
 
 /** localStorage key for the per-browser mini-game preference (on by default). */
@@ -326,7 +327,7 @@ function createInvaderGame(canvas: HTMLCanvasElement, messages: string[], onMess
 }
 
 interface ChatWaitingGameProps {
-  t: (key: string) => string;
+  t: Translate;
   /** Host-level override; when false the feature is hidden entirely. */
   enabled?: boolean;
 }
@@ -340,7 +341,7 @@ interface ChatWaitingGameProps {
  * text, so the "dynamic loading messages" feedback always stands on its own.
  */
 export const ChatWaitingGame = ({ t, enabled = true }: ChatWaitingGameProps) => {
-  const messages = useMemo(() => DEFAULT_MESSAGES.map((m) => t(m)), [t]);
+  const messages = useMemo(() => defaultMessages(t), [t]);
   const reducedMotion = usePrefersReducedMotion();
   const [minigameOn, setMinigameOn] = useState(readPref);
   const [msgIndex, setMsgIndex] = useState(0);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatConversationSummary, ChatMode, XtmAgent } from '../types';
-import { timeAgo } from '../utils';
+import type { ChatConversationSummary, ChatMode, Translate, XtmAgent } from '../types';
+import { timeAgo, translate } from '../utils';
 import {
   AlertTriangleIcon,
   ChevronDownIcon,
@@ -50,13 +50,17 @@ interface ChatHeaderProps {
   activeConversationId?: string | null;
   onSelectConversation?: (id: string) => void;
   onDeleteConversation?: (id: string) => void;
-  t: (key: string) => string;
+  t: Translate;
 }
 
-const modeOptions: { mode: ChatMode; label: string; getIcon: (p: { size: number; className: string }) => React.ReactNode }[] = [
-  { mode: 'floating', label: 'Floating', getIcon: (p) => <FloatingIcon {...p} /> },
-  { mode: 'sidebar', label: 'Sidebar', getIcon: (p) => <SidebarIcon {...p} /> },
-  { mode: 'fullscreen', label: 'Full screen', getIcon: (p) => <FullscreenIcon {...p} /> },
+// Labels are thunks rather than bare strings so each key stays a literal call
+// on the host's translator in the source: a table of plain keys resolved later
+// through a variable works at runtime but is invisible to key extraction, which
+// is how a locale ends up missing exactly the strings nobody typed by hand.
+const modeOptions: { mode: ChatMode; label: (t: Translate) => string; getIcon: (p: { size: number; className: string }) => React.ReactNode }[] = [
+  { mode: 'floating', label: (t) => t('Floating'), getIcon: (p) => <FloatingIcon {...p} /> },
+  { mode: 'sidebar', label: (t) => t('Sidebar'), getIcon: (p) => <SidebarIcon {...p} /> },
+  { mode: 'fullscreen', label: (t) => t('Full screen'), getIcon: (p) => <FullscreenIcon {...p} /> },
 ];
 
 export const ChatHeader = ({
@@ -132,7 +136,7 @@ export const ChatHeader = ({
         </button>
         {transferredFrom && (
           <div className="pl-10 pr-2 text-[0.6rem] font-normal text-gray-400 dark:text-white/30">
-            {t('Transferred from')} {transferredFrom}
+            {translate(t, 'Transferred from {agent}', { agent: transferredFrom })}
           </div>
         )}
       </div>
@@ -355,7 +359,7 @@ export const ChatHeader = ({
               }`}
             >
               {opt.getIcon({ size: 18, className: 'text-gray-400 dark:text-white/40' })}
-              <span className="text-[0.8125rem] text-gray-700 dark:text-white/70">{t(opt.label)}</span>
+              <span className="text-[0.8125rem] text-gray-700 dark:text-white/70">{opt.label(t)}</span>
             </button>
           ))}
         </div>
