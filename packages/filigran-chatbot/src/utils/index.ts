@@ -310,7 +310,7 @@ export function translate(t: Translate, key: string, values: Record<string, stri
   // happens to contain `{something}` is then never mistaken for a slot of its
   // own. A slot with no value keeps its braces, so a stray one is visible
   // rather than silently blank.
-  return t(key).replace(/\{(\w+)\}/g, (slot, name) => (name in values ? String(values[name] ?? '') : slot));
+  return t(key).replace(/\{(\w+)\}/g, (slot, name) => (Object.hasOwn(values, name) ? String(values[name] ?? '') : slot));
 }
 
 /**

@@ -65,30 +65,34 @@ export const ChatWelcome = ({
     )}
     {!agentDescription && <span className="mb-5" />}
 
-    <div className="w-full max-w-[320px]">
-      <span className="block text-center mb-2 text-[0.65rem] tracking-[1.5px] uppercase text-[var(--chat-accent)] font-semibold">
-        {t('Suggestions')}
-      </span>
-      {suggestionsLoading ? (
-        // Placeholder rows rather than an empty gap: the list is about to be
-        // replaced by the new agent's own suggestions.
-        <div aria-hidden className="space-y-1">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-8 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-100/50 dark:bg-white/[0.03] animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        promptSuggestions.map((prompt) => (
-          <button
-            key={prompt}
-            type="button"
-            onClick={() => onPromptClick(prompt)}
-            className="w-full text-left text-[0.8125rem] text-gray-800 dark:text-white py-1.5 px-3 mb-1 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)]"
-          >
-            {prompt}
-          </button>
-        ))
-      )}
-    </div>
+    {/* A host that passes no suggestions gets no section: the heading on its own
+        used to sit above an empty gap. */}
+    {(suggestionsLoading || promptSuggestions.length > 0) && (
+      <div className="w-full max-w-[320px]">
+        <span className="block text-center mb-2 text-[0.65rem] tracking-[1.5px] uppercase text-[var(--chat-accent)] font-semibold">
+          {t('Suggestions')}
+        </span>
+        {suggestionsLoading ? (
+          // Placeholder rows rather than an empty gap: the list is about to be
+          // replaced by the new agent's own suggestions.
+          <div aria-hidden className="space-y-1">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-8 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-100/50 dark:bg-white/[0.03] animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          promptSuggestions.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => onPromptClick(prompt)}
+              className="w-full text-left text-[0.8125rem] text-gray-800 dark:text-white py-1.5 px-3 mb-1 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)]"
+            >
+              {prompt}
+            </button>
+          ))
+        )}
+      </div>
+    )}
   </div>
 );

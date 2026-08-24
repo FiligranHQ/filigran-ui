@@ -28,7 +28,7 @@ export function parseAgUiEvent(evt: Record<string, unknown>, ctx: ProtocolContex
     // Empty rather than a literal English fallback: the content is rendered as
     // the assistant's message, and the consumer supplies its own translated
     // text when the backend sends none — as the other protocols already do.
-    return { action: 'error', content: (evt.message as string) || '' };
+    return { action: 'error', content: typeof evt.message === 'string' ? evt.message : '' };
   }
 
   // --- Step lifecycle ---
