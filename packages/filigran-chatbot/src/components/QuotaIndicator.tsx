@@ -1,5 +1,5 @@
 import type { ChatQuotaStatus } from '../types';
-import { compactCount as compact } from '../utils';
+import { compactCount as compact, translate } from '../utils';
 import { Tooltip } from './Tooltip';
 
 interface QuotaIndicatorProps {
@@ -20,7 +20,7 @@ export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
   // No ceiling: report consumption without implying a limit that isn't there.
   if (limit === null) {
     return (
-      <Tooltip title={period ? `${t('Usage')} · ${period}` : t('Usage')}>
+      <Tooltip title={period ? translate(t, 'Usage · {period}', { period }) : t('Usage')}>
         <span className="text-[0.68rem] tabular-nums text-gray-400 dark:text-white/30">{compact(used)}</span>
       </Tooltip>
     );
@@ -39,7 +39,8 @@ export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
       : 'text-gray-400 dark:text-white/30';
 
   const label = `${compact(used)}/${compact(limit)}`;
-  const title = [exhausted ? t('Quota reached') : t('Quota'), period].filter(Boolean).join(' · ');
+  const headline = exhausted ? t('Quota reached') : t('Quota');
+  const title = period ? `${headline} · ${period}` : headline;
 
   return (
     <Tooltip title={title}>

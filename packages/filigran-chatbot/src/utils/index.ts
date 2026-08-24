@@ -1,3 +1,5 @@
+import type { Translate } from '../types';
+
 export function hexAlpha(hex: string, alpha: number): string {
   const a = Math.round(alpha * 255)
     .toString(16)
@@ -287,7 +289,56 @@ export function markdownUrlTransform(url: string): string {
   return '';
 }
 
-export const identity = (key: string) => key;
+export const identity: Translate = (key) => key;
+
+/**
+ * Translates `key`, then splices `values` into the result's `{name}` slots.
+ *
+ * The point is that the key stays a whole sentence. Building a phrase out of
+ * translated fragments — "Waiting for" + count + "tasks" — freezes English word
+ * order and English plural rules into the layout, and a translator sees each
+ * fragment with no sentence around it. Here the locale owns the whole sentence
+ * and decides where the number goes; the host's `t` still does nothing but look
+ * a key up, so this needs no support from it.
+ *
+ * Plurals stay two explicit keys (`'1 tool call'` / `'{count} tool calls'`) for
+ * the same reason: a lookup cannot select a plural form, so the call site picks
+ * the sentence and the locale translates it whole.
+ */
+export function translate(t: Translate, key: string, values: Record<string, string | number>): string {
+  // One pass over the sentence rather than one pass per value: a value that
+  // happens to contain `{something}` is then never mistaken for a slot of its
+  // own. A slot with no value keeps its braces, so a stray one is visible
+  // rather than silently blank.
+  return t(key).replace(/\{(\w+)\}/g, (slot, name) => (name in values ? String(values[name] ?? '') : slot));
+}
+
+/**
+ * Same as `translate`, but leaves one slot unfilled and returns the text on
+ * either side of it — for the case where the value has to be markup (a coloured
+ * agent name, a link) and so cannot be spliced into a string.
+ *
+ * Without this the sentence gets cut into "How can " + node + " help you, ",
+ * which is untranslatable in any language that would not put the node in that
+ * spot. Here the locale still owns the whole sentence and decides where the slot
+ * sits.
+ *
+ * `hasSlot` is false for a translation that dropped the slot — a locale that
+ * reworded the sentence so it no longer names the value. The caller then renders
+ * the sentence without the node instead of letting it dangle off the end.
+ */
+export function translateAround(
+  t: Translate,
+  key: string,
+  slot: string,
+  values: Record<string, string | number> = {},
+): { before: string; after: string; hasSlot: boolean } {
+  const sentence = translate(t, key, values);
+  const token = `{${slot}}`;
+  const at = sentence.indexOf(token);
+  if (at === -1) return { before: sentence, after: '', hasSlot: false };
+  return { before: sentence.slice(0, at), after: sentence.slice(at + token.length), hasSlot: true };
+}
 
 /**
  * Nearest chatbot panel root (`.filigran-chatbot`) for portal-based overlays
@@ -320,18 +371,18 @@ export function compactCount(n: number): string {
  * Returns an empty string for missing/unparseable timestamps so the row
  * simply omits the label instead of showing "Invalid Date".
  */
-export function timeAgo(iso: string | undefined, t: (key: string) => string): string {
+export function timeAgo(iso: string | undefined, t: Translate): string {
   if (!iso) return '';
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return '';
   const diffMs = Date.now() - then;
   const minutes = Math.floor(diffMs / 60_000);
   if (minutes < 1) return t('just now');
-  if (minutes < 60) return `${minutes}${t('m ago')}`;
+  if (minutes < 60) return translate(t, '{count}m ago', { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}${t('h ago')}`;
+  if (hours < 24) return translate(t, '{count}h ago', { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}${t('d ago')}`;
+  if (days < 7) return translate(t, '{count}d ago', { count: days });
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 

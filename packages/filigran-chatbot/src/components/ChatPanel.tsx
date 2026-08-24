@@ -1,5 +1,5 @@
 import { type FunctionComponent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatAttachment, ChatMessage, ChatPanelProps } from '../types';
+import type { ChatAttachment, ChatMessage, ChatPanelProps, Translate } from '../types';
 import { hexAlpha, identity } from '../utils';
 import { parseAttachments, parseContextUsage, parseToolCallTrace, parseTransferChain } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
@@ -20,11 +20,16 @@ const FLOATING_WIDTH = 380;
 const FLOATING_HEIGHT = 560;
 const SIDEBAR_GAP = 6;
 
-const DEFAULT_SUGGESTIONS = [
-  'Help me create a new simulation scenario',
-  'What are the latest attack patterns?',
-  'How do I configure detection rules?',
-  'Summarize my recent findings',
+/**
+ * Fallback suggestions, translated where they are written so extraction sees
+ * the keys — the host's own list and the backend's are translated too (they may
+ * be keys), but only these belong to the package.
+ */
+const defaultSuggestions = (t: Translate) => [
+  t('Help me create a new simulation scenario'),
+  t('What are the latest attack patterns?'),
+  t('How do I configure detection rules?'),
+  t('Summarize my recent findings'),
 ];
 
 export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
@@ -39,7 +44,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   t = identity,
   accentColor = '#7b5cff',
   logoIcon,
-  promptSuggestions = DEFAULT_SUGGESTIONS,
+  promptSuggestions,
   draftBorderColor,
   resizable = false,
   onWidthChange,
@@ -119,6 +124,17 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     requestHeaders,
     agentSlug: selectedAgent?.slug,
   });
+
+  /**
+   * Suggestions shown on the welcome screen, resolved to final text here rather
+   * than in `ChatWelcome`: the backend's and the host's lists still go through
+   * `t` (a host may well pass keys), while the package's own fallback is
+   * translated at its definition so the keys stay extractable.
+   */
+  const suggestions = useMemo(
+    () => (agentSuggestions ?? promptSuggestions)?.map((s) => t(s)) ?? defaultSuggestions(t),
+    [agentSuggestions, promptSuggestions, t],
+  );
 
   const { prompts, quota, refreshQuota } = useComposerExtras({
     apiBaseUrl,
@@ -242,7 +258,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
    * the same agent that will answer, so the two now agree.
    */
   const [conversationAgentName, setConversationAgentName] = useState<string | null>(null);
-  const agentName = transferredAgent?.name || conversationAgentName || selectedAgent?.name || 'Assistant';
+  const agentName = transferredAgent?.name || conversationAgentName || selectedAgent?.name || t('Assistant');
 
   // "Viewing the chat" must mean the panel is on screen in the active tab —
   // NOT that an element inside it currently holds focus. In sidebar (and
@@ -610,8 +626,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           firstName={firstName}
           logoIcon={resolvedLogo}
           // The agent's own suggestions when the backend serves them, the
-          // host's list otherwise — never an empty section.
-          promptSuggestions={agentSuggestions ?? promptSuggestions}
+          // host's list otherwise, this package's list when there is neither —
+          // never an empty section.
+          promptSuggestions={suggestions}
           suggestionsLoading={suggestionsLoading}
           agentName={selectedAgent?.name}
           agentDescription={selectedAgent?.description}

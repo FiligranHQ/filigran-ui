@@ -121,13 +121,14 @@ import { ChatToggleButton } from '@filigran/chatbot';
 
 #### Props
 
-| Prop          | Type              | Default      | Description                    |
-| ------------- | ----------------- | ------------ | ------------------------------ |
-| `isOpen`      | `boolean`         | **required** | Whether the chat panel is open |
-| `onToggle`    | `() => void`      | **required** | Called when button is clicked  |
-| `label`       | `string`          | `'Chat'`     | Tooltip/aria label             |
-| `accentColor` | `string`          | `'#7b5cff'`  | Button background color        |
-| `icon`        | `React.ReactNode` | default icon | Custom icon                    |
+| Prop          | Type                      | Default      | Description                                                                |
+| ------------- | ------------------------- | ------------ | -------------------------------------------------------------------------- |
+| `isOpen`      | `boolean`                 | **required** | Whether the chat panel is open                                             |
+| `onToggle`    | `() => void`              | **required** | Called when button is clicked                                              |
+| `label`       | `string`                  | built-in     | Button text, already translated by the host; omit for `t('Ask Assistant')` |
+| `t`           | `(key: string) => string` | identity     | Translation function, used for the default label                           |
+| `accentColor` | `string`                  | `'#7b5cff'`  | Button background color                                                    |
+| `icon`        | `React.ReactNode`         | default icon | Custom icon                                                                |
 
 ## API Contract
 
@@ -571,59 +572,230 @@ function App() {
 }
 ```
 
-**Translation keys used:**
+`t` is only ever asked for a lookup — key in, translated string out — so any
+i18n library works and the package never carries a dictionary of its own.
+Untranslated hosts can omit it: the default is the identity function, so every
+key is its own English text.
 
-- `'Thinking...'`
-- `'Using tools…'`
-- `'Analyzing results…'`
-- `'Composing answer…'`
-- `'Incorporating your message…'`
-- `'Ask a question...'`
-- `'Stop generating'`
-- `'Send now'`
-- `'Enter to send now · Esc to stop'`
-- `'Attachments wait for the current response'`
-- `'New chat'`
-- `'Conversation history'`
-- `'No conversations yet'`
-- `'Untitled conversation'`
-- `'New conversation'`
-- `'Delete conversation'`
-- `'just now'` / `'m ago'` / `'h ago'` / `'d ago'`
-- `'Switch view'`
-- `'Close'`
-- `'Switch to another agent'`
+#### Values inside sentences
+
+A key is always a **whole sentence**, with `{placeholder}` slots for the values.
+The panel fills the slots in _after_ the lookup, so a locale is free to move the
+value, and a translator sees the sentence rather than a fragment of one:
+
+| Key | Renders as |
+| --- | --- |
+| `'Waiting for {count} background tasks…'` | Waiting for 3 background tasks… |
+| `'Transferred from {agent}'` | Transferred from Threat Analyst |
+| `'{percent}% full'` | 84% full |
+| `'How can {agent} help you, {name}?'` | How can **Threat Analyst** help you, John? |
+
+Two consequences worth knowing when writing the locale files:
+
+- **Plurals are separate keys** — `'1 tool call'` and `'{count} tool calls'`,
+  `'Delegating one task…'` and `'Delegating {count} tasks…'`. A lookup cannot
+  select a plural form, so the panel picks the sentence and the locale
+  translates it whole; a language with more plural forms than English can route
+  the plural key through its own rules.
+- **A missing slot is not fatal** — a translation that drops a `{placeholder}`
+  renders the rest of the sentence as it is, and the value is simply absent.
+  That includes the greeting, where the agent's name is markup: a locale that
+  rewords the sentence without `{agent}` gets the sentence, not a name dangling
+  off the end of it.
+
+`promptSuggestions` (and any suggestions the backend serves) also go through
+`t`, so a host may pass either keys or final text.
+
+#### Translation keys used
+
+Every key the package can ask for, grouped by where it appears:
+
+**Toggle button**
+
+- `'Ask Assistant'`
+
+**Header, agent menu and history**
+
+- `'Agent switching is not available here'`
 - `'Browse agents'`
+- `'Close'`
+- `'Conversation history'`
+- `'Could not reach the assistant service. Check the connection and try again.'`
 - `'Create agent'`
+- `'Delete conversation'`
+- `'Floating'`
+- `'Full screen'`
+- `'New chat'`
+- `'New conversation'`
+- `'No agent matches'`
+- `'No conversations yet'`
+- `'Search agents...'`
+- `'Sidebar'`
+- `'Switch to'`
+- `'Switch to another agent'`
+- `'Switch view'`
+- `'Transferred from {agent}'`
+- `'Untitled conversation'`
+
+**Conversation sidebar**
+
+- `'Conversation title'`
+- `'Hide conversations'`
+- `'No conversation matches'`
+- `'Rename conversation'`
+- `'Search conversations...'`
+- `'Show conversations'`
+
+**Welcome screen**
+
+- `'Assistant'`
+- `'Help me create a new simulation scenario'`
+- `'How can I help you, {name}?'`
+- `'How can {agent} help you, {name}?'`
+- `'How do I configure detection rules?'`
+- `'Suggestions'`
+- `'Summarize my recent findings'`
+- `'What are the latest attack patterns?'`
+
+**Composer**
+
+- `'Ask a question...'`
+- `'Attachments wait for the current response'`
+- `'Dictate a message'`
+- `'Enter to send now · Esc to stop'`
+- `'Files uploading...'`
+- `'Insert prompt template'`
+- `'No prompt matches'`
+- `'Search prompts...'`
+- `'Send now'`
+- `'Stop dictation'`
+- `'Stop generating'`
+- `'Uses AI. Verify results.'`
+
+**Messages, markdown and files**
+
+- `'Bad response'`
+- `'Copied'`
+- `'Copied!'`
+- `'Copy code'`
+- `'Copy response'`
+- `'Download'`
+- `'Expand image'`
+- `'Good response'`
+- `'Image could not be loaded'`
+- `'Image preview'`
+- `'Load earlier messages'`
+- `'Loading image…'`
 - `'Reasoning details'`
 - `'Reasoning details — turn limit reached'`
+
+**Agent status**
+
+- `'Analyzing results…'`
+- `'Collecting results from one task…'`
+- `'Collecting results from {count} tasks…'`
+- `'Composing answer…'`
+- `'Consulting {agent}…'`
+- `'Delegating one task…'`
+- `'Delegating {count} tasks…'`
+- `'Incorporating your message…'`
+- `'Thinking...'`
+- `'Transferring to {agent}…'`
+- `'Using tools…'`
+- `'Waiting for one background task…'`
+- `'Waiting for your approval…'`
+- `'Waiting for {count} background tasks…'`
+- `'the agent'`
+- `'{tool} (+{count} more)…'`
+
+**Waiting mini-game**
+
+- `'Almost there'`
+- `'Analyzing the details'`
+- `'Connecting the dots'`
+- `'Consulting the sources'`
+- `'Crunching the data'`
+- `'Polishing the answer'`
+- `'Putting it together'`
+- `'Reticulating splines'`
+- `'Thinking it through'`
+- `'Turn off the waiting mini-game'`
+- `'Turn on the waiting mini-game'`
+- `'Wrapping things up'`
+
+**Reasoning details**
+
+- `'(no output)'`
+- `'1 tool call'`
+- `'1 transfer'`
+- `'Input'`
 - `'Model reasoning'`
-- `'iterations'`
-- `'transfer'` / `'transfers'`
+- `'Output'`
+- `"The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far."`
 - `'Transfer chain'`
 - `'Turn limit reached.'`
-- `"The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far."`
-- `'Input'` / `'Output'` / `'(no output)'`
-- `'Download'`
-- `'tool call'` / `'tool calls'`
-- `'Uses AI. Verify results.'`
-- `'How can I help you, '`
-- `'Suggestions'`
-- `'Waiting for your approval…'`
-- `'The agent needs your approval to run a tool:'` / `'The agent needs your approval to run these tools:'`
-- `'Yes'` / `'No'` / `'Yes, always'` / `'Back'` / `'Confirm'` / `'Sending…'` / `'decided'`
-- `'Approved'` / `'Declined'` / `'Always allowed'`
-- `'Decline this call'`
-- `'Why not? The agent sees this and can adapt (optional)'`
-- `'e.g. wrong environment — use staging instead'`
+- `'{count} iterations'`
+- `'{count} tool calls'`
+- `'{count} transfers'`
+
+**Tool approval**
+
 - `'Also applies to your scheduled runs, until you revoke it'`
+- `'Always allowed'`
+- `'Approved'`
+- `'Back'`
+- `'Confirm'`
+- `'Decline this call'`
+- `'Declined'`
+- `'No'`
+- `'Sending…'`
+- `'The agent needs your approval to run a tool:'`
+- `'The agent needs your approval to run these tools:'`
+- `'Why not? The agent sees this and can adapt (optional)'`
+- `'Yes'`
+- `'Yes, always'`
+- `'e.g. wrong environment — use staging instead'`
+- `'unknown tool'`
+- `'{decided}/{total} decided'`
 - `'“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.'`
-- `'This turn is no longer waiting for a decision.'`
+
+**Context gauge**
+
+- `'Context full — older turns are being dropped'`
+- `'Context nearly full — older turns are being summarized'`
+- `'Context used'`
+- `'Conversation'`
+- `'MCP & dynamic tools'`
+- `'Summarized conversation'`
+- `'System prompt'`
+- `'Tool definitions'`
+- `'Tool results'`
+- `'{counts} tokens'`
+- `'{percent}% full'`
+- `'{summary} — click for details'`
+
+**Quota**
+
+- `'Quota'`
+- `'Quota reached'`
+- `'Usage'`
+- `'Usage · {period}'`
+
+**Notices, errors and timestamps**
+
 - `'Could not send your decision. Please try again.'`
+- `'No response.'`
+- `'Response ready'`
+- `'Sorry, an error occurred. Please try again.'`
 - `'This decision could not be sent. Reload the chat and try again.'`
-- `'Floating'`
-- `'Sidebar'`
-- `'Full screen'`
+- `'This turn is no longer waiting for a decision.'`
+- `'Unable to connect. Please check the configuration.'`
+- `'Your answer is ready'`
+- `'just now'`
+- `'{agent} has finished'`
+- `'{count}d ago'`
+- `'{count}h ago'`
+- `'{count}m ago'`
 
 ## Styling
 

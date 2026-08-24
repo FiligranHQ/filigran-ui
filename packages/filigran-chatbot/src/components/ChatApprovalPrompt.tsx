@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ToolApprovalDecision, ToolApprovalProposal, ToolApprovalVerdict } from '../types';
+import { translate } from '../utils';
 import { AlertTriangleIcon, CheckIcon, WrenchIcon, XCircleIcon } from './icons';
 
 interface ChatApprovalPromptProps {
@@ -117,7 +118,10 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
         <div className="min-w-0 flex items-start gap-2">
           <WrenchIcon size={13} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="min-w-0">
-            <p className="truncate font-mono text-xs text-gray-800 dark:text-white/85">{proposal.toolName}</p>
+            {/* An unnamed tool is a malformed proposal, not a tool called
+                "unknown tool": the placeholder is the package's own text and
+                therefore translated here, not in the parser. */}
+            <p className="truncate font-mono text-xs text-gray-800 dark:text-white/85">{proposal.toolName || t('unknown tool')}</p>
             {proposal.toolDescription && <p className="mt-0.5 text-[0.7rem] text-gray-600 dark:text-white/60">{proposal.toolDescription}</p>}
             {proposal.source && <p className="mt-0.5 text-[0.65rem] text-gray-400 dark:text-white/35">{proposal.source}</p>}
           </div>
@@ -324,7 +328,7 @@ export const ChatApprovalPrompt = ({ proposals, onSubmit, isSubmitting, error, t
             to count; on a single proposal it reads as a progress bar for a
             one-step process. */}
         <span className="text-[0.7rem] text-gray-500 dark:text-white/40">
-          {proposals.length > 1 ? `${decidedCount}/${proposals.length} ${t('decided')}` : ''}
+          {proposals.length > 1 ? translate(t, '{decided}/{total} decided', { decided: decidedCount, total: proposals.length }) : ''}
         </span>
         <button
           type="button"

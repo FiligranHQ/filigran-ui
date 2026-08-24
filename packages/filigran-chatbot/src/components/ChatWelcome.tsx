@@ -1,6 +1,27 @@
+import type { Translate } from '../types';
+import { translate, translateAround } from '../utils';
+
+/**
+ * The greeting, as one sentence the locale owns end to end. The agent's name is
+ * markup (it carries the accent colour), so it cannot be spliced into a string —
+ * hence the split around its slot rather than three separate fragments.
+ */
+const Greeting = ({ firstName, agentName, t }: { firstName: string; agentName?: string; t: Translate }) => {
+  if (!agentName) return <>{translate(t, 'How can I help you, {name}?', { name: firstName })}</>;
+  const { before, after, hasSlot } = translateAround(t, 'How can {agent} help you, {name}?', 'agent', { name: firstName });
+  return (
+    <>
+      {before}
+      {hasSlot && <span className="text-[var(--chat-accent)]">{agentName}</span>}
+      {after}
+    </>
+  );
+};
+
 interface ChatWelcomeProps {
   firstName: string;
   logoIcon: React.ReactNode;
+  /** Already translated by the caller — see `ChatPanel`. */
   promptSuggestions: string[];
   onPromptClick: (prompt: string) => void;
   /** Selected agent, so the screen says who is about to answer. */
@@ -8,7 +29,7 @@ interface ChatWelcomeProps {
   agentDescription?: string | null;
   /** True while agent-specific suggestions are being fetched. */
   suggestionsLoading?: boolean;
-  t: (key: string) => string;
+  t: Translate;
 }
 
 export const ChatWelcome = ({
@@ -36,19 +57,7 @@ export const ChatWelcome = ({
       className="text-xl font-medium mb-1 text-center text-gray-900 dark:text-white"
       style={{ fontFamily: '"Geologica", sans-serif', animation: 'chat-fade-in 0.35s ease-out' }}
     >
-      {agentName ? (
-        <>
-          {t('How can ')}
-          <span className="text-[var(--chat-accent)]">{agentName}</span>
-          {t(' help you, ')}
-          {firstName}?
-        </>
-      ) : (
-        <>
-          {t('How can I help you, ')}
-          {firstName}?
-        </>
-      )}
+      <Greeting firstName={firstName} agentName={agentName} t={t} />
     </h2>
 
     {agentDescription && (
@@ -76,7 +85,7 @@ export const ChatWelcome = ({
             onClick={() => onPromptClick(prompt)}
             className="w-full text-left text-[0.8125rem] text-gray-800 dark:text-white py-1.5 px-3 mb-1 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)]"
           >
-            {t(prompt)}
+            {prompt}
           </button>
         ))
       )}
