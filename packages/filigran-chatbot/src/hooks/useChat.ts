@@ -812,8 +812,8 @@ export function useChat({
         // misconfigured connection: the host puts the line meant for the user
         // in the error body, so it wins over any generic text we could write.
         const reason = await responseErrorText(res);
-        const content = reason || translate(t, 'The request failed ({status}).', { status: res.status });
-        setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content } : m)));
+        const errorLine = reason || translate(t, 'The request failed ({status}).', { status: res.status });
+        setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: errorLine } : m)));
         return;
       }
 
