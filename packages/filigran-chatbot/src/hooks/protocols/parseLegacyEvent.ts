@@ -1,3 +1,4 @@
+import { extractErrorText } from '../../utils';
 import type { ParsedAction, ProtocolContext } from './types';
 
 /**
@@ -54,7 +55,7 @@ export function parseLegacyEvent(evt: Record<string, unknown>, ctx: ProtocolCont
   }
 
   if (eventType === 'error') {
-    return { action: 'error', content: (evt.data as string) || '' };
+    return { action: 'error', content: extractErrorText(evt.data) };
   }
 
   if (eventType === 'end') {

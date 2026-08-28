@@ -787,6 +787,7 @@ Every key the package can ask for, grouped by where it appears:
 - `'No response.'`
 - `'Response ready'`
 - `'Sorry, an error occurred. Please try again.'`
+- `'The request failed ({status}).'`
 - `'This decision could not be sent. Reload the chat and try again.'`
 - `'This turn is no longer waiting for a decision.'`
 - `'Unable to connect. Please check the configuration.'`

@@ -6,6 +6,7 @@ import type {
   ToolCallTraceEntry,
   TransferChainEntry,
 } from '../../types';
+import { extractErrorText } from '../../utils';
 import type { ParsedAction, ProtocolContext } from './types';
 
 /** Wire key → the breakdown field it populates. */
@@ -171,7 +172,10 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
   const type = evt.type as string | undefined;
 
   if (type === 'error') {
-    return { action: 'error', content: (evt.content as string) || '' };
+    // `content` is not always a string: a refusal can arrive as the raw error
+    // body (`{detail: {code, message}}`), which reaches the bubble as
+    // "[object Object]" unless the text is pulled out of it here.
+    return { action: 'error', content: extractErrorText(evt.content) };
   }
 
   if (type === 'status') {

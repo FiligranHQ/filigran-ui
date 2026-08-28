@@ -451,3 +451,33 @@ export function splitFileMarkers(content: string): FileMarkerPart[] {
   if (tail) parts.push({ type: 'text', value: tail });
   return parts;
 }
+
+/**
+ * Human-readable text out of a backend error payload.
+ *
+ * Shapes differ per host: a bare string, `{message}`, or FastAPI's `{detail}` —
+ * itself either a string or a `{code, message}` object. Anything else (a
+ * validation array, an opaque object) yields `''` so the caller falls back to
+ * its own line instead of rendering `[object Object]`.
+ */
+export function extractErrorText(payload: unknown): string {
+  if (typeof payload === 'string') return payload.trim();
+  if (!payload || typeof payload !== 'object') return '';
+  const { message, detail } = payload as { message?: unknown; detail?: unknown };
+  if (typeof message === 'string' && message.trim()) return message.trim();
+  if (typeof detail === 'string' && detail.trim()) return detail.trim();
+  if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+    const nested = (detail as { message?: unknown }).message;
+    if (typeof nested === 'string' && nested.trim()) return nested.trim();
+  }
+  return '';
+}
+
+/** `extractErrorText` on a failed response's body; `''` when it is not JSON. */
+export async function responseErrorText(res: Response): Promise<string> {
+  try {
+    return extractErrorText(await res.json());
+  } catch {
+    return '';
+  }
+}

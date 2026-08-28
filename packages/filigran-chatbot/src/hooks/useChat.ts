@@ -12,6 +12,7 @@ import type {
 import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
 import { parseToolApprovalProposals } from './protocols/parseRestEvent';
+import { responseErrorText, translate } from '../utils';
 
 const STORAGE_KEY = 'filigranChatConversationId';
 const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
@@ -806,7 +807,17 @@ export function useChat({
         signal: controller.signal,
       });
 
-      if (!res.ok || !res.body) {
+      if (!res.ok) {
+        // A refused request (403 on a gated agent, a quota rejection) is not a
+        // misconfigured connection: the host puts the line meant for the user
+        // in the error body, so it wins over any generic text we could write.
+        const reason = await responseErrorText(res);
+        const content = reason || translate(t, 'The request failed ({status}).', { status: res.status });
+        setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content } : m)));
+        return;
+      }
+
+      if (!res.body) {
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, content: t('Unable to connect. Please check the configuration.') } : m)),
         );
