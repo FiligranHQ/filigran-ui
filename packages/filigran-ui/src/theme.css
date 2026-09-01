@@ -476,11 +476,11 @@
   --radius-xs: 0.125rem;
   --radius-full: 624.9375rem;
 
-  --shadow-xs: 0.125rem;
-  --shadow-sm: 0.25rem;
-  --shadow-md: 0.5rem;
-  --shadow-lg: 1rem;
-  --shadow-xl: 1.25rem;
+  --depth-xs: 0.125rem;
+  --depth-sm: 0.25rem;
+  --depth-md: 0.5rem;
+  --depth-lg: 1rem;
+  --depth-xl: 1.25rem;
 
   --font-geologica: Geologica;
   --font-ibm-plex-sans: IBM Plex Sans;
@@ -1610,10 +1610,10 @@
   --bg-elevation-highlight-layer-1: var(--gray-100);
   --bg-elevation-highlight-layer-2: var(--gray-150);
   --bg-elevation-highlight-layer-3: var(--gray-50);
-  --bg-elevation-hover-layer-0: var(--gray-50);
+  --bg-elevation-hover-layer-0: var(--gray-200);
   --bg-elevation-hover-layer-1: var(--gray-150);
   --bg-elevation-hover-layer-2: var(--gray-200);
-  --bg-elevation-hover-layer-3: var(--gray-150);
+  --bg-elevation-hover-layer-3: var(--gray-200);
   --bg-elevation-disabled-layer-0: var(--gray-200);
   --bg-elevation-disabled-layer-1: var(--gray-200);
   --bg-elevation-disabled-layer-2: var(--gray-200);
