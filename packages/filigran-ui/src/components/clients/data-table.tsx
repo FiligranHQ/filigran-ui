@@ -123,9 +123,6 @@ const defaultI18nKey: DatatableI18nKey = {
   'Reset table': 'Reset table',
 }
 
-const DATA_TABLE_HOVER_BG_CLASS = 'bg-[hsl(var(--bg-elevation-hover-layer-0)/.5)]'
-const DATA_TABLE_HOVER_ROW_CLASS = 'hover:bg-[hsl(var(--bg-elevation-hover-layer-0)/.5)]'
-
 interface TableContextProps<TData> {
   table: TableType<TData>
   t_i18n: (key: string) => string
@@ -619,11 +616,9 @@ const DefaultSelectionHeader =
   return ( <div
     className={cn(
       'flex justify-between items-center w-full pl-4',
-      DATA_TABLE_HOVER_BG_CLASS,
-      DATA_TABLE_HOVER_ROW_CLASS,
       'transition-all duration-200 ease-in-out',
       selectedCount > 0
-        ? 'py-3 h-12 mt-4 mb-s'
+        ? 'bg-[hsl(var(--bg-elevation-hover-layer-0)/.5)] py-3 h-12 mt-4 mb-s'
         : 'h-0 overflow-hidden'
     )}>
     <div>
@@ -854,7 +849,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
                 <TableRow
                   key={row.id}
                   className={cn(
-                    row.getCanSelect() && DATA_TABLE_HOVER_ROW_CLASS,
+                    row.getCanSelect() && 'hover:bg-[hsl(var(--bg-elevation-hover-layer-0)/.5)]',
                     onClickRow ? 'cursor-pointer' : '',
                     !row.getCanSelect() &&
                       'bg-text-foreground/30 cursor-auto opacity-50'
