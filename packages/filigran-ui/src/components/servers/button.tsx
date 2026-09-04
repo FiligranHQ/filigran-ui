@@ -8,21 +8,22 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-text-negative-primary hover:bg-tertiary focus-visible:ring-primary/50 disabled:bg-ds-bg-disabled disabled:text-text disabled:opacity-100',
+          'bg-primary text-text-negative-primary hover:bg-tertiary focus-visible:ring-primary/50 disabled:bg-elevation-disabled disabled:text-text-default-primary disabled:opacity-100',
         destructive:
-          'bg-destructive text-text-negative-primary hover:bg-destructive/75 focus-visible:ring-destructive/50',
+          'bg-destructive text-text-negative-primary hover:bg-feedback-error-tertiary focus-visible:ring-destructive/50 disabled:bg-elevation-disabled disabled:text-text-default-primary disabled:opacity-100',
         secondary:
-          'border-primary text-primary border bg-transparent hover:bg-hover focus-visible:ring-primary/50',
+          'border-primary text-primary border bg-transparent hover:bg-hover focus-visible:ring-primary/50 disabled:border-elevation-border-disabled disabled:text-text-default-disabled disabled:opacity-100',
         'secondary-destructive':
-          'border border-destructive/75 bg-transparent hover:bg-hover text-destructive focus-visible:ring-destructive/50',
+          'border border-destructive/75 bg-transparent hover:bg-feedback-error-secondary-transparency-20 text-destructive focus-visible:ring-destructive/50 disabled:border-elevation-border-disabled disabled:text-text-default-disabled disabled:opacity-100',
         outline:
           'border-primary focus-visible:ring-primary/50 text-primary border bg-transparent hover:bg-hover',
         'outline-primary': 'border',
         'outline-destructive':
           'border border-destructive/75 bg-transparent hover:bg-hover text-destructive focus-visible:ring-destructive/50',
-        tertiary: 'hover:bg-hover text-primary focus-visible:ring-primary/50',
+        tertiary:
+          'hover:bg-hover text-primary focus-visible:ring-primary/50 disabled:text-text-default-disabled disabled:opacity-100',
         'tertiary-destructive':
-          'hover:bg-hover text-destructive focus-visible:ring-destructive/50',
+          'hover:bg-feedback-error-secondary-transparency-20 text-destructive focus-visible:ring-destructive/50 disabled:text-text-default-disabled disabled:opacity-100',
         'tertiary-secondary':
           'hover:bg-hover text-secondary focus-visible:ring-secondary/50',
         ghost:
