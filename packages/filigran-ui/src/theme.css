@@ -332,6 +332,8 @@
   --color-elevation-border-strong-layer-3: var(
     --semantic-elevation-border-strong-layer-3
   );
+  --color-elevation-border-disabled: var(--semantic-elevation-border-disabled);
+  --color-elevation-disabled: var(--semantic-elevation-disabled);
   --color-text-default-primary: var(--semantic-text-default-primary);
   --color-text-default-secondary: var(--semantic-text-default-secondary);
   --color-text-default-disabled: var(--semantic-text-default-disabled);
@@ -385,6 +387,9 @@
   --color-feedback-error-secondary: var(--semantic-feedback-error-secondary);
   --color-feedback-error-secondary-transparency: var(
     --semantic-feedback-error-secondary-transparency
+  );
+  --color-feedback-error-secondary-transparency-20: var(
+    --semantic-feedback-error-secondary-transparency-20
   );
   --color-feedback-error-tertiary: var(--semantic-feedback-error-tertiary);
   --color-feedback-neutral-primary: var(--semantic-feedback-neutral-primary);
@@ -1373,7 +1378,9 @@
 
   --semantic-text-default-primary: var(--color-gray-900);
   --semantic-text-default-secondary: var(--color-gray-700);
-  --semantic-text-default-disabled: var(--color-grayblue-400);
+  --semantic-text-default-disabled: var(--color-gray-600);
+  --semantic-elevation-disabled: var(--color-gray-200);
+  --semantic-elevation-border-disabled: var(--color-gray-500);
   --semantic-text-negative-primary: var(--color-gray-100);
   --semantic-text-negative-secondary: var(--color-gray-300);
   --semantic-text-negative-disabled: var(--color-grayblue-150);
@@ -1564,6 +1571,9 @@
   --semantic-feedback-error-primary: var(--color-red-600);
   --semantic-feedback-error-secondary: var(--color-red-300);
   --semantic-feedback-error-secondary-transparency: hsl(var(--red-300) / 0.3);
+  --semantic-feedback-error-secondary-transparency-20: hsl(
+    var(--red-300) / 0.2
+  );
   --semantic-feedback-error-tertiary: var(--color-red-700);
   --semantic-feedback-neutral-primary: var(--color-gray-600);
   --semantic-feedback-neutral-secondary: var(--color-gray-400);
@@ -1823,6 +1833,8 @@
   --color-elevation-border-strong-layer-3: var(
     --semantic-elevation-border-strong-layer-3
   );
+  --color-elevation-border-disabled: var(--semantic-elevation-border-disabled);
+  --color-elevation-disabled: var(--semantic-elevation-disabled);
   --color-text-default-primary: var(--semantic-text-default-primary);
   --color-text-default-secondary: var(--semantic-text-default-secondary);
   --color-text-default-disabled: var(--semantic-text-default-disabled);
@@ -1985,7 +1997,9 @@ body[data-theme='Dark'] {
 
   --semantic-text-default-primary: var(--color-gray-100);
   --semantic-text-default-secondary: var(--color-gray-300);
-  --semantic-text-default-disabled: var(--color-grayblue-150);
+  --semantic-text-default-disabled: var(--color-gray-400);
+  --semantic-elevation-disabled: var(--color-gray-800);
+  --semantic-elevation-border-disabled: var(--color-gray-600);
   --semantic-text-negative-primary: var(--color-gray-900);
   --semantic-text-negative-secondary: var(--color-gray-700);
   --semantic-text-negative-disabled: var(--color-grayblue-400);
@@ -2027,6 +2041,9 @@ body[data-theme='Dark'] {
   --semantic-feedback-error-primary: var(--color-red-400);
   --semantic-feedback-error-secondary: var(--color-red-700);
   --semantic-feedback-error-secondary-transparency: hsl(var(--red-700) / 0.3);
+  --semantic-feedback-error-secondary-transparency-20: hsl(
+    var(--red-700) / 0.2
+  );
   --semantic-feedback-error-tertiary: var(--color-red-300);
   --semantic-feedback-neutral-primary: var(--color-gray-400);
   --semantic-feedback-neutral-secondary: var(--color-gray-600);
@@ -2298,6 +2315,8 @@ body[data-theme='Dark'] {
   --color-elevation-border-strong-layer-3: var(
     --semantic-elevation-border-strong-layer-3
   );
+  --color-elevation-border-disabled: var(--semantic-elevation-border-disabled);
+  --color-elevation-disabled: var(--semantic-elevation-disabled);
   --color-text-default-primary: var(--semantic-text-default-primary);
   --color-text-default-secondary: var(--semantic-text-default-secondary);
   --color-text-default-disabled: var(--semantic-text-default-disabled);
