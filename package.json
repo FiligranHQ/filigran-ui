@@ -37,6 +37,6 @@
     "minimatch": "10.2.5",
     "postcss-svgo": "7.1.1",
     "serialize-javascript": "7.0.5",
-    "svgo": "4.0.1"
+    "svgo": "4.0.2"
   }
 }
