@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AgentStatusState, IconProps } from '../types';
+import type { AgentStatusState, IconProps, Translate } from '../types';
 import {
+  AlertTriangleIcon,
   BrainIcon,
   DatabaseIcon,
   ExternalLinkIcon,
@@ -12,12 +13,13 @@ import {
   UserPlusIcon,
   WrenchIcon,
 } from './icons';
+import { translate } from '../utils';
 import { ChatWaitingGame } from './ChatWaitingGame';
 
 interface ChatThinkingProps {
   agentStatus: AgentStatusState | null;
   logoIcon?: React.ReactNode;
-  t: (key: string) => string;
+  t: Translate;
   /** Host-level override for the waiting mini-game / dynamic messages. */
   miniGameEnabled?: boolean;
 }
@@ -30,7 +32,24 @@ interface StatusVisual {
   showDots: boolean;
 }
 
-function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: string) => string): StatusVisual {
+/**
+ * Whole-sentence keys, one per plural branch: a lookup-only `t` cannot select a
+ * plural form, so the branch is chosen here and the locale translates the
+ * finished sentence — including where the count sits in it.
+ */
+function delegatingLabel(count: number, t: Translate): string {
+  return count > 1 ? translate(t, 'Delegating {count} tasks…', { count }) : t('Delegating one task…');
+}
+
+function pollingLabel(count: number, t: Translate): string {
+  return count > 1 ? translate(t, 'Waiting for {count} background tasks…', { count }) : t('Waiting for one background task…');
+}
+
+function collectingLabel(count: number, t: Translate): string {
+  return count > 1 ? translate(t, 'Collecting results from {count} tasks…', { count }) : t('Collecting results from one task…');
+}
+
+function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate): StatusVisual {
   if (!agentStatus) {
     return { label: t('Thinking...'), StatusIcon: BrainIcon, showDots: false };
   }
@@ -42,18 +61,15 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
       // Delegation tools have dedicated statuses
       if (lower.some((n) => n === 'spawn_background_task')) {
         const count = rawNames.filter((n) => n === 'spawn_background_task').length;
-        const label = count > 1 ? `${t('Delegating')} ${count} ${t('tasks')}…` : `${t('Delegating task')}…`;
-        return { label, StatusIcon: UserPlusIcon, showDots: false };
+        return { label: delegatingLabel(count, t), StatusIcon: UserPlusIcon, showDots: false };
       }
       if (lower.some((n) => n === 'check_task_status')) {
         const count = rawNames.filter((n) => n === 'check_task_status').length;
-        const target = count > 1 ? `${count} ${t('background tasks')}` : t('background task');
-        return { label: `${t('Waiting for')} ${target}…`, StatusIcon: SparklesIcon, showDots: false };
+        return { label: pollingLabel(count, t), StatusIcon: SparklesIcon, showDots: false };
       }
       if (lower.some((n) => n === 'get_task_result')) {
         const count = rawNames.filter((n) => n === 'get_task_result').length;
-        const from = count > 1 ? `${count} ${t('tasks')}` : t('task');
-        return { label: `${t('Collecting results from')} ${from}…`, StatusIcon: SparklesIcon, showDots: false };
+        return { label: collectingLabel(count, t), StatusIcon: SparklesIcon, showDots: false };
       }
 
       let StatusIcon: IconComponent = WrenchIcon;
@@ -72,12 +88,18 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
       if (rawNames.length > 0) {
         const display = rawNames.map((n) => n.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
         const unique = Array.from(new Set(display));
-        label = unique.length === 1 ? `${unique[0]}…` : `${unique[0]} (+${unique.length - 1} more)…`;
+        label = unique.length === 1 ? `${unique[0]}…` : translate(t, '{tool} (+{count} more)…', { tool: unique[0], count: unique.length - 1 });
       } else {
         label = t('Using tools…');
       }
       return { label, StatusIcon, showDots: false };
     }
+    case 'awaiting_approval':
+      // Not progress: the turn has stopped and the stream is held open while a
+      // person decides. Shown only when the prompt itself is not rendered (a
+      // host wiring `ChatMessages` without a decision handler) — otherwise the
+      // prompt replaces this bubble entirely.
+      return { label: t('Waiting for your approval…'), StatusIcon: AlertTriangleIcon, showDots: false };
     case 'analyzing':
       return { label: t('Analyzing results…'), StatusIcon: SparklesIcon, showDots: false };
     case 'steering':
@@ -85,30 +107,24 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: (key: stri
     case 'composing':
       return { label: t('Composing answer…'), StatusIcon: BrainIcon, showDots: true };
     case 'consulting': {
-      const consultName = agentStatus.tools?.[0] ?? 'agent';
-      return { label: `${t('Consulting')} ${consultName}…`, StatusIcon: UserPlusIcon, showDots: false };
+      const consultName = agentStatus.tools?.[0] ?? t('the agent');
+      return { label: translate(t, 'Consulting {agent}…', { agent: consultName }), StatusIcon: UserPlusIcon, showDots: false };
     }
     case 'delegating': {
       const count = agentStatus.tools?.filter((n) => n === 'spawn_background_task').length ?? 0;
-      return {
-        label: count > 1 ? `${t('Delegating')} ${count} ${t('tasks')}…` : `${t('Delegating task')}…`,
-        StatusIcon: UserPlusIcon,
-        showDots: false,
-      };
+      return { label: delegatingLabel(count, t), StatusIcon: UserPlusIcon, showDots: false };
     }
     case 'polling': {
       const checkCount = agentStatus.tools?.filter((n) => n === 'check_task_status').length ?? 0;
-      const target = checkCount > 1 ? `${checkCount} ${t('background tasks')}` : t('background task');
-      return { label: `${t('Waiting for')} ${target}…`, StatusIcon: SparklesIcon, showDots: false };
+      return { label: pollingLabel(checkCount, t), StatusIcon: SparklesIcon, showDots: false };
     }
     case 'collecting': {
       const fetchCount = agentStatus.tools?.filter((n) => n === 'get_task_result').length ?? 0;
-      const from = fetchCount > 1 ? `${fetchCount} ${t('tasks')}` : t('task');
-      return { label: `${t('Collecting results from')} ${from}…`, StatusIcon: SparklesIcon, showDots: false };
+      return { label: collectingLabel(fetchCount, t), StatusIcon: SparklesIcon, showDots: false };
     }
     case 'transferring': {
-      const targetName = agentStatus.tools?.[0] ?? 'agent';
-      return { label: `${t('Transferring to')} ${targetName}…`, StatusIcon: ExternalLinkIcon, showDots: false };
+      const targetName = agentStatus.tools?.[0] ?? t('the agent');
+      return { label: translate(t, 'Transferring to {agent}…', { agent: targetName }), StatusIcon: ExternalLinkIcon, showDots: false };
     }
     case 'thinking':
     default:
@@ -240,7 +256,27 @@ function useStalled(signal: number, delayMs: number, enabled: boolean): boolean 
 export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true }: ChatThinkingProps) => {
   const { label, StatusIcon, showDots } = resolveStatusVisual(agentStatus, t);
   const thinkingContent = agentStatus?.thinkingContent;
-  const elapsedS = agentStatus?.elapsedS;
+
+  // Tick the elapsed counter every second. The backend only reports a fresh
+  // value once every ~10s (`tool_heartbeat`), so rendering that integer
+  // directly makes the timer sit still and then jump ~10s at a time. Each
+  // heartbeat re-anchors `elapsedStartMs` (the instant elapsed was zero); the
+  // displayed seconds are derived from that anchor plus a local 1s ticker, so
+  // the number moves smoothly and self-corrects on every beat. The interval
+  // only runs while an anchor is present, and this state is local to the
+  // indicator so the tick never re-renders the surrounding message list.
+  const elapsedStartMs = agentStatus?.elapsedStartMs;
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (elapsedStartMs == null) return;
+    setNowMs(Date.now());
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [elapsedStartMs]);
+
+  // Fall back to the raw heartbeat value for backends/protocols that report
+  // `elapsedS` without an anchor.
+  const elapsedS = elapsedStartMs != null ? Math.max(0, (nowMs - elapsedStartMs) / 1000) : agentStatus?.elapsedS;
   const showElapsed = typeof elapsedS === 'number' && elapsedS >= ELAPSED_DISPLAY_THRESHOLD_S;
   // Show the waiting game when reasoning is absent or has stalled for 5s; flip
   // back to the reasoning window the moment new reasoning text resumes (the

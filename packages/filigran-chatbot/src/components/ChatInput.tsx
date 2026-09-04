@@ -1,6 +1,10 @@
 import { useRef, type KeyboardEvent } from 'react';
-import type { ChatFile, ChatMode } from '../types';
-import { AttachFileIcon, FileIcon, SendIcon, StopCircleIcon } from './icons';
+import type { ChatContextUsage, ChatFile, ChatMode, ChatPromptTemplate, ChatQuotaStatus } from '../types';
+import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
+import { useDictation } from '../hooks/useDictation';
+import { ContextUsageIndicator } from './ContextUsageIndicator';
+import { PromptPicker } from './PromptPicker';
+import { QuotaIndicator } from './QuotaIndicator';
 import { Tooltip } from './Tooltip';
 
 interface ChatInputProps {
@@ -23,6 +27,14 @@ interface ChatInputProps {
   t: (key: string) => string;
   mode?: ChatMode;
   separatorColor?: string;
+  /** Saved prompt templates; omitted entirely when the host serves none. */
+  prompts?: ChatPromptTemplate[] | null;
+  /** Agentic quota headroom; omitted entirely when the host serves none. */
+  quota?: ChatQuotaStatus | null;
+  /** Context-window occupancy; omitted until the backend reports it. */
+  contextUsage?: ChatContextUsage | null;
+  /** Host-supplied controls appended to the toolbar (see `composerToolbar`). */
+  composerToolbar?: React.ReactNode;
 }
 
 export const ChatInput = ({
@@ -39,6 +51,10 @@ export const ChatInput = ({
   t,
   mode,
   separatorColor,
+  prompts,
+  quota,
+  contextUsage,
+  composerToolbar,
 }: ChatInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -46,6 +62,9 @@ export const ChatInput = ({
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      // Leaving the mic live after a send would splice the next words into a
+      // composer the user believes they just emptied.
+      dictation.stop();
       onSend();
     }
     if (e.key === 'Escape' && isLoading) {
@@ -60,6 +79,23 @@ export const ChatInput = ({
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   };
+
+  // Append rather than replace: a user who has already started typing must not
+  // lose it to a template pick. The blank line keeps the two blocks distinct.
+  const handlePromptPick = (content: string) => {
+    onInputChange(inputValue.trim() ? `${inputValue.trimEnd()}\n\n${content}` : content);
+    textareaRef.current?.focus();
+  };
+
+  // Dictation appends each finalised phrase, so speaking continues a draft
+  // rather than replacing it — same contract as picking a template.
+  const dictation = useDictation((finalText) => {
+    onInputChange(inputValue.trim() ? `${inputValue.trimEnd()} ${finalText}` : finalText);
+  });
+
+  // The toolbar row costs vertical space, so it only exists when something
+  // actually occupies it.
+  const hasToolbar = Boolean((prompts && prompts.length > 0) || quota || contextUsage || composerToolbar || dictation.supported);
 
   const isFileManagementEnabled = Boolean(onFileAdd && onFileRemove && onPaste);
   const hasContent = inputValue.trim() || (isFileManagementEnabled && attachedFiles.length > 0);
@@ -177,6 +213,43 @@ export const ChatInput = ({
           </button>
         </Tooltip>
       </div>
+
+      {hasToolbar && (
+        <div className="flex items-center gap-1.5 mt-1.5 px-0.5">
+          {prompts && prompts.length > 0 && <PromptPicker prompts={prompts} onPick={handlePromptPick} t={t} />}
+          {dictation.supported && (
+            <Tooltip title={dictation.listening ? t('Stop dictation') : t('Dictate a message')}>
+              <button
+                type="button"
+                onClick={dictation.toggle}
+                aria-label={dictation.listening ? t('Stop dictation') : t('Dictate a message')}
+                aria-pressed={dictation.listening}
+                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+                  dictation.listening
+                    ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20'
+                    : 'text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10'
+                }`}
+              >
+                {dictation.listening ? <MicOffIcon size={15} /> : <MicIcon size={15} />}
+              </button>
+            </Tooltip>
+          )}
+          {dictation.interim && (
+            <span className="text-[0.7rem] italic text-gray-400 dark:text-white/30 truncate max-w-[45%]">{dictation.interim}</span>
+          )}
+          {composerToolbar}
+          {/* Status readouts sit last and pushed right, together: they are not
+              controls, so neither should ever land between two clickable
+              things. Context before quota — "how full is this chat" is the one
+              the user can still act on by starting a new one. */}
+          {(contextUsage || quota) && (
+            <span className="ml-auto flex items-center gap-2.5">
+              {contextUsage && <ContextUsageIndicator usage={contextUsage} t={t} />}
+              {quota && <QuotaIndicator quota={quota} t={t} />}
+            </span>
+          )}
+        </div>
+      )}
 
       <p className="text-center text-[0.65rem] text-gray-400 dark:text-white/30 mt-1.5 opacity-70">{footerText}</p>
     </div>

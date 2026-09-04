@@ -2110,6 +2110,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@eslint/js@npm:10.0.1":
+  version: 10.0.1
+  resolution: "@eslint/js@npm:10.0.1"
+  peerDependencies:
+    eslint: ^10.0.0
+  peerDependenciesMeta:
+    eslint:
+      optional: true
+  checksum: 10c0/9f3fcaf71ba7fdf65d82e8faad6ecfe97e11801cc3c362b306a88ea1ed1344ae0d35330dddb0e8ad18f010f6687a70b75491b9e01c8af57acd7987cee6b3ec6c
+  languageName: node
+  linkType: hard
+
 "@eslint/object-schema@npm:^3.0.3":
   version: 3.0.3
   resolution: "@eslint/object-schema@npm:3.0.3"
@@ -2139,7 +2151,9 @@ __metadata:
   resolution: "@filigran/chat-playground@workspace:projects/filigran-chat-playground"
   dependencies:
     "@filigran/chatbot": "workspace:*"
+    "@tailwindcss/postcss": "npm:4.2.2"
     "@tailwindcss/typography": "npm:0.5.19"
+    "@types/node": "npm:22.19.15"
     "@types/react": "npm:19.2.14"
     "@types/react-dom": "npm:19.2.3"
     "@vitejs/plugin-react": "npm:6.0.1"
@@ -2148,6 +2162,7 @@ __metadata:
     react: "npm:19.2.4"
     react-dom: "npm:19.2.4"
     react-markdown: "npm:10.1.0"
+    remark-breaks: "npm:4.0.0"
     remark-gfm: "npm:4.0.1"
     tailwindcss: "npm:4.2.2"
     typescript: "npm:5.9.3"
@@ -2159,6 +2174,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@filigran/chatbot@workspace:packages/filigran-chatbot"
   dependencies:
+    "@eslint/js": "npm:10.0.1"
     "@rollup/plugin-commonjs": "npm:29.0.2"
     "@rollup/plugin-json": "npm:6.1.0"
     "@rollup/plugin-node-resolve": "npm:16.0.3"
@@ -2176,6 +2192,7 @@ __metadata:
     react: "npm:19.2.4"
     react-dom: "npm:19.2.4"
     react-markdown: "npm:10.1.0"
+    remark-breaks: "npm:4.0.0"
     remark-gfm: "npm:4.0.1"
     rollup: "npm:4.60.1"
     rollup-plugin-dts: "npm:6.4.1"
@@ -2191,6 +2208,7 @@ __metadata:
     react: ">=18"
     react-dom: ">=18"
     react-markdown: ">=10"
+    remark-breaks: ">=4"
     remark-gfm: ">=4"
   languageName: unknown
   linkType: soft
@@ -11249,6 +11267,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mdast-util-newline-to-break@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "mdast-util-newline-to-break@npm:2.0.0"
+  dependencies:
+    "@types/mdast": "npm:^4.0.0"
+    mdast-util-find-and-replace: "npm:^3.0.0"
+  checksum: 10c0/756a5660b0a821e0d6d6a0b2d9b13ac32e41cc028c485a91bccf6300977e2557236c6cc93dbd55c68b785f1ed6eae69209a4ffe182533cd1cdfda369021bebd2
+  languageName: node
+  linkType: hard
+
 "mdast-util-phrasing@npm:^4.0.0":
   version: 4.1.0
   resolution: "mdast-util-phrasing@npm:4.1.0"
@@ -14471,6 +14499,17 @@ __metadata:
     rehype-stringify: "npm:^10.0.0"
     unified: "npm:^11.0.0"
   checksum: 10c0/13d82086b673b3ce1fddb54cc8d30be16bde83fb62f1507f0af06070c94b85d07c3780fa994357bad2c9d51b84e4108ff661677b71d187e4f2167cab22d84363
+  languageName: node
+  linkType: hard
+
+"remark-breaks@npm:4.0.0":
+  version: 4.0.0
+  resolution: "remark-breaks@npm:4.0.0"
+  dependencies:
+    "@types/mdast": "npm:^4.0.0"
+    mdast-util-newline-to-break: "npm:^2.0.0"
+    unified: "npm:^11.0.0"
+  checksum: 10c0/d7b319a7993b54c5d574e9255080c5de68cfa24f993873b0ee296af13f478521c41d4b7ae0fc14b4607ea70c8f6967e998ab7a467de13139141e66a1a34cb6be
   languageName: node
   linkType: hard
 
