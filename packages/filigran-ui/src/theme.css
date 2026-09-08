@@ -638,11 +638,7 @@
     var(--color-filigran-ia-secondary) 0%,
     var(--color-filigran-ia-main) 100%
   );
-  --gradient-background: linear-gradient(
-    135deg,
-    var(--color-elevation-bg) 0%,
-    var(--color-elevation-bg) 100%
-  );
+  --gradient-background: var(--gradient-layer-0-white);
   --gradient-layer-0-layer-1: linear-gradient(
     100.35deg,
     var(--color-elevation-background-layer-0) 0%,
@@ -1186,13 +1182,13 @@
   --text-light: 231 5% 30%;
   --text-disabled: 219 11% 48%;
 
-  --gradient-background: linear-gradient(100.35deg, #ececf2 0%, #f7f7f7 100%);
+  --gradient-background: var(--gradient-layer-0);
   --gradient-layer-0-layer-1: linear-gradient(
     100.35deg,
     var(--color-elevation-background-layer-0) 0%,
     var(--color-elevation-background-layer-1) 100%
   );
-  --gradient-layer-0-white: linear-gradient(
+  --gradient-layer-0: linear-gradient(
     100.35deg,
     var(--color-elevation-background-layer-0) 0%,
     var(--color-elevation-background-layer-0-gradient) 100%
@@ -2224,7 +2220,7 @@ body[data-theme='Dark'] {
   --entity-victimology: 265.21 100% 76.67%;
   --entity-locations: 186.7 94.95% 38.82%;
 
-  --gradient-background: linear-gradient(100.35deg, #070d19 0%, #08101d 100%);
+  --gradient-background: var(--gradient-layer-0);
 
   --gradient-ia: linear-gradient(90deg, #d6c2fa 0.67%, #b286ff 100.67%);
   --gradient-focus: linear-gradient(90deg, #0fbcff -3.68%, #00f1bd 106.62%);
