@@ -7,6 +7,7 @@ export type FieldConfigItem = {
   inputProps?: React.InputHTMLAttributes<HTMLInputElement> &
     React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
       showLabel?: boolean;
+      popoverContentClassName?: string;
     };
   label?: string;
   fieldType?:

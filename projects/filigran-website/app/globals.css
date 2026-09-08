@@ -1,26 +1,27 @@
-@reference '@filigran/ui/index.css';
-@import "@filigran/ui/theme.css";
-@import "tw-animate-css";
-@import "tailwindcss";
+@import 'tailwindcss';
+@import '../../../packages/filigran-ui/src/theme.css';
+@import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
-@source "../../../packages/filigran-ui/src";
+
+@source '../../../packages/filigran-ui/**/*.{js,ts,jsx,tsx}';
+
 
 @layer base {
-  * {
-    font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
-    letter-spacing: var(--tracking-default, 0.0075em);
+  html {
+    font-size: 100%;
+    @apply bg-background;
   }
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: var(--font-geologica), system-ui, sans-serif;
+  * {
+    @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
+    font-size: var(--text-content-body-base);
+    font-weight: var(--font-weight-content-body-base);
+    background: var(--gradient-background);
+    color: var(--color-text-default-primary);
   }
+
 }
 
 /* Keep dark mode class-driven in Tailwind v4 CSS-first mode. */

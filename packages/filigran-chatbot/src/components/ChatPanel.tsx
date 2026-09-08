@@ -1,27 +1,35 @@
-import { type FunctionComponent, useCallback, useEffect, useRef, useState } from 'react';
-import type { ChatAttachment, ChatMessage, ChatPanelProps } from '../types';
+import { type FunctionComponent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ChatAttachment, ChatMessage, ChatPanelProps, Translate } from '../types';
 import { hexAlpha, identity } from '../utils';
-import { parseAttachments, parseToolCallTrace, parseTransferChain } from '../hooks/protocols/parseRestEvent';
+import { parseAttachments, parseContextUsage, parseToolCallTrace, parseTransferChain } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
 import { useSidebarResize } from '../hooks/useSidebarResize';
 import { useAwayCompletionNotice } from '../hooks/useAwayCompletionNotice';
+import { useComposerExtras } from '../hooks/useComposerExtras';
+import { useAgentSuggestions } from '../hooks/useAgentSuggestions';
 import { DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
 import { ChatWelcome } from './ChatWelcome';
+import { ConversationSidebar } from './ConversationSidebar';
 
 const FLOATING_WIDTH = 380;
 const FLOATING_HEIGHT = 560;
 const SIDEBAR_GAP = 6;
 
-const DEFAULT_SUGGESTIONS = [
-  'Help me create a new simulation scenario',
-  'What are the latest attack patterns?',
-  'How do I configure detection rules?',
-  'Summarize my recent findings',
+/**
+ * Fallback suggestions, translated where they are written so extraction sees
+ * the keys — the host's own list and the backend's are translated too (they may
+ * be keys), but only these belong to the package.
+ */
+const defaultSuggestions = (t: Translate) => [
+  t('Help me create a new simulation scenario'),
+  t('What are the latest attack patterns?'),
+  t('How do I configure detection rules?'),
+  t('Summarize my recent findings'),
 ];
 
 export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
@@ -36,7 +44,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   t = identity,
   accentColor = '#7b5cff',
   logoIcon,
-  promptSuggestions = DEFAULT_SUGGESTIONS,
+  promptSuggestions,
   draftBorderColor,
   resizable = false,
   onWidthChange,
@@ -54,10 +62,14 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   miniGameEnabled = true,
   notifyOnComplete = true,
   onTaskComplete,
+  onMessageFeedback,
+  disableImagePreviews = false,
+  contextUsageEnabled = true,
+  composerToolbar,
 }) => {
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
-  const { agents, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({
+  const { agents, agentsLoading, agentsError, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({
     apiBaseUrl,
     apiEndpoints,
     backendType,
@@ -72,8 +84,15 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     agentStatus,
     attachedFiles,
     conversationId,
+    contextUsage,
     transferredAgent,
     canSteer,
+    pendingApprovals,
+    isSubmittingApproval,
+    approvalError,
+    submitApprovalDecisions,
+    isResumingAfterDecision,
+    historyReloadNonce,
     historyLoadedRef,
     conversationIdRef,
     handleFileAdd,
@@ -83,6 +102,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     handleStopGenerating,
     setAttachedFiles,
     setMessages,
+    setContextUsage,
     updateConversationId,
     handleSwitchConversation,
   } = useChat({
@@ -97,13 +117,65 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     maxTotalSize,
   });
 
-  const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation } = useConversations({
+  const { suggestions: agentSuggestions, loading: suggestionsLoading } = useAgentSuggestions({
+    apiBaseUrl,
+    apiEndpoints,
+    backendType,
+    requestHeaders,
+    agentSlug: selectedAgent?.slug,
+  });
+
+  /**
+   * Suggestions shown on the welcome screen, resolved to final text here rather
+   * than in `ChatWelcome`: the backend's and the host's lists still go through
+   * `t` (a host may well pass keys), while the package's own fallback is
+   * translated at its definition so the keys stay extractable.
+   */
+  const suggestions = useMemo(
+    () => (agentSuggestions ?? promptSuggestions)?.map((s) => t(s)) ?? defaultSuggestions(t),
+    [agentSuggestions, promptSuggestions, t],
+  );
+
+  const { prompts, quota, refreshQuota } = useComposerExtras({
+    apiBaseUrl,
+    apiEndpoints,
+    backendType,
+    requestHeaders,
+  });
+
+  const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation } = useConversations({
     apiBaseUrl,
     apiEndpoints,
     backendType,
     requestHeaders,
   });
   const [historyMenuOpen, setHistoryMenuOpen] = useState(false);
+
+  // Fullscreen shows the conversation list permanently, so it has to be
+  // fetched on entry rather than lazily when a menu opens. Kept collapsible:
+  // fullscreen is also the mode people use to read a long answer.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const showConversationSidebar = mode === 'fullscreen' && historyEnabled;
+
+  // Re-read on entry AND whenever the active conversation changes, so a chat
+  // created by the first send appears in the list. The header menu could fetch
+  // lazily on open; a permanent list has no such moment, and a stale sidebar
+  // that never shows the conversation you are in is worse than no sidebar.
+  useEffect(() => {
+    if (showConversationSidebar) void refreshConversations();
+  }, [showConversationSidebar, conversationId, refreshConversations]);
+
+  // A finished turn has consumed allowance and may have retitled the chat.
+  const wasLoadingRef = useRef(false);
+  useEffect(() => {
+    if (wasLoadingRef.current && !isLoading) {
+      refreshQuota();
+      // The backend titles a conversation from its first message, so the row
+      // stays "New conversation" until the turn is read back.
+      if (showConversationSidebar) void refreshConversations();
+    }
+    wasLoadingRef.current = isLoading;
+  }, [isLoading, refreshQuota, showConversationSidebar, refreshConversations]);
 
   const handleHistoryMenuToggle = () => {
     // Computed from the committed state in the event handler — NOT inside the
@@ -172,9 +244,21 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     };
   }, [pushContentSelector, mode, sidebarWidth, defaultWidth, resizable, isResizing]);
 
-  const resolvedLogo = logoIcon ?? <DefaultLogoIcon size={24} />;
+  // Stable across renders so the memoized message rows (which take it as a
+  // prop) aren't invalidated on every streamed frame.
+  const resolvedLogo = useMemo(() => logoIcon ?? <DefaultLogoIcon size={24} />, [logoIcon]);
   const firstName = user.firstName;
-  const agentName = transferredAgent?.name || selectedAgent?.name || 'Assistant';
+  /**
+   * The agent a *restored* conversation belongs to, as the backend reports it.
+   *
+   * Sits between the live transfer and the menu selection on purpose. Reopening
+   * a past thread used to relabel it — and its new replies — with whichever
+   * agent was selected, while the backend went on routing the conversation to
+   * its own stored agent. The label named someone who had not spoken. This is
+   * the same agent that will answer, so the two now agree.
+   */
+  const [conversationAgentName, setConversationAgentName] = useState<string | null>(null);
+  const agentName = transferredAgent?.name || conversationAgentName || selectedAgent?.name || t('Assistant');
 
   // "Viewing the chat" must mean the panel is on screen in the active tab —
   // NOT that an element inside it currently holds focus. In sidebar (and
@@ -232,10 +316,19 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   const downloadPathProvided = apiEndpoints?.download !== null && apiEndpoints?.download !== undefined;
   const canDownload = backendType === 'rest' && apiEndpoints?.download !== null && (!apiEndpoints?.singleEndpoint || downloadPathProvided);
 
+  // The host-proxied URL of an attachment. Shared by the download action and
+  // the inline image preview so both resolve against the same proxy route.
+  const resolveAttachmentUrl = useCallback(
+    (att: ChatAttachment) => {
+      const base = apiEndpoints?.download ?? '/chat/files';
+      return `${apiBaseUrl}${base}/${encodeURIComponent(att.fileId)}/download`;
+    },
+    [apiBaseUrl, apiEndpoints],
+  );
+
   const handleDownloadFile = useCallback(
     async (att: ChatAttachment) => {
-      const base = apiEndpoints?.download ?? '/chat/files';
-      const url = `${apiBaseUrl}${base}/${encodeURIComponent(att.fileId)}/download`;
+      const url = resolveAttachmentUrl(att);
       try {
         const res = await fetch(url, {
           method: 'GET',
@@ -260,7 +353,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         onDownloadError?.(err, att);
       }
     },
-    [apiBaseUrl, apiEndpoints, requestHeaders, onDownloadError],
+    [resolveAttachmentUrl, requestHeaders, onDownloadError],
   );
 
   const cssVars = {
@@ -292,7 +385,14 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   useEffect(() => {
     // Skip session history if disabled, using single endpoint mode, or non-REST backend
     if (apiEndpoints?.sessions === null || apiEndpoints?.singleEndpoint || backendType === 'legacy' || backendType === 'ag-ui') return;
-    if (!conversationId || historyLoadedRef.current || !selectedAgent) return;
+    // No conversation means a fresh chat — "New conversation", or an agent
+    // switch, both of which null the id. Drop the restored thread's agent with
+    // it, or the new chat would keep wearing the old one's name.
+    if (!conversationId) {
+      setConversationAgentName(null);
+      return;
+    }
+    if (historyLoadedRef.current || !selectedAgent) return;
     historyLoadedRef.current = true;
     const sessionsUrl = `${apiBaseUrl}${apiEndpoints?.sessions ?? '/chat/sessions'}`;
 
@@ -343,6 +443,12 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         if (typeof data.conversation_id === 'string' && data.conversation_id && data.conversation_id !== requestedConversationId) {
           updateConversationId(data.conversation_id);
         }
+        // Null is meaningful and different from absent: it says the backend
+        // knows this conversation has no agent (one predating per-conversation
+        // routing), where a missing key means an older backend that cannot
+        // tell us. Both land on the selected-agent fallback, but only the
+        // first is a deliberate answer.
+        setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
         if (!data.messages?.length) return;
         const restored: ChatMessage[] = data.messages.map(
           (
@@ -357,6 +463,10 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
               tool_call_trace?: unknown;
               transfer_chain?: unknown;
               is_truncated?: unknown;
+              agent_name?: unknown;
+              context_tokens?: unknown;
+              context_window?: unknown;
+              context_breakdown?: unknown;
             },
             i: number,
           ) => ({
@@ -364,6 +474,11 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
             role: m.role as 'user' | 'assistant',
             content: m.content,
             timestamp: new Date(),
+            // Per-message attribution when the backend keeps it — the only way
+            // a thread that changed hands mid-way reads correctly. Nothing
+            // records it today, so this is normally undefined and the
+            // conversation's agent applies to the whole thread.
+            agentName: typeof m.agent_name === 'string' ? m.agent_name : undefined,
             // Re-surface downloadable file chips on conversation restore for
             // both roles: agent-generated deliverables on assistant messages
             // (the [[FILE:…]] markers in content are stripped at render time by
@@ -384,6 +499,17 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           }),
         );
         setMessages(restored);
+        // The context gauge is conversation state, not per-message: the NEWEST
+        // entry that carries a reading is the current occupancy. Scanned from
+        // the end so a turn that predates the field (or a user message) falls
+        // through to the last one that has it, rather than blanking the gauge.
+        for (let i = data.messages.length - 1; i >= 0; i -= 1) {
+          const usage = parseContextUsage(data.messages[i] as Record<string, unknown>);
+          if (usage) {
+            setContextUsage(usage);
+            break;
+          }
+        }
       })
       .catch(() => {
         if (isStale()) return;
@@ -395,11 +521,15 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     apiBaseUrl,
     apiEndpoints,
     backendType,
+    // Re-runs the restore when the hook asks for one — the only way a turn
+    // resumed without a stream can ever show its answer.
+    historyReloadNonce,
     historyLoadedRef,
     conversationIdRef,
     isMountedRef,
     requestHeaders,
     setMessages,
+    setContextUsage,
     updateConversationId,
   ]);
 
@@ -444,6 +574,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         mode={mode}
         agentName={agentName}
         agents={agents}
+        agentsLoading={agentsLoading}
+        agentsError={agentsError}
         selectedAgent={selectedAgent}
         transferredFrom={transferredAgent ? selectedAgent?.name : undefined}
         agentMenuOpen={agentMenuOpen}
@@ -458,7 +590,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         onClose={onClose}
         logoIcon={resolvedLogo}
         agentDashboardUrl={agentDashboardUrl}
-        historyEnabled={historyEnabled}
+        historyEnabled={historyEnabled && !showConversationSidebar}
         historyMenuOpen={historyMenuOpen}
         onHistoryMenuToggle={handleHistoryMenuToggle}
         onHistoryMenuClose={() => setHistoryMenuOpen(false)}
@@ -469,8 +601,40 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         onDeleteConversation={(id) => void handleDeleteConversation(id)}
         t={t}
       />
+      {/* Fullscreen puts the conversation list beside the thread. The header
+          stays full width above both: it carries the agent picker, the mode
+          switcher and close, which belong to the panel rather than to either
+          column. `min-h-0` lets the thread scroll instead of growing the row. */}
+      <div className={showConversationSidebar ? 'flex flex-1 min-h-0' : 'contents'}>
+        {showConversationSidebar && (
+          <ConversationSidebar
+            conversations={conversations}
+            loading={conversationsLoading}
+            activeConversationId={conversationId}
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
+            onSelect={handleSelectConversation}
+            onDelete={(id) => void handleDeleteConversation(id)}
+            onRename={(id, title) => void renameConversation(id, title)}
+            onNewChat={handleNewChat}
+            t={t}
+          />
+        )}
+        <div className={showConversationSidebar ? 'flex flex-1 flex-col min-w-0' : 'contents'}>
       {messages.length === 0 ? (
-        <ChatWelcome firstName={firstName} logoIcon={resolvedLogo} promptSuggestions={promptSuggestions} onPromptClick={setInputValue} t={t} />
+        <ChatWelcome
+          firstName={firstName}
+          logoIcon={resolvedLogo}
+          // The agent's own suggestions when the backend serves them, the
+          // host's list otherwise, this package's list when there is neither —
+          // never an empty section.
+          promptSuggestions={suggestions}
+          suggestionsLoading={suggestionsLoading}
+          agentName={selectedAgent?.name}
+          agentDescription={selectedAgent?.description}
+          onPromptClick={setInputValue}
+          t={t}
+        />
       ) : (
         <ChatMessages
           messages={messages}
@@ -480,7 +644,15 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           logoIcon={resolvedLogo}
           onRelativeLinkClick={onRelativeLinkClick}
           onDownloadFile={canDownload ? handleDownloadFile : undefined}
+          resolveAttachmentUrl={canDownload && !disableImagePreviews ? resolveAttachmentUrl : undefined}
+          requestHeaders={requestHeaders}
           miniGameEnabled={miniGameEnabled}
+          onMessageFeedback={onMessageFeedback}
+          isResumingAfterDecision={isResumingAfterDecision}
+          pendingApprovals={pendingApprovals}
+          onSubmitApprovalDecisions={submitApprovalDecisions}
+          isSubmittingApproval={isSubmittingApproval}
+          approvalError={approvalError}
           t={t}
         />
       )}
@@ -498,7 +670,13 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         t={t}
         mode={mode}
         separatorColor={draftBorderColor}
+        prompts={prompts}
+        quota={quota}
+        contextUsage={contextUsageEnabled ? contextUsage : null}
+        composerToolbar={composerToolbar}
       />
+        </div>
+      </div>
     </div>
   );
 };

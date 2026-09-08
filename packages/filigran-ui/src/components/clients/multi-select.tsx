@@ -1,5 +1,5 @@
 import {cva, type VariantProps} from 'class-variance-authority'
-import {CheckIcon, CloseIcon, KeyboardArrowDownIcon} from '@filigran/icon'
+import {CheckIcon, CloseIcon, ArrowDropDownIcon} from '@filigran/icon'
 import * as React from 'react'
 import {useMemo} from 'react'
 import {
@@ -19,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../clients'
+import {cn} from '../../lib/utils'
 import {Badge, Button} from '../servers'
 
 const multiSelectVariants = cva('', {
@@ -51,6 +52,8 @@ interface MultiSelectFormFieldProps<
   disabled?: boolean
   placeholder: string
   noResultString: string
+  popoverContentClassName?: string
+  placeholderClassName?: string
   className?: string
   onValueChange: (value: string[]) => void
   onInputChange?: (value: string) => void
@@ -74,6 +77,8 @@ const MultiSelectFormField = React.forwardRef<
       onInputChange,
       placeholder,
       noResultString = 'No results found',
+      popoverContentClassName,
+      placeholderClassName,
       ...props
     },
     ref
@@ -244,7 +249,10 @@ const MultiSelectFormField = React.forwardRef<
               ref={ref}
               {...props}
               onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-              className="flex h-9 w-full items-center justify-between rounded border border-input bg-inherit p-1 hover:bg-hover">
+              className={cn(
+                'flex h-9 w-full items-center justify-between rounded bg-input-bg-default p-1 hover:bg-hover',
+                className
+              )}>
               {selectedValues.length > 0 ? (
                 <div className="flex w-full items-center">
                   <div
@@ -303,19 +311,22 @@ const MultiSelectFormField = React.forwardRef<
                       orientation="vertical"
                       className="h-6"
                     />
-                    <KeyboardArrowDownIcon className="mx-2 w-2.5 h-2.5 cursor-pointer text-muted-foreground" />
+                    <ArrowDropDownIcon className="ml-2 mr-1 size-5 cursor-pointer text-muted-foreground" />
                   </div>
                 </div>
               ) : (
                 <div className="flex w-full items-center justify-between">
                   <span
-                    className="mx-3 text-sm text-muted-foreground normal-case"
+                    className={cn(
+                      'mx-3 text-sm text-muted-foreground normal-case',
+                      placeholderClassName
+                    )}
                     role="textbox"
                     aria-readonly="true">
                     {placeholder}
                   </span>
-                  <KeyboardArrowDownIcon
-                    className="mx-2 w-2.5 h-2.5 cursor-pointer text-muted-foreground"
+                  <ArrowDropDownIcon
+                    className="ml-2 mr-1 size-5 cursor-pointer text-muted-foreground"
                     aria-hidden="true"
                   />
                 </div>
@@ -323,19 +334,22 @@ const MultiSelectFormField = React.forwardRef<
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-[300px] p-0 drop-shadow-xs"
+            className={cn('w-[300px] p-0 drop-shadow-xs', popoverContentClassName)}
             align="start"
             onEscapeKeyDown={() => setIsPopoverOpen(false)}>
             {/*ShouldFilter use to filter on client side or server side*/}
-            <Command onChange={handleSearchInputChange} shouldFilter={shouldFilter}>
+            <Command
+              className={popoverContentClassName}
+              onChange={handleSearchInputChange}
+              shouldFilter={shouldFilter}>
               <CommandInput
                 placeholder="Search..."
                 onKeyDown={handleInputKeyDown}
               />
               <CommandList
                 onWheel={(e) => {
-                  e.currentTarget.scrollTop += e.deltaY;
-                  e.stopPropagation();
+                  e.currentTarget.scrollTop += e.deltaY
+                  e.stopPropagation()
                 }}>
                 <CommandEmpty>{noResultString}</CommandEmpty>
                 <CommandGroup>

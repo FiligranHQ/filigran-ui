@@ -31,7 +31,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-  'fixed z-50 gap-4 bg-background pt-16 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+  'fixed z-50 gap-4 bg-elevation-background-layer-2 pt-16 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
   {
     variants: {
       side: {
@@ -67,12 +67,12 @@ const SheetContent = React.forwardRef<
         {children}
       </div>
       <SheetPrimitive.Close asChild>
-        <div className="absolute left-3 top-0 flex h-16 items-center">
+        <div className="absolute right-3 top-0 z-10 flex h-16 items-center">
           <Button
             variant="ghost"
             size="icon"
             className="text-primary hover:bg-hover/50 focus:bg-hover/50">
-            <CloseIcon className="h-3 w-3" />
+            <CloseIcon className="size-4" />
             <span className="sr-only">Close</span>
           </Button>
         </div>
@@ -88,7 +88,7 @@ const SheetHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'z-1 absolute left-0 right-0 top-0 flex h-16 flex-col justify-center border-b border-border-light bg-page-background pl-16 text-foreground',
+      'z-1 absolute left-0 right-0 top-0 flex h-16 flex-col justify-center px-xl content-body-base-bold bg-elevation-surface-heading-layer-2',
       className
     )}
     {...props}
@@ -116,7 +116,7 @@ const SheetTitle = React.forwardRef<
 >(({className, ...props}, ref) => (
   <SheetPrimitive.Title
     ref={ref}
-    className={cn('text-lg text-foreground', className)}
+    className={cn('heading-sm text-text-default-primary', className)}
     {...props}
   />
 ))

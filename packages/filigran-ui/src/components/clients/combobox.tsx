@@ -1,6 +1,6 @@
 'use client'
 
-import {CheckIcon, CloseIcon, KeyboardArrowDownIcon} from '@filigran/icon'
+import {CheckIcon, CloseIcon, ArrowDropDownIcon} from '@filigran/icon'
 import * as React from 'react'
 import {cn} from '../../lib/utils'
 import {Button} from '../servers'
@@ -78,7 +78,7 @@ function Combobox<T>({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            'normal-case w-full justify-between border-input',
+            'normal-case w-full justify-between bg-input-bg-default border-none',
             className
           )}
           onClick={() => setOpen(!open)}>
@@ -94,7 +94,7 @@ function Combobox<T>({
                 onClick={handleReset}
               />
             )}
-            <KeyboardArrowDownIcon className="h-2.5 w-2.5 cursor-pointer text-muted-foreground" />
+            <ArrowDropDownIcon className="size-5 cursor-pointer text-muted-foreground" />
           </div>
         </Button>
       </PopoverTrigger>

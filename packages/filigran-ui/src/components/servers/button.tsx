@@ -3,24 +3,36 @@ import {cva, type VariantProps} from 'class-variance-authority'
 import * as React from 'react'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded font-normal text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center rounded text-content-button font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 hover:cursor-pointer',
   {
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground hover:bg-primary/75 focus-visible:ring-primary/50 disabled:bg-ds-bg-disabled disabled:text-text disabled:opacity-100',
+          'bg-primary text-text-negative-primary hover:bg-tertiary focus-visible:ring-primary/50 disabled:bg-elevation-disabled disabled:text-text-default-primary disabled:opacity-100',
         destructive:
-          'bg-destructive text-destructive-foreground hover:bg-destructive/75 focus-visible:ring-destructive/50',
-        outline: 'border border-border-medium bg-transparent hover:bg-hover',
-        'outline-primary': 'border border-primary bg-transparent hover:bg-hover text-primary focus-visible:ring-primary/50',
-        'outline-destructive': 'border border-destructive/75 bg-transparent hover:bg-hover text-destructive focus-visible:ring-destructive/50',
-        'outline-secondary': 'border border-secondary bg-transparent hover:bg-hover text-secondary focus-visible:ring-secondary/50',
+          'bg-destructive text-text-negative-primary hover:bg-feedback-error-tertiary focus-visible:ring-destructive/50 disabled:bg-elevation-disabled disabled:text-text-default-primary disabled:opacity-100',
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/75 focus-visible:ring-secondary/50',
-        ghost: 'hover:bg-hover',
-        'ghost-primary': 'hover:bg-hover text-primary focus-visible:ring-primary/50',
-        'ghost-destructive': 'hover:bg-hover text-destructive focus-visible:ring-destructive/50',
-        'ghost-secondary': 'hover:bg-hover text-secondary focus-visible:ring-secondary/50',
+          'border-primary text-primary border bg-transparent hover:bg-hover focus-visible:ring-primary/50 disabled:border-elevation-border-disabled disabled:text-text-default-disabled disabled:opacity-100',
+        'secondary-destructive':
+          'border border-destructive/75 bg-transparent hover:bg-feedback-error-secondary-transparency-20 text-destructive focus-visible:ring-destructive/50 disabled:border-elevation-border-disabled disabled:text-text-default-disabled disabled:opacity-100',
+        outline:
+          'border-primary focus-visible:ring-primary/50 text-primary border bg-transparent hover:bg-hover',
+        'outline-primary': 'border',
+        'outline-destructive':
+          'border border-destructive/75 bg-transparent hover:bg-hover text-destructive focus-visible:ring-destructive/50',
+        tertiary:
+          'hover:bg-hover text-primary focus-visible:ring-primary/50 disabled:text-text-default-disabled disabled:opacity-100',
+        'tertiary-destructive':
+          'hover:bg-feedback-error-secondary-transparency-20 text-destructive focus-visible:ring-destructive/50 disabled:text-text-default-disabled disabled:opacity-100',
+        'tertiary-secondary':
+          'hover:bg-hover text-secondary focus-visible:ring-secondary/50',
+        ghost:
+          'text-text-negative-primary focus-visible:ring-primary/50 text-filigran-brand-primary hover:bg-hover',
+        'ghost-primary': 'hover:bg-hover',
+        'ghost-destructive':
+          'hover:bg-hover text-destructive focus-visible:ring-destructive/50',
+        'ghost-secondary':
+          'hover:bg-hover text-secondary focus-visible:ring-secondary/50',
         link: 'text-primary underline-offset-4 hover:underline normal-case',
         'link-primary':
           'text-primary underline-offset-4 hover:underline normal-case focus-visible:ring-primary/50',
@@ -30,7 +42,7 @@ const buttonVariants = cva(
           'text-secondary underline-offset-4 hover:underline normal-case focus-visible:ring-secondary/50',
       },
       size: {
-        default: 'h-9 px-4 py-2',
+        default: 'h-9 p-4',
         sm: 'h-8 rounded px-3',
         lg: 'h-10 rounded px-8',
         icon: 'h-9 w-9',

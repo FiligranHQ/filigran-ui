@@ -7,32 +7,14 @@ const SvgChessKnight = ({
 }: SVGProps<SVGSVGElement> & SVGRProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 16 20"
+    fill="currentColor"
+    viewBox="0 0 24 24"
     role="img"
     aria-labelledby={titleId}
     {...props}
   >
     {title ? <title id={titleId}>{title}</title> : null}
-    <mask
-      id="chess_knight_svg__a"
-      width={25}
-      height={24}
-      x={-4}
-      y={-2}
-      maskUnits="userSpaceOnUse"
-      style={{
-        maskType: "alpha",
-      }}
-    >
-      <path fill="currentColor" d="M-3.419-2h24v24h-24z" />
-    </mask>
-    <g mask="url(#chess_knight_svg__a)">
-      <path
-        fill="currentColor"
-        d="M1.581 20v-4q0-.575.3-1.037.3-.463.8-.738l4.9-2.475V10l-3.475 1.725q-.3.15-.625.225-.324.075-.65.075a2.86 2.86 0 0 1-1.462-.4 2.7 2.7 0 0 1-1.063-1.15 2.7 2.7 0 0 1-.3-1.437q.05-.764.475-1.413L3.581 3l-2-3h6q3.325 0 5.663 2.325T15.58 8v12zm2-2h10V8q0-2.5-1.75-4.25T7.581 2h-2.25l.65 1-3.825 5.75a.87.87 0 0 0-.137.412q-.014.213.087.413.125.274.338.363.212.087.412.087.075 0 .375-.075l6.35-3.2V13l-6 3z"
-      />
-    </g>
+    <path d="M19 22H5v-2h14zM13 2c-1.25 0-2.42.62-3.11 1.66L7 8l2 2 2.06-1.37c.44-.31 1.08-.19 1.39.27.02.03.05.06.05.1.3.59.19 1.3-.28 1.77l-4.8 4.8c-.55.56-.55 1.46.01 2.01.26.26.62.42.99.42H17V6a4 4 0 0 0-4-4" />
   </svg>
 );
 export default SvgChessKnight;

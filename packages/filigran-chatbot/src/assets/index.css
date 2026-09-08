@@ -2,6 +2,21 @@
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
+/*
+ * Scan THIS package's components explicitly, resolved relative to this file.
+ *
+ * Importing `tailwindcss/utilities.css` on its own does not enable automatic
+ * source detection the way `@import 'tailwindcss'` does — detection is rooted
+ * at whichever project's PostCSS is compiling. Our own Rollup build happens to
+ * be rooted here, so it worked by accident; a consumer compiling this file from
+ * source (the playground aliases the package to `src/`) is rooted at *its* root
+ * and emitted utilities for its own markup instead, silently dropping every
+ * class only this package uses — `dark:` variants included, which is how the
+ * panel ended up unreadable in dark mode. An explicit relative source makes the
+ * output identical in both.
+ */
+@source '../';
+
 @plugin "tailwindcss-scoped-preflight" {
   isolationStrategy: inside;
   selector: .filigran-chatbot;

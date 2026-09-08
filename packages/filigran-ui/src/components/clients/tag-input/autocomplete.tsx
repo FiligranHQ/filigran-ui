@@ -19,6 +19,7 @@ type AutocompleteProps = {
   inlineTags?: boolean
   classStyleProps: TagInputStyleClassesProps['autoComplete']
   usePortal?: boolean
+  className?: string
 }
 
 export const Autocomplete: React.FC<AutocompleteProps> = ({
@@ -35,6 +36,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
   children,
   classStyleProps,
   usePortal,
+  className,
 }) => {
   const triggerContainerRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -210,7 +212,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
         onOpenChange={handleOpenChange}
         modal={usePortal}>
         <div
-          className="relative flex h-full items-center rounded border border-border bg-transparent pr-3"
+          className="relative flex h-full items-center rounded bg-input-bg-default pr-3"
           ref={triggerContainerRef}>
           {childrenWithProps}
           <PopoverTrigger
@@ -248,7 +250,11 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
           side="bottom"
           align="start"
           forceMount
-          className={cn(`relative p-0`, classStyleProps?.popoverContent)}
+          className={cn(
+            `relative p-0`,
+            classStyleProps?.popoverContent,
+            className
+          )}
           style={{
             top: `${popooverContentTop}px`,
             marginLeft: `calc(-${popoverWidth}px + 45px)`,
@@ -294,7 +300,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
                       )}
                       data-value={option.text}
                       onClick={() => toggleTag(option)}>
-                      <div className="flex w-full items-center gap-2 hover:bg-gray-200 dark:hover:bg-blue-900 p-xs">
+                      <div className="flex w-full items-center gap-2 hover:bg-hover p-xs">
                         <div
                           className={cn(
                             'mr-1/2 flex h-4 w-4 items-center justify-center rounded-xs border border-primary',

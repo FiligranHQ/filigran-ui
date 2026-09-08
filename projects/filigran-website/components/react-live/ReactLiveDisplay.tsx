@@ -2,9 +2,10 @@
 
 import {LiveProvider, LiveEditor, LiveError, LivePreview} from 'react-live'
 import {FunctionComponent} from 'react'
-import {tw} from 'twind'
 import * as FiligranUIComponent from '@filigran/ui'
 import * as FiligranIcon from '@filigran/icon'
+
+const tw = (className: string) => className
 
 interface ReactLiveDisplayProps {
   scope?: any

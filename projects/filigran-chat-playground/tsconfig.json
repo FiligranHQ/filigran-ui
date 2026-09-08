@@ -11,7 +11,12 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@filigran/chatbot": ["../../packages/filigran-chatbot/src/index.ts"],
+      "@filigran/chatbot/markdown": ["../../packages/filigran-chatbot/src/markdown.ts"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "vite.config.ts", "mock-api.ts"]
 }

@@ -1,5 +1,16 @@
 export type ChatMode = 'sidebar' | 'floating' | 'fullscreen';
+
+/**
+ * The host's translation lookup, passed down to every component that renders
+ * text. Key in, translated string out — the package never owns a dictionary of
+ * its own, and never asks the host's `t` for more than a lookup: values are
+ * spliced into the *translated* sentence by `translate()` in `utils`, so a key
+ * is always a whole sentence and a locale stays free to reorder it.
+ */
+export type Translate = (key: string) => string;
 export type BackendType = 'legacy' | 'rest' | 'ag-ui';
+/** A user's rating of one assistant answer. */
+export type MessageFeedback = 'up' | 'down';
 
 /**
  * Custom API endpoint configuration.
@@ -22,6 +33,46 @@ export interface ApiEndpoints {
    * disable mid-run steering entirely.
    */
   steer?: string | null;
+  /**
+   * Path for submitting tool-approval decisions when the agent pauses on a
+   * gated tool call. The widget POSTs
+   * `{ conversation_id, decisions: [{ tool_call_id, decision, rejection_reason }] }`
+   * and the paused turn resumes on the same stream with the tool result.
+   *
+   * **No default, unlike every sibling entry, and that is deliberate.** Setting
+   * this is what makes the widget advertise `supports_tool_approval` to the
+   * backend, and advertising it is a promise to answer: a backend that pauses a
+   * turn waits indefinitely for a decision, with no timeout and no safe default
+   * action to take on the reviewer's behalf. If this path defaulted to XTM
+   * One's own route, a host proxying the chat (OpenCTI, OpenAEV, OpenGRC) could
+   * upgrade the widget without adding the matching proxy route, claim support,
+   * receive the pause, POST the decision into a 404 — and hang the turn with
+   * the user watching a spinner.
+   *
+   * While unset the widget never claims support and the backend degrades to a
+   * plain assistant message explaining what it could not run, which is why an
+   * un-updated host keeps working untouched.
+   *
+   * REST backend only: `legacy` and `ag-ui` never meet this gate.
+   */
+  approve?: string | null;
+  /**
+   * Base path for recovering what a paused turn is still waiting on, read as
+   * `GET {apiBaseUrl}{pendingApprovals}/{conversation_id}/pending-approvals`
+   * (the same base-plus-suffix idiom as {@link ApiEndpoints.download}). XTM
+   * One serves it at `/chat/conversations`.
+   *
+   * `approval_required` is a single event on a stream, so a reload loses it —
+   * including the `tool_call_id`s a decision has to name. The turn is left
+   * waiting for an answer nobody can give, which reads as a chat that simply
+   * stopped replying. The panel therefore asks once per conversation on mount;
+   * an empty list is the ordinary answer.
+   *
+   * No default, for the same reason as {@link ApiEndpoints.approve}: a proxied
+   * host has to expose the route before the panel starts calling it. Unset, the
+   * live flow still works and only reload recovery is absent.
+   */
+  pendingApprovals?: string | null;
   /** Path for fetching agents. Default: '/chat/agents'. Set to null to disable. */
   agents?: string | null;
   /** Path for fetching session history. Default: '/chat/sessions'. Set to null to disable. */
@@ -50,6 +101,148 @@ export interface ApiEndpoints {
    * unless this path is set explicitly to a proxy route.
    */
   download?: string | null;
+  /**
+   * Path for the prompt library shown in the composer toolbar.
+   * Default: '/chat/prompts'. Set to null to hide the affordance.
+   *
+   * Visibility is data-driven on purpose: a host that does not serve this
+   * route simply has no prompt button, so there is no separate "mode" to keep
+   * in step with what the backend actually implements.
+   */
+  prompts?: string | null;
+  /**
+   * Path for the quota indicator shown in the composer toolbar.
+   * Default: '/chat/quota'. Set to null to hide the affordance.
+   */
+  quota?: string | null;
+  /**
+   * Path for per-agent suggested actions shown on the welcome screen.
+   * Default: '/chat/suggestions'. Set to null to always use the host's
+   * `promptSuggestions` prop instead.
+   *
+   * Called as `GET {suggestions}?agent_slug=<slug>`. A backend that ignores
+   * the parameter still answers with a generic set, so the same route carries
+   * both today's generic suggestions and per-agent (later per-user) ones.
+   */
+  suggestions?: string | null;
+}
+
+/** A reusable prompt the user can insert into the composer. */
+export interface ChatPromptTemplate {
+  id: string;
+  title: string;
+  /** The text inserted into the composer when picked. */
+  content: string;
+  description?: string;
+}
+
+/**
+ * Agentic quota headroom for the current user, as the composer indicator needs
+ * it — deliberately just the three numbers it renders. Where the limit comes
+ * from (user override, group, platform, licence) is the host platform's own
+ * business and has no place on an embedded surface.
+ */
+export interface ChatQuotaStatus {
+  used: number;
+  /** null means unlimited — the indicator then shows usage without a bar. */
+  limit: number | null;
+  /** Human-readable period label, e.g. "monthly". */
+  period: string;
+}
+
+/**
+ * One tool call the agent wants to make and is waiting on a human to approve.
+ *
+ * `inputSchema` travels alongside `arguments` so each value can be rendered
+ * with the tool's own description of what it means. That pairing is the whole
+ * point: `cascade: true` is unjudgeable on its own, while "cascade — also
+ * delete linked entities" is a decision someone can actually make. A prompt
+ * that shows names and values alone is a rubber stamp wearing the costume of a
+ * safety control.
+ */
+export interface ToolApprovalProposal {
+  /**
+   * Identity of the proposed call, and the key every decision is sent back on.
+   * Never the tool name: one turn can propose the same tool twice with
+   * different arguments.
+   */
+  toolCallId: string;
+  /** Empty when the backend named no tool; the UI labels that case itself. */
+  toolName: string;
+  toolDescription?: string;
+  arguments: Record<string, unknown>;
+  /** JSON Schema the arguments came from, used to label each one. */
+  inputSchema?: Record<string, unknown>;
+  /** Where the tool comes from, e.g. `integration:opencti`. */
+  source?: string;
+}
+
+/**
+ * A reviewer's verdict on one proposed call.
+ *
+ * There is deliberately no "edit the arguments" verdict. Rewriting a call under
+ * the agent's name would leave a transcript crediting it with arguments it
+ * never chose, and turn a yes/no judgement into authoring. A wrong proposal is
+ * corrected by rejecting it with a reason the agent can act on.
+ */
+export type ToolApprovalVerdict = 'approve' | 'approve_always' | 'reject';
+
+/** One decision, ready to be sent back to the paused turn. */
+export interface ToolApprovalDecision {
+  toolCallId: string;
+  verdict: ToolApprovalVerdict;
+  /**
+   * Why the call was declined. Optional, and the agent's only signal to correct
+   * itself — with argument editing gone, a rejection *is* the correction
+   * channel.
+   */
+  rejectionReason?: string;
+}
+
+/**
+ * How full the model's context window is for the current conversation, as the
+ * composer gauge needs it — a ratio, so both halves are required.
+ *
+ * `used` is the backend's own estimate of what the next turn will carry, not a
+ * billed token count: it is the figure the agent loop budgets its compaction
+ * against, which is what makes the gauge predictive of the summarising the user
+ * is about to see rather than a receipt for the turn that just ended.
+ */
+export interface ChatContextUsage {
+  /** Estimated tokens currently occupying the window. */
+  used: number;
+  /** The model's context window, in tokens. Always > 0. */
+  limit: number;
+  /** Where those tokens went, when the backend reports it. */
+  breakdown?: ChatContextBreakdown;
+}
+
+/**
+ * What the context is being spent on, in tokens.
+ *
+ * Buckets are grouped by what the user can *do* about each: they can start a new
+ * chat (`conversation`), they cannot shrink the agent's persona (`system`), and
+ * the two the backend manages on their behalf (`summary`, `toolResults`) are
+ * what explain a long chat that seems to have forgotten things.
+ *
+ * Every key is optional and only non-zero ones are reported, so a backend that
+ * measures a different set — or none — still renders. Tool definitions are
+ * included even though some backends may not count them in their compaction
+ * gate; the gauge is meant to reflect what the prompt actually carries.
+ */
+export interface ChatContextBreakdown {
+  /** The agent's system prompt and any in-run instructions. */
+  system?: number;
+  /** Schemas of the platform's built-in tools. */
+  tools?: number;
+  /** Schemas of the agent's own integrations, MCP servers and custom tools. */
+  dynamicTools?: number;
+  /** Digests of earlier turns produced by the backend's compaction. */
+  summary?: number;
+  /** The user's and assistant's own messages. */
+  conversation?: number;
+  /** Output of tool calls still held verbatim in the context. */
+  toolResults?: number;
 }
 
 export interface ChatPanelProps {
@@ -62,7 +255,7 @@ export interface ChatPanelProps {
   apiEndpoints?: ApiEndpoints;
   agentDashboardUrl?: string;
   user: { firstName: string };
-  t?: (key: string) => string;
+  t?: Translate;
   accentColor?: string;
   logoIcon?: React.ReactNode;
   promptSuggestions?: string[];
@@ -147,12 +340,50 @@ export interface ChatPanelProps {
    * Receives the already-translated `title` and `body`.
    */
   onTaskComplete?: (title: string, body: string) => void;
+  /**
+   * Enables the 👍/👎 affordance on completed assistant messages and receives
+   * each rating. `feedback` is `null` when the user clears a previous rating.
+   * Omit to hide the affordance entirely — the chatbot stores nothing itself,
+   * so a host without a feedback endpoint should not show the buttons.
+   */
+  onMessageFeedback?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
+  /**
+   * Disable the inline preview of image attachments (they render as ordinary
+   * download cards instead). Previews fetch the image through the host download
+   * proxy, so hosts that meter or restrict that endpoint can opt out.
+   * Default: false.
+   */
+  disableImagePreviews?: boolean;
+  /**
+   * Show how full the model's context window is for the current conversation
+   * — a small ring plus percentage in the composer toolbar, so the user can
+   * see a long chat approaching the point where the agent starts summarising
+   * older turns and decide to split the work instead. Default: true.
+   *
+   * A host-level master switch, not a mode flag: the gauge is data-driven and
+   * simply absent until the backend reports occupancy (only the XTM One REST
+   * backend does today), so leaving this on costs nothing on a backend that
+   * says nothing.
+   */
+  contextUsageEnabled?: boolean;
+  /**
+   * Rendered into the composer toolbar, after the built-in controls.
+   *
+   * The escape hatch for anything the package has no business knowing about —
+   * XTM One's session-tool picker (integrations, MCP servers, knowledge bases)
+   * being the motivating case. A host that passes nothing gets no extra
+   * controls, so this doubles as the "product" toolbar: there is no mode flag
+   * to keep in step, only the presence or absence of what a host provides.
+   */
+  composerToolbar?: React.ReactNode;
 }
 
 export interface ChatToggleButtonProps {
   isOpen: boolean;
   onToggle: () => void;
+  /** Overrides the built-in label; already translated by the host. */
   label?: string;
+  t?: Translate;
   accentColor?: string;
   icon?: React.ReactNode;
 }
@@ -162,6 +393,16 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  /**
+   * The agent that produced *this* message, when the backend says so.
+   *
+   * Takes precedence over the panel-wide name, which is the currently selected
+   * agent and therefore wrong for history: reopening a thread used to relabel
+   * every past answer with whoever happened to be picked in the menu. Optional,
+   * because no backend records per-message attribution yet — the panel falls
+   * back to the conversation's agent, then to the selected one.
+   */
+  agentName?: string;
   files?: ChatFile[];
   /** Agent-generated downloadable files attached to an assistant message. */
   attachments?: ChatAttachment[];
@@ -238,6 +479,14 @@ export interface AgentStatusState {
    * so long executions (background tasks, consults) never look stuck.
    */
   elapsedS?: number;
+  /**
+   * Wall-clock instant (ms) at which the current tool batch started, derived
+   * from `elapsedS` on each heartbeat. Heartbeats only arrive every ~10s, so
+   * rendering `elapsedS` directly makes the timer sit still and then jump.
+   * Anchoring here lets the indicator tick once a second locally and
+   * re-synchronise on every beat.
+   */
+  elapsedStartMs?: number;
 }
 
 export interface ChatFile {
@@ -264,6 +513,13 @@ export interface ChatConversationSummary {
   /** ISO timestamp of the last activity, used for the relative-time label. */
   updatedAt?: string;
   messageCount?: number;
+  /**
+   * The agent this conversation belongs to, when the backend reports it — so
+   * the history list can say which agent a thread is with before you open it.
+   * Undefined on backends that do not send it, null-ish for conversations that
+   * genuinely have no agent.
+   */
+  agentName?: string;
 }
 
 export interface XtmAgent {

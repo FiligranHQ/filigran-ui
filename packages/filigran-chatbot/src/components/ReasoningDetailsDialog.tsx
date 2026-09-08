@@ -13,7 +13,7 @@ import {
   XCircleIcon,
 } from './icons';
 import { cleanReasoningText } from './ChatThinking';
-import { findChatbotRoot } from '../utils';
+import { findChatbotRoot, translate } from '../utils';
 
 /** Trace values longer than this are shown raw instead of pretty-printed JSON. */
 const TRACE_PRETTY_LIMIT = 10_000;
@@ -162,9 +162,9 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
   const reasoning = (msg.reasoning ?? '').trim();
 
   const summaryParts = [
-    iterations > 1 ? `${iterations} ${t('iterations')}` : '',
-    `${totalCalls} ${totalCalls === 1 ? t('tool call') : t('tool calls')}`,
-    transfers.length > 0 ? `${transfers.length} ${transfers.length === 1 ? t('transfer') : t('transfers')}` : '',
+    iterations > 1 ? translate(t, '{count} iterations', { count: iterations }) : '',
+    totalCalls === 1 ? t('1 tool call') : translate(t, '{count} tool calls', { count: totalCalls }),
+    transfers.length === 1 ? t('1 transfer') : transfers.length > 1 ? translate(t, '{count} transfers', { count: transfers.length }) : '',
   ].filter(Boolean);
 
   return (

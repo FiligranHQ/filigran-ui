@@ -1,14 +1,15 @@
 import type { FunctionComponent } from 'react';
 import type { ChatToggleButtonProps } from '../types';
-import { hexAlpha } from '../utils';
+import { hexAlpha, identity } from '../utils';
 import { DefaultLogoIcon } from './icons';
 
 export const ChatToggleButton: FunctionComponent<ChatToggleButtonProps> = ({
   isOpen,
   onToggle,
-  label = 'Ask Assistant',
+  label,
   accentColor = '#7b5cff',
   icon,
+  t = identity,
 }) => {
   const resolvedIcon = icon ?? <DefaultLogoIcon size={16} />;
 
@@ -32,7 +33,7 @@ export const ChatToggleButton: FunctionComponent<ChatToggleButtonProps> = ({
       }}
     >
       <span className="[&>svg]:w-4 [&>svg]:h-4">{resolvedIcon}</span>
-      {label}
+      {label ?? t('Ask Assistant')}
     </button>
   );
 };

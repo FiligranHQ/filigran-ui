@@ -1,0 +1,20 @@
+import type { SVGProps } from "react";
+import type { SVGRProps } from "../model/svgr";
+const SvgBriefcaseRemoveOutline = ({
+  title,
+  titleId,
+  ...props
+}: SVGProps<SVGSVGElement> & SVGRProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="currentColor"
+    viewBox="0 0 24 24"
+    role="img"
+    aria-labelledby={titleId}
+    {...props}
+  >
+    {title ? <title id={titleId}>{title}</title> : null}
+    <path d="M10 2h4a2 2 0 0 1 2 2v2h4a2 2 0 0 1 2 2v5.53a5.7 5.7 0 0 0-2-1.19V8H4v11h8.08c.12.72.37 1.39.72 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4V4a2 2 0 0 1 2-2m4 4V4h-4v2zm.46 9.88 1.42-1.42L18 16.59l2.12-2.13 1.42 1.42L19.41 18l2.13 2.12-1.42 1.42L18 19.41l-2.12 2.13-1.42-1.42L16.59 18z" />
+  </svg>
+);
+export default SvgBriefcaseRemoveOutline;

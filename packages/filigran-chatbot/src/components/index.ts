@@ -1,4 +1,5 @@
 export { ChatPanel } from './ChatPanel';
+export { ChatApprovalPrompt } from './ChatApprovalPrompt';
 export { ChatToggleButton } from './ChatToggleButton';
 export { ChatHeader } from './ChatHeader';
 export { ChatInput } from './ChatInput';

@@ -267,6 +267,7 @@ export function ExampleMultiSelect() {
                   <FormLabel>Programming Languages</FormLabel>
                   <FormControl>
                     <MultiSelectFormField
+                      className={"bg-elevation-background-layer-3"}
                       options={languagesList}
                       defaultValue={field.value}
                       onValueChange={field.onChange}

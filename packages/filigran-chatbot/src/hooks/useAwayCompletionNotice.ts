@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { translate } from '../utils';
 
 /**
  * A turn must run at least this long before its completion is worth a
@@ -156,7 +157,7 @@ export function useAwayCompletionNotice({
       // Focused tab + looking at the chat → the streamed answer is the feedback.
       if (!away && viewingChat) return;
       const title = t('Response ready');
-      const body = agentName ? `${agentName} ${t('has finished')}` : t('Your answer is ready');
+      const body = agentName ? translate(t, '{agent} has finished', { agent: agentName }) : t('Your answer is ready');
       if (away) {
         startTitleFlash(title);
         notifyOS(title, body);

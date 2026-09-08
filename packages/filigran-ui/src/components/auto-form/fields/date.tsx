@@ -10,6 +10,8 @@ export default function AutoFormDate({
   fieldConfigItem,
   fieldProps,
 }: AutoFormInputComponentProps) {
+  const {popoverContentClassName} = fieldProps
+
   return (
     <FormItem>
       <AutoFormLabel
@@ -20,7 +22,7 @@ export default function AutoFormDate({
         <DatePicker
           date={field.value}
           setDate={field.onChange}
-          {...fieldProps}
+          popoverContentClassName={popoverContentClassName}
         />
       </FormControl>
       <AutoFormTooltip fieldConfigItem={fieldConfigItem} />

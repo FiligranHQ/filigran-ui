@@ -14,7 +14,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const extensions = ['.ts', '.tsx'];
 
-const external = ['react', 'react-dom', 'react/jsx-runtime', 'react-markdown', 'remark-gfm'];
+const external = ['react', 'react-dom', 'react/jsx-runtime', 'react-markdown', 'remark-breaks', 'remark-gfm'];
 
 const indexConfig = {
   external,
@@ -75,6 +75,33 @@ const configs = [
       },
       dts(),
     ],
+  },
+  // `@filigran/chatbot/markdown` — pure string helpers only. Deliberately a
+  // separate entry (no CSS pipeline, no React) so a host can share the panel's
+  // markdown normalisation without its bundler having to tree-shake the whole
+  // panel out of an eagerly-loaded chunk.
+  {
+    external,
+    input: './src/markdown.ts',
+    output: {
+      file: 'dist/markdown.js',
+      format: 'es',
+      sourcemap: true,
+    },
+    plugins: [
+      resolve({ extensions, browser: true }),
+      commonjs(),
+      json(),
+      typescript({ tsconfig: './tsconfig.json', declaration: false, declarationMap: false }),
+      typescriptPaths({ preserveExtensions: true }),
+      terser({ output: { comments: false } }),
+    ],
+  },
+  {
+    input: 'src/markdown.ts',
+    external,
+    output: [{ file: 'dist/markdown.d.ts', format: 'es' }],
+    plugins: [dts()],
   },
 ];
 

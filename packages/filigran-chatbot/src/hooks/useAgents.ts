@@ -12,6 +12,14 @@ interface UseAgentsOptions {
 
 interface UseAgentsReturn {
   agents: XtmAgent[];
+  /** True while the first fetch is in flight. */
+  agentsLoading: boolean;
+  /**
+   * Set when the agent list could not be retrieved — the backend is
+   * unreachable, or answered an error. Distinguishes "still loading" from
+   * "there is nothing to load", which an empty array alone cannot.
+   */
+  agentsError: boolean;
   selectedAgent: XtmAgent | null;
   setSelectedAgent: React.Dispatch<React.SetStateAction<XtmAgent | null>>;
   agentMenuOpen: boolean;
@@ -19,8 +27,27 @@ interface UseAgentsReturn {
   handleSwitchAgent: (agent: XtmAgent, onSwitch?: () => void) => void;
 }
 
+/**
+ * Normalize the raw agents list response.
+ * Defensive: the endpoint may answer with something other than a JSON array
+ * (an error envelope, an HTML error page that happens to parse), and an
+ * `agents.map is not a function` thrown in ChatHeader blanks the whole panel.
+ * Accepts both the bare array and the `{ agents: [...] }` envelope, mirroring
+ * what useConversations tolerates, and drops entries without an agent id.
+ */
+function parseAgents(data: unknown): XtmAgent[] {
+  const rawList = Array.isArray(data)
+    ? data
+    : Array.isArray((data as Record<string, unknown>)?.agents)
+      ? ((data as Record<string, unknown>).agents as unknown[])
+      : [];
+  return rawList.filter((raw): raw is XtmAgent => !!raw && typeof raw === 'object' && typeof (raw as XtmAgent).id === 'string');
+}
+
 export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requestHeaders }: UseAgentsOptions): UseAgentsReturn {
   const [agents, setAgents] = useState<XtmAgent[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+  const [agentsError, setAgentsError] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<XtmAgent | null>(null);
   const [agentMenuOpen, setAgentMenuOpen] = useState(false);
 
@@ -30,17 +57,30 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
       return;
     }
     const agentsUrl = `${apiBaseUrl}${apiEndpoints?.agents ?? '/chat/agents'}`;
+    setAgentsLoading(true);
+    setAgentsError(false);
     fetch(agentsUrl, { headers: requestHeaders })
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data: XtmAgent[]) => {
-        setAgents(data);
-        if (data.length > 0 && !selectedAgent) {
+      .then((res) => {
+        // A non-2xx is a failure, not an empty catalogue. Mapping it to `[]`
+        // was why an unreachable backend left the menu spinning forever with
+        // nothing to explain it.
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: unknown) => {
+        const list = parseAgents(data);
+        setAgents(list);
+        if (list.length > 0 && !selectedAgent) {
           const savedSlug = localStorage.getItem(STORAGE_AGENT_KEY);
-          const match = savedSlug ? data.find((a) => a.slug === savedSlug) : null;
-          setSelectedAgent(match || data[0]);
+          const match = savedSlug ? list.find((a) => a.slug === savedSlug) : null;
+          setSelectedAgent(match || list[0]);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setAgents([]);
+        setAgentsError(true);
+      })
+      .finally(() => setAgentsLoading(false));
   }, [apiBaseUrl, apiEndpoints, backendType, requestHeaders]);
 
   const handleSwitchAgent = (agent: XtmAgent, onSwitch?: () => void) => {
@@ -56,6 +96,8 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
 
   return {
     agents,
+    agentsLoading,
+    agentsError,
     selectedAgent,
     setSelectedAgent,
     agentMenuOpen,
