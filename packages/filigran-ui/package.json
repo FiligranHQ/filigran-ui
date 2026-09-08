@@ -88,7 +88,7 @@
     "@types/react-color": "^2",
     "@types/react-dom": "19.2.3",
     "@uiw/react-md-editor": "4.1.0",
-    "postcss": "8.5.10",
+    "postcss": "8.5.18",
     "prettier": "3.8.1",
     "prettier-plugin-organize-imports": "4.3.0",
     "prettier-plugin-tailwindcss": "0.7.2",
