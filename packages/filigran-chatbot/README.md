@@ -6,11 +6,18 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 
 - 🔄 **SSE Message Streaming** — Real-time response streaming with status indicators
 - ⚡ **Mid-Run Steering** — Send messages while the agent is generating; they are injected into the running agentic loop instead of waiting for the turn to finish
-- 🗂️ **Conversation History** — Switch between (and delete) past conversations from a history menu in the header
+- ✋ **Tool Approval** — When the agent stops at a tool that needs a human's consent, the turn pauses mid-answer and the reviewer approves, declines with a reason, or approves always — opt-in per host, see [Tool approval](#post-apibaseurlapiendpointsapprove)
+- 🗂️ **Conversation History** — Switch between (and delete) past conversations from a header menu, or from a permanent sidebar in fullscreen mode (collapsible, searchable past 7 entries, rename in place)
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
 - 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose
-- 📝 **Full Markdown** — Tables, code blocks with copy button, lists, blockquotes
+- 📝 **Full Markdown** — Tables (mis-delimited ones repaired), code blocks with copy button, lists, blockquotes, soft line breaks, inline images with a lightbox
+- 🖼️ **Image Previews** — `data:image/*` charts and image attachments render inline, click to expand
+- 📋 **Copy & Rate** — Copy any answer; optional 👍/👎 feedback wired to the host
+- 🧰 **Composer Toolbar** — Prompt library and quota indicator, both driven by whether the host serves the route; plus a slot for the host's own controls
+- 🧠 **Context Gauge** — Ring + percentage showing how full the model's context window is, so a long chat's silent summarising is visible before it happens
+- 🎙️ **Dictation** — Speech-to-text via the browser's own Web Speech API; no endpoint, no key, hidden where unsupported
+- ✍️ **Draft Recovery** — Unsent composer text is kept per conversation and restored when the panel reopens
 - 🎨 **Customizable Theme** — Accent color and logo customization
 - 📱 **3 Display Modes** — Floating, sidebar (resizable), and fullscreen
 - 💾 **Persistence** — Conversation and sidebar width saved to localStorage
@@ -74,6 +81,10 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onWidthChange`     | `(width: number) => void`                 | —            | Called when sidebar width changes during resize                  |
 | `onResizeStart`     | `() => void`                              | —            | Called when resize drag starts                                   |
 | `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
+| `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Enables 👍/👎 on completed assistant answers and receives each rating (`null` clears it). Omit to hide the affordance — the panel stores nothing itself. |
+| `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
+| `contextUsageEnabled` | `boolean`                               | `true`       | Show how full the model's context window is for the current conversation (ring + percentage in the composer toolbar). Data-driven, so it stays absent until the backend reports occupancy — see [Context usage](#context-usage). |
+| `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
 
 #### Resizable Sidebar Example
 
@@ -110,13 +121,14 @@ import { ChatToggleButton } from '@filigran/chatbot';
 
 #### Props
 
-| Prop          | Type              | Default      | Description                    |
-| ------------- | ----------------- | ------------ | ------------------------------ |
-| `isOpen`      | `boolean`         | **required** | Whether the chat panel is open |
-| `onToggle`    | `() => void`      | **required** | Called when button is clicked  |
-| `label`       | `string`          | `'Chat'`     | Tooltip/aria label             |
-| `accentColor` | `string`          | `'#7b5cff'`  | Button background color        |
-| `icon`        | `React.ReactNode` | default icon | Custom icon                    |
+| Prop          | Type                      | Default      | Description                                                                |
+| ------------- | ------------------------- | ------------ | -------------------------------------------------------------------------- |
+| `isOpen`      | `boolean`                 | **required** | Whether the chat panel is open                                             |
+| `onToggle`    | `() => void`              | **required** | Called when button is clicked                                              |
+| `label`       | `string`                  | built-in     | Button text, already translated by the host; omit for `t('Ask Assistant')` |
+| `t`           | `(key: string) => string` | identity     | Translation function, used for the default label                           |
+| `accentColor` | `string`                  | `'#7b5cff'`  | Button background color                                                    |
+| `icon`        | `React.ReactNode`         | default icon | Custom icon                                                                |
 
 ## API Contract
 
@@ -218,6 +230,12 @@ yields an empty list, so the menu shows its empty state instead of breaking
 the chat. Set `apiEndpoints.history` to `null` to hide the history menu
 entirely, or point it at a dedicated path if your proxy can't route `GET` on
 the sessions path.
+
+### `PATCH {apiBaseUrl}/chat/sessions/{conversation_id}`
+
+Renames a conversation. Body: `{ "title": "..." }`. Only reached from the
+fullscreen sidebar; a backend without the route simply fails the request and
+the row reverts to its previous title.
 
 ### `DELETE {apiBaseUrl}/chat/sessions/{conversation_id}`
 
@@ -378,6 +396,134 @@ data: {"type": "stream", "content": "Follow-up answer to the steering message"}
 data: {"type": "done", "content": "Follow-up answer to the steering message", "conversation_id": "uuid"}
 ```
 
+### `POST {apiBaseUrl}{apiEndpoints.approve}`
+
+Answers a turn that paused because the agent proposed a tool call requiring a
+human's consent. **Opt-in: there is no default path.** The widget advertises
+approval support to the backend only when `apiEndpoints.approve` is set, and
+that flag is a promise — a backend that pauses a turn waits indefinitely for a
+decision, with no timeout. A host that names a path it cannot route would
+receive the pause, POST the decision into a 404, and hang the turn with the
+user watching a spinner. Leave it unset and the backend degrades to an ordinary
+assistant message explaining what it could not run, so an un-updated host keeps
+working untouched.
+
+When set, `supports_tool_approval: true` is sent on every `rest` message body.
+
+**Server → client**, on the existing SSE stream, alongside `stream` / `status` /
+`done`:
+
+```
+data: {"type": "approval_required", "conversation_id": "uuid-here", "proposals": [
+  {
+    "tool_call_id": "call_abc123",
+    "tool_name": "opencti_delete_entity",
+    "tool_description": "Permanently delete an entity from the platform.",
+    "arguments": {"entity_id": "e-123", "cascade": true},
+    "input_schema": {"type": "object", "properties": {
+      "entity_id": {"type": "string", "description": "Entity to delete"},
+      "cascade": {"type": "boolean", "description": "Also delete linked entities"}
+    }},
+    "source": "integration:opencti"
+  }
+]}
+```
+
+The turn is **not** over: no `done` arrives, the stream stays open and silent
+(kept alive by SSE `: keepalive` comment lines, which the reader drops), and the
+rest of the turn continues on it once a decision is sent. The progress bubble is
+replaced by the prompt, which renders each argument next to its description from
+`input_schema` — `cascade: true` is unjudgeable on its own, so a prompt showing
+only names and values would be a rubber stamp.
+
+**Client → server**, one decision per proposed call:
+
+```json
+{
+  "conversation_id": "uuid-here",
+  "decisions": [
+    { "tool_call_id": "call_abc123", "decision": "approve" },
+    { "tool_call_id": "call_ghi789", "decision": "reject", "rejection_reason": "Wrong target environment." },
+    { "tool_call_id": "call_jkl012", "decision": "approve_always" }
+  ]
+}
+```
+
+| `decision`       | Effect                                                              |
+| ---------------- | ------------------------------------------------------------------- |
+| `approve`        | Runs with the arguments exactly as proposed                          |
+| `reject`         | Does not run; the agent receives `rejection_reason` and can adapt    |
+| `approve_always` | Runs, **and** saves a standing approval for this user                |
+
+Every proposed `tool_call_id` must appear exactly once — the backend refuses a
+partial set, because resuming with an undecided call leaves a `tool_use` block
+without its `tool_result`, which the model providers reject outright. The prompt
+therefore submits itself once the last card is decided. A set containing
+`approve_always` waits for an explicit Confirm instead: it is the only verdict
+whose reach outlives the turn (it applies to the user's unattended scheduled
+runs too), so the warning has to be read before it is committed.
+
+A decision carries no arguments. Correcting a wrong proposal is what
+`reject` with a reason is for — rewriting a call under the agent's name would
+leave a transcript crediting it with arguments it never chose.
+
+On a non-2xx the prompt stays on screen with the failure noted and the controls
+re-armed: the turn is still paused either way, so clearing the prompt would
+strand it with nothing able to answer. A `409` means nothing is waiting any more
+(the turn finished, was cancelled, or was answered elsewhere); the stream ending
+then clears the prompt on its own. Stopping the turn also dismisses it — the
+backend waits indefinitely by design, so abandoning the stream is the reviewer's
+only other way out.
+
+**Proxied hosts:** the decision goes through the same fetch path as every other
+endpoint — relative to `apiBaseUrl` and honouring `requestHeaders` — so CSRF
+wrappers and per-request context headers keep working. A proxy in front of the
+chat must forward the request body whole (a proxy rebuilding it from a fixed
+field list silently drops `supports_tool_approval`), never time out the
+streaming turn, and pass SSE keepalives through untouched.
+
+#### Recovering a prompt after a page reload
+
+`approval_required` is a single event on a stream, so a reload loses it —
+including the `tool_call_id`s a decision has to name — while the turn goes on
+waiting for an answer that can no longer be given. To the user that is a chat
+which simply stopped replying.
+
+Set `apiEndpoints.pendingApprovals` (XTM One: `/chat/conversations`) and the
+panel asks once per conversation, on mount and on every conversation switch:
+
+```
+GET {apiBaseUrl}{apiEndpoints.pendingApprovals}/{conversation_id}/pending-approvals
+→ {
+    "conversation_id": "uuid-here",
+    "proposals": [ /* as the event carried */ ],
+    "turn": "running" | "idle"
+  }
+```
+
+An empty `proposals` is the ordinary answer. A non-empty one re-renders the same
+prompt, and the decision is POSTed exactly as before. Like `approve` this has no
+default and is skipped when unset, leaving the live flow untouched.
+
+The recovered turn resumes with the reasoning and tool results it had already
+produced — but **not on a stream**: the one it would have reported on died with
+the old page, so the backend persists the answer and suppresses the live `done`
+frame. So after a decision on a recovered prompt the panel shows its ordinary
+working indicator and polls this route every 5s, using `turn` as the stop
+condition: while it reads `running` it keeps waiting, and the moment it reads
+`idle` it re-reads the conversation once — the answer is there. A resumed turn
+that pauses *again* on a second gated call is picked up by the same poll, which
+is the only way that prompt could reach the user with no stream open.
+
+One bound applies server-side: after 30 minutes with **no sign of a client** and
+no decision, the turn stops waiting and the pause is discarded. Any request about
+the conversation counts as a sign, so while a recovered prompt is displayed the
+panel re-reads this route every 10 minutes purely to say someone is still there —
+a tab left open makes no requests of its own, and the bound is meant to limit
+abandonment, never the person deciding.
+
+REST backend only: `legacy` and `ag-ui` never meet this gate.
+
 ## Customization
 
 ### Custom Logo
@@ -426,47 +572,230 @@ function App() {
 }
 ```
 
-**Translation keys used:**
+`t` is only ever asked for a lookup — key in, translated string out — so any
+i18n library works and the package never carries a dictionary of its own.
+Untranslated hosts can omit it: the default is the identity function, so every
+key is its own English text.
 
-- `'Thinking...'`
-- `'Using tools…'`
-- `'Analyzing results…'`
-- `'Composing answer…'`
-- `'Incorporating your message…'`
-- `'Ask a question...'`
-- `'Stop generating'`
-- `'Send now'`
-- `'Enter to send now · Esc to stop'`
-- `'Attachments wait for the current response'`
-- `'New chat'`
-- `'Conversation history'`
-- `'No conversations yet'`
-- `'Untitled conversation'`
-- `'New conversation'`
-- `'Delete conversation'`
-- `'just now'` / `'m ago'` / `'h ago'` / `'d ago'`
-- `'Switch view'`
-- `'Close'`
-- `'Switch to another agent'`
+#### Values inside sentences
+
+A key is always a **whole sentence**, with `{placeholder}` slots for the values.
+The panel fills the slots in _after_ the lookup, so a locale is free to move the
+value, and a translator sees the sentence rather than a fragment of one:
+
+| Key | Renders as |
+| --- | --- |
+| `'Waiting for {count} background tasks…'` | Waiting for 3 background tasks… |
+| `'Transferred from {agent}'` | Transferred from Threat Analyst |
+| `'{percent}% full'` | 84% full |
+| `'How can {agent} help you, {name}?'` | How can **Threat Analyst** help you, John? |
+
+Two consequences worth knowing when writing the locale files:
+
+- **Plurals are separate keys** — `'1 tool call'` and `'{count} tool calls'`,
+  `'Delegating one task…'` and `'Delegating {count} tasks…'`. A lookup cannot
+  select a plural form, so the panel picks the sentence and the locale
+  translates it whole; a language with more plural forms than English can route
+  the plural key through its own rules.
+- **A missing slot is not fatal** — a translation that drops a `{placeholder}`
+  renders the rest of the sentence as it is, and the value is simply absent.
+  That includes the greeting, where the agent's name is markup: a locale that
+  rewords the sentence without `{agent}` gets the sentence, not a name dangling
+  off the end of it.
+
+`promptSuggestions` (and any suggestions the backend serves) also go through
+`t`, so a host may pass either keys or final text.
+
+#### Translation keys used
+
+Every key the package can ask for, grouped by where it appears:
+
+**Toggle button**
+
+- `'Ask Assistant'`
+
+**Header, agent menu and history**
+
+- `'Agent switching is not available here'`
 - `'Browse agents'`
+- `'Close'`
+- `'Conversation history'`
+- `'Could not reach the assistant service. Check the connection and try again.'`
 - `'Create agent'`
+- `'Delete conversation'`
+- `'Floating'`
+- `'Full screen'`
+- `'New chat'`
+- `'New conversation'`
+- `'No agent matches'`
+- `'No conversations yet'`
+- `'Search agents...'`
+- `'Sidebar'`
+- `'Switch to'`
+- `'Switch to another agent'`
+- `'Switch view'`
+- `'Transferred from {agent}'`
+- `'Untitled conversation'`
+
+**Conversation sidebar**
+
+- `'Conversation title'`
+- `'Hide conversations'`
+- `'No conversation matches'`
+- `'Rename conversation'`
+- `'Search conversations...'`
+- `'Show conversations'`
+
+**Welcome screen**
+
+- `'Assistant'`
+- `'Help me create a new simulation scenario'`
+- `'How can I help you, {name}?'`
+- `'How can {agent} help you, {name}?'`
+- `'How do I configure detection rules?'`
+- `'Suggestions'`
+- `'Summarize my recent findings'`
+- `'What are the latest attack patterns?'`
+
+**Composer**
+
+- `'Ask a question...'`
+- `'Attachments wait for the current response'`
+- `'Dictate a message'`
+- `'Enter to send now · Esc to stop'`
+- `'Files uploading...'`
+- `'Insert prompt template'`
+- `'No prompt matches'`
+- `'Search prompts...'`
+- `'Send now'`
+- `'Stop dictation'`
+- `'Stop generating'`
+- `'Uses AI. Verify results.'`
+
+**Messages, markdown and files**
+
+- `'Bad response'`
+- `'Copied'`
+- `'Copied!'`
+- `'Copy code'`
+- `'Copy response'`
+- `'Download'`
+- `'Expand image'`
+- `'Good response'`
+- `'Image could not be loaded'`
+- `'Image preview'`
+- `'Load earlier messages'`
+- `'Loading image…'`
 - `'Reasoning details'`
 - `'Reasoning details — turn limit reached'`
+
+**Agent status**
+
+- `'Analyzing results…'`
+- `'Collecting results from one task…'`
+- `'Collecting results from {count} tasks…'`
+- `'Composing answer…'`
+- `'Consulting {agent}…'`
+- `'Delegating one task…'`
+- `'Delegating {count} tasks…'`
+- `'Incorporating your message…'`
+- `'Thinking...'`
+- `'Transferring to {agent}…'`
+- `'Using tools…'`
+- `'Waiting for one background task…'`
+- `'Waiting for your approval…'`
+- `'Waiting for {count} background tasks…'`
+- `'the agent'`
+- `'{tool} (+{count} more)…'`
+
+**Waiting mini-game**
+
+- `'Almost there'`
+- `'Analyzing the details'`
+- `'Connecting the dots'`
+- `'Consulting the sources'`
+- `'Crunching the data'`
+- `'Polishing the answer'`
+- `'Putting it together'`
+- `'Reticulating splines'`
+- `'Thinking it through'`
+- `'Turn off the waiting mini-game'`
+- `'Turn on the waiting mini-game'`
+- `'Wrapping things up'`
+
+**Reasoning details**
+
+- `'(no output)'`
+- `'1 tool call'`
+- `'1 transfer'`
+- `'Input'`
 - `'Model reasoning'`
-- `'iterations'`
-- `'transfer'` / `'transfers'`
+- `'Output'`
+- `"The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far."`
 - `'Transfer chain'`
 - `'Turn limit reached.'`
-- `"The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far."`
-- `'Input'` / `'Output'` / `'(no output)'`
-- `'Download'`
-- `'tool call'` / `'tool calls'`
-- `'Uses AI. Verify results.'`
-- `'How can I help you, '`
-- `'Suggestions'`
-- `'Floating'`
-- `'Sidebar'`
-- `'Full screen'`
+- `'{count} iterations'`
+- `'{count} tool calls'`
+- `'{count} transfers'`
+
+**Tool approval**
+
+- `'Also applies to your scheduled runs, until you revoke it'`
+- `'Always allowed'`
+- `'Approved'`
+- `'Back'`
+- `'Confirm'`
+- `'Decline this call'`
+- `'Declined'`
+- `'No'`
+- `'Sending…'`
+- `'The agent needs your approval to run a tool:'`
+- `'The agent needs your approval to run these tools:'`
+- `'Why not? The agent sees this and can adapt (optional)'`
+- `'Yes'`
+- `'Yes, always'`
+- `'e.g. wrong environment — use staging instead'`
+- `'unknown tool'`
+- `'{decided}/{total} decided'`
+- `'“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.'`
+
+**Context gauge**
+
+- `'Context full — older turns are being dropped'`
+- `'Context nearly full — older turns are being summarized'`
+- `'Context used'`
+- `'Conversation'`
+- `'MCP & dynamic tools'`
+- `'Summarized conversation'`
+- `'System prompt'`
+- `'Tool definitions'`
+- `'Tool results'`
+- `'{counts} tokens'`
+- `'{percent}% full'`
+- `'{summary} — click for details'`
+
+**Quota**
+
+- `'Quota'`
+- `'Quota reached'`
+- `'Usage'`
+- `'Usage · {period}'`
+
+**Notices, errors and timestamps**
+
+- `'Could not send your decision. Please try again.'`
+- `'No response.'`
+- `'Response ready'`
+- `'Sorry, an error occurred. Please try again.'`
+- `'This decision could not be sent. Reload the chat and try again.'`
+- `'This turn is no longer waiting for a decision.'`
+- `'Unable to connect. Please check the configuration.'`
+- `'Your answer is ready'`
+- `'just now'`
+- `'{agent} has finished'`
+- `'{count}d ago'`
+- `'{count}h ago'`
+- `'{count}m ago'`
 
 ## Styling
 
@@ -478,11 +807,142 @@ import '@filigran/chatbot/styles.css';
 
 The component uses Tailwind CSS classes and CSS custom properties for theming. The accent color is applied via `--chat-accent` CSS variable.
 
+### Composer toolbar
+
+Two toolbar items are **data-driven rather than mode-driven**: they appear only
+when the host serves the route, so the UI can never advertise something the
+backend cannot answer, and there is no mode flag to keep in step.
+
+| Endpoint | Default path | Response |
+| --- | --- | --- |
+| Prompt library | `GET {apiBaseUrl}/chat/prompts` | `[{ id, title, content, description? }]` (or `{ prompts: [...] }`) |
+| Quota status | `GET {apiBaseUrl}/chat/quota` | `{ used: number, limit: number \| null, period: string }` |
+| Agent suggestions | `GET {apiBaseUrl}/chat/suggestions?agent_slug=<slug>` | `["..."]` (or `{ suggestions: [...] }`, or objects with `prompt`/`label`/`text`) |
+
+Set either to `null` in `apiEndpoints` to hide it. `limit: null` means no
+ceiling — the indicator then shows consumption without a bar. The quota is
+re-read whenever a turn finishes.
+
+The welcome screen names the selected agent and shows its own suggestions —
+which is also how switching agent is confirmed: the thread resets to that
+screen, so without it nothing tells you who the next message will reach. When
+the suggestions route is unavailable the host's `promptSuggestions` prop is used
+instead, so the section is never empty.
+
+Dictation needs no configuration at all: it uses the browser's own Web Speech
+API, so the mic button appears wherever the API exists and is simply absent
+elsewhere. Finalised phrases are appended to the composer (never replacing a
+draft), interim words preview beside the button, and sending stops the mic so
+the next words cannot land in a composer the user just emptied.
+
+### Context usage
+
+The composer also carries a context gauge — a small ring plus percentage
+showing how full the model's context window is for the current conversation,
+the affordance Cursor popularised. It answers one question: *is this
+conversation about to get shorter than I think?* Long chats do not fail at the
+window, they get silently summarised, and a user who cannot see that coming
+reads the summary's gaps as the assistant forgetting.
+
+Clicking it opens a breakdown: one stacked bar over the window plus a colour
+legend, so "why is this chat 84 % full" has an answer the user can act on —
+usually "the tool results", sometimes "the MCP tools you wired up".
+
+Unlike the items above it needs no endpoint of its own. The backend reports the
+occupancy on the frames it already sends:
+
+| Frame | Extra keys | When |
+| --- | --- | --- |
+| `status: "thinking"` | `context_tokens`, `context_window`, `context_breakdown?` | Each agent-loop iteration, so the gauge climbs during a long turn |
+| `done` | same | Closing value for the turn — a turn whose last iteration compacted ends lower than it peaked |
+| Restored message (`POST /chat/sessions`) | same | On the newest assistant message, so a reload or conversation switch restores the gauge |
+
+`context_tokens` and `context_window` are required together and the window must
+be positive: a token count with no window to measure it against is not a ratio.
+Anything else is ignored, so a backend that reports nothing simply has no gauge —
+and a host on an older backend needs no configuration change.
+
+`context_breakdown` is optional and validated independently, so a malformed one
+costs the gauge its detail but never its number. Keys, all optional, in tokens:
+
+| Key | Legend row |
+| --- | --- |
+| `system` | System prompt |
+| `tools` | Tool definitions |
+| `dynamic_tools` | MCP & dynamic tools |
+| `summary` | Summarized conversation |
+| `tool_results` | Tool results |
+| `conversation` | Conversation |
+
+Only positive values are shown, so a chat with no digest yet simply has no
+"Summarized conversation" row. **The values must sum to `context_tokens`** — the
+popover shows the lines and the headline together, and a breakdown whose parts
+do not add up reads as broken numbers rather than as rounding. A producer doing
+per-bucket integer division has to distribute the remainder rather than drop it.
+
+Colours track the backend's own thresholds, not a design choice: neutral below
+80 % (where XTM One's agent loop starts distilling older turns into a summary),
+amber past it, red past 95 % (where it emergency-prunes). `used` is a
+char-derived estimate of what the next call will carry — deliberately a forecast
+rather than a receipt for the turn that just ended, which is why the figures are
+prefixed with `~`.
+
+Only the `rest` backend carries the figures today.
+
+Anything host-specific goes through `composerToolbar`:
+
+```tsx
+<ChatPanel
+  composerToolbar={<MySessionToolPicker />}
+  {...rest}
+/>
+```
+
+## Markdown Helpers
+
+A host that renders assistant prose with its **own** markdown component (its
+design tokens, its icon set) should still normalise the text the same way the
+panel does, rather than maintaining a divergent copy. These pure
+`string → string` helpers ship from the dedicated **`@filigran/chatbot/markdown`**
+entry point — ~2 kB, no React, no CSS. Import them from there and never from the
+package root, which is the full panel bundle:
+
+```tsx
+import {
+  hardenNestedCodeFences,
+  markdownUrlTransform,
+  normalizeImageMarkdown,
+  normalizeMarkdownTables,
+  wrapBareJson,
+} from '@filigran/chatbot/markdown';
+
+const processed = hardenNestedCodeFences(
+  normalizeMarkdownTables(wrapBareJson(normalizeImageMarkdown(content))),
+);
+
+<ReactMarkdown urlTransform={markdownUrlTransform}>{processed}</ReactMarkdown>;
+```
+
+Order matters: alt-text is flattened before anything reads line structure, and
+the JSON wrap must see the raw payload before fences are hardened.
+
+| Helper                    | Fixes                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `normalizeImageMarkdown`  | Multi-line `![alt](url)` alt text, which breaks the image into literal paragraphs plus a stray link             |
+| `wrapBareJson`            | A whole message that is raw JSON — fenced as ```json so it stays readable and copyable                          |
+| `normalizeMarkdownTables` | A delimiter row whose column count doesn't match the header, including tables nested in blockquotes / list items |
+| `hardenNestedCodeFences`  | A ```markdown block containing its own ``` fences, which shatters the snippet into alternating code and prose   |
+| `markdownUrlTransform`    | react-markdown's default sanitiser stripping `data:image/*` URIs (code-interpreter charts). Still blocks `javascript:` and non-image `data:` |
+
+None of them touch content they don't apply to — an already-valid document is
+returned byte-identical.
+
 ## Peer Dependencies
 
 - `react` >= 18
 - `react-dom` >= 18
 - `react-markdown` >= 10
+- `remark-breaks` >= 4
 - `remark-gfm` >= 4
 
 ---

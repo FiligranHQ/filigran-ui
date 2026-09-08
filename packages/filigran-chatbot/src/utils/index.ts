@@ -1,3 +1,5 @@
+import type { Translate } from '../types';
+
 export function hexAlpha(hex: string, alpha: number): string {
   const a = Math.round(alpha * 255)
     .toString(16)
@@ -40,25 +42,69 @@ export function hardenNestedCodeFences(raw: string): string {
   }
   if (openerIdx === -1) return raw;
 
-  let maxRun = 3;
-  let nestedCount = 0;
-  let lastBareFence = -1;
+  // Find the outer block's *matching* closer rather than the last bare fence in
+  // the message. Same-length fences are ambiguous — an inner ``` looks exactly
+  // like the outer closer — so inner fences are paired off with two structural
+  // signals:
+  //   • a labelled fence (```lang) opens a nested block, and the next bare
+  //     fence closes it (depth tracking); and
+  //   • two consecutive *bare* fences wrapping a non-blank body form an
+  //     unlabelled nested code block — a ``` … ``` example inside the document.
+  // A bare fence at depth 0 is the outer closer when the next fence is
+  // labelled, absent, or bare-but-separated-by-only-blank-lines: that last case
+  // is a block boundary (this closer followed by a *separate* block), not
+  // nesting, so the separate block is never absorbed.
+  //
+  // Taking the last bare fence instead swallowed everything up to it — trailing
+  // prose and unrelated code blocks alike — whenever a later block followed the
+  // markdown one.
+  const fences: { idx: number; run: number; bare: boolean }[] = [];
   for (let i = openerIdx + 1; i < lines.length; i++) {
     const m = lines[i].match(fenceRe);
-    if (!m) continue;
-    nestedCount++;
-    maxRun = Math.max(maxRun, m[2].length);
-    if (m[3].trim() === '') lastBareFence = i;
+    if (m) fences.push({ idx: i, run: m[2].length, bare: m[3].trim() === '' });
   }
-  if (nestedCount === 0) return raw;
+
+  // True when every line strictly between two fence lines is blank — which
+  // separates a nested code block (real body) from a mere block boundary.
+  const blankBetween = (a: number, b: number): boolean => {
+    for (let k = a + 1; k < b; k++) {
+      if (lines[k].trim() !== '') return false;
+    }
+    return true;
+  };
+
+  let depth = 0;
+  let maxRun = 3;
+  let nestedCount = 0;
+  let closerIdx = -1;
+  for (let j = 0; j < fences.length; j++) {
+    const f = fences[j];
+    if (f.bare && depth === 0) {
+      const next = fences[j + 1];
+      if (!next || !next.bare || blankBetween(f.idx, next.idx)) {
+        closerIdx = f.idx;
+        break;
+      }
+      depth++; // opens an unlabelled nested code block
+    } else {
+      // A labelled fence opens a nested block; a bare fence at depth > 0 closes
+      // the innermost one.
+      depth = f.bare ? Math.max(0, depth - 1) : depth + 1;
+    }
+    nestedCount++;
+    maxRun = Math.max(maxRun, f.run);
+  }
+
+  // Only harden when the block really contains nested fences AND its own closer
+  // was found — otherwise leave the text alone rather than extending the block
+  // over whatever follows.
+  if (closerIdx === -1 || nestedCount === 0) return raw;
 
   const fence = '`'.repeat(Math.max(maxRun + 1, 4));
   const om = lines[openerIdx].match(fenceRe)!;
   lines[openerIdx] = `${om[1]}${fence}${om[3]}`;
-  if (lastBareFence > openerIdx) {
-    const cm = lines[lastBareFence].match(fenceRe)!;
-    lines[lastBareFence] = `${cm[1]}${fence}`;
-  }
+  const cm = lines[closerIdx].match(fenceRe)!;
+  lines[closerIdx] = `${cm[1]}${fence}`;
   return lines.join('\n');
 }
 
@@ -166,7 +212,133 @@ export function normalizeMarkdownTables(raw: string): string {
   return lines.join('\n');
 }
 
-export const identity = (key: string) => key;
+/**
+ * When the ENTIRE message is a raw JSON object/array (and not already fenced),
+ * wrap it in a ```json fence so it renders as a proper, copyable code block
+ * instead of one long line of mangled prose — markdown collapses the newlines
+ * and eats the `*`/`_` inside string values otherwise.
+ *
+ * Deliberately conservative: it parses the payload first, so a message that
+ * merely *starts* with `{` (e.g. prose about an object) is left untouched.
+ */
+export function wrapBareJson(raw: string): string {
+  const trimmed = raw.trim();
+  if ((!trimmed.startsWith('{') && !trimmed.startsWith('[')) || trimmed.startsWith('```')) return raw;
+  try {
+    JSON.parse(trimmed);
+    return '```json\n' + trimmed + '\n```';
+  } catch {
+    return raw;
+  }
+}
+
+/**
+ * Models routinely emit markdown images whose alt text is the whole generation
+ * prompt, spread over several lines. CommonMark has no multi-line `![…](…)`, so
+ * the image syntax breaks apart and the prompt renders as literal paragraphs
+ * followed by a stray link.
+ *
+ * This collapses the alt text of such an image onto a single line (whitespace
+ * runs → one space) so the parser emits a real `<img>` node. Single-line images
+ * are returned byte-identical, and the URL is never rewritten — the URL may
+ * contain anything, and only the alt text is at fault.
+ *
+ * The URL part excludes `)` and whitespace, so a link title
+ * (`![alt](url "title")`) or a parenthesised URL is left alone rather than
+ * mis-parsed.
+ */
+export function normalizeImageMarkdown(raw: string): string {
+  if (!raw.includes('![')) return raw;
+  return raw.replace(/!\[([^\]]*?\n[^\]]*?)\]\(([^)\s]+)\)/g, (_match, alt: string, url: string) => {
+    const flat = alt.replace(/\s+/g, ' ').trim();
+    return `![${flat}](${url})`;
+  });
+}
+
+/** Schemes react-markdown's own sanitizer allows, minus the `data:` special case below. */
+const SAFE_URL_PROTOCOLS = new Set(['http', 'https', 'mailto', 'tel']);
+
+/**
+ * URL sanitizer for react-markdown that additionally preserves `data:image/*`
+ * URIs.
+ *
+ * react-markdown v9+ ships a default `urlTransform` allowing only
+ * http / https / mailto / tel. Agents with a code interpreter return charts as
+ * `data:image/png;base64,…`, which that default strips — leaving a broken
+ * `<img>`. Every other scheme (notably `javascript:` / `vbscript:`) is still
+ * blocked, and non-image `data:` URIs are blocked too, so this widens the
+ * allow-list by exactly one safe, inert case.
+ */
+export function markdownUrlTransform(url: string): string {
+  const colon = url.indexOf(':');
+  if (colon < 0) return url; // relative URL — always safe
+
+  const slash = url.indexOf('/');
+  const question = url.indexOf('?');
+  const hash = url.indexOf('#');
+
+  // A `/`, `?` or `#` before the colon means this is a path, not a scheme
+  // (e.g. `./a:b`), so there is nothing to sanitize.
+  if ((slash > -1 && colon > slash) || (question > -1 && colon > question) || (hash > -1 && colon > hash)) {
+    return url;
+  }
+
+  const protocol = url.slice(0, colon).toLowerCase();
+  if (SAFE_URL_PROTOCOLS.has(protocol)) return url;
+  if (protocol === 'data' && /^data:image\//i.test(url)) return url;
+  return '';
+}
+
+export const identity: Translate = (key) => key;
+
+/**
+ * Translates `key`, then splices `values` into the result's `{name}` slots.
+ *
+ * The point is that the key stays a whole sentence. Building a phrase out of
+ * translated fragments — "Waiting for" + count + "tasks" — freezes English word
+ * order and English plural rules into the layout, and a translator sees each
+ * fragment with no sentence around it. Here the locale owns the whole sentence
+ * and decides where the number goes; the host's `t` still does nothing but look
+ * a key up, so this needs no support from it.
+ *
+ * Plurals stay two explicit keys (`'1 tool call'` / `'{count} tool calls'`) for
+ * the same reason: a lookup cannot select a plural form, so the call site picks
+ * the sentence and the locale translates it whole.
+ */
+export function translate(t: Translate, key: string, values: Record<string, string | number>): string {
+  // One pass over the sentence rather than one pass per value: a value that
+  // happens to contain `{something}` is then never mistaken for a slot of its
+  // own. A slot with no value keeps its braces, so a stray one is visible
+  // rather than silently blank.
+  return t(key).replace(/\{(\w+)\}/g, (slot, name) => (Object.hasOwn(values, name) ? String(values[name] ?? '') : slot));
+}
+
+/**
+ * Same as `translate`, but leaves one slot unfilled and returns the text on
+ * either side of it — for the case where the value has to be markup (a coloured
+ * agent name, a link) and so cannot be spliced into a string.
+ *
+ * Without this the sentence gets cut into "How can " + node + " help you, ",
+ * which is untranslatable in any language that would not put the node in that
+ * spot. Here the locale still owns the whole sentence and decides where the slot
+ * sits.
+ *
+ * `hasSlot` is false for a translation that dropped the slot — a locale that
+ * reworded the sentence so it no longer names the value. The caller then renders
+ * the sentence without the node instead of letting it dangle off the end.
+ */
+export function translateAround(
+  t: Translate,
+  key: string,
+  slot: string,
+  values: Record<string, string | number> = {},
+): { before: string; after: string; hasSlot: boolean } {
+  const sentence = translate(t, key, values);
+  const token = `{${slot}}`;
+  const at = sentence.indexOf(token);
+  if (at === -1) return { before: sentence, after: '', hasSlot: false };
+  return { before: sentence.slice(0, at), after: sentence.slice(at + token.length), hasSlot: true };
+}
 
 /**
  * Nearest chatbot panel root (`.filigran-chatbot`) for portal-based overlays
@@ -184,23 +356,33 @@ export function findChatbotRoot(el: HTMLElement | null): HTMLElement {
 }
 
 /**
+ * Compact count for the composer's status readouts: 1200 → "1.2k", so neither
+ * the quota nor the context gauge can widen the toolbar as the numbers grow.
+ */
+export function compactCount(n: number): string {
+  if (n < 1000) return `${n}`;
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0).replace(/\.0$/, '')}k`;
+  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+}
+
+/**
  * Compact relative-time label for the conversation history menu
  * ("just now", "5m ago", "3h ago", "2d ago", then a short date).
  * Returns an empty string for missing/unparseable timestamps so the row
  * simply omits the label instead of showing "Invalid Date".
  */
-export function timeAgo(iso: string | undefined, t: (key: string) => string): string {
+export function timeAgo(iso: string | undefined, t: Translate): string {
   if (!iso) return '';
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return '';
   const diffMs = Date.now() - then;
   const minutes = Math.floor(diffMs / 60_000);
   if (minutes < 1) return t('just now');
-  if (minutes < 60) return `${minutes}${t('m ago')}`;
+  if (minutes < 60) return translate(t, '{count}m ago', { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}${t('h ago')}`;
+  if (hours < 24) return translate(t, '{count}h ago', { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}${t('d ago')}`;
+  if (days < 7) return translate(t, '{count}d ago', { count: days });
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 

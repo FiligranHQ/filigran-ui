@@ -324,7 +324,7 @@ const DraggableTableHeader = <TData, TValue>({
       key={header.id}
       colSpan={header.colSpan}
       className={cn(
-        'transition-width truncate group z-10 whitespace-nowrap opacity-100 transition-transform duration-200 ease-in-out uppercase top-0 bg-background',
+        'transition-width truncate group z-10 whitespace-nowrap opacity-100 transition-transform duration-200 ease-in-out top-0 bg-background normal-case',
         isDragging && 'z-10 bg-text-secondary/50 opacity-80',
         sticky && 'sticky'
       )}
@@ -476,7 +476,7 @@ const LoadingRow = <TData,>({table}: {table: TableType<TData>}) => {
     <>
       {table.getHeaderGroups().map((headerGroup) => (
         <TableRow
-          className={'hover:bg-inherit'}
+          className="hover:bg-inherit"
           key={headerGroup.id}>
           {headerGroup.headers.map((_, index) => (
             <TableCell key={index}>
@@ -615,10 +615,10 @@ const DefaultSelectionHeader =
   const selectedCount = selectionHandlers.getSelectionCount(table, totalSelectableCount) || 0;
   return ( <div
     className={cn(
-      'flex justify-between items-center w-full bg-primary/10 hover:bg-primary/10 pl-4',
+      'flex justify-between items-center w-full pl-4',
       'transition-all duration-200 ease-in-out',
       selectedCount > 0
-        ? 'py-3 h-12 mt-4 mb-s'
+        ? 'bg-[hsl(var(--bg-elevation-hover-layer-0)/.5)] py-3 h-12 mt-4 mb-s'
         : 'h-0 overflow-hidden'
     )}>
     <div>
@@ -658,7 +658,7 @@ export function createDefaultSelectionColumn<TData>(
       if (! selectionHandlers) return null;
       return (
         <Checkbox
-          className="flex"
+          className="flex bg-background"
           checked={
             selectionHandlers.isAllSelected(table)
               ? true
@@ -675,7 +675,7 @@ export function createDefaultSelectionColumn<TData>(
       if (!selectionHandlers) return null;
       return (
       <Checkbox
-        className="flex"
+        className="flex bg-background"
         checked={selectionHandlers.isRowSelected(row)}
         onClick={(e) => e.stopPropagation()}
         onCheckedChange={() => selectionHandlers.toggleRow(row)}
@@ -823,10 +823,10 @@ function GenericDataTable<TData extends {id: string}, TValue>(
         <Table
           style={{width: table.getCenterTotalSize()}}
           sticky={sticky}>
-          <TableHeader>
+          <TableHeader className="[&_tr]:border-b">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
-                className={'hover:bg-inherit'}
+                className="hover:bg-inherit"
                 key={headerGroup.id}>
                 <SortableContext
                   items={table.getState().columnOrder}
@@ -849,7 +849,7 @@ function GenericDataTable<TData extends {id: string}, TValue>(
                 <TableRow
                   key={row.id}
                   className={cn(
-                    'hover:bg-hover',
+                    row.getCanSelect() && 'hover:bg-[hsl(var(--bg-elevation-hover-layer-0)/.5)]',
                     onClickRow ? 'cursor-pointer' : '',
                     !row.getCanSelect() &&
                       'bg-text-foreground/30 cursor-auto opacity-50'

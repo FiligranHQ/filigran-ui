@@ -53,6 +53,7 @@ interface MultiSelectFormFieldProps<
   placeholder: string
   noResultString: string
   popoverContentClassName?: string
+  placeholderClassName?: string
   className?: string
   onValueChange: (value: string[]) => void
   onInputChange?: (value: string) => void
@@ -77,6 +78,7 @@ const MultiSelectFormField = React.forwardRef<
       placeholder,
       noResultString = 'No results found',
       popoverContentClassName,
+      placeholderClassName,
       ...props
     },
     ref
@@ -247,7 +249,10 @@ const MultiSelectFormField = React.forwardRef<
               ref={ref}
               {...props}
               onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-              className="flex h-9 w-full items-center justify-between rounded bg-input-bg-default p-1 hover:bg-hover">
+              className={cn(
+                'flex h-9 w-full items-center justify-between rounded bg-input-bg-default p-1 hover:bg-hover',
+                className
+              )}>
               {selectedValues.length > 0 ? (
                 <div className="flex w-full items-center">
                   <div
@@ -312,7 +317,10 @@ const MultiSelectFormField = React.forwardRef<
               ) : (
                 <div className="flex w-full items-center justify-between">
                   <span
-                    className="mx-3 text-sm text-muted-foreground normal-case"
+                    className={cn(
+                      'mx-3 text-sm text-muted-foreground normal-case',
+                      placeholderClassName
+                    )}
                     role="textbox"
                     aria-readonly="true">
                     {placeholder}

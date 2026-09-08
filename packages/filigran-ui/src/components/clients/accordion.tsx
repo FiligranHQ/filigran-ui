@@ -2,7 +2,9 @@
 
 import * as AccordionPrimitive from '@radix-ui/react-accordion'
 import {ArrowDropDownIcon} from '@filigran/icon'
+import {cva, type VariantProps} from 'class-variance-authority'
 import * as React from 'react'
+import {buttonVariants} from '../servers/button'
 import {cn} from '../../lib/utils'
 
 const Accordion = AccordionPrimitive.Root
@@ -19,23 +21,58 @@ const AccordionItem = React.forwardRef<
 ))
 AccordionItem.displayName = 'AccordionItem'
 
+const accordionTriggerVariants = cva(
+  'flex flex-1 items-center justify-between py-2 pr-2 font-medium transition-all hover:underline',
+  {
+    variants: {
+      variant: {
+        default: '[&[data-state=open]>.accordion-arrow-icon]:rotate-180',
+        colored:
+          'border-t border-elevation-background-layer-3 hover:cursor-pointer [&[data-state=open]_.accordion-arrow-icon]:rotate-180',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  }
+)
+
+interface AccordionTriggerProps
+  extends React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>,
+    VariantProps<typeof accordionTriggerVariants> {}
+
 const AccordionTrigger = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
->(({className, children, ...props}, ref) => (
-  <AccordionPrimitive.Header className="flex">
-    <AccordionPrimitive.Trigger
-      ref={ref}
-      className={cn(
-        'flex flex-1 items-center justify-between py-2 pr-2 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180',
-        className
-      )}
-      {...props}>
-      {children}
-      <ArrowDropDownIcon className="h-5 w-5 shrink-0 transition-transform duration-200" />
-    </AccordionPrimitive.Trigger>
-  </AccordionPrimitive.Header>
-))
+  AccordionTriggerProps
+>(({className, children, variant, ...props}, ref) => {
+  const showColoredTrigger = variant === 'colored'
+
+  return (
+    <AccordionPrimitive.Header
+      className={cn('flex', showColoredTrigger && 'items-center gap-1')}>
+      <AccordionPrimitive.Trigger
+        ref={ref}
+        className={cn(
+          accordionTriggerVariants({variant}),
+          className
+        )}
+        {...props}>
+        {children}
+        {showColoredTrigger ? (
+          <span
+            className={cn(
+              buttonVariants({variant: 'secondary', size: 'icon'}),
+              'shrink-0'
+            )}>
+            <ArrowDropDownIcon className="accordion-arrow-icon h-5 w-5 shrink-0 transition-transform duration-200" />
+          </span>
+        ) : (
+          <ArrowDropDownIcon className="accordion-arrow-icon h-5 w-5 shrink-0 transition-transform duration-200" />
+        )}
+      </AccordionPrimitive.Trigger>
+    </AccordionPrimitive.Header>
+  )
+})
 AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName
 
 const AccordionContent = React.forwardRef<
