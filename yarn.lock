@@ -2245,7 +2245,7 @@ __metadata:
   dependencies:
     "@mui/icons-material": "npm:6.5.0"
     "@mui/material": "npm:6.5.0"
-    "@tiptap/core": "npm:3.23.1"
+    "@tiptap/core": "npm:3.30.5"
     "@tiptap/extension-color": "npm:3.23.1"
     "@tiptap/extension-highlight": "npm:3.23.1"
     "@tiptap/extension-image": "npm:3.23.1"
@@ -5175,12 +5175,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/core@npm:3.23.1":
-  version: 3.23.1
-  resolution: "@tiptap/core@npm:3.23.1"
+"@tiptap/core@npm:3.30.5":
+  version: 3.30.5
+  resolution: "@tiptap/core@npm:3.30.5"
   peerDependencies:
-    "@tiptap/pm": 3.23.1
-  checksum: 10c0/f5a6c8518004fd266f12b86ec692803d1f5493a54a446605d90b96433c76b8c85efb87295febf2adfeabce9566f4395514801e9e15c25c6abc2334b469335ce0
+    "@tiptap/pm": 3.30.5
+  checksum: 10c0/d64a695926b2db554a1faec7652c24bd34488be0d1fcfaa036a74094aefaed87c032c2a93fa8b8c0170c7f35b168fa942358a494a44597e1236acf5bd16026cc
   languageName: node
   linkType: hard
 

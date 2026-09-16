@@ -35,14 +35,14 @@
     "react-dom": ">=18"
   },
   "dependencies": {
-    "@tiptap/core": "3.23.1",
+    "@tiptap/core": "3.30.5",
     "@tiptap/pm": "3.23.1",
     "@tiptap/react": "3.23.1"
   },
   "devDependencies": {
     "@mui/icons-material": "6.5.0",
     "@mui/material": "6.5.0",
-    "@tiptap/core": "3.23.1",
+    "@tiptap/core": "3.30.5",
     "@tiptap/extension-color": "3.23.1",
     "@tiptap/extension-highlight": "3.23.1",
     "@tiptap/extension-image": "3.23.1",
