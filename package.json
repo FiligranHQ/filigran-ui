@@ -23,7 +23,8 @@
     "publish:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace @filigran/ui npm publish --provenance --access public",
     "release:filigran-chatbot": "yarn build:filigran-chatbot && yarn workspace @filigran/chatbot npm publish --access public",
     "release:filigran-icon": "yarn build:filigran-icon && yarn workspace @filigran/icon npm publish --access public",
-    "release:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace @filigran/ui npm publish --access public"
+    "release:filigran-ui": "yarn build:filigran-icon && yarn build:filigran-ui && yarn workspace @filigran/ui npm publish --access public",
+    "release:filigran-rich-text-editor": "yarn build:filigran-rich-text-editor && yarn workspace @filigran/rich-text-editor npm publish --access public"
   },
   "workspaces": [
     "packages/*",
