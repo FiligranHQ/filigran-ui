@@ -30,6 +30,8 @@ interface ComboboxProps<T> {
   className?: string
   keyValue?: keyof T | 'value'
   keyLabel?: keyof T | 'label'
+  shouldFilter?: boolean
+  disabled?: boolean
 }
 
 function Combobox<T>({
@@ -43,16 +45,22 @@ function Combobox<T>({
   className,
   keyLabel = 'label',
   keyValue = 'value',
+  shouldFilter = true,
+  disabled,
 }: ComboboxProps<T>) {
   const [open, setOpen] = React.useState(false)
 
-  const handleSelect = (selectedValue: string) => {
-    const selectedItem =
-      dataTab.find(
-        (item) => String(item[keyValue as keyof typeof item]) === selectedValue
-      ) || undefined
+  // Every open-state change goes through here: the CommandInput is unmounted on
+  // close without firing a change event, so the search term is reset explicitly.
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      onInputChange?.('')
+    }
+  }
 
-    setOpen(false)
+  const handleSelect = (selectedItem: T) => {
+    handleOpenChange(false)
     onValueChange(selectedItem)
   }
 
@@ -67,21 +75,20 @@ function Combobox<T>({
     onValueChange(undefined)
   }
 
-  // @ts-ignore
   return (
     <Popover
       open={open}
-      onOpenChange={setOpen}>
+      onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          disabled={disabled}
           className={cn(
             'normal-case w-full justify-between bg-input-bg-default border-none',
             className
-          )}
-          onClick={() => setOpen(!open)}>
+          )}>
           {value ? (
             String(value[keyLabel as keyof T])
           ) : (
@@ -99,23 +106,28 @@ function Combobox<T>({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="p-0 popover-content-width-same-as-its-trigger">
-        <Command onChange={handleSearchInputChange}>
+        {/* Set shouldFilter to false when options are already filtered server-side */}
+        <Command
+          onChange={handleSearchInputChange}
+          shouldFilter={shouldFilter}>
           <CommandInput placeholder={placeholder} />
-          <CommandList>
+          <CommandList
+            onWheel={(e) => {
+              e.currentTarget.scrollTop += e.deltaY
+              e.stopPropagation()
+            }}>
             <CommandEmpty>{emptyCommand}</CommandEmpty>
             <CommandGroup>
               {dataTab.map((data) => (
                 <CommandItem
                   key={String(data[keyValue as keyof T])}
                   value={String(data[keyValue as keyof T])}
-                  onSelect={() =>
-                    handleSelect(String(data[keyValue as keyof T]))
-                  }>
+                  keywords={[String(data[keyLabel as keyof T])]}
+                  onSelect={() => handleSelect(data)}>
                   <CheckIcon
                     className={cn(
                       'mr-2 h-4 w-4',
-                      (value as ComboboxItem)?.value ===
-                        data[keyValue as keyof T]
+                      value?.[keyValue as keyof T] === data[keyValue as keyof T]
                         ? 'opacity-100'
                         : 'opacity-0'
                     )}
