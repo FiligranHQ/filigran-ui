@@ -162,17 +162,39 @@ const REASONING_WINDOW_MAX_CHARS = 6000;
 const MIN_REASONING_CHARS = 3;
 
 /**
- * The text the reasoning window shows: the cleaned tail of the turn's
- * reasoning, opened at a paragraph break when one is near, and never inside a
- * fenced block the cut split (its orphaned closer would pair with the next
- * opener and strip the prose between them).
+ * The text the reasoning window shows: the cleaned tail of the prose between
+ * the turn's fenced blocks, opened at a paragraph break when one is near.
+ * Fences pair up from the start of the whole text, as `cleanReasoningText`
+ * pairs them: paired inside a cut tail instead, a block the cut split or a
+ * block still streaming shifts every pair and strips the newest prose.
  */
 function reasoningWindowText(content: string): string {
   if (content.length <= REASONING_WINDOW_MAX_CHARS) return cleanReasoningText(content);
-  let tail = content.slice(content.length - REASONING_WINDOW_MAX_CHARS);
-  const paragraph = tail.indexOf('\n\n');
-  if (paragraph !== -1 && paragraph < tail.length / 2) tail = tail.slice(paragraph + 2);
-  if ((tail.split('```').length - 1) % 2 === 1) tail = tail.slice(tail.indexOf('```') + 3);
+  // [start, end) of the prose around each fenced block; an unclosed fence
+  // stays prose, as `cleanReasoningText` leaves it.
+  const prose: [number, number][] = [];
+  let from = 0;
+  for (let open = content.indexOf('```'); open !== -1; open = content.indexOf('```', from)) {
+    const close = content.indexOf('```', open + 3);
+    if (close === -1) break;
+    prose.push([from, open]);
+    from = close + 3;
+  }
+  prose.push([from, content.length]);
+  const parts: string[] = [];
+  let budget = REASONING_WINDOW_MAX_CHARS;
+  for (let i = prose.length - 1; i >= 0 && budget > 0; i--) {
+    const [start, end] = prose[i];
+    const cut = Math.max(start, end - budget);
+    parts.push(content.slice(cut, end));
+    // + 1: each dropped block leaves a space, as in `cleanReasoningText`.
+    budget -= end - cut + 1;
+  }
+  let tail = parts.reverse().join(' ');
+  if (budget <= 0) {
+    const paragraph = tail.indexOf('\n\n');
+    if (paragraph !== -1 && paragraph < tail.length / 2) tail = tail.slice(paragraph + 2);
+  }
   return cleanReasoningText(tail);
 }
 
