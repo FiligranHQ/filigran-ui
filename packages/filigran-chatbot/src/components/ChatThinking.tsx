@@ -271,7 +271,7 @@ const WAITING_GAME_DELAY_MS = 5000;
  * waiting game takes its place: long enough to outlast an ordinary tool call,
  * so the window only gives way on a genuinely long wait.
  */
-const QUIET_REASONING_GAME_DELAY_MS = 30_000;
+const QUIET_REASONING_GAME_DELAY_MS = 10_000;
 
 /**
  * True once `active` has held for `delayMs` with the same `key`; false the
@@ -318,7 +318,7 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true 
   // Reasoning wins over the waiting game: once the turn has reasoning to show,
   // the window stays through tool calls and short silences until the answer
   // streams. The game fills a wait with no reasoning after 5 s, and takes over
-  // from reasoning that has gone 30 s without a new chunk, until the next one.
+  // from reasoning that has gone 10 s without a new chunk, until the next one.
   const reasoningText = useMemo(() => reasoningWindowText(thinkingContent ?? ''), [thinkingContent]);
   const showReasoning = reasoningText.length >= MIN_REASONING_CHARS;
   const waitedWithoutReasoning = useSustained(miniGameEnabled && !showReasoning, WAITING_GAME_DELAY_MS);
