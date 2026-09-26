@@ -103,7 +103,10 @@
   }
 }
 
-@keyframes reasoningGlow {
+/* Namespaced like chat-dot / chat-fade-in: keyframe names are global, and a
+   host page defining its own `reasoningGlow` would repaint (or be repainted
+   by) this one. */
+@keyframes chat-reasoning-glow {
   0%,
   100% {
     border-color: var(--chat-accent, hsl(197 100% 53%));
@@ -114,6 +117,20 @@
     border-color: var(--chat-accent, hsl(197 100% 53%));
     border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 35%, transparent);
     box-shadow: inset 2px 0 12px -4px color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 18%, transparent);
+  }
+}
+
+/* The reasoning window's breathing glow; under reduced motion it stands still
+   on a static accent border. */
+.filigran-chat-reasoning {
+  border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 25%, transparent);
+  animation:
+    chat-reasoning-glow 3s ease-in-out infinite,
+    chat-fade-in 0.5s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .filigran-chat-reasoning {
+    animation: none;
   }
 }
 

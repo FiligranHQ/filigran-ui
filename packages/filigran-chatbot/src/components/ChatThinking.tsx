@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AgentStatusState, IconProps, Translate } from '../types';
 import {
   AlertTriangleIcon,
@@ -151,6 +151,54 @@ export function cleanReasoningText(text: string): string {
 }
 
 /**
+ * Most characters of the turn's reasoning the window renders. The window is
+ * pinned to its newest line and shows about eight lines, while a long turn
+ * accumulates hundreds of KB: laying all of it out again on every streamed
+ * chunk only re-flows text nobody can see.
+ */
+const REASONING_WINDOW_MAX_CHARS = 6000;
+
+/** Fewer visible characters than this is no reasoning to show. */
+const MIN_REASONING_CHARS = 3;
+
+/**
+ * The text the reasoning window shows: the cleaned tail of the prose between
+ * the turn's fenced blocks, opened at a paragraph break when one is near.
+ * Fences pair up from the start of the whole text, as `cleanReasoningText`
+ * pairs them: paired inside a cut tail instead, a block the cut split or a
+ * block still streaming shifts every pair and strips the newest prose.
+ */
+function reasoningWindowText(content: string): string {
+  if (content.length <= REASONING_WINDOW_MAX_CHARS) return cleanReasoningText(content);
+  // [start, end) of the prose around each fenced block; an unclosed fence
+  // stays prose, as `cleanReasoningText` leaves it.
+  const prose: [number, number][] = [];
+  let from = 0;
+  for (let open = content.indexOf('```'); open !== -1; open = content.indexOf('```', from)) {
+    const close = content.indexOf('```', open + 3);
+    if (close === -1) break;
+    prose.push([from, open]);
+    from = close + 3;
+  }
+  prose.push([from, content.length]);
+  const parts: string[] = [];
+  let budget = REASONING_WINDOW_MAX_CHARS;
+  for (let i = prose.length - 1; i >= 0 && budget > 0; i--) {
+    const [start, end] = prose[i];
+    const cut = Math.max(start, end - budget);
+    parts.push(content.slice(cut, end));
+    // + 1: each dropped block leaves a space, as in `cleanReasoningText`.
+    budget -= end - cut + 1;
+  }
+  let tail = parts.reverse().join(' ');
+  if (budget <= 0) {
+    const paragraph = tail.indexOf('\n\n');
+    if (paragraph !== -1 && paragraph < tail.length / 2) tail = tail.slice(paragraph + 2);
+  }
+  return cleanReasoningText(tail);
+}
+
+/**
  * Reasoning window — the model's reasoning prose rendered below the status
  * bubble while the agent works: smaller, dimmed text inside a capped-height
  * (max-h-40) window always pinned to the newest line, with a Cursor-style
@@ -161,27 +209,23 @@ export function cleanReasoningText(text: string): string {
  * feedback that scrolls up and dissolves; the full accumulated reasoning
  * stays readable afterwards via the message's reasoning details.  The window
  * (and the status bubble above it) disappears the moment the final answer
- * starts flowing.
+ * starts flowing.  `text` comes cleaned and tail-bounded from
+ * `reasoningWindowText`; the glow lives on `.filigran-chat-reasoning` so
+ * reduced motion can stop it.
  */
-export function ThinkingTextBubble({ content }: { content: string }) {
+function ThinkingTextBubble({ text }: { text: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
-  const cleaned = cleanReasoningText(content);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
     setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
-  }, [cleaned]);
-
-  if (cleaned.length < 3) return null;
+  }, [text]);
 
   return (
-    <div
-      className="ml-11 mt-2.5 max-w-[75%] rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] py-2 pl-3 pr-3"
-      style={{ animation: 'reasoningGlow 3s ease-in-out infinite, chat-fade-in 0.5s ease-out' }}
-    >
+    <div className="filigran-chat-reasoning ml-11 mt-2.5 max-w-[75%] rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] py-2 pl-3 pr-3">
       <div
         ref={ref}
         className={`max-h-40 overflow-hidden${
@@ -193,7 +237,7 @@ export function ThinkingTextBubble({ content }: { content: string }) {
             : ''
         }`}
       >
-        <p className="m-0 whitespace-pre-wrap break-words text-xs leading-5 text-gray-500 dark:text-white/45">{cleaned}</p>
+        <p className="m-0 whitespace-pre-wrap break-words text-xs leading-5 text-gray-500 dark:text-white/45">{text}</p>
       </div>
     </div>
   );
@@ -217,40 +261,33 @@ function formatElapsed(seconds: number): string {
 const ELAPSED_DISPLAY_THRESHOLD_S = 15;
 
 /**
- * The reasoning window flips to the waiting game once nothing has progressed
- * for this long — i.e. no reasoning at all, or a reasoning stream that stalled.
+ * How long a working turn with no reasoning to show waits before the waiting
+ * game fills the space, so a quick reply never flashes it.
  */
-const STALL_DELAY_MS = 5000;
+const WAITING_GAME_DELAY_MS = 5000;
 
 /**
- * True once `signal` has stayed unchanged for `delayMs`. Re-arms whenever the
- * signal changes, so resumed reasoning clears the flag immediately. Used to
- * detect a stalled (or absent) reasoning stream so we can show the waiting game
- * in the meantime and flip back to the reasoning the moment it resumes. Arms no
- * timer (and never flips) while `enabled` is false, so a host that disables the
- * waiting game schedules no timeouts or re-renders for it.
+ * How long reasoning already on screen must go without a new chunk before the
+ * waiting game takes its place: long enough to outlast an ordinary tool call,
+ * so the window only gives way on a genuinely long wait.
  */
-function useStalled(signal: number, delayMs: number, enabled: boolean): boolean {
-  const [stalled, setStalled] = useState(false);
-  const prevSignalRef = useRef(signal);
+const QUIET_REASONING_GAME_DELAY_MS = 10_000;
 
-  // Did the signal change since the last settled render? When it did, reasoning
-  // has just resumed, so we report "not stalled" for this very render without a
-  // render-phase state update (discouraged in React / brittle under StrictMode
-  // and concurrent rendering). The effect below then resets the flag and re-arms
-  // the timer — deriving the value here keeps the flip back to the reasoning
-  // window free of the one-frame lag a clear-in-effect alone would leave.
-  const signalChanged = prevSignalRef.current !== signal;
-
+/**
+ * True once `active` has held for `delayMs` with the same `key`; false the
+ * moment either changes, in that very render (the timer that fired carries
+ * the key it saw). Arms no timer while `active` is false, so a host that
+ * disables the waiting game schedules no timeouts or re-renders for it.
+ */
+function useSustained(active: boolean, delayMs: number, key = 0): boolean {
+  const [firedKey, setFiredKey] = useState<number | null>(null);
   useEffect(() => {
-    prevSignalRef.current = signal;
-    setStalled(false);
-    if (!enabled) return;
-    const id = window.setTimeout(() => setStalled(true), delayMs);
+    setFiredKey(null);
+    if (!active) return;
+    const id = window.setTimeout(() => setFiredKey(key), delayMs);
     return () => window.clearTimeout(id);
-  }, [signal, delayMs, enabled]);
-
-  return enabled && stalled && !signalChanged;
+  }, [active, delayMs, key]);
+  return active && firedKey === key;
 }
 
 export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true }: ChatThinkingProps) => {
@@ -278,11 +315,15 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true 
   // `elapsedS` without an anchor.
   const elapsedS = elapsedStartMs != null ? Math.max(0, (nowMs - elapsedStartMs) / 1000) : agentStatus?.elapsedS;
   const showElapsed = typeof elapsedS === 'number' && elapsedS >= ELAPSED_DISPLAY_THRESHOLD_S;
-  // Show the waiting game when reasoning is absent or has stalled for 5s; flip
-  // back to the reasoning window the moment new reasoning text resumes (the
-  // accumulated content carries the continuation).
-  const stalled = useStalled(thinkingContent?.length ?? 0, STALL_DELAY_MS, miniGameEnabled);
-  const showGame = miniGameEnabled && stalled;
+  // Reasoning wins over the waiting game: once the turn has reasoning to show,
+  // the window stays through tool calls and short silences until the answer
+  // streams. The game fills a wait with no reasoning after 5 s, and takes over
+  // from reasoning that has gone 10 s without a new chunk, until the next one.
+  const reasoningText = useMemo(() => reasoningWindowText(thinkingContent ?? ''), [thinkingContent]);
+  const showReasoning = reasoningText.length >= MIN_REASONING_CHARS;
+  const waitedWithoutReasoning = useSustained(miniGameEnabled && !showReasoning, WAITING_GAME_DELAY_MS);
+  const reasoningWentQuiet = useSustained(miniGameEnabled && showReasoning, QUIET_REASONING_GAME_DELAY_MS, thinkingContent?.length ?? 0);
+  const showGame = showReasoning ? reasoningWentQuiet : waitedWithoutReasoning;
 
   return (
     <>
@@ -311,11 +352,7 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true 
           </div>
         </div>
       </div>
-      {thinkingContent && !showGame ? (
-        <ThinkingTextBubble content={thinkingContent} />
-      ) : showGame ? (
-        <ChatWaitingGame t={t} enabled={miniGameEnabled} />
-      ) : null}
+      {showGame ? <ChatWaitingGame t={t} enabled={miniGameEnabled} /> : showReasoning ? <ThinkingTextBubble text={reasoningText} /> : null}
     </>
   );
 };
