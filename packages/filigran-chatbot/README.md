@@ -71,7 +71,9 @@ import { ChatPanel } from '@filigran/chatbot';
 | `apiBaseUrl`        | `string`                                  | **required** | Base URL for chat API endpoints                                  |
 | `user`              | `{ firstName: string }`                   | **required** | Current user info                                                |
 | `topOffset`         | `number`                                  | `0`          | Top offset in pixels (for sidebar/fullscreen with fixed headers) |
-| `agentDashboardUrl` | `string`                                  | —            | URL for "Browse agents" / "Create agent" links                   |
+| `agentDashboardUrl` | `string`                                  | —            | XTM One URL for the "Browse agents" / "Create agent" links and the waiting panel's "Play Space Invaders in XTM One" link (`{url}/chat?arcade=play`, http(s) only) |
+| `miniGameEnabled`   | `boolean`                                 | `true`       | Show the waiting panel during longer waits: rotating messages and the invitation to play XTM One's arcade (the package ships no game of its own) |
+| `onPlayWaitingGame` | `() => void`                              | —            | Open the arcade in place instead of linking to XTM One, for a host that runs it itself (the XTM One floating assistant) |
 | `t`                 | `(key: string) => string`                 | identity     | Translation function for i18n                                    |
 | `accentColor`       | `string`                                  | `'#7b5cff'`  | Primary accent color (hex)                                       |
 | `logoIcon`          | `React.ReactNode`                         | default icon | Custom logo/icon for the assistant                               |
@@ -708,19 +710,19 @@ Every key the package can ask for, grouped by where it appears:
 - `'the agent'`
 - `'{tool} (+{count} more)…'`
 
-**Waiting mini-game**
+**Waiting panel**
 
 - `'Almost there'`
 - `'Analyzing the details'`
 - `'Connecting the dots'`
 - `'Consulting the sources'`
 - `'Crunching the data'`
+- `'Play Space Invaders'`
+- `'Play Space Invaders in XTM One'`
 - `'Polishing the answer'`
 - `'Putting it together'`
 - `'Reticulating splines'`
 - `'Thinking it through'`
-- `'Turn off the waiting mini-game'`
-- `'Turn on the waiting mini-game'`
 - `'Wrapping things up'`
 
 **Reasoning details**

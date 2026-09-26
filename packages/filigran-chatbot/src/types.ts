@@ -253,6 +253,11 @@ export interface ChatPanelProps {
   apiBaseUrl: string;
   /** Custom API endpoint configuration. */
   apiEndpoints?: ApiEndpoints;
+  /**
+   * The XTM One URL: the header's "Browse agents" / "Create agent" links, and
+   * the waiting panel's invitation to play the arcade there
+   * (`{agentDashboardUrl}/chat?arcade=play`). Only an http(s) URL is linked.
+   */
   agentDashboardUrl?: string;
   user: { firstName: string };
   t?: Translate;
@@ -320,12 +325,17 @@ export interface ChatPanelProps {
    */
   backendType?: BackendType;
   /**
-   * Show the waiting experience during longer waits: dynamic rotating status
-   * messages plus an optional Space Invader mini-game that shoots the message
-   * letters away one by one. Users can still toggle the game off per browser
-   * from the panel; this prop is a host-level master switch. Default: true.
+   * Show the waiting panel during longer waits: rotating status messages and
+   * an invitation to play XTM One's Space Invaders arcade, in a new tab
+   * through `agentDashboardUrl` or in place through `onPlayWaitingGame`. The
+   * package ships no game of its own. Host-level master switch. Default: true.
    */
   miniGameEnabled?: boolean;
+  /**
+   * Opens the arcade in place instead of linking to XTM One, for a host that
+   * runs it itself (the XTM One floating assistant). Wins over the link.
+   */
+  onPlayWaitingGame?: () => void;
   /**
    * Notify the user when a long-running turn finishes while they are not
    * watching the chat — away (tab hidden / another window) via a document-title

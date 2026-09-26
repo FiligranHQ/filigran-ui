@@ -14,14 +14,18 @@ import {
   WrenchIcon,
 } from './icons';
 import { translate } from '../utils';
-import { ChatWaitingGame } from './ChatWaitingGame';
+import { ChatWaitingPanel } from './ChatWaitingPanel';
 
 interface ChatThinkingProps {
   agentStatus: AgentStatusState | null;
   logoIcon?: React.ReactNode;
   t: Translate;
-  /** Host-level override for the waiting mini-game / dynamic messages. */
+  /** Host-level override for the waiting panel (messages and the invitation to play). */
   miniGameEnabled?: boolean;
+  /** Opens the XTM One arcade in place; wins over `waitingGameUrl`. */
+  onPlayWaitingGame?: () => void;
+  /** Where the XTM One arcade is played, opened in a new tab. */
+  waitingGameUrl?: string | null;
 }
 
 type IconComponent = (props: IconProps) => React.JSX.Element;
@@ -262,13 +266,13 @@ const ELAPSED_DISPLAY_THRESHOLD_S = 15;
 
 /**
  * How long a working turn with no reasoning to show waits before the waiting
- * game fills the space, so a quick reply never flashes it.
+ * panel fills the space, so a quick reply never flashes it.
  */
 const WAITING_GAME_DELAY_MS = 5000;
 
 /**
  * How long reasoning already on screen must go without a new chunk before the
- * waiting game takes its place: long enough to outlast an ordinary tool call,
+ * waiting panel takes its place: long enough to outlast an ordinary tool call,
  * so the window only gives way on a genuinely long wait.
  */
 const QUIET_REASONING_GAME_DELAY_MS = 10_000;
@@ -277,7 +281,7 @@ const QUIET_REASONING_GAME_DELAY_MS = 10_000;
  * True once `active` has held for `delayMs` with the same `key`; false the
  * moment either changes, in that very render (the timer that fired carries
  * the key it saw). Arms no timer while `active` is false, so a host that
- * disables the waiting game schedules no timeouts or re-renders for it.
+ * disables the waiting panel schedules no timeouts or re-renders for it.
  */
 function useSustained(active: boolean, delayMs: number, key = 0): boolean {
   const [firedKey, setFiredKey] = useState<number | null>(null);
@@ -290,7 +294,7 @@ function useSustained(active: boolean, delayMs: number, key = 0): boolean {
   return active && firedKey === key;
 }
 
-export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true }: ChatThinkingProps) => {
+export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true, onPlayWaitingGame, waitingGameUrl }: ChatThinkingProps) => {
   const { label, StatusIcon, showDots } = resolveStatusVisual(agentStatus, t);
   const thinkingContent = agentStatus?.thinkingContent;
 
@@ -315,15 +319,15 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true 
   // `elapsedS` without an anchor.
   const elapsedS = elapsedStartMs != null ? Math.max(0, (nowMs - elapsedStartMs) / 1000) : agentStatus?.elapsedS;
   const showElapsed = typeof elapsedS === 'number' && elapsedS >= ELAPSED_DISPLAY_THRESHOLD_S;
-  // Reasoning wins over the waiting game: once the turn has reasoning to show,
+  // Reasoning wins over the waiting panel: once the turn has reasoning to show,
   // the window stays through tool calls and short silences until the answer
-  // streams. The game fills a wait with no reasoning after 5 s, and takes over
+  // streams. The panel fills a wait with no reasoning after 5 s, and takes over
   // from reasoning that has gone 10 s without a new chunk, until the next one.
   const reasoningText = useMemo(() => reasoningWindowText(thinkingContent ?? ''), [thinkingContent]);
   const showReasoning = reasoningText.length >= MIN_REASONING_CHARS;
   const waitedWithoutReasoning = useSustained(miniGameEnabled && !showReasoning, WAITING_GAME_DELAY_MS);
   const reasoningWentQuiet = useSustained(miniGameEnabled && showReasoning, QUIET_REASONING_GAME_DELAY_MS, thinkingContent?.length ?? 0);
-  const showGame = showReasoning ? reasoningWentQuiet : waitedWithoutReasoning;
+  const showWaiting = showReasoning ? reasoningWentQuiet : waitedWithoutReasoning;
 
   return (
     <>
@@ -352,7 +356,11 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true 
           </div>
         </div>
       </div>
-      {showGame ? <ChatWaitingGame t={t} enabled={miniGameEnabled} /> : showReasoning ? <ThinkingTextBubble text={reasoningText} /> : null}
+      {showWaiting ? (
+        <ChatWaitingPanel t={t} enabled={miniGameEnabled} onPlay={onPlayWaitingGame} playUrl={waitingGameUrl} />
+      ) : showReasoning ? (
+        <ThinkingTextBubble text={reasoningText} />
+      ) : null}
     </>
   );
 };

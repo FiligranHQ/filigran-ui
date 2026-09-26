@@ -43,8 +43,12 @@ interface ChatMessagesProps {
   resolveAttachmentUrl?: (attachment: ChatAttachment) => string | undefined;
   /** Auth headers used when fetching previewed images (see `ChatImage`). */
   requestHeaders?: Record<string, string>;
-  /** Host-level override for the waiting mini-game / dynamic messages. */
+  /** Host-level override for the waiting panel (messages and the invitation to play). */
   miniGameEnabled?: boolean;
+  /** Opens the XTM One arcade in place; wins over `waitingGameUrl`. */
+  onPlayWaitingGame?: () => void;
+  /** Where the XTM One arcade is played, opened in a new tab. */
+  waitingGameUrl?: string | null;
   /** Enables the 👍/👎 affordance on completed assistant messages. */
   onMessageFeedback?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
   /**
@@ -442,6 +446,8 @@ export const ChatMessages = ({
   resolveAttachmentUrl,
   requestHeaders,
   miniGameEnabled = true,
+  onPlayWaitingGame,
+  waitingGameUrl,
   onMessageFeedback,
   isResumingAfterDecision,
   pendingApprovals,
@@ -543,7 +549,14 @@ export const ChatMessages = ({
           if (awaitingApproval) return null;
           return (
             <div key={msg.id}>
-              <ChatThinking agentStatus={agentStatus} logoIcon={logoIcon} t={t} miniGameEnabled={miniGameEnabled} />
+              <ChatThinking
+                agentStatus={agentStatus}
+                logoIcon={logoIcon}
+                t={t}
+                miniGameEnabled={miniGameEnabled}
+                onPlayWaitingGame={onPlayWaitingGame}
+                waitingGameUrl={waitingGameUrl}
+              />
             </div>
           );
         }
@@ -569,7 +582,14 @@ export const ChatMessages = ({
           restore replaces the whole transcript on every poll, so there is no
           bubble of ours left to hang it on. */}
       {isResumingAfterDecision && !awaitingApproval && (
-        <ChatThinking agentStatus={agentStatus} logoIcon={logoIcon} t={t} miniGameEnabled={miniGameEnabled} />
+        <ChatThinking
+          agentStatus={agentStatus}
+          logoIcon={logoIcon}
+          t={t}
+          miniGameEnabled={miniGameEnabled}
+          onPlayWaitingGame={onPlayWaitingGame}
+          waitingGameUrl={waitingGameUrl}
+        />
       )}
       {awaitingApproval && (
         <ChatApprovalPrompt
