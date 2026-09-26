@@ -13,6 +13,7 @@ import { DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
+import { waitingGameUrl } from './ChatWaitingPanel';
 import { ChatWelcome } from './ChatWelcome';
 import { ConversationSidebar } from './ConversationSidebar';
 
@@ -60,6 +61,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   pushContentSelector,
   backendType = 'rest',
   miniGameEnabled = true,
+  onPlayWaitingGame,
   notifyOnComplete = true,
   onTaskComplete,
   onMessageFeedback,
@@ -247,6 +249,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   // Stable across renders so the memoized message rows (which take it as a
   // prop) aren't invalidated on every streamed frame.
   const resolvedLogo = useMemo(() => logoIcon ?? <DefaultLogoIcon size={24} />, [logoIcon]);
+  const playUrl = useMemo(() => waitingGameUrl(agentDashboardUrl), [agentDashboardUrl]);
   const firstName = user.firstName;
   /**
    * The agent a *restored* conversation belongs to, as the backend reports it.
@@ -647,6 +650,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           resolveAttachmentUrl={canDownload && !disableImagePreviews ? resolveAttachmentUrl : undefined}
           requestHeaders={requestHeaders}
           miniGameEnabled={miniGameEnabled}
+          onPlayWaitingGame={onPlayWaitingGame}
+          waitingGameUrl={playUrl}
           onMessageFeedback={onMessageFeedback}
           isResumingAfterDecision={isResumingAfterDecision}
           pendingApprovals={pendingApprovals}
