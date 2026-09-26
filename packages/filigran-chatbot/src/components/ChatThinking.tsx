@@ -267,20 +267,27 @@ const ELAPSED_DISPLAY_THRESHOLD_S = 15;
 const WAITING_GAME_DELAY_MS = 5000;
 
 /**
- * True once `active` has held for `delayMs`; false the moment it drops (the
- * `active &&` covers the render before the effect resets the state). Arms no
- * timer while `active` is false, so a host that disables the waiting game
- * schedules no timeouts or re-renders for it.
+ * How long reasoning already on screen must go without a new chunk before the
+ * waiting game takes its place: long enough to outlast an ordinary tool call,
+ * so the window only gives way on a genuinely long wait.
  */
-function useSustained(active: boolean, delayMs: number): boolean {
-  const [sustained, setSustained] = useState(false);
+const QUIET_REASONING_GAME_DELAY_MS = 30_000;
+
+/**
+ * True once `active` has held for `delayMs` with the same `key`; false the
+ * moment either changes, in that very render (the timer that fired carries
+ * the key it saw). Arms no timer while `active` is false, so a host that
+ * disables the waiting game schedules no timeouts or re-renders for it.
+ */
+function useSustained(active: boolean, delayMs: number, key = 0): boolean {
+  const [firedKey, setFiredKey] = useState<number | null>(null);
   useEffect(() => {
-    setSustained(false);
+    setFiredKey(null);
     if (!active) return;
-    const id = window.setTimeout(() => setSustained(true), delayMs);
+    const id = window.setTimeout(() => setFiredKey(key), delayMs);
     return () => window.clearTimeout(id);
-  }, [active, delayMs]);
-  return active && sustained;
+  }, [active, delayMs, key]);
+  return active && firedKey === key;
 }
 
 export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true }: ChatThinkingProps) => {
@@ -309,11 +316,14 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true 
   const elapsedS = elapsedStartMs != null ? Math.max(0, (nowMs - elapsedStartMs) / 1000) : agentStatus?.elapsedS;
   const showElapsed = typeof elapsedS === 'number' && elapsedS >= ELAPSED_DISPLAY_THRESHOLD_S;
   // Reasoning wins over the waiting game: once the turn has reasoning to show,
-  // the window stays through tool calls and silences until the answer streams.
-  // The game only fills a wait that has none.
+  // the window stays through tool calls and short silences until the answer
+  // streams. The game fills a wait with no reasoning after 5 s, and takes over
+  // from reasoning that has gone 30 s without a new chunk, until the next one.
   const reasoningText = useMemo(() => reasoningWindowText(thinkingContent ?? ''), [thinkingContent]);
   const showReasoning = reasoningText.length >= MIN_REASONING_CHARS;
-  const showGame = useSustained(miniGameEnabled && !showReasoning, WAITING_GAME_DELAY_MS);
+  const waitedWithoutReasoning = useSustained(miniGameEnabled && !showReasoning, WAITING_GAME_DELAY_MS);
+  const reasoningWentQuiet = useSustained(miniGameEnabled && showReasoning, QUIET_REASONING_GAME_DELAY_MS, thinkingContent?.length ?? 0);
+  const showGame = showReasoning ? reasoningWentQuiet : waitedWithoutReasoning;
 
   return (
     <>
@@ -342,7 +352,7 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true 
           </div>
         </div>
       </div>
-      {showReasoning ? <ThinkingTextBubble text={reasoningText} /> : showGame ? <ChatWaitingGame t={t} enabled={miniGameEnabled} /> : null}
+      {showGame ? <ChatWaitingGame t={t} enabled={miniGameEnabled} /> : showReasoning ? <ThinkingTextBubble text={reasoningText} /> : null}
     </>
   );
 };
