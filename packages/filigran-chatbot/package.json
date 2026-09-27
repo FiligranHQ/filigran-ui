@@ -28,7 +28,12 @@
     "lint-fix": "eslint --fix \"src/**/*.ts*\"",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
+    "test": "node --test \"src/**/*.test.ts\"",
     "prepack": "yarn build"
+  },
+  "dependencies": {
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.0"
   },
   "peerDependencies": {
     "react": ">=18",

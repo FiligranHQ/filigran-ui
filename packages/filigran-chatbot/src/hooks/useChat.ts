@@ -77,6 +77,79 @@ const RESUME_WATCH_MS = 900000;
  */
 const APPROVAL_PRESENCE_INTERVAL_MS = 600000;
 
+/**
+ * Streamed answer text and reasoning, applied to React state at most once per
+ * animation frame.
+ *
+ * A backend can emit one event per model delta, dozens a second: applied one by
+ * one, each re-renders the panel and re-parses the live answer, far more often
+ * than the screen can show. The deltas are gathered here and applied together
+ * on the next frame. Every other event is handled after a `flush()`, so state
+ * still changes in the order the events arrived.
+ */
+interface StreamDeltas {
+  /** The answer text grew; the applier reads the text itself. */
+  text: () => void;
+  /** A chunk of reasoning prose arrived. */
+  thinking: (chunk: string) => void;
+  /** Apply what is pending now. */
+  flush: () => void;
+  /** Drop what is pending and ignore any later delta: the stream is over or abandoned. */
+  close: () => void;
+}
+
+function createStreamDeltas(apply: (textChanged: boolean, thinking: string) => void): StreamDeltas {
+  let textChanged = false;
+  let thinking = '';
+  let frame: number | null = null;
+  let closed = false;
+
+  const cancelFrame = () => {
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null;
+  };
+  const flush = () => {
+    cancelFrame();
+    if (!textChanged && !thinking) return;
+    const changed = textChanged;
+    const chunk = thinking;
+    textChanged = false;
+    thinking = '';
+    apply(changed, chunk);
+  };
+  const schedule = () => {
+    if (frame !== null) return;
+    if (typeof requestAnimationFrame !== 'function') {
+      flush();
+      return;
+    }
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      flush();
+    });
+  };
+
+  return {
+    text: () => {
+      if (closed) return;
+      textChanged = true;
+      schedule();
+    },
+    thinking: (chunk) => {
+      if (closed) return;
+      thinking += chunk;
+      schedule();
+    },
+    flush,
+    close: () => {
+      closed = true;
+      cancelFrame();
+      textChanged = false;
+      thinking = '';
+    },
+  };
+}
+
 /** Maximum number of files that can be attached to a single message. */
 const DEFAULT_MAX_FILE_COUNT = 10;
 /** Maximum total size of all attached files (50 MB). */
@@ -312,6 +385,9 @@ export function useChat({
 
   const historyLoadedRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // The running stream's pending deltas, so stopping it can apply them and a
+  // new chat can drop them.
+  const streamDeltasRef = useRef<StreamDeltas | null>(null);
   const hasUsedToolsRef = useRef(false);
   // Ref mirror of conversationId — always current across async boundaries
   const conversationIdRef = useRef(conversationId);
@@ -776,6 +852,28 @@ export function useChat({
     // the try so the catch below writes the error into the LIVE segment, not
     // an already-completed one.
     let currentAssistantId = assistantId;
+    let accumulated = '';
+    let doneReceived = false;
+
+    const deltas = createStreamDeltas((textChanged, thinking) => {
+      if (textChanged) {
+        // Snapshot the segment id and text: the state updater runs
+        // asynchronously and `currentAssistantId` / `accumulated` may
+        // already belong to the NEXT segment by then.
+        const segId = currentAssistantId;
+        const text = accumulated;
+        setAgentStatus((prev) => ({ status: 'streaming', thinkingContent: prev?.thinkingContent }));
+        setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: text } : m)));
+      }
+      if (thinking) {
+        setAgentStatus((prev) => ({
+          ...prev,
+          status: prev?.status ?? 'thinking',
+          thinkingContent: (prev?.thinkingContent ?? '') + thinking,
+        }));
+      }
+    });
+    streamDeltasRef.current = deltas;
 
     try {
       const controller = new AbortController();
@@ -819,8 +917,6 @@ export function useChat({
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let accumulated = '';
-      let doneReceived = false;
 
       /**
        * Open a new response segment when events keep flowing after a `done`.
@@ -831,6 +927,8 @@ export function useChat({
        */
       const ensureSegment = () => {
         if (!doneReceived) return;
+        // Nothing of the closed segment may land in the new one.
+        deltas.flush();
         doneReceived = false;
         accumulated = '';
         currentAssistantId = crypto.randomUUID();
@@ -864,6 +962,13 @@ export function useChat({
                 // carry a fresh context reading whatever phase it announces.
                 if (parsed.contextUsage) setContextUsage(parsed.contextUsage);
                 if (parsed.status === 'tool_start') hasUsedToolsRef.current = true;
+                if (parsed.status === 'thinking_text') {
+                  deltas.thinking(parsed.thinkingContent ?? '');
+                  break;
+                }
+                // Every other status lands after the text and reasoning that
+                // arrived before it.
+                deltas.flush();
                 if (parsed.status === 'stream_retract') {
                   // Rare: text that streamed as a provisional answer turned
                   // out to precede tool calls — discard the answer bubble
@@ -874,12 +979,6 @@ export function useChat({
                   setAgentStatus((prev) => ({
                     status: 'analyzing',
                     thinkingContent: prev?.thinkingContent,
-                  }));
-                } else if (parsed.status === 'thinking_text') {
-                  setAgentStatus((prev) => ({
-                    ...prev,
-                    status: prev?.status ?? 'thinking',
-                    thinkingContent: (prev?.thinkingContent ?? '') + (parsed.thinkingContent ?? ''),
                   }));
                 } else if (parsed.status === 'tool_heartbeat') {
                   // Liveness signal during a long tool execution: update the
@@ -907,17 +1006,12 @@ export function useChat({
               case 'stream': {
                 ensureSegment();
                 accumulated += parsed.content;
-                // Snapshot the segment id and text: the state updater runs
-                // asynchronously and `currentAssistantId` / `accumulated` may
-                // already belong to the NEXT segment by then.
-                const segId = currentAssistantId;
-                const text = accumulated;
-                setAgentStatus((prev) => ({ status: 'streaming', thinkingContent: prev?.thinkingContent }));
-                setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: text } : m)));
+                deltas.text();
                 break;
               }
 
               case 'done': {
+                deltas.flush();
                 doneReceived = true;
                 // A completed segment cannot still be waiting on a decision, so
                 // any prompt left standing (a submission that failed against a
@@ -961,6 +1055,7 @@ export function useChat({
                 // decision is POSTed back. Not an end state: no segment is
                 // opened or closed, `isLoading` stays true, and the rest of
                 // the turn arrives on this same reader afterwards.
+                deltas.flush();
                 approvalConversationIdRef.current = parsed.conversationId ?? conversationIdRef.current;
                 setApprovalError(null);
                 setPendingApprovals(parsed.proposals);
@@ -974,6 +1069,7 @@ export function useChat({
 
               case 'error': {
                 ensureSegment();
+                deltas.flush();
                 const segId = currentAssistantId;
                 setMessages((prev) =>
                   prev.map((m) =>
@@ -1002,16 +1098,22 @@ export function useChat({
           }
         }
       }
+      deltas.flush();
       if (accumulated && !doneReceived) {
         const segId = currentAssistantId;
         const text = accumulated;
         setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: text || t('No response.') } : m)));
       }
     } catch (err) {
+      // A frame still pending would land after the error below, or in the
+      // chat that replaced an aborted stream.
+      deltas.close();
       if (err instanceof DOMException && err.name === 'AbortError') return;
       const segId = currentAssistantId;
       setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: t('Sorry, an error occurred. Please try again.') } : m)));
     } finally {
+      deltas.close();
+      if (streamDeltasRef.current === deltas) streamDeltasRef.current = null;
       abortControllerRef.current = null;
       setIsLoading(false);
       setAgentStatus(null);
@@ -1030,6 +1132,9 @@ export function useChat({
   };
 
   const handleNewChat = () => {
+    // Nothing of the abandoned stream may land in the fresh chat.
+    streamDeltasRef.current?.close();
+    streamDeltasRef.current = null;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     // Cancel any in-flight file uploads
@@ -1079,6 +1184,11 @@ export function useChat({
   };
 
   const handleStopGenerating = () => {
+    // The text that arrived before the stop stays on screen, including what the
+    // next frame would have applied; nothing after it does.
+    streamDeltasRef.current?.flush();
+    streamDeltasRef.current?.close();
+    streamDeltasRef.current = null;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setIsLoading(false);
@@ -1102,6 +1212,9 @@ export function useChat({
     const id = window.setTimeout(() => persistDraft(conversationId, inputValue), DRAFT_PERSIST_DELAY_MS);
     return () => window.clearTimeout(id);
   }, [inputValue, conversationId]);
+
+  // A panel closed mid-stream has no state left for the stream's frames to update.
+  useEffect(() => () => streamDeltasRef.current?.close(), []);
 
   // Flush the pending draft on unmount. Hosts unmount the panel the instant it
   // is closed, which would otherwise drop anything typed inside the debounce

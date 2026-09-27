@@ -9,6 +9,7 @@ import { useSidebarResize } from '../hooks/useSidebarResize';
 import { useAwayCompletionNotice } from '../hooks/useAwayCompletionNotice';
 import { useComposerExtras } from '../hooks/useComposerExtras';
 import { useAgentSuggestions } from '../hooks/useAgentSuggestions';
+import { useLatestCallback, useShallowStable } from '../hooks/useStableProps';
 import { DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
@@ -39,36 +40,53 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   onModeChange,
   topOffset = 0,
   apiBaseUrl,
-  apiEndpoints,
+  apiEndpoints: apiEndpointsProp,
   agentDashboardUrl,
   user,
   t = identity,
   accentColor = '#7b5cff',
   logoIcon,
-  promptSuggestions,
+  promptSuggestions: promptSuggestionsProp,
   draftBorderColor,
   resizable = false,
   onWidthChange,
   onResizeStart,
   onResizeEnd,
   disableFileManagement = false,
-  onRelativeLinkClick,
-  onDownloadError,
+  onRelativeLinkClick: onRelativeLinkClickProp,
+  onDownloadError: onDownloadErrorProp,
   maxFileCount,
   maxTotalSize,
-  requestHeaders,
-  pageContext,
+  requestHeaders: requestHeadersProp,
+  pageContext: pageContextProp,
   pushContentSelector,
   backendType = 'rest',
   miniGameEnabled = true,
-  onPlayWaitingGame,
+  onPlayWaitingGame: onPlayWaitingGameProp,
   notifyOnComplete = true,
-  onTaskComplete,
-  onMessageFeedback,
+  onTaskComplete: onTaskCompleteProp,
+  onMessageFeedback: onMessageFeedbackProp,
   disableImagePreviews = false,
   contextUsageEnabled = true,
   composerToolbar,
 }) => {
+  // Hosts tend to build these inline, so each host render hands the panel new
+  // objects and functions with the same content. Held stable here, a host
+  // render no longer re-renders every memoized message row, re-runs the effects
+  // keyed on them (agent list, prompts, quota, suggestions, conversation list)
+  // or refetches the images fetched with the headers. `t` passes through as is,
+  // since a new one means new translations, and so do ReactNode props, which
+  // cannot be compared.
+  const apiEndpoints = useShallowStable(apiEndpointsProp);
+  const requestHeaders = useShallowStable(requestHeadersProp);
+  const pageContext = useShallowStable(pageContextProp);
+  const promptSuggestions = useShallowStable(promptSuggestionsProp);
+  const onRelativeLinkClick = useLatestCallback(onRelativeLinkClickProp);
+  const onDownloadError = useLatestCallback(onDownloadErrorProp);
+  const onPlayWaitingGame = useLatestCallback(onPlayWaitingGameProp);
+  const onTaskComplete = useLatestCallback(onTaskCompleteProp);
+  const onMessageFeedback = useLatestCallback(onMessageFeedbackProp);
+
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
   const { agents, agentsLoading, agentsError, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({
@@ -624,62 +642,62 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
           />
         )}
         <div className={showConversationSidebar ? 'flex flex-1 flex-col min-w-0' : 'contents'}>
-      {messages.length === 0 ? (
-        <ChatWelcome
-          firstName={firstName}
-          logoIcon={resolvedLogo}
-          // The agent's own suggestions when the backend serves them, the
-          // host's list otherwise, this package's list when there is neither —
-          // never an empty section.
-          promptSuggestions={suggestions}
-          suggestionsLoading={suggestionsLoading}
-          agentName={selectedAgent?.name}
-          agentDescription={selectedAgent?.description}
-          onPromptClick={setInputValue}
-          t={t}
-        />
-      ) : (
-        <ChatMessages
-          messages={messages}
-          isLoading={isLoading}
-          agentStatus={agentStatus}
-          agentName={agentName}
-          logoIcon={resolvedLogo}
-          onRelativeLinkClick={onRelativeLinkClick}
-          onDownloadFile={canDownload ? handleDownloadFile : undefined}
-          resolveAttachmentUrl={canDownload && !disableImagePreviews ? resolveAttachmentUrl : undefined}
-          requestHeaders={requestHeaders}
-          miniGameEnabled={miniGameEnabled}
-          onPlayWaitingGame={onPlayWaitingGame}
-          waitingGameUrl={playUrl}
-          onMessageFeedback={onMessageFeedback}
-          isResumingAfterDecision={isResumingAfterDecision}
-          pendingApprovals={pendingApprovals}
-          onSubmitApprovalDecisions={submitApprovalDecisions}
-          isSubmittingApproval={isSubmittingApproval}
-          approvalError={approvalError}
-          t={t}
-        />
-      )}
-      <ChatInput
-        inputValue={inputValue}
-        onInputChange={setInputValue}
-        onSend={handleSendMessage}
-        onStop={handleStopGenerating}
-        isLoading={isLoading}
-        canSteer={canSteer}
-        attachedFiles={disableFileManagement ? [] : attachedFiles}
-        onFileAdd={disableFileManagement ? undefined : handleFileAdd}
-        onFileRemove={disableFileManagement ? undefined : (i) => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
-        onPaste={disableFileManagement ? undefined : handlePaste}
-        t={t}
-        mode={mode}
-        separatorColor={draftBorderColor}
-        prompts={prompts}
-        quota={quota}
-        contextUsage={contextUsageEnabled ? contextUsage : null}
-        composerToolbar={composerToolbar}
-      />
+          {messages.length === 0 ? (
+            <ChatWelcome
+              firstName={firstName}
+              logoIcon={resolvedLogo}
+              // The agent's own suggestions when the backend serves them, the
+              // host's list otherwise, this package's list when there is neither —
+              // never an empty section.
+              promptSuggestions={suggestions}
+              suggestionsLoading={suggestionsLoading}
+              agentName={selectedAgent?.name}
+              agentDescription={selectedAgent?.description}
+              onPromptClick={setInputValue}
+              t={t}
+            />
+          ) : (
+            <ChatMessages
+              messages={messages}
+              isLoading={isLoading}
+              agentStatus={agentStatus}
+              agentName={agentName}
+              logoIcon={resolvedLogo}
+              onRelativeLinkClick={onRelativeLinkClick}
+              onDownloadFile={canDownload ? handleDownloadFile : undefined}
+              resolveAttachmentUrl={canDownload && !disableImagePreviews ? resolveAttachmentUrl : undefined}
+              requestHeaders={requestHeaders}
+              miniGameEnabled={miniGameEnabled}
+              onPlayWaitingGame={onPlayWaitingGame}
+              waitingGameUrl={playUrl}
+              onMessageFeedback={onMessageFeedback}
+              isResumingAfterDecision={isResumingAfterDecision}
+              pendingApprovals={pendingApprovals}
+              onSubmitApprovalDecisions={submitApprovalDecisions}
+              isSubmittingApproval={isSubmittingApproval}
+              approvalError={approvalError}
+              t={t}
+            />
+          )}
+          <ChatInput
+            inputValue={inputValue}
+            onInputChange={setInputValue}
+            onSend={handleSendMessage}
+            onStop={handleStopGenerating}
+            isLoading={isLoading}
+            canSteer={canSteer}
+            attachedFiles={disableFileManagement ? [] : attachedFiles}
+            onFileAdd={disableFileManagement ? undefined : handleFileAdd}
+            onFileRemove={disableFileManagement ? undefined : (i) => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
+            onPaste={disableFileManagement ? undefined : handlePaste}
+            t={t}
+            mode={mode}
+            separatorColor={draftBorderColor}
+            prompts={prompts}
+            quota={quota}
+            contextUsage={contextUsageEnabled ? contextUsage : null}
+            composerToolbar={composerToolbar}
+          />
         </div>
       </div>
     </div>

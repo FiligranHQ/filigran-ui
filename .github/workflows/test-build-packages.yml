@@ -48,6 +48,9 @@ jobs:
     strategy:
       matrix:
         package: [filigran-chatbot, filigran-icon, filigran-ui]
+        include:
+          - package: filigran-chatbot
+            test: true
       fail-fast: false
     steps:
       - name: Setup Node
@@ -65,6 +68,9 @@ jobs:
           key: workspace-${{ github.sha }}
       - name: Build ${{ matrix.package }}
         run: yarn build:${{ matrix.package }}
+      - name: Test ${{ matrix.package }}
+        if: matrix.test
+        run: yarn test:${{ matrix.package }}
       - name: Cache ${{ matrix.package }} build
         uses: actions/cache/save@v5
         with:

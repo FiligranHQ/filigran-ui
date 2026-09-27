@@ -14,7 +14,18 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const extensions = ['.ts', '.tsx'];
 
-const external = ['react', 'react-dom', 'react/jsx-runtime', 'react-markdown', 'remark-breaks', 'remark-gfm'];
+const external = ['react', 'react-dom', 'react/jsx-runtime', 'react-markdown', 'remark-breaks', 'remark-gfm', 'remark-parse', 'unified'];
+
+// The unit tests import with `.ts` paths, as Node's type stripping requires,
+// and TypeScript only allows those in a compilation that emits nothing: the
+// bundle leaves the tests out and turns the option back off.
+const typescriptOptions = {
+  tsconfig: './tsconfig.json',
+  declaration: false,
+  declarationMap: false,
+  allowImportingTsExtensions: false,
+  exclude: ['**/*.test.ts'],
+};
 
 const indexConfig = {
   external,
@@ -22,11 +33,7 @@ const indexConfig = {
     resolve({ extensions, browser: true }),
     commonjs(),
     json(),
-    typescript({
-      tsconfig: './tsconfig.json',
-      declaration: false,
-      declarationMap: false,
-    }),
+    typescript(typescriptOptions),
     postcss({
       plugins: [tailwindcssPostcss()],
       extract: 'styles.css',
@@ -92,7 +99,7 @@ const configs = [
       resolve({ extensions, browser: true }),
       commonjs(),
       json(),
-      typescript({ tsconfig: './tsconfig.json', declaration: false, declarationMap: false }),
+      typescript(typescriptOptions),
       typescriptPaths({ preserveExtensions: true }),
       terser({ output: { comments: false } }),
     ],

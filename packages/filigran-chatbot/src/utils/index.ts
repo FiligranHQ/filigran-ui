@@ -255,6 +255,15 @@ export function normalizeImageMarkdown(raw: string): string {
   });
 }
 
+/**
+ * The text the panel hands to its markdown renderer. Order matters — image
+ * alt-text is flattened before anything else looks at line structure, and the
+ * JSON wrap must see the raw payload before fences are hardened.
+ */
+export function prepareMarkdown(content: string): string {
+  return hardenNestedCodeFences(normalizeMarkdownTables(wrapBareJson(normalizeImageMarkdown(content))));
+}
+
 /** Schemes react-markdown's own sanitizer allows, minus the `data:` special case below. */
 const SAFE_URL_PROTOCOLS = new Set(['http', 'https', 'mailto', 'tel']);
 
