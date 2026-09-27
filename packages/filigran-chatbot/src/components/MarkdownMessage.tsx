@@ -143,7 +143,11 @@ const MarkdownLink = ({ href, children }: { href?: string; children?: React.Reac
 const MarkdownImage = ({ src, alt }: { src?: unknown; alt?: string }) => {
   const { requestHeaders, t } = useContext(MarkdownRenderContext);
   if (typeof src !== 'string' || !src) return null;
-  return <ChatImage src={src} alt={alt || ''} requestHeaders={requestHeaders} t={t} />;
+  // Keyed by its source: the image at a given place can change while the
+  // message streams (a reference-style image resolves to each partial URL of
+  // its definition as that line arrives), and a new source must not inherit the
+  // previous one's fetched blob or its load error.
+  return <ChatImage key={src} src={src} alt={alt || ''} requestHeaders={requestHeaders} t={t} />;
 };
 
 const MARKDOWN_COMPONENTS: Components = {

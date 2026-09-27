@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { AgentStatusState, ChatAttachment, ChatMessage, MessageFeedback, ToolApprovalDecision, ToolApprovalProposal } from '../types';
 import { splitFileMarkers, stripFileMarkers } from '../utils';
+import { createScrollFollower } from '../utils/scrollFollow';
 import { AlertTriangleIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, FileIcon, InfoIcon, ThumbsDownIcon, ThumbsUpIcon } from './icons';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
@@ -16,9 +17,6 @@ import { ReasoningDetailsDialog } from './ReasoningDetailsDialog';
  */
 const INITIAL_RENDER_WINDOW = 150;
 const RENDER_WINDOW_STEP = 50;
-
-/** How near the bottom a reader scrolling down must come for the view to follow the conversation again. */
-const FOLLOW_THRESHOLD_PX = 100;
 
 /** How long the copy affordance stays in its confirmed state. */
 const COPY_FEEDBACK_DELAY = 2000;
@@ -460,54 +458,29 @@ export const ChatMessages = ({
   const [renderWindow, setRenderWindow] = useState(INITIAL_RENDER_WINDOW);
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<string, MessageFeedback>>({});
 
-  // Whether the view follows the conversation as it grows: on while the reader
-  // is at the bottom, off once they scroll up to read back, on again when they
-  // come back down or send a message.
-  const followRef = useRef(true);
-  // Where the view was last seen, which tells the reader scrolling up apart
-  // from the view being moved down by a jump of ours.
-  const lastScrollTopRef = useRef(0);
+  // Keeps the end of the conversation in view while the reader is at the
+  // bottom (see `createScrollFollower`). It holds no React state: its timer
+  // firing after unmount finds no container and does nothing.
+  const [follower] = useState(() => createScrollFollower(() => scrollRef.current));
   const touchYRef = useRef<number | null>(null);
 
-  // `behavior: 'instant'` (CSSOM View, Baseline-supported) rather than 'auto':
-  // a `scroll-behavior: smooth` stylesheet would turn 'auto' smooth again, and
-  // a smooth scroll restarted on every chunk lags behind the text.
-  const scrollToBottom = useCallback((behavior: ScrollBehavior) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior });
-    lastScrollTopRef.current = el.scrollTop;
-  }, []);
-
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const top = el.scrollTop;
-    const movedUp = top < lastScrollTopRef.current - 1;
-    lastScrollTopRef.current = top;
-    const distance = el.scrollHeight - top - el.clientHeight;
-    if (movedUp) {
-      // The reader scrolled up — or the browser moved the view to the new end
-      // of a list that got shorter, which leaves it at the bottom.
-      followRef.current = distance <= 1;
-    } else if (distance <= FOLLOW_THRESHOLD_PX) {
-      followRef.current = true;
+  // A wheel or a swipe toward the top is the reader leaving the bottom — but
+  // only over the thread itself: an overlay portalled out of it (the image
+  // lightbox) still bubbles its events here through React, and scrolls nothing
+  // of ours. A mostly sideways wheel is a code block or a table scrolled
+  // horizontally.
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (event.deltaY < 0 && Math.abs(event.deltaY) > Math.abs(event.deltaX) && event.currentTarget.contains(event.target as Node)) {
+      follower.leave();
     }
-  };
-
-  // A wheel or a swipe toward the top stops the follow at once: its scroll
-  // event is only dispatched with the next frame, and a chunk committed before
-  // it would pull the view back down first.
-  const handleWheel = (event: React.WheelEvent) => {
-    if (event.deltaY < 0) followRef.current = false;
   };
   const handleTouchStart = (event: React.TouchEvent) => {
     touchYRef.current = event.touches[0]?.clientY ?? null;
   };
-  const handleTouchMove = (event: React.TouchEvent) => {
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
     const y = event.touches[0]?.clientY;
     if (y === undefined) return;
-    if (touchYRef.current !== null && y > touchYRef.current) followRef.current = false;
+    if (touchYRef.current !== null && y > touchYRef.current && event.currentTarget.contains(event.target as Node)) follower.leave();
     touchYRef.current = y;
   };
 
@@ -521,8 +494,8 @@ export const ChatMessages = ({
   // A message the user just sent (a steer included) and a conversation just
   // opened are scrolled into view smoothly, and the view follows again.
   // Anything else — mostly the streamed answer, which changes `messages` on
-  // every frame — keeps the bottom in view with an instant jump, and only while
-  // the view follows, so a reader who scrolled up stays where they are.
+  // every frame — keeps the bottom in view only while the view follows, so a
+  // reader who scrolled up stays where they are.
   let userMessageCount = 0;
   for (const m of messages) if (m.role === 'user') userMessageCount += 1;
   const seenRef = useRef<{ firstMessageId?: string; userMessageCount: number } | null>(null);
@@ -530,12 +503,11 @@ export const ChatMessages = ({
     const seen = seenRef.current;
     seenRef.current = { firstMessageId, userMessageCount };
     if (!seen || seen.firstMessageId !== firstMessageId || userMessageCount > seen.userMessageCount) {
-      followRef.current = true;
-      scrollToBottom('smooth');
-    } else if (followRef.current) {
-      scrollToBottom('instant');
+      follower.reveal();
+    } else {
+      follower.keepUp();
     }
-  }, [messages, firstMessageId, userMessageCount, scrollToBottom]);
+  }, [messages, firstMessageId, userMessageCount, follower]);
 
   // Keep the bottom in view while the reasoning window below the status
   // bubble grows: thinking prose streams in without any `messages` change,
@@ -543,9 +515,8 @@ export const ChatMessages = ({
   // stops seeing the live reasoning.
   const thinkingLen = agentStatus?.thinkingContent?.length ?? 0;
   useLayoutEffect(() => {
-    if (!thinkingLen || !followRef.current) return;
-    scrollToBottom('instant');
-  }, [thinkingLen, scrollToBottom]);
+    if (thinkingLen) follower.keepUp();
+  }, [thinkingLen, follower]);
 
   const hasEarlierMessages = messages.length > renderWindow;
   const visibleMessages = useMemo(
@@ -589,7 +560,7 @@ export const ChatMessages = ({
   return (
     <div
       ref={scrollRef}
-      onScroll={handleScroll}
+      onScroll={follower.onScroll}
       onWheel={handleWheel}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}

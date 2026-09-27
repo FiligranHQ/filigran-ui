@@ -12,6 +12,7 @@ import type {
 import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
 import { parseToolApprovalProposals } from './protocols/parseRestEvent';
+import { createStreamDeltas, type StreamDeltas } from './streamDeltas';
 
 const STORAGE_KEY = 'filigranChatConversationId';
 const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
@@ -76,79 +77,6 @@ const RESUME_WATCH_MS = 900000;
  * time. Well inside the server's window, since missing it costs the whole turn.
  */
 const APPROVAL_PRESENCE_INTERVAL_MS = 600000;
-
-/**
- * Streamed answer text and reasoning, applied to React state at most once per
- * animation frame.
- *
- * A backend can emit one event per model delta, dozens a second: applied one by
- * one, each re-renders the panel and re-parses the live answer, far more often
- * than the screen can show. The deltas are gathered here and applied together
- * on the next frame. Every other event is handled after a `flush()`, so state
- * still changes in the order the events arrived.
- */
-interface StreamDeltas {
-  /** The answer text grew; the applier reads the text itself. */
-  text: () => void;
-  /** A chunk of reasoning prose arrived. */
-  thinking: (chunk: string) => void;
-  /** Apply what is pending now. */
-  flush: () => void;
-  /** Drop what is pending and ignore any later delta: the stream is over or abandoned. */
-  close: () => void;
-}
-
-function createStreamDeltas(apply: (textChanged: boolean, thinking: string) => void): StreamDeltas {
-  let textChanged = false;
-  let thinking = '';
-  let frame: number | null = null;
-  let closed = false;
-
-  const cancelFrame = () => {
-    if (frame !== null) cancelAnimationFrame(frame);
-    frame = null;
-  };
-  const flush = () => {
-    cancelFrame();
-    if (!textChanged && !thinking) return;
-    const changed = textChanged;
-    const chunk = thinking;
-    textChanged = false;
-    thinking = '';
-    apply(changed, chunk);
-  };
-  const schedule = () => {
-    if (frame !== null) return;
-    if (typeof requestAnimationFrame !== 'function') {
-      flush();
-      return;
-    }
-    frame = requestAnimationFrame(() => {
-      frame = null;
-      flush();
-    });
-  };
-
-  return {
-    text: () => {
-      if (closed) return;
-      textChanged = true;
-      schedule();
-    },
-    thinking: (chunk) => {
-      if (closed) return;
-      thinking += chunk;
-      schedule();
-    },
-    flush,
-    close: () => {
-      closed = true;
-      cancelFrame();
-      textChanged = false;
-      thinking = '';
-    },
-  };
-}
 
 /** Maximum number of files that can be attached to a single message. */
 const DEFAULT_MAX_FILE_COUNT = 10;
