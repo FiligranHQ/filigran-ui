@@ -160,6 +160,46 @@ const PANEL = [
 /** An answer that is one JSON document, which the panel wraps in a fence once it parses. */
 const BARE_JSON = ['{', '  "hosts": ["FS-01", "DC-01"],', '  "note": "a *starred* value",', '  "count": 2', '}'].join('\n');
 
+/** Text that looks like a definition and is not one: it must not cost the split. */
+const LOOKALIKES = [
+  'A regex: `[^a-z]+`, and [^a-z] in prose.',
+  '',
+  '```ts',
+  'interface Row {',
+  '  [key: string]: unknown;',
+  '}',
+  '> [docs]: /inside-a-fence',
+  '```',
+  '',
+  '    [docs]: /indented-code',
+  '',
+  'Between.',
+  '',
+  '> a quoted paragraph',
+  '[docs]: /a-lazy-continuation-line',
+  '',
+  'See [docs].',
+].join('\n');
+
+/**
+ * Definitions a line-start pattern misses: in a quote or a list item, nested,
+ * with a label spanning lines or holding an escaped bracket. Each with a
+ * reference that uses it.
+ */
+const DEFINITIONS: ReadonlyArray<[definition: string, use: string]> = [
+  ['> [docs]: /guide', '[the docs][docs]'],
+  ['- [docs]: /guide', '[the docs][docs]'],
+  ['1. [docs]: /guide', '[the docs][docs]'],
+  ['> > [docs]: /guide', '[the docs][docs]'],
+  ['>[docs]: /guide', '[docs]'],
+  ['  > - [docs]: /guide "The guide"', '[docs][]'],
+  ['- an item\n\n  [docs]: /guide', '[the docs][docs]'],
+  ['[docs\nguide]: /guide', '[the docs][docs guide]'],
+  ['[a\\]b]: /guide', '[the docs][a\\]b]'],
+  ['> [^1]: A note in a quote.', 'A claim.[^1]'],
+  ['- [^1]: A note in a list item.', 'A claim.[^1]'],
+];
+
 function render(markdown: string): string {
   return renderToString(createElement(ReactMarkdown, { ...OPTIONS, children: markdown }));
 }
@@ -207,6 +247,7 @@ const CASES: ReadonlyArray<[name: string, text: string, prepare: (text: string) 
   ['interruptions', INTERRUPTIONS, (text) => text],
   ['panel preprocessing', PANEL, prepareMarkdown],
   ['bare JSON', BARE_JSON, prepareMarkdown],
+  ['look-alike definitions', LOOKALIKES, (text) => text],
 ];
 
 for (const [name, text, prepare] of CASES) {
@@ -224,7 +265,7 @@ for (const [name, text, prepare] of CASES) {
     for (const prefix of prefixes(text)) {
       const source = prepare(prefix);
       const carried: MarkdownBlocks = splitMarkdownBlocks(source, previous);
-      assert.deepEqual(carried.blocks, splitMarkdownBlocks(source).blocks, prefix);
+      assert.deepEqual(carried, splitMarkdownBlocks(source), prefix);
       previous = carried;
     }
   });
@@ -262,6 +303,25 @@ test('link reference definitions and footnotes keep the text in one block', () =
   for (const text of ['See [the report][r].\n\nMore text.\n\n[r]: https://example.com', 'A claim.[^1]\n\nMore text.\n\n[^1]: The source.']) {
     assert.deepEqual(splitMarkdownBlocks(text).blocks, [text]);
   }
+});
+
+test('a definition in a quote, a list item or with an unusual label keeps the text in one block, at every streamed length', () => {
+  for (const [definition, use] of DEFINITIONS) {
+    for (const text of [`See ${use}.\n\nMore text.\n\n${definition}\n\nAfter.`, `${definition}\n\nIntro.\n\nSee ${use}.\n\nAfter.`]) {
+      let previous: MarkdownBlocks | null = null;
+      for (const prefix of prefixes(text)) {
+        const carried: MarkdownBlocks = splitMarkdownBlocks(prefix, previous);
+        assert.deepEqual(carried, splitMarkdownBlocks(prefix), prefix);
+        assert.equal(normalized(renderBlocks(carried.blocks)), normalized(render(prefix)), prefix);
+        previous = carried;
+      }
+      assert.deepEqual(splitMarkdownBlocks(text).blocks, [text], text);
+    }
+  }
+});
+
+test('text that only looks like a definition keeps the split', () => {
+  assert.ok(splitMarkdownBlocks(LOOKALIKES).blocks.length >= 4);
 });
 
 test('a text that does not extend the previous one is split from the start', () => {

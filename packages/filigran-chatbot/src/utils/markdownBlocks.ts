@@ -21,8 +21,12 @@ import { unified } from 'unified';
  * indented block, whatever is appended to it. A block that starts without a
  * blank line before it stays open with its predecessor (`#` alone is a heading
  * that interrupts the paragraph above; `#x` is that paragraph's next line).
- * Link reference definitions and footnotes resolve across the whole document,
- * so a text carrying either stays one block.
+ * Link reference definitions and footnote definitions resolve across the whole
+ * document, from a quote or a list item too, so a text holding one renders as
+ * one block. They are read off the tree the split parses anyway rather than
+ * matched by a line pattern: a pattern misses a label spanning lines, and
+ * keeps whole a text that only looks like a definition (a TypeScript index
+ * signature in a code block, a regex's `[^a-z]`).
  *
  * XTM One's web chat splits its streaming answer by the same rules; a fix to
  * one belongs in the other.
@@ -30,16 +34,34 @@ import { unified } from 'unified';
 
 const blockParser = unified().use(remarkParse).use(remarkGfm).freeze();
 
-const DOCUMENT_WIDE = /^ {0,3}\[[^\]\n]+\]:|\[\^[^\]\n]+\]/m;
+type BlockNode = ReturnType<typeof blockParser.parse>['children'][number];
 
 export interface MarkdownBlocks {
   /** The text the blocks cover; `blocks.join('') === source`. */
   source: string;
+  /** What to render: the top-level blocks, or the whole text when it holds a definition. */
   blocks: string[];
-  /** Offset of each block in `source`. */
+  /** Offset of each top-level block in `source`, kept when the text renders whole. */
   starts: number[];
-  /** Blocks `[0, settled)` are final while text is appended to `source`. */
+  /** Top-level blocks `[0, settled)` are final while text is appended to `source`. */
   settled: number;
+  /** The first top-level block holding a link reference or footnote definition, `-1` for none. */
+  firstDefinition: number;
+}
+
+/** Whether *node* is or contains a link reference or footnote definition. */
+function holdsDefinition(node: BlockNode): boolean {
+  switch (node.type) {
+    case 'definition':
+    case 'footnoteDefinition':
+      return true;
+    case 'blockquote':
+    case 'list':
+    case 'listItem':
+      return node.children.some(holdsDefinition);
+    default:
+      return false;
+  }
 }
 
 function lineStart(text: string, offset: number): number {
@@ -73,7 +95,7 @@ function endsIndented(text: string, start: number, end: number): boolean {
 }
 
 function single(text: string): MarkdownBlocks {
-  return { source: text, blocks: text ? [text] : [], starts: text ? [0] : [], settled: 0 };
+  return { source: text, blocks: text ? [text] : [], starts: text ? [0] : [], settled: 0, firstDefinition: -1 };
 }
 
 /**
@@ -84,20 +106,25 @@ function single(text: string): MarkdownBlocks {
  * retracted answer, a normalizer that rewrote earlier lines) is ignored.
  */
 export function splitMarkdownBlocks(text: string, previous?: MarkdownBlocks | null): MarkdownBlocks {
-  if (!text.trim() || DOCUMENT_WIDE.test(text)) return single(text);
+  if (!text.trim()) return single(text);
 
   const reuse = previous && previous.settled > 0 && text.startsWith(previous.source) ? previous.settled : 0;
   const from = reuse ? previous!.starts[reuse] : 0;
   const tail = text.slice(from);
 
   const starts = previous && reuse ? previous.starts.slice(0, reuse) : [];
+  // A definition in a settled block stays one; none there means the first one,
+  // if any, is in the part parsed now.
+  let firstDefinition = previous && reuse && previous.firstDefinition < reuse ? previous.firstDefinition : -1;
   starts.push(from);
   for (const node of blockParser.parse(tail).children) {
     const offset = node.position?.start.offset;
-    if (offset === undefined) continue;
-    const start = from + lineStart(tail, offset);
-    const last = starts[starts.length - 1];
-    if (start > last && !endsIndented(text, last, start)) starts.push(start);
+    if (offset !== undefined) {
+      const start = from + lineStart(tail, offset);
+      const last = starts[starts.length - 1];
+      if (start > last && !endsIndented(text, last, start)) starts.push(start);
+    }
+    if (firstDefinition < 0 && holdsDefinition(node)) firstDefinition = starts.length - 1;
   }
 
   let settled = reuse;
@@ -108,8 +135,8 @@ export function splitMarkdownBlocks(text: string, previous?: MarkdownBlocks | nu
     }
   }
 
-  const blocks = starts.map((start, index) => text.slice(start, starts[index + 1] ?? text.length));
-  return { source: text, blocks, starts, settled };
+  const blocks = firstDefinition < 0 ? starts.map((start, index) => text.slice(start, starts[index + 1] ?? text.length)) : [text];
+  return { source: text, blocks, starts, settled, firstDefinition };
 }
 
 /**
