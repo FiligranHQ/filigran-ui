@@ -114,7 +114,7 @@ export function createScrollFollower(getBox: () => ScrollBox | null, timers: Scr
       lastTop = top;
       const distance = box.scrollHeight - top - box.clientHeight;
       if (movedUp) {
-        // The reader scrolled up â€” or the browser moved the view to the new end
+        // The reader scrolled up — or the browser moved the view to the new end
         // of a list that got shorter, which leaves it at the bottom.
         following = distance <= 1;
       } else if (distance <= FOLLOW_THRESHOLD_PX) {
