@@ -1,31 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createDictationController, type DictationController, type SpeechRecognitionLike } from './dictationController';
 
-/**
- * Minimal shape of the Web Speech API surface we use. Typed locally rather
- * than pulled from `lib.dom` — `SpeechRecognition` is still vendor-prefixed and
- * missing from TypeScript's DOM lib, and this package ships no ambient types.
- */
-interface SpeechRecognitionAlternativeLike {
-  transcript: string;
-}
-interface SpeechRecognitionResultLike {
-  isFinal: boolean;
-  0: SpeechRecognitionAlternativeLike;
-}
-interface SpeechRecognitionEventLike {
-  resultIndex: number;
-  results: { length: number; [index: number]: SpeechRecognitionResultLike };
-}
-interface SpeechRecognitionLike {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-}
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
 function getSpeechRecognition(): SpeechRecognitionCtor | null {
@@ -43,8 +18,10 @@ interface UseDictationReturn {
   listening: boolean;
   /** Words heard but not yet finalised, for a live preview. */
   interim: string;
+  /** Start listening, or stop and still commit the phrase already heard. */
   toggle: () => void;
-  stop: () => void;
+  /** Stop listening and drop anything still on its way, e.g. once the draft is sent. */
+  cancel: () => void;
 }
 
 /**
@@ -60,11 +37,7 @@ interface UseDictationReturn {
 export function useDictation(onFinalText: (text: string) => void): UseDictationReturn {
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState('');
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  // Recognition ends on its own after a pause; this distinguishes "the browser
-  // stopped listening" from "the user asked to stop", so a natural pause
-  // mid-sentence does not silently end the session.
-  const shouldRestartRef = useRef(false);
+  const controllerRef = useRef<DictationController | null>(null);
   // Read through a ref so re-creating the callback each render does not tear
   // down and rebuild the recogniser mid-dictation.
   const onFinalTextRef = useRef(onFinalText);
@@ -81,84 +54,22 @@ export function useDictation(onFinalText: (text: string) => void): UseDictationR
     recognition.interimResults = true;
     recognition.lang = typeof navigator !== 'undefined' ? navigator.language || 'en-US' : 'en-US';
 
-    recognition.onresult = (event) => {
-      let interimText = '';
-      let finalText = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) finalText += result[0].transcript;
-        else interimText += result[0].transcript;
-      }
-      if (finalText) {
-        onFinalTextRef.current(finalText);
-        setInterim('');
-      } else {
-        setInterim(interimText);
-      }
-    };
-
-    recognition.onerror = () => {
-      // Permission denied, no microphone, network failure — stop cleanly
-      // rather than leaving the button stuck in its listening state.
-      shouldRestartRef.current = false;
-      setListening(false);
-      setInterim('');
-    };
-
-    recognition.onend = () => {
-      if (shouldRestartRef.current) {
-        try {
-          recognition.start();
-          return;
-        } catch {
-          /* already starting, or the engine refused — fall through and stop */
-        }
-      }
-      setListening(false);
-      setInterim('');
-    };
-
-    recognitionRef.current = recognition;
+    const controller = createDictationController(recognition, {
+      onFinal: (text) => onFinalTextRef.current(text),
+      onInterim: setInterim,
+      onListeningChange: setListening,
+    });
+    controllerRef.current = controller;
     return () => {
-      shouldRestartRef.current = false;
-      recognitionRef.current = null;
-      try {
-        recognition.stop();
-      } catch {
-        /* never started */
-      }
+      controllerRef.current = null;
+      controller.dispose();
+      setListening(false);
+      setInterim('');
     };
   }, []);
 
-  const stop = useCallback(() => {
-    shouldRestartRef.current = false;
-    setInterim('');
-    setListening(false);
-    try {
-      recognitionRef.current?.stop();
-    } catch {
-      /* already stopped */
-    }
-  }, []);
+  const toggle = useCallback(() => controllerRef.current?.toggle(), []);
+  const cancel = useCallback(() => controllerRef.current?.cancel(), []);
 
-  const toggle = useCallback(() => {
-    const recognition = recognitionRef.current;
-    if (!recognition) return;
-    if (shouldRestartRef.current) {
-      stop();
-      return;
-    }
-    try {
-      shouldRestartRef.current = true;
-      recognition.start();
-      setListening(true);
-    } catch {
-      // `start()` throws if it is already running; treat that as "not started"
-      // rather than leaving the UI claiming to listen.
-      shouldRestartRef.current = false;
-      setListening(false);
-    }
-  }, [stop]);
-
-  return { supported, listening, interim, toggle, stop };
+  return { supported, listening, interim, toggle, cancel };
 }

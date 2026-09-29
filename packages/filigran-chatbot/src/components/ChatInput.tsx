@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatFile, ChatMode, ChatPromptTemplate, ChatQuotaStatus } from '../types';
 import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
 import { useDictation } from '../hooks/useDictation';
@@ -37,6 +37,8 @@ interface ChatInputProps {
   composerToolbar?: React.ReactNode;
 }
 
+const MAX_TEXTAREA_HEIGHT = 120;
+
 export const ChatInput = ({
   inputValue,
   onInputChange,
@@ -59,26 +61,30 @@ export const ChatInput = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      // Leaving the mic live after a send would splice the next words into a
-      // composer the user believes they just emptied.
-      dictation.stop();
-      onSend();
-    }
-    if (e.key === 'Escape' && isLoading) {
-      e.preventDefault();
-      onStop();
-    }
-  };
+  // A dictated phrase lands at the end of the draft while the focus is on the
+  // mic, so nothing scrolls the field to it once the text outgrows the cap.
+  const revealEndRef = useRef(false);
 
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onInputChange(e.target.value);
-    const el = e.target;
+  // Dictation appends each finalised phrase, so speaking continues a draft
+  // rather than replacing it — same contract as picking a template.
+  const dictation = useDictation((finalText) => {
+    revealEndRef.current = true;
+    onInputChange(inputValue.trim() ? `${inputValue.trimEnd()} ${finalText}` : finalText);
+  });
+
+  // Sized from the value rather than from the textarea's own change event:
+  // dictation, template picks, draft restores and the clear after a send all
+  // change the text without one.
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
-  };
+    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+    if (revealEndRef.current) {
+      revealEndRef.current = false;
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [inputValue]);
 
   // Append rather than replace: a user who has already started typing must not
   // lose it to a template pick. The blank line keeps the two blocks distinct.
@@ -87,15 +93,10 @@ export const ChatInput = ({
     textareaRef.current?.focus();
   };
 
-  // Dictation appends each finalised phrase, so speaking continues a draft
-  // rather than replacing it — same contract as picking a template.
-  const dictation = useDictation((finalText) => {
-    onInputChange(inputValue.trim() ? `${inputValue.trimEnd()} ${finalText}` : finalText);
-  });
-
   // The toolbar row costs vertical space, so it only exists when something
-  // actually occupies it.
-  const hasToolbar = Boolean((prompts && prompts.length > 0) || quota || contextUsage || composerToolbar || dictation.supported);
+  // actually occupies it. Dictation is not among them: it acts on the text
+  // field, so it lives inside it, next to Send.
+  const hasToolbar = Boolean((prompts && prompts.length > 0) || quota || contextUsage || composerToolbar);
 
   const isFileManagementEnabled = Boolean(onFileAdd && onFileRemove && onPaste);
   const hasContent = inputValue.trim() || (isFileManagementEnabled && attachedFiles.length > 0);
@@ -106,6 +107,27 @@ export const ChatInput = ({
   // sends can steer the running agent. With attachments selected the send
   // must wait for the current response, so only Stop is shown.
   const showSteerSend = isLoading && canSteer && Boolean(inputValue.trim()) && !hasAttachments;
+
+  // Every way of sending goes through here, and only when the matching button
+  // would be enabled: Enter must not send while files upload, nor end a
+  // dictation that nothing was sent from. Dictation is cancelled, not stopped:
+  // a phrase still being recognised would land in the composer just emptied.
+  const send = () => {
+    if (!(isLoading ? showSteerSend : canSend)) return;
+    dictation.cancel();
+    onSend();
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+    if (e.key === 'Escape' && isLoading) {
+      e.preventDefault();
+      onStop();
+    }
+  };
 
   const footerText =
     isLoading && canSteer && !hasAttachments
@@ -151,7 +173,12 @@ export const ChatInput = ({
         </div>
       )}
 
-      <div className="flex items-center border border-gray-200 dark:border-white/10 rounded-xl px-2 py-1 transition-colors focus-within:border-[var(--chat-accent)]">
+      {/* items-end keeps the buttons on the last line once the field grows. */}
+      <div
+        className={`flex items-end border rounded-xl px-2 py-1 transition-colors ${
+          dictation.listening ? 'border-red-500/50' : 'border-gray-200 dark:border-white/10 focus-within:border-[var(--chat-accent)]'
+        }`}
+      >
         {isFileManagementEnabled && (
           <>
             <input
@@ -175,20 +202,38 @@ export const ChatInput = ({
         )}
         <textarea
           ref={textareaRef}
-          placeholder={t('Ask a question...')}
+          placeholder={dictation.listening ? t('Listening...') : t('Ask a question...')}
           value={inputValue}
-          onChange={handleInput}
+          onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onPaste={onPaste}
           rows={1}
           className="flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 filigran-chat-scrollable"
-          style={{ maxHeight: 120 }}
+          style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}
         />
+        {dictation.supported && (
+          <Tooltip title={dictation.listening ? t('Stop dictation') : t('Dictate a message')}>
+            <button
+              type="button"
+              onClick={dictation.toggle}
+              aria-label={t('Dictate a message')}
+              aria-pressed={dictation.listening}
+              className={`relative w-8 h-8 flex items-center justify-center shrink-0 rounded-lg mr-0.5 transition-colors ${
+                dictation.listening
+                  ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20'
+                  : 'text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10'
+              }`}
+            >
+              {dictation.listening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
+              {dictation.listening && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500 motion-safe:animate-pulse" />}
+            </button>
+          </Tooltip>
+        )}
         {showSteerSend && (
           <Tooltip title={t('Send now')}>
             <button
               type="button"
-              onClick={onSend}
+              onClick={send}
               aria-label={t('Send now')}
               className="p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
             >
@@ -199,7 +244,7 @@ export const ChatInput = ({
         <Tooltip title={isLoading ? t('Stop generating') : hasFilesUploading ? t('Files uploading...') : ''}>
           <button
             type="button"
-            onClick={isLoading ? onStop : onSend}
+            onClick={isLoading ? onStop : send}
             disabled={!isLoading && !canSend}
             className={`p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 ${
               isLoading
@@ -217,26 +262,6 @@ export const ChatInput = ({
       {hasToolbar && (
         <div className="flex items-center gap-1.5 mt-1.5 px-0.5">
           {prompts && prompts.length > 0 && <PromptPicker prompts={prompts} onPick={handlePromptPick} t={t} />}
-          {dictation.supported && (
-            <Tooltip title={dictation.listening ? t('Stop dictation') : t('Dictate a message')}>
-              <button
-                type="button"
-                onClick={dictation.toggle}
-                aria-label={dictation.listening ? t('Stop dictation') : t('Dictate a message')}
-                aria-pressed={dictation.listening}
-                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
-                  dictation.listening
-                    ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20'
-                    : 'text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10'
-                }`}
-              >
-                {dictation.listening ? <MicOffIcon size={15} /> : <MicIcon size={15} />}
-              </button>
-            </Tooltip>
-          )}
-          {dictation.interim && (
-            <span className="text-[0.7rem] italic text-gray-400 dark:text-white/30 truncate max-w-[45%]">{dictation.interim}</span>
-          )}
           {composerToolbar}
           {/* Status readouts sit last and pushed right, together: they are not
               controls, so neither should ever land between two clickable
@@ -251,7 +276,16 @@ export const ChatInput = ({
         </div>
       )}
 
-      <p className="text-center text-[0.65rem] text-gray-400 dark:text-white/30 mt-1.5 opacity-70">{footerText}</p>
+      {/* Words heard but not yet final take the footer's place, so the preview
+          never shifts the composer's height. */}
+      {dictation.interim ? (
+        <p className="flex items-center justify-center gap-1.5 text-[0.65rem] italic text-red-500 dark:text-red-400 mt-1.5">
+          <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-red-500 motion-safe:animate-pulse" />
+          <span className="truncate">{dictation.interim}</span>
+        </p>
+      ) : (
+        <p className="text-center text-[0.65rem] text-gray-400 dark:text-white/30 mt-1.5 opacity-70">{footerText}</p>
+      )}
     </div>
   );
 };
