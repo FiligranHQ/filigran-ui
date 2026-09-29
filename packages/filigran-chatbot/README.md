@@ -671,6 +671,7 @@ Every key the package can ask for, grouped by where it appears:
 - `'Enter to send now · Esc to stop'`
 - `'Files uploading...'`
 - `'Insert prompt template'`
+- `'Listening...'`
 - `'No prompt matches'`
 - `'Search prompts...'`
 - `'Send now'`
@@ -836,10 +837,13 @@ the suggestions route is unavailable the host's `promptSuggestions` prop is used
 instead, so the section is never empty.
 
 Dictation needs no configuration at all: it uses the browser's own Web Speech
-API, so the mic button appears wherever the API exists and is simply absent
-elsewhere. Finalised phrases are appended to the composer (never replacing a
-draft), interim words preview beside the button, and sending stops the mic so
-the next words cannot land in a composer the user just emptied.
+API, so the mic button appears inside the text field, next to Send, wherever
+the API exists and is simply absent elsewhere. It is not a toolbar item, so it
+never adds the toolbar row on its own. While it listens the field turns red and
+reads `Listening...`, finalised phrases are appended to the composer (never
+replacing a draft), interim words preview in the line under it, and every send
+(Enter, Send, Send now) stops the mic so the next words cannot land in a
+composer the user just emptied.
 
 ### Context usage
 
