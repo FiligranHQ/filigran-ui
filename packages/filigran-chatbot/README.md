@@ -88,6 +88,10 @@ import { ChatPanel } from '@filigran/chatbot';
 | `contextUsageEnabled` | `boolean`                               | `true`       | Show how full the model's context window is for the current conversation (ring + percentage in the composer toolbar). Data-driven, so it stays absent until the backend reports occupancy — see [Context usage](#context-usage). |
 | `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
 
+Plain-data props (`requestHeaders`, `apiEndpoints`, `pageContext`, `promptSuggestions`) are compared by content and callback props are called
+through a stable wrapper, so building them inline is fine. `t` and `logoIcon` are used as given: keep them stable (`useCallback` / `useMemo`),
+or every render of the host re-renders every message in the thread.
+
 #### Resizable Sidebar Example
 
 ```tsx
@@ -947,6 +951,11 @@ returned byte-identical.
 - `remark-breaks` >= 4
 - `remark-gfm` >= 4
 
+## Dependencies
+
+- `unified` ^11 and `remark-parse` ^11 — the ranges react-markdown 10 depends on, so a host resolves them to the copies it already has. The panel
+  uses them to find the top-level blocks of a streaming answer, and re-renders only the blocks that can still change.
+
 ---
 
 ## Development
@@ -962,6 +971,12 @@ To build:
 
 ```bash
 yarn build
+```
+
+To run the unit tests (Node's built-in test runner, which runs TypeScript natively from Node 22.18 / 23.6):
+
+```bash
+yarn test
 ```
 
 To publish:

@@ -1,13 +1,7 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type {
-  AgentStatusState,
-  ChatAttachment,
-  ChatMessage,
-  MessageFeedback,
-  ToolApprovalDecision,
-  ToolApprovalProposal,
-} from '../types';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { AgentStatusState, ChatAttachment, ChatMessage, MessageFeedback, ToolApprovalDecision, ToolApprovalProposal } from '../types';
 import { splitFileMarkers, stripFileMarkers } from '../utils';
+import { createScrollFollower } from '../utils/scrollFollow';
 import { AlertTriangleIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, FileIcon, InfoIcon, ThumbsDownIcon, ThumbsUpIcon } from './icons';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
@@ -285,7 +279,13 @@ const MessageRow = memo(
           if (part.value.trim()) {
             blocks.push(
               <div key={`t-${i}`} className="max-w-[90%] pl-1 py-1 text-[0.8125rem] leading-7">
-                <MarkdownMessage content={part.value} onRelativeLinkClick={onRelativeLinkClick} requestHeaders={requestHeaders} t={t} />
+                <MarkdownMessage
+                  content={part.value}
+                  streaming={isStreaming}
+                  onRelativeLinkClick={onRelativeLinkClick}
+                  requestHeaders={requestHeaders}
+                  t={t}
+                />
               </div>,
             );
           }
@@ -402,9 +402,7 @@ const MessageRow = memo(
         {showActions && (
           <div className="mt-0.5 flex items-center gap-0.5 text-gray-400 dark:text-white/40">
             <MessageCopyButton text={stripFileMarkers(msg.content)} t={t} />
-            {onFeedbackChange && (
-              <MessageFeedbackButtons value={feedback} onChange={(next) => onFeedbackChange(msg.id, next, msg)} t={t} />
-            )}
+            {onFeedbackChange && <MessageFeedbackButtons value={feedback} onChange={(next) => onFeedbackChange(msg.id, next, msg)} t={t} />}
             {hasReasoningDetails && (
               <button
                 type="button"
@@ -456,26 +454,35 @@ export const ChatMessages = ({
   approvalError,
   t,
 }: ChatMessagesProps) => {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [renderWindow, setRenderWindow] = useState(INITIAL_RENDER_WINDOW);
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<string, MessageFeedback>>({});
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Keeps the end of the conversation in view while the reader is at the
+  // bottom (see `createScrollFollower`). It holds no React state: its timer
+  // firing after unmount finds no container and does nothing.
+  const [follower] = useState(() => createScrollFollower(() => scrollRef.current));
+  const touchYRef = useRef<number | null>(null);
 
-  // Keep the bottom in view while the reasoning window below the status
-  // bubble grows: thinking prose streams in without any `messages` change,
-  // so without this the growing window slides under the fold and the user
-  // stops seeing the live reasoning. `behavior: 'instant'` (CSSOM View,
-  // Baseline-supported) forces a non-animated jump — this fires on every
-  // reasoning chunk and smooth animations would queue up; 'auto' would not
-  // do, since a `scroll-behavior: smooth` ancestor turns it smooth again.
-  const thinkingLen = agentStatus?.thinkingContent?.length ?? 0;
-  useEffect(() => {
-    if (!thinkingLen) return;
-    messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
-  }, [thinkingLen]);
+  // A wheel or a swipe toward the top is the reader leaving the bottom — but
+  // only over the thread itself: an overlay portalled out of it (the image
+  // lightbox) still bubbles its events here through React, and scrolls nothing
+  // of ours. A mostly sideways wheel is a code block or a table scrolled
+  // horizontally.
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (event.deltaY < 0 && Math.abs(event.deltaY) > Math.abs(event.deltaX) && event.currentTarget.contains(event.target as Node)) {
+      follower.leave();
+    }
+  };
+  const handleTouchStart = (event: React.TouchEvent) => {
+    touchYRef.current = event.touches[0]?.clientY ?? null;
+  };
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    const y = event.touches[0]?.clientY;
+    if (y === undefined) return;
+    if (touchYRef.current !== null && y > touchYRef.current && event.currentTarget.contains(event.target as Node)) follower.leave();
+    touchYRef.current = y;
+  };
 
   // Switching conversation (restore / new chat) replaces the whole array, so
   // the window must snap back to the tail instead of keeping a widened one.
@@ -483,6 +490,33 @@ export const ChatMessages = ({
   useEffect(() => {
     setRenderWindow(INITIAL_RENDER_WINDOW);
   }, [firstMessageId]);
+
+  // A message the user just sent (a steer included) and a conversation just
+  // opened are scrolled into view smoothly, and the view follows again.
+  // Anything else — mostly the streamed answer, which changes `messages` on
+  // every frame — keeps the bottom in view only while the view follows, so a
+  // reader who scrolled up stays where they are.
+  let userMessageCount = 0;
+  for (const m of messages) if (m.role === 'user') userMessageCount += 1;
+  const seenRef = useRef<{ firstMessageId?: string; userMessageCount: number } | null>(null);
+  useLayoutEffect(() => {
+    const seen = seenRef.current;
+    seenRef.current = { firstMessageId, userMessageCount };
+    if (!seen || seen.firstMessageId !== firstMessageId || userMessageCount > seen.userMessageCount) {
+      follower.reveal();
+    } else {
+      follower.keepUp();
+    }
+  }, [messages, firstMessageId, userMessageCount, follower]);
+
+  // Keep the bottom in view while the reasoning window below the status
+  // bubble grows: thinking prose streams in without any `messages` change,
+  // so without this the growing window slides under the fold and the user
+  // stops seeing the live reasoning.
+  const thinkingLen = agentStatus?.thinkingContent?.length ?? 0;
+  useLayoutEffect(() => {
+    if (thinkingLen) follower.keepUp();
+  }, [thinkingLen, follower]);
 
   const hasEarlierMessages = messages.length > renderWindow;
   const visibleMessages = useMemo(
@@ -524,7 +558,14 @@ export const ChatMessages = ({
   const awaitingApproval = !!pendingApprovals?.length && !!onSubmitApprovalDecisions;
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable">
+    <div
+      ref={scrollRef}
+      onScroll={follower.onScroll}
+      onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable"
+    >
       {hasEarlierMessages && (
         <div className="flex justify-center">
           <button
@@ -604,7 +645,8 @@ export const ChatMessages = ({
           t={t}
         />
       )}
-      <div ref={messagesEndRef} />
+      {/* Holds the list's gap below its last item. */}
+      <div />
     </div>
   );
 };

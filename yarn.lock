@@ -2194,6 +2194,7 @@ __metadata:
     react-markdown: "npm:10.1.0"
     remark-breaks: "npm:4.0.0"
     remark-gfm: "npm:4.0.1"
+    remark-parse: "npm:^11.0.0"
     rollup: "npm:4.60.1"
     rollup-plugin-dts: "npm:6.4.1"
     rollup-plugin-livereload: "npm:2.0.5"
@@ -2204,6 +2205,7 @@ __metadata:
     tailwindcss-scoped-preflight: "npm:4.0.1"
     typescript: "npm:5.9.3"
     typescript-eslint: "npm:8.58.0"
+    unified: "npm:^11.0.0"
   peerDependencies:
     react: ">=18"
     react-dom: ">=18"
