@@ -61,9 +61,14 @@ export const ChatInput = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // A dictated phrase lands at the end of the draft while the focus is on the
+  // mic, so nothing scrolls the field to it once the text outgrows the cap.
+  const revealEndRef = useRef(false);
+
   // Dictation appends each finalised phrase, so speaking continues a draft
   // rather than replacing it — same contract as picking a template.
   const dictation = useDictation((finalText) => {
+    revealEndRef.current = true;
     onInputChange(inputValue.trim() ? `${inputValue.trimEnd()} ${finalText}` : finalText);
   });
 
@@ -75,26 +80,11 @@ export const ChatInput = ({
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+    if (revealEndRef.current) {
+      revealEndRef.current = false;
+      el.scrollTop = el.scrollHeight;
+    }
   }, [inputValue]);
-
-  // Every way of sending goes through here: leaving the mic live after a send
-  // would splice the next words into a composer the user believes they just
-  // emptied.
-  const send = () => {
-    dictation.stop();
-    onSend();
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
-    if (e.key === 'Escape' && isLoading) {
-      e.preventDefault();
-      onStop();
-    }
-  };
 
   // Append rather than replace: a user who has already started typing must not
   // lose it to a template pick. The blank line keeps the two blocks distinct.
@@ -117,6 +107,27 @@ export const ChatInput = ({
   // sends can steer the running agent. With attachments selected the send
   // must wait for the current response, so only Stop is shown.
   const showSteerSend = isLoading && canSteer && Boolean(inputValue.trim()) && !hasAttachments;
+
+  // Every way of sending goes through here, and only when the matching button
+  // would be enabled: Enter must not send while files upload, nor end a
+  // dictation that nothing was sent from. Dictation is cancelled, not stopped:
+  // a phrase still being recognised would land in the composer just emptied.
+  const send = () => {
+    if (!(isLoading ? showSteerSend : canSend)) return;
+    dictation.cancel();
+    onSend();
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+    if (e.key === 'Escape' && isLoading) {
+      e.preventDefault();
+      onStop();
+    }
+  };
 
   const footerText =
     isLoading && canSteer && !hasAttachments
@@ -205,9 +216,9 @@ export const ChatInput = ({
             <button
               type="button"
               onClick={dictation.toggle}
-              aria-label={dictation.listening ? t('Stop dictation') : t('Dictate a message')}
+              aria-label={t('Dictate a message')}
               aria-pressed={dictation.listening}
-              className={`relative w-8 h-8 flex items-center justify-center shrink-0 rounded-lg transition-colors ${
+              className={`relative w-8 h-8 flex items-center justify-center shrink-0 rounded-lg mr-0.5 transition-colors ${
                 dictation.listening
                   ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20'
                   : 'text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10'

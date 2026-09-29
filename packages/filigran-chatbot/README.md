@@ -842,8 +842,9 @@ the API exists and is simply absent elsewhere. It is not a toolbar item, so it
 never adds the toolbar row on its own. While it listens the field turns red and
 reads `Listening...`, finalised phrases are appended to the composer (never
 replacing a draft), interim words preview in the line under it, and every send
-(Enter, Send, Send now) stops the mic so the next words cannot land in a
-composer the user just emptied.
+(Enter, Send, Send now) stops the mic and drops the phrase still being
+recognised, so no words can land in a composer the user just emptied. Stopping
+the mic by hand keeps that last phrase.
 
 ### Context usage
 
