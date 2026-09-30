@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } 
 import type { ChatConversationSummary, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo } from '../utils';
-import { fileableWorkspaces, groupConversations, groupIsOpen } from '../utils/workspaces';
+import { fileableWorkspaces, groupConversations, groupIsOpen, unfiledEmptyNote } from '../utils/workspaces';
 import { Dropdown } from './Dropdown';
 import {
   BotIcon,
@@ -166,6 +166,7 @@ export const ConversationSidebar = ({
     [conversations, workspaces, matches],
   );
   const fileable = workspaces ? fileableWorkspaces(workspaces.list) : [];
+  const unfiledNote = grouped ? unfiledEmptyNote({ total: conversations.length, unfiled: grouped.unfiled.length, loading, searching: !!q }) : null;
 
   if (collapsed) {
     return (
@@ -321,9 +322,9 @@ export const ConversationSidebar = ({
                 <span className="text-[0.625rem] tabular-nums text-gray-400 dark:text-white/30">{grouped.unfiled.length}</span>
               </div>
               {grouped.unfiled.map(renderRow)}
-              {grouped.unfiled.length === 0 && !loading && (
+              {unfiledNote && (
                 <p className="px-3 py-1.5 text-[0.65rem] text-gray-400 dark:text-white/30">
-                  {conversations.length === 0 ? t('No conversations yet') : t('Every conversation is in a workspace.')}
+                  {unfiledNote === 'none' ? t('No conversations yet') : t('Every conversation is in a workspace.')}
                 </p>
               )}
             </DropZone>
@@ -628,6 +629,9 @@ const ConversationRow = ({
       }
       onClick={() => onSelect(c.conversationId)}
       onKeyDown={(e) => {
+        // Only the row's own keys: Enter or Space on the move, rename and
+        // delete buttons inside it belongs to those buttons.
+        if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onSelect(c.conversationId);

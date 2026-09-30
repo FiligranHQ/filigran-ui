@@ -13,6 +13,7 @@ import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
 import { parseToolApprovalProposals } from './protocols/parseRestEvent';
 import { createStreamDeltas, type StreamDeltas } from './streamDeltas';
+import { createSessionGate } from '../utils/sessionGate';
 
 const STORAGE_KEY = 'filigranChatConversationId';
 const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
@@ -348,8 +349,9 @@ export function useChat({
   const probedConversationRef = useRef<string | null>(null);
   // When the resume watch stops regardless of what the turn reports.
   const resumeDeadlineRef = useRef(0);
-  // Mutex to prevent concurrent session creation
-  const creatingSessionRef = useRef<Promise<string | null> | null>(null);
+  // One session creation at a time, for the chat on screen: a new chat
+  // abandons the one in flight (see `createSessionGate`).
+  const [sessionGate] = useState(createSessionGate);
   // The workspace the next session is created in ("new conversation" inside
   // a workspace group). A ref for the request, state for the list to show it.
   const pendingWorkspaceRef = useRef<string | null>(null);
@@ -475,49 +477,45 @@ export function useChat({
   }, []);
 
   /**
-   * Ensure a conversation exists. Uses a mutex so concurrent callers
-   * (e.g. multiple files selected at once) share a single session creation.
+   * Ensure a conversation exists. Concurrent callers of the same chat (e.g.
+   * multiple files selected at once) share a single session creation, and a
+   * creation answered after a new chat was started resolves to `null` without
+   * touching the chat that replaced it.
    */
   const ensureConversation = async (slug: string | null | undefined): Promise<string | null> => {
     // Fast path: already have one
     if (conversationIdRef.current) return conversationIdRef.current;
 
     // If another call is already creating, wait for it
-    if (creatingSessionRef.current) return creatingSessionRef.current;
+    if (sessionGate.pending) return sessionGate.pending;
 
     const sessionsUrl = getSessionsUrl();
     if (!sessionsUrl) return null;
 
-    const promise = (async () => {
-      try {
-        const workspaceId = pendingWorkspaceRef.current;
-        const res = await fetch(sessionsUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
-          body: JSON.stringify(workspaceId ? { agent_slug: slug, workspace_id: workspaceId } : { agent_slug: slug }),
-        });
-        if (!res.ok) return null;
-        const data = await res.json();
-        const convId = (data?.conversation_id as string) ?? null;
-        if (convId) {
-          // Just created: there is no history to restore. Left armed, the
-          // panel's restore would fetch it while the first turn streams and
-          // replace the answer being written with the one message persisted.
-          historyLoadedRef.current = true;
-          updateConversationId(convId);
-          pendingWorkspaceRef.current = null;
-          setPendingWorkspaceId(null);
-        }
-        return convId;
-      } catch {
-        return null;
-      } finally {
-        creatingSessionRef.current = null;
+    return sessionGate.run(async (isCurrent) => {
+      const workspaceId = pendingWorkspaceRef.current;
+      const res = await fetch(sessionsUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+        body: JSON.stringify(workspaceId ? { agent_slug: slug, workspace_id: workspaceId } : { agent_slug: slug }),
+      });
+      if (!res.ok || !isCurrent()) return null;
+      const data = await res.json();
+      // The user started another chat meanwhile: this conversation is not
+      // its, and neither is the workspace or the history guard to reset.
+      if (!isCurrent()) return null;
+      const convId = (data?.conversation_id as string) ?? null;
+      if (convId) {
+        // Just created: there is no history to restore. Left armed, the
+        // panel's restore would fetch it while the first turn streams and
+        // replace the answer being written with the one message persisted.
+        historyLoadedRef.current = true;
+        updateConversationId(convId);
+        pendingWorkspaceRef.current = null;
+        setPendingWorkspaceId(null);
       }
-    })();
-
-    creatingSessionRef.current = promise;
-    return promise;
+      return convId;
+    });
   };
 
   /**
@@ -833,7 +831,12 @@ export function useChat({
       // message still goes, in a conversation of no workspace, rather than
       // being lost.
       if (!conversationIdRef.current && pendingWorkspaceRef.current) {
-        if (!(await ensureConversation(agentSlug))) {
+        const generation = sessionGate.generation;
+        const created = await ensureConversation(agentSlug);
+        // A new chat replaced this one meanwhile: the send went with it, and
+        // the workspace now pending is the new chat's, not this send's.
+        if (sessionGate.generation !== generation) return;
+        if (!created) {
           pendingWorkspaceRef.current = null;
           setPendingWorkspaceId(null);
         }
@@ -1108,7 +1111,8 @@ export function useChat({
     // Cancel any in-flight file uploads
     uploadAbortRef.current.abort();
     uploadAbortRef.current = new AbortController();
-    creatingSessionRef.current = null;
+    // A session still being created was the abandoned chat's.
+    sessionGate.abandon();
     setMessages([]);
     setInputValue('');
     setAttachedFiles([]);

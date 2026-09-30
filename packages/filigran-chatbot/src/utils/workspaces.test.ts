@@ -4,7 +4,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ELSEWHERE_GROUP, fileableWorkspaces, groupConversations, groupIsOpen, parseWorkspaces, refusalMessage } from './workspaces.ts';
+import {
+  ELSEWHERE_GROUP,
+  fileableWorkspaces,
+  groupConversations,
+  groupIsOpen,
+  parseWorkspaces,
+  refusalMessage,
+  revertMove,
+  unfiledEmptyNote,
+} from './workspaces.ts';
 import type { ChatWorkspace } from '../types';
 
 const ws = (id: string, name: string, over: Partial<ChatWorkspace> = {}): ChatWorkspace => ({
@@ -106,4 +115,41 @@ test('the move menu offers what the caller can file into, in the order the list 
     ]).map((w) => w.name),
     ['General', 'Acme audit', 'Board reporting', 'Threat research'],
   );
+});
+
+test('a refused move puts back that conversation alone', () => {
+  // `b` was moved by another request that succeeded while this one was in
+  // flight: undoing this move must not undo that one.
+  const now = [conv('a', 'w-2'), conv('b', 'w-3')];
+  const reverted = revertMove(now, 'a', 'w-2', 'w-1');
+  assert.deepEqual(
+    reverted.map((c) => [c.conversationId, c.workspaceId]),
+    [
+      ['a', 'w-1'],
+      ['b', 'w-3'],
+    ],
+  );
+  assert.equal(reverted[1], now[1]);
+});
+
+test('a refused move leaves a conversation that has moved since where it is', () => {
+  // A later move (or a refresh) placed it elsewhere: that placement stands.
+  const now = [conv('a', 'w-3')];
+  assert.equal(revertMove(now, 'a', 'w-2', 'w-1'), now);
+  // A move out of every workspace is undone like any other.
+  assert.equal(revertMove([conv('a', null)], 'a', null, 'w-1')[0].workspaceId, 'w-1');
+  // Gone from the list meanwhile.
+  const empty: ReturnType<typeof conv>[] = [];
+  assert.equal(revertMove(empty, 'a', 'w-2', 'w-1'), empty);
+});
+
+test('an empty unfiled group says why, except while searching', () => {
+  assert.equal(unfiledEmptyNote({ total: 0, unfiled: 0, loading: false, searching: false }), 'none');
+  assert.equal(unfiledEmptyNote({ total: 3, unfiled: 0, loading: false, searching: false }), 'all-filed');
+  assert.equal(unfiledEmptyNote({ total: 3, unfiled: 1, loading: false, searching: false }), null);
+  assert.equal(unfiledEmptyNote({ total: 3, unfiled: 0, loading: true, searching: false }), null);
+  // The group holds matches only: every conversation is not in a workspace,
+  // the search just found none outside one.
+  assert.equal(unfiledEmptyNote({ total: 3, unfiled: 0, loading: false, searching: true }), null);
+  assert.equal(unfiledEmptyNote({ total: 0, unfiled: 0, loading: false, searching: true }), null);
 });

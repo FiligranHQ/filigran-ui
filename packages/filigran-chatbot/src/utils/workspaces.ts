@@ -115,6 +115,37 @@ export function groupIsOpen(
   return !collapsed.has(key);
 }
 
+/**
+ * Undo one refused move in the conversation list: the conversation goes back
+ * to where it was, and only while it is still where this move put it - once a
+ * later move or a refresh has placed it, that placement stands. Every other
+ * row is kept as the list holds it now, not as it was when the move started.
+ */
+export function revertMove<T extends Pick<ChatConversationSummary, 'conversationId' | 'workspaceId'>>(
+  list: T[],
+  conversationId: string,
+  destination: string | null,
+  previous: string | null | undefined,
+): T[] {
+  const index = list.findIndex((c) => c.conversationId === conversationId);
+  if (index < 0 || (list[index].workspaceId ?? null) !== destination) return list;
+  const next = [...list];
+  next[index] = { ...list[index], workspaceId: previous };
+  return next;
+}
+
+/**
+ * What an empty "Not in a workspace" group says: that there is no
+ * conversation at all, that every one is filed, or nothing. Nothing while
+ * searching: the group then holds matches only, and a search that matches
+ * nothing has its own message.
+ */
+export function unfiledEmptyNote(options: { total: number; unfiled: number; loading: boolean; searching: boolean }): 'none' | 'all-filed' | null {
+  const { total, unfiled, loading, searching } = options;
+  if (unfiled > 0 || loading || searching) return null;
+  return total === 0 ? 'none' : 'all-filed';
+}
+
 /** The message of a refused workspace request, from XTM One's `detail`. */
 export async function refusalMessage(res: Response): Promise<string | null> {
   try {

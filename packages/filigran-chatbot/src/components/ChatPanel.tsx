@@ -617,7 +617,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
                     onRename: renameWorkspace,
                     onDelete: async (id) => {
                       const result = await deleteWorkspace(id);
-                      // Its conversations moved to their owners' default workspaces.
+                      // Its conversations are back in no workspace (`workspace_id: null`).
                       if (result.ok) void refreshConversations();
                       return result;
                     },

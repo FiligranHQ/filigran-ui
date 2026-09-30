@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatConversationSummary } from '../types';
-import { refusalMessage } from '../utils/workspaces';
+import { refusalMessage, revertMove } from '../utils/workspaces';
 
 interface UseConversationsOptions {
   apiBaseUrl: string;
@@ -151,8 +151,11 @@ export function useConversations({
     async (id: string, workspaceId: string | null): Promise<string | null> => {
       if (!historyEnabled) return '';
       // Optimistic, like a rename: the row moves under the pointer that
-      // dropped it, and goes back if the backend refuses.
-      const previous = conversations;
+      // dropped it, and goes back if the backend refuses. Only this row, and
+      // only while it is still where this move put it: other moves may have
+      // landed, or the list been refreshed, while this one was in flight.
+      const previous = conversations.find((c) => c.conversationId === id)?.workspaceId;
+      const revert = () => setConversations((prev) => revertMove(prev, id, workspaceId, previous));
       setConversations((prev) => prev.map((c) => (c.conversationId === id ? { ...c, workspaceId } : c)));
       try {
         const res = await fetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
@@ -161,12 +164,12 @@ export function useConversations({
           body: JSON.stringify({ workspace_id: workspaceId }),
         });
         if (!res.ok) {
-          setConversations(previous);
+          revert();
           return (await refusalMessage(res)) ?? '';
         }
         return null;
       } catch {
-        setConversations(previous);
+        revert();
         return '';
       }
     },
