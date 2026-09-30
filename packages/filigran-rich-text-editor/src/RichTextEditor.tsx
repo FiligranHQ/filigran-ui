@@ -52,6 +52,9 @@ declare module '@mui/material/styles' {
 
 export const TIPTAP_EDITOR_SELECTOR = '.tiptap-editor-content.ProseMirror';
 
+const hasTextContent = (html: string): boolean =>
+  html !== '' && (new DOMParser().parseFromString(html, 'text/html').body.textContent ?? '').trim() !== '';
+
 export interface RichTextEditorAdapter {
   /** Returns the current HTML content */
   getData: () => string;
@@ -216,7 +219,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
         paragraph: false,
         link: {
           autolink: true,
@@ -284,9 +286,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         ...(id ? { 'data-editor-id': id } : {}),
       },
       handlePaste: (_view, event) => {
-        const items = event.clipboardData?.items;
-        if (!items) return false;
-        for (const item of Array.from(items)) {
+        const clipboardData = event.clipboardData;
+        if (!clipboardData || hasTextContent(clipboardData.getData('text/html'))) return false;
+        for (const item of Array.from(clipboardData.items)) {
           if (item.type.startsWith('image/')) {
             const file = item.getAsFile();
             if (file) {
