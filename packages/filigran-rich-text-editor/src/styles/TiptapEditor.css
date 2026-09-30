@@ -224,6 +224,16 @@ body[data-theme="dark"] .rich-text-editor-wrapper .ProseMirror th {
   background-color: rgba(0, 0, 0, 0.05);
 }
 
+.rich-text-editor-wrapper .ProseMirror [data-cell-background="light"],
+.rich-text-content [data-cell-background="light"] {
+  color: #000000;
+}
+
+.rich-text-editor-wrapper .ProseMirror [data-cell-background="dark"],
+.rich-text-content [data-cell-background="dark"] {
+  color: #ffffff;
+}
+
 /* Selected cells highlight (prosemirror-tables adds .selectedCell) */
 .rich-text-editor-wrapper .ProseMirror .selectedCell::after {
   content: "";
