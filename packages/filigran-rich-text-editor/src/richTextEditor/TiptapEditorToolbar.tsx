@@ -55,6 +55,9 @@ const HEADING_OPTIONS = [
   { value: 'h1', label: 'Heading 1', level: 1 },
   { value: 'h2', label: 'Heading 2', level: 2 },
   { value: 'h3', label: 'Heading 3', level: 3 },
+  { value: 'h4', label: 'Heading 4', level: 4 },
+  { value: 'h5', label: 'Heading 5', level: 5 },
+  { value: 'h6', label: 'Heading 6', level: 6 },
 ] as const;
 
 const FONT_FAMILY_OPTIONS = [
@@ -124,13 +127,8 @@ export const TiptapEditorToolbar: React.FC<TiptapEditorToolbarProps> = ({
   const [moreAnchor, setMoreAnchor] = React.useState<HTMLElement | null>(null);
 
   const currentHeading
-    = editor.isActive('heading', { level: 1 })
-      ? 'h1'
-      : editor.isActive('heading', { level: 2 })
-        ? 'h2'
-        : editor.isActive('heading', { level: 3 })
-          ? 'h3'
-          : 'paragraph';
+    = HEADING_OPTIONS.find((o) => o.level !== null && editor.isActive('heading', { level: o.level }))?.value
+      ?? 'paragraph';
 
   const currentFontFamily = editor.getAttributes('textStyle').fontFamily ?? '';
   const currentFontSize = editor.getAttributes('textStyle').fontSize ?? '';
