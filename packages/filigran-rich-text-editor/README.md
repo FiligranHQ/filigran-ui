@@ -130,7 +130,7 @@ The editor comes with a rich toolbar and the following built-in capabilities:
 - **Highlights** — highlight text with custom colors
 - **Links** — insert/edit links via a popover
 - **Images** — insert from URL or paste/drop. Resizable, with alt/title/caption/link options
-- **Tables** — insert via a grid picker, resizable columns, context menu for row/column operations, nested tables, cell split/merge
+- **Tables** — insert via a grid picker, resizable columns, context menu for row/column operations, nested tables, cell split/merge. Cell background colors and borders of pasted or loaded content are preserved
 - **Block elements** — blockquote, code block, horizontal rule, page break
 - **Indentation** — increase / decrease indent
 - **Typography** — automatic smart quotes, dashes, ellipsis (TipTap Typography extension)

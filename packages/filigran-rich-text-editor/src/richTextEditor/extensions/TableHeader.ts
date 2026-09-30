@@ -1,4 +1,5 @@
 import { TableHeader as TiptapTableHeader } from '@tiptap/extension-table';
+import { tableCellStyleAttributes } from './TableCellStyleAttributes';
 
 /**
  * Extended TableHeader that allows any block content and preserves inline width styles.
@@ -22,6 +23,7 @@ export const NestedTableHeader = TiptapTableHeader.extend({
           };
         },
       },
+      ...tableCellStyleAttributes,
     };
   },
 });
