@@ -9,8 +9,9 @@ import { unified } from 'unified';
  * no `**`, no `#`, no table pipes, no code block, no image, and no bare URL
  * spelled out character by character. The text is parsed with the parser the
  * panel renders with (remark-parse + remark-gfm), so what counts as a heading,
- * a list or a link is what the screen shows. File markers are the caller's to
- * strip first (`stripFileMarkers`), as everywhere else.
+ * a list or a link is what the screen shows. It reads the documents the
+ * transcript renders (`answerMarkdownSources`), never the raw answer: the
+ * renderer splits it at its file markers and repairs it first (`prepareMarkdown`).
  *
  * Kept free of local imports so `node --test` runs it as is.
  */
@@ -55,14 +56,15 @@ function collectLines(node: MdNode, lines: string[]): void {
 }
 
 /**
- * The words of a markdown answer, one sentence-ending line per block: a
- * heading or a list item without its own punctuation gets a full stop, so
- * the voice pauses where the eye does.
+ * The words of an answer's markdown documents, one sentence-ending line per
+ * block: a heading or a list item without its own punctuation gets a full
+ * stop, so the voice pauses where the eye does. Each document is parsed on its own.
  */
-export function speakableText(markdown: string): string {
-  if (!markdown.trim()) return '';
+export function speakableText(documents: readonly string[]): string {
   const lines: string[] = [];
-  collectLines(parser.parse(markdown) as MdNode, lines);
+  for (const markdown of documents) {
+    if (markdown.trim()) collectLines(parser.parse(markdown) as MdNode, lines);
+  }
   return lines
     .map((line) =>
       line
@@ -76,12 +78,19 @@ export function speakableText(markdown: string): string {
 }
 
 /**
- * Whether an answer has words to read outside its code blocks - what decides
- * that it gets a "Read aloud" button. A cheap look rather than `speakableText`:
- * it runs for every message on screen, the full parse only on a click.
+ * A fenced code block: a run of 3+ backticks or tildes, closed by a bare run of
+ * the same character at least as long (`prepareMarkdown` lengthens the fence
+ * around nested ones), or by the end of an answer cut short.
  */
-export function hasSpeakableWords(markdown: string): boolean {
-  return /[\p{L}\p{N}]/u.test(markdown.replace(/^\s*(```|~~~)[\s\S]*?(^\s*\1|(?![\s\S]))/gm, ''));
+const FENCED_BLOCK_RE = /^[ \t]*((`|~)\2{2,})[\s\S]*?(?:^[ \t]*\1\2*[ \t]*$|(?![\s\S]))/gm;
+
+/**
+ * Whether an answer's markdown documents have words to read outside their code
+ * blocks - what decides that it gets a "Read aloud" button. A cheap look rather
+ * than `speakableText`: it runs for every message on screen, the full parse only on a click.
+ */
+export function hasSpeakableWords(documents: readonly string[]): boolean {
+  return documents.some((markdown) => /[\p{L}\p{N}]/u.test(markdown.replace(FENCED_BLOCK_RE, '')));
 }
 
 /**

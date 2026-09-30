@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useInsertionEffect, useRef, useState } from 'react';
-import { stripFileMarkers } from '../utils';
 import { chunkSpeech, createSpeechController, speakableText, type SpeechController } from '../utils/speech';
 
 const speechSupported = (): boolean =>
@@ -37,13 +36,16 @@ export function useSpeechReader(locale?: string) {
     return controllerRef.current;
   }, [supported]);
 
-  /** Reads `content` as the message `id`, or stops it when it is the one being read. */
+  /**
+   * Reads the message `id` from the markdown documents the transcript renders it
+   * from (`answerMarkdownSources`), or stops it when it is the one being read.
+   */
   const toggle = useCallback(
-    (id: string, content: string) => {
+    (id: string, documents: readonly string[]) => {
       const reader = controller();
       if (!reader) return;
       if (reader.speakingId === id) reader.stop();
-      else reader.speak(id, chunkSpeech(speakableText(stripFileMarkers(content))), localeRef.current);
+      else reader.speak(id, chunkSpeech(speakableText(documents)), localeRef.current);
     },
     [controller],
   );

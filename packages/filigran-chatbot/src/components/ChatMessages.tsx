@@ -2,7 +2,7 @@ import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } fr
 import type { AgentStatusState, ChatAttachment, ChatMessage, MessageFeedback, ToolApprovalDecision, ToolApprovalProposal } from '../types';
 import { feedbackKeyOf, useMessageFeedback, type FeedbackEntry } from '../hooks/useMessageFeedback';
 import { useSpeechReader } from '../hooks/useSpeechReader';
-import { splitFileMarkers, stripFileMarkers } from '../utils';
+import { answerMarkdownSources, splitFileMarkers, stripFileMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
 import { formatMessageTime } from '../utils/messageTime';
 import { createScrollFollower } from '../utils/scrollFollow';
@@ -343,7 +343,7 @@ interface MessageRowProps {
   canSpeak: boolean;
   /** This message is being read aloud. */
   isSpeaking: boolean;
-  onToggleSpeech: (id: string, content: string) => void;
+  onToggleSpeech: (id: string, documents: readonly string[]) => void;
   t: (key: string) => string;
 }
 
@@ -547,6 +547,10 @@ const MessageRow = memo(
     // the message is still streaming.
     const showActions = isAssistant && !isEmpty && !isStreaming;
     const plainText = stripFileMarkers(msg.content);
+    const speechDocuments = useMemo(
+      () => (showActions && canSpeak ? answerMarkdownSources(msg.content) : null),
+      [showActions, canSpeak, msg.content],
+    );
     const shown = shownFeedback(feedback, msg.feedback);
     const speechKey = feedbackKeyOf(msg);
 
@@ -625,8 +629,8 @@ const MessageRow = memo(
                 t={t}
               />
             )}
-            {canSpeak && hasSpeakableWords(plainText) && (
-              <ReadAloudButton speaking={isSpeaking} onToggle={() => onToggleSpeech(speechKey, msg.content)} t={t} />
+            {speechDocuments && hasSpeakableWords(speechDocuments) && (
+              <ReadAloudButton speaking={isSpeaking} onToggle={() => onToggleSpeech(speechKey, speechDocuments)} t={t} />
             )}
           </div>
         )}

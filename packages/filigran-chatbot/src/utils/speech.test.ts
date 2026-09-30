@@ -8,11 +8,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { stripFileMarkers } from './index.ts';
+import { answerMarkdownSources } from './index.ts';
 import { chunkSpeech, createSpeechController, hasSpeakableWords, speakableText } from './speech.ts';
 
+// What the transcript does with an answer: the button reads these documents, and so does the voice.
+const read = (answer: string): string => speakableText(answerMarkdownSources(answer));
+const hasWords = (answer: string): boolean => hasSpeakableWords(answerMarkdownSources(answer));
+
 test('the markdown is read as the words a reader sees', () => {
-  const text = speakableText(
+  const text = read(
     [
       '## Summary',
       '',
@@ -50,15 +54,38 @@ test('the markdown is read as the words a reader sees', () => {
   );
 });
 
-test('file markers are stripped before the text is read', () => {
-  assert.equal(speakableText(stripFileMarkers('Here is the export [[FILE:3f2a]].')), 'Here is the export.');
-  assert.equal(speakableText(stripFileMarkers('[[FILE:3f2a]]')), '');
+test('file markers are not read, and split the answer where its file cards sit', () => {
+  assert.equal(read('Here is the export [[FILE:3f2a]]'), 'Here is the export.');
+  assert.equal(read('[[FILE:3f2a]]'), '');
+  assert.equal(hasWords('[[FILE:3f2a]]'), false);
+  // Each side of a card is a document of its own: the reference defined after
+  // the card does not reach the link before it, as on screen.
+  assert.equal(read('See [the report][r].\n\n[[FILE:3f2a]]\n\n[r]: https://example.com/r'), 'See [the report][r].');
+  assert.equal(read('First part.[[FILE:a]]Second part[[FILE:b]]'), 'First part.\nSecond part.');
+});
+
+test('an answer the renderer shows as code is not read, and gets no button', () => {
+  const json = '{"status": "done", "actors": ["APT29", "APT28"]}';
+  assert.equal(hasWords(json), false);
+  assert.equal(read(json), '');
+  assert.equal(read(`${json}\n\n[[FILE:a]]\n\nThe export is attached.`), 'The export is attached.');
+});
+
+test('a table the renderer repairs is read as its cells, not its pipes', () => {
+  const table = ['| Host | Seen | Owner |', '| --- | --- |', '| srv-01 | today | Alice |'].join('\n');
+  assert.equal(read(table), 'Host, Seen, Owner.\nsrv-01, today, Alice.');
+});
+
+test('a markdown document shown in a code block is not read', () => {
+  const answer = ['```markdown', '# Prompt', '', '```python', 'print(1)', '```', '', 'Say hello.', '```'].join('\n');
+  assert.equal(hasWords(answer), false);
+  assert.equal(read(answer), '');
 });
 
 test('an answer with nothing to say reads as nothing', () => {
-  assert.equal(speakableText(''), '');
-  assert.equal(speakableText('```\ncode only\n```'), '');
-  assert.equal(speakableText('![img](x.png)\n\n---'), '');
+  assert.equal(read(''), '');
+  assert.equal(read('```\ncode only\n```'), '');
+  assert.equal(read('![img](x.png)\n\n---'), '');
 });
 
 test('long text is cut between sentences, then between words, never past the limit', () => {
@@ -131,14 +158,17 @@ test('reading another message stops the first, whose cancelled queue changes not
 });
 
 test('an answer made only of code has no words to read', () => {
-  assert.equal(hasSpeakableWords('Here is the query.\n\n```sql\nSELECT 1\n```'), true);
-  assert.equal(hasSpeakableWords('```sql\nSELECT 1;\n```'), false);
-  assert.equal(hasSpeakableWords('  ~~~\nls -la\n  ~~~\n'), false);
+  assert.equal(hasWords('Here is the query.\n\n```sql\nSELECT 1\n```'), true);
+  assert.equal(hasWords('```sql\nSELECT 1;\n```'), false);
+  assert.equal(hasWords('  ~~~\nls -la\n  ~~~\n'), false);
   // A fence still open (a cut answer) runs to the end.
-  assert.equal(hasSpeakableWords('```\nrm -rf build'), false);
-  assert.equal(hasSpeakableWords('```\na\n```\nThen run it.'), true);
-  assert.equal(hasSpeakableWords('---'), false);
-  assert.equal(hasSpeakableWords('Réponse : 42'), true);
+  assert.equal(hasWords('```\nrm -rf build'), false);
+  assert.equal(hasWords('```\na\n```\nThen run it.'), true);
+  // Only a bare run at least as long closes a fence.
+  assert.equal(hasWords('````\n```python\nx = 1\n```\n````'), false);
+  assert.equal(hasWords('```\n```python\nok\n```\nDone.'), true);
+  assert.equal(hasWords('---'), false);
+  assert.equal(hasWords('Réponse : 42'), true);
 });
 
 test('stop ends the reading once, and is a no-op when nothing is read', () => {
