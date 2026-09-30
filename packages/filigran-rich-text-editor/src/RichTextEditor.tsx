@@ -42,6 +42,7 @@ import { TaskList } from './richTextEditor/extensions/TaskList';
 import { TaskItem } from './richTextEditor/extensions/TaskListItem';
 import { Div } from './richTextEditor/extensions/Div';
 import { WordLists } from './richTextEditor/extensions/WordLists';
+import { WordImages } from './richTextEditor/extensions/WordImages';
 
 import './styles/TiptapEditor.css';
 
@@ -278,6 +279,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       TableCellSplit,
       Div,
       WordLists,
+      WordImages,
     ],
     content: initialContentRef.current,
     editable: !disabled,
