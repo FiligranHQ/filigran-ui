@@ -971,6 +971,7 @@ export function useChat({
                           toolCallTrace: parsed.toolCallTrace,
                           transferChain: parsed.transferChain,
                           isTruncated: parsed.isTruncated,
+                          serverId: parsed.messageId ?? m.serverId,
                         }
                       : m,
                   ),

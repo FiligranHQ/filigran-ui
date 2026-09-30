@@ -23,6 +23,14 @@ const SCENARIOS: { prompt: string; label: string; covers: string }[] = [
   { prompt: 'long thread', label: 'Long thread', covers: '200 backfilled messages — render window' },
 ];
 
+/** The locales the panel can be given; the first one leaves it to the browser. */
+const LOCALES: { value: string | undefined; label: string }[] = [
+  { value: undefined, label: 'Browser' },
+  { value: 'en-US', label: 'en-US' },
+  { value: 'fr-FR', label: 'fr-FR' },
+  { value: 'ja-JP', label: 'ja-JP' },
+];
+
 /**
  * Whether the playground is talking to a real XTM One, and to whom.
  *
@@ -237,6 +245,8 @@ const App = () => {
   // One ships gating. Worth being able to see side by side, so it is a switch
   // rather than an edit.
   const [supportsApproval, setSupportsApproval] = useState(true);
+  // The message times and the read-aloud voice follow it; unset is the browser's.
+  const [locale, setLocale] = useState<string | undefined>(undefined);
   const [isDark, setIsDark] = useState(true);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [hostToolActive, setHostToolActive] = useState(false);
@@ -396,6 +406,27 @@ const App = () => {
                     </div>
                   </div>
 
+                  {/* Locale */}
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Locale (message times, read aloud):</p>
+                    <div className="flex gap-2">
+                      {LOCALES.map(({ value, label }) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => setLocale(value)}
+                          className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                            locale === value
+                              ? 'border-[#7b5cff] bg-[#7b5cff]/10 text-[#7b5cff]'
+                              : 'border-gray-300 dark:border-white/20 text-gray-700 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/10'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Tool approval opt-in */}
                   <div className="mb-4">
                     <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Tool approval:</p>
@@ -501,7 +532,10 @@ const App = () => {
                       'Markdown: tables (incl. the mis-delimited one), fenced code with and without a language, lists show bullets/numbers, soft line breaks',
                       'Images: inline chart and image attachment both preview; click opens the lightbox; Escape closes it',
                       'The javascript: link is inert, the https: one opens in a new tab',
-                      'Hover an answer: copy button and 👍/👎 appear; ratings show up under "Host callbacks"',
+                      'Footer: every message shows its time (hover: the full date); hovering or tabbing reveals copy, 👍/👎 and read aloud',
+                      'Ratings are stored (mock): 👎 asks for an optional comment, Save / Skip closes it; the active thumb retracts it; each shows up under "Host callbacks"',
+                      'Reopen a rated conversation from the history: its rating is locked ("Feedback already submitted"); "long thread" backlog is dated yesterday',
+                      'Read aloud reads one answer at a time, stops on a second click, on a new message and on New chat; the locale switch changes the time format and the voice',
                       'Reasoning details ("i") opens the tool trace',
                       'Long thread: "Load earlier messages" appears and walks the window back',
                       'Slow turn: elapsed counter ticks every second, then the waiting game appears',
@@ -532,18 +566,19 @@ const App = () => {
             onModeChange={setMode}
             topOffset={HEADER_HEIGHT}
             apiBaseUrl="/api/xtmone"
-            // Tool approval is opt-in and has no default paths: naming them is
-            // how a host promises it can answer a paused turn, so a widget that
-            // cannot must never claim it. Both are plain passthroughs here —
-            // the dev server rewrites `/api/xtmone/*` onto XTM One's
-            // `/api/v1/platform/*` generically, so they need nothing of their
-            // own. Against the mock they simply 404 and the panel degrades,
-            // which is the un-opted-in behaviour every current host has.
-            apiEndpoints={
-              supportsApproval
-                ? { approve: '/chat/messages/approve', pendingApprovals: '/chat/conversations' }
-                : undefined
-            }
+            // Tool approval and stored feedback are opt-in and have no default
+            // paths: naming them is how a host promises the backend answers
+            // them, so a widget that cannot must never claim it. All are plain
+            // passthroughs here — the dev server rewrites `/api/xtmone/*` onto
+            // XTM One's `/api/v1/platform/*` generically, so they need nothing
+            // of their own. The mock stores feedback; approval paths it does
+            // not know 404 and the panel degrades, which is the un-opted-in
+            // behaviour every current host has.
+            apiEndpoints={{
+              feedback: '/chat/conversations',
+              ...(supportsApproval ? { approve: '/chat/messages/approve', pendingApprovals: '/chat/conversations' } : {}),
+            }}
+            locale={locale}
             agentDashboardUrl="https://xtm.example.com"
             user={{ firstName: session.state === 'signed-in' ? session.email.split('@')[0] : 'Tester' }}
             accentColor="#7b5cff"

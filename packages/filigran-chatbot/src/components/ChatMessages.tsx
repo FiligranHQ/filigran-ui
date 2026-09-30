@@ -1,13 +1,31 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { AgentStatusState, ChatAttachment, ChatMessage, MessageFeedback, ToolApprovalDecision, ToolApprovalProposal } from '../types';
+import { feedbackKeyOf, useMessageFeedback, type FeedbackEntry } from '../hooks/useMessageFeedback';
+import { useSpeechReader } from '../hooks/useSpeechReader';
 import { splitFileMarkers, stripFileMarkers } from '../utils';
+import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
+import { formatMessageTime } from '../utils/messageTime';
 import { createScrollFollower } from '../utils/scrollFollow';
-import { AlertTriangleIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, FileIcon, InfoIcon, ThumbsDownIcon, ThumbsUpIcon } from './icons';
+import { hasSpeakableWords } from '../utils/speech';
+import {
+  AlertTriangleIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  CopyIcon,
+  DownloadIcon,
+  FileIcon,
+  InfoIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
+  VolumeIcon,
+  VolumeOffIcon,
+} from './icons';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
 import { ChatThinking } from './ChatThinking';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ReasoningDetailsDialog } from './ReasoningDetailsDialog';
+import { Tooltip } from './Tooltip';
 
 /**
  * Windowed thread rendering: only the most recent slice of the thread is
@@ -43,8 +61,18 @@ interface ChatMessagesProps {
   onPlayWaitingGame?: () => void;
   /** Where the XTM One arcade is played, opened in a new tab. */
   waitingGameUrl?: string | null;
-  /** Enables the 👍/👎 affordance on completed assistant messages. */
+  /** Enables the 👍/👎 affordance on completed assistant messages (see `feedbackUrl`). */
   onMessageFeedback?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
+  /**
+   * Where the panel stores ratings itself (`feedbackBaseUrl`): shows the thumbs
+   * on every answer the backend identified, whether or not `onMessageFeedback`
+   * is passed.
+   */
+  feedbackUrl?: string | null;
+  /** The conversation on screen; its ratings are stored against it. */
+  conversationId?: string | null;
+  /** BCP 47 tag the times are formatted in and answers are read aloud in. */
+  locale?: string;
   /**
    * True while a turn answered after a reload is finishing without a stream.
    * Rendered as the ordinary working indicator: from the user's side nothing
@@ -94,8 +122,34 @@ function isImageAttachment(att: ChatAttachment): boolean {
   return dot > 0 && IMAGE_EXTENSIONS.has(att.filename.slice(dot + 1).toLowerCase());
 }
 
-/** Copies the assistant's answer as plain text. Revealed on message hover. */
-const MessageCopyButton = ({ text, t }: { text: string; t: (key: string) => string }) => {
+/**
+ * The footer's secondary controls show while the message is hovered or holds
+ * the focus, and always where nothing hovers (a touch screen). A keyboard user
+ * tabbing onto one sees it through `focus-visible` / `focus-within`.
+ */
+const REVEAL_ON_HOVER =
+  'opacity-0 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
+const FOOTER_BUTTON = 'p-1 rounded-lg transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
+const REVEALED_BUTTON = `${REVEAL_ON_HOVER} hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]`;
+/** A control in its "on" state (the given rating, the message being read) stays in view. */
+const ACTIVE_BUTTON = 'opacity-100 text-[var(--chat-accent)]';
+
+/** When the message was sent; the tooltip spells the date out. */
+const MessageTime = ({ timestamp, locale }: { timestamp: Date; locale?: string }) => {
+  const time = formatMessageTime(timestamp, locale);
+  if (!time) return null;
+  return (
+    <Tooltip title={time.full}>
+      <time dateTime={time.iso} className="px-1 text-[0.65rem] tabular-nums text-gray-400 dark:text-white/40 select-none">
+        <span aria-hidden="true">{time.label}</span>
+        <span className="sr-only">{time.full}</span>
+      </time>
+    </Tooltip>
+  );
+};
+
+/** Copies a message as plain text. Revealed on message hover. */
+const MessageCopyButton = ({ text, label, t }: { text: string; label: string; t: (key: string) => string }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -109,65 +163,161 @@ const MessageCopyButton = ({ text, t }: { text: string; t: (key: string) => stri
     }
   };
 
+  const name = copied ? t('Copied!') : label;
   return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      title={copied ? t('Copied!') : t('Copy response')}
-      aria-label={copied ? t('Copied!') : t('Copy response')}
-      className={`p-1 rounded-lg transition-opacity ${
-        copied
-          ? 'opacity-100 text-green-500 dark:text-green-400'
-          : 'opacity-0 group-hover/msg:opacity-100 focus-visible:opacity-100 hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]'
-      }`}
-    >
-      {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-    </button>
+    <Tooltip title={name}>
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label={name}
+        className={`${FOOTER_BUTTON} ${copied ? 'opacity-100 text-green-500 dark:text-green-400' : REVEALED_BUTTON}`}
+      >
+        {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
+      </button>
+    </Tooltip>
   );
 };
 
-/** 👍/👎 on a completed answer. Clicking the active value clears it. */
+/**
+ * 👍/👎 on a completed answer. Clicking the active value clears it. A rating
+ * given before the conversation was reopened is final: only it is shown.
+ */
 const MessageFeedbackButtons = ({
   value,
+  locked,
+  pending,
   onChange,
+  downRef,
   t,
 }: {
   value: MessageFeedback | null;
+  locked: boolean;
+  pending: boolean;
   onChange: (next: MessageFeedback | null) => void;
+  downRef: React.RefObject<HTMLButtonElement | null>;
   t: (key: string) => string;
 }) => {
-  // Same focus-visible treatment as the copy button: these are hover-revealed,
-  // so without it a keyboard user tabs onto an invisible control.
-  const buttonClass = (active: boolean) =>
-    `p-1 rounded-lg transition-opacity ${
-      active
-        ? 'opacity-100 text-[var(--chat-accent)]'
-        : 'opacity-0 group-hover/msg:opacity-100 focus-visible:opacity-100 hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]'
-    }`;
+  const lockedId = useId();
+  const inert = locked || pending;
+
+  const button = (target: MessageFeedback, label: string) => {
+    const active = value === target;
+    if (locked && !active) return null;
+    const Icon = target === 'up' ? ThumbsUpIcon : ThumbsDownIcon;
+    return (
+      <Tooltip title={locked ? t('Feedback already submitted') : label}>
+        <button
+          ref={target === 'down' ? downRef : undefined}
+          type="button"
+          onClick={() => {
+            if (!inert) onChange(active ? null : target);
+          }}
+          aria-label={label}
+          aria-pressed={active}
+          // Not `disabled`: a disabled button takes no focus and no hover, so
+          // it could not say why it does not answer.
+          aria-disabled={inert || undefined}
+          aria-describedby={locked ? lockedId : undefined}
+          className={`${FOOTER_BUTTON} ${active ? ACTIVE_BUTTON : REVEALED_BUTTON} ${inert ? 'cursor-default' : ''}`}
+        >
+          <Icon size={14} filled={active} />
+        </button>
+      </Tooltip>
+    );
+  };
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => onChange(value === 'up' ? null : 'up')}
-        title={t('Good response')}
-        aria-label={t('Good response')}
-        aria-pressed={value === 'up'}
-        className={buttonClass(value === 'up')}
-      >
-        <ThumbsUpIcon size={14} filled={value === 'up'} />
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange(value === 'down' ? null : 'down')}
-        title={t('Bad response')}
-        aria-label={t('Bad response')}
-        aria-pressed={value === 'down'}
-        className={buttonClass(value === 'down')}
-      >
-        <ThumbsDownIcon size={14} filled={value === 'down'} />
-      </button>
+      {button('up', t('Good response'))}
+      {button('down', t('Bad response'))}
+      {locked && (
+        <span id={lockedId} className="sr-only">
+          {t('Feedback already submitted')}
+        </span>
+      )}
     </>
+  );
+};
+
+/** The optional word on what went wrong, asked once a thumbs down is stored. */
+const FeedbackComment = ({
+  pending,
+  onSave,
+  onSkip,
+  t,
+}: {
+  pending: boolean;
+  onSave: (text: string) => void;
+  onSkip: () => void;
+  t: (key: string) => string;
+}) => {
+  const [text, setText] = useState('');
+  const id = useId();
+  const canSave = !pending && !!text.trim();
+
+  return (
+    <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] p-2">
+      <label htmlFor={id} className="text-[0.7rem] text-gray-600 dark:text-white/60">
+        {t('Tell us what went wrong (optional)')}
+      </label>
+      <textarea
+        id={id}
+        // Opened by the user's own thumbs down, to be typed into.
+        autoFocus
+        rows={2}
+        maxLength={FEEDBACK_COMMENT_MAX_LENGTH}
+        value={text}
+        // Read-only rather than disabled while saving, so the focus stays here.
+        readOnly={pending}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!pending) onSkip();
+          } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            if (canSave) onSave(text);
+          }
+        }}
+        placeholder={t('What could be improved?')}
+        className="w-full resize-y rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-transparent px-2 py-1 text-[0.75rem] leading-5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+      />
+      <div className="flex justify-end gap-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            if (!pending) onSkip();
+          }}
+          aria-disabled={pending || undefined}
+          className="rounded-md px-2 py-0.5 text-[0.7rem] text-gray-500 dark:text-white/50 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+        >
+          {t('Skip')}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (canSave) onSave(text);
+          }}
+          aria-disabled={!canSave || undefined}
+          className={`rounded-md px-2 py-0.5 text-[0.7rem] text-white bg-[var(--chat-accent)] transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)] ${canSave ? 'hover:opacity-90' : 'opacity-50 cursor-default'}`}
+        >
+          {t('Save')}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/** Reads the answer aloud; the same button stops it. */
+const ReadAloudButton = ({ speaking, onToggle, t }: { speaking: boolean; onToggle: () => void; t: (key: string) => string }) => {
+  const name = speaking ? t('Stop reading') : t('Read aloud');
+  return (
+    <Tooltip title={name}>
+      <button type="button" onClick={onToggle} aria-label={name} className={`${FOOTER_BUTTON} ${speaking ? ACTIVE_BUTTON : REVEALED_BUTTON}`}>
+        {speaking ? <VolumeOffIcon size={14} /> : <VolumeIcon size={14} />}
+      </button>
+    </Tooltip>
   );
 };
 
@@ -181,8 +331,19 @@ interface MessageRowProps {
   onDownloadFile?: (attachment: ChatAttachment) => void;
   resolveAttachmentUrl?: (attachment: ChatAttachment) => string | undefined;
   requestHeaders?: Record<string, string>;
-  feedback: MessageFeedback | null;
-  onFeedbackChange?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
+  /** How this answer's thumbs work, or null for none (`feedbackModeOf`). */
+  feedbackMode: FeedbackMode | null;
+  /** What the user did to its rating in this session. */
+  feedback: FeedbackEntry | undefined;
+  onRate: (msg: ChatMessage, next: MessageFeedback | null, current: FeedbackEntry | undefined) => void;
+  onSaveComment: (msg: ChatMessage, text: string, current: FeedbackEntry) => void;
+  onSkipComment: (msg: ChatMessage, current: FeedbackEntry) => void;
+  locale?: string;
+  /** The browser can read aloud. */
+  canSpeak: boolean;
+  /** This message is being read aloud. */
+  isSpeaking: boolean;
+  onToggleSpeech: (id: string, content: string) => void;
   t: (key: string) => string;
 }
 
@@ -203,13 +364,32 @@ const MessageRow = memo(
     onDownloadFile,
     resolveAttachmentUrl,
     requestHeaders,
+    feedbackMode,
     feedback,
-    onFeedbackChange,
+    onRate,
+    onSaveComment,
+    onSkipComment,
+    locale,
+    canSpeak,
+    isSpeaking,
+    onToggleSpeech,
     t,
   }: MessageRowProps) => {
     const [showReasoning, setShowReasoning] = useState(false);
     const isAssistant = msg.role === 'assistant';
     const isEmpty = !msg.content;
+    const downRef = useRef<HTMLButtonElement>(null);
+
+    // The comment question takes the focus when it opens; when it closes with
+    // the focus still in it (the element is gone, so the page lost it), the
+    // focus goes back to the thumb that opened it rather than to the page.
+    const commentOpen = !!feedback?.commentOpen;
+    const wasCommentOpen = useRef(commentOpen);
+    useLayoutEffect(() => {
+      const closed = wasCommentOpen.current && !commentOpen;
+      wasCommentOpen.current = commentOpen;
+      if (closed && (!document.activeElement || document.activeElement === document.body)) downRef.current?.focus();
+    }, [commentOpen]);
 
     const renderAttachmentCard = (att: ChatAttachment, key: string) => {
       // An image the host can resolve a URL for is shown, not filed away.
@@ -366,6 +546,9 @@ const MessageRow = memo(
     // Actions only make sense on a finished answer, so they stay hidden while
     // the message is still streaming.
     const showActions = isAssistant && !isEmpty && !isStreaming;
+    const plainText = stripFileMarkers(msg.content);
+    const shown = shownFeedback(feedback, msg.feedback);
+    const speechKey = feedbackKeyOf(msg);
 
     return (
       <div className={`group/msg flex flex-col ${isAssistant ? 'items-start' : 'items-end'}`}>
@@ -399,31 +582,66 @@ const MessageRow = memo(
           </div>
         )}
 
+        {/* The user's side mirrors the answer's: the time hugs the bubble's edge. */}
+        {!isAssistant && (
+          <div className="mt-0.5 flex items-center justify-end gap-0.5 text-gray-400 dark:text-white/40">
+            {!!msg.content.trim() && <MessageCopyButton text={msg.content} label={t('Copy message')} t={t} />}
+            {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
+          </div>
+        )}
+
         {showActions && (
-          <div className="mt-0.5 flex items-center gap-0.5 text-gray-400 dark:text-white/40">
-            <MessageCopyButton text={stripFileMarkers(msg.content)} t={t} />
-            {onFeedbackChange && <MessageFeedbackButtons value={feedback} onChange={(next) => onFeedbackChange(msg.id, next, msg)} t={t} />}
+          <div className="mt-0.5 flex flex-wrap items-center gap-0.5 text-gray-400 dark:text-white/40">
+            {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
             {hasReasoningDetails && (
-              <button
-                type="button"
-                onClick={() => setShowReasoning((v) => !v)}
-                className={`p-1 rounded-lg transition-opacity ${
-                  msg.isTruncated
-                    ? // A truncated turn must be visible at a glance (not gated
-                      // on hover) so the user notices the warning — mirrors the
-                      // XTM One web chat affordance.
-                      'opacity-100 text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
-                    : 'opacity-50 hover:opacity-100 hover:text-[var(--chat-accent)]'
-                }`}
-                title={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}
-                aria-label={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}
-                aria-haspopup="dialog"
-                aria-expanded={showReasoning}
-              >
-                {msg.isTruncated ? <AlertTriangleIcon size={14} /> : <InfoIcon size={14} />}
-              </button>
+              <Tooltip title={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}>
+                <button
+                  type="button"
+                  onClick={() => setShowReasoning((v) => !v)}
+                  className={`${FOOTER_BUTTON} ${
+                    msg.isTruncated
+                      ? // A truncated turn must be visible at a glance (not gated
+                        // on hover) so the user notices the warning — mirrors the
+                        // XTM One web chat affordance.
+                        'opacity-100 text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
+                      : 'opacity-50 hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]'
+                  }`}
+                  aria-label={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}
+                  aria-haspopup="dialog"
+                  aria-expanded={showReasoning}
+                >
+                  {msg.isTruncated ? <AlertTriangleIcon size={14} /> : <InfoIcon size={14} />}
+                </button>
+              </Tooltip>
+            )}
+            <MessageCopyButton text={plainText} label={t('Copy response')} t={t} />
+            {feedbackMode && (
+              <MessageFeedbackButtons
+                value={shown.value}
+                locked={shown.locked}
+                pending={!!feedback?.pending}
+                onChange={(next) => onRate(msg, next, feedback)}
+                downRef={downRef}
+                t={t}
+              />
+            )}
+            {canSpeak && hasSpeakableWords(plainText) && (
+              <ReadAloudButton speaking={isSpeaking} onToggle={() => onToggleSpeech(speechKey, msg.content)} t={t} />
             )}
           </div>
+        )}
+        {showActions && feedback?.commentOpen && (
+          <FeedbackComment
+            pending={feedback.pending}
+            onSave={(text) => onSaveComment(msg, text, feedback)}
+            onSkip={() => onSkipComment(msg, feedback)}
+            t={t}
+          />
+        )}
+        {showActions && feedback?.error && (
+          <p role="alert" className="mt-0.5 pl-1 text-[0.7rem] text-red-600 dark:text-red-400">
+            {feedback.error}
+          </p>
         )}
         {showReasoning && <ReasoningDetailsDialog msg={msg} onClose={() => setShowReasoning(false)} t={t} />}
       </div>
@@ -452,11 +670,26 @@ export const ChatMessages = ({
   onSubmitApprovalDecisions,
   isSubmittingApproval,
   approvalError,
+  feedbackUrl,
+  conversationId,
+  locale,
   t,
 }: ChatMessagesProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [renderWindow, setRenderWindow] = useState(INITIAL_RENDER_WINDOW);
-  const [feedbackByMessage, setFeedbackByMessage] = useState<Record<string, MessageFeedback>>({});
+  const {
+    entries: feedbackEntries,
+    rate,
+    saveComment,
+    skipComment,
+  } = useMessageFeedback({
+    feedbackUrl,
+    conversationId,
+    requestHeaders,
+    onMessageFeedback,
+    t,
+  });
+  const speech = useSpeechReader(locale);
 
   // Keeps the end of the conversation in view while the reader is at the
   // bottom (see `createScrollFollower`). It holds no React state: its timer
@@ -524,19 +757,16 @@ export const ChatMessages = ({
     [messages, renderWindow, hasEarlierMessages],
   );
 
-  const handleFeedbackChange = useCallback(
-    (messageId: string, next: MessageFeedback | null, message: ChatMessage) => {
-      setFeedbackByMessage((prev) => {
-        if (next !== null) return { ...prev, [messageId]: next };
-        if (!(messageId in prev)) return prev;
-        const rest = { ...prev };
-        delete rest[messageId];
-        return rest;
-      });
-      onMessageFeedback?.(messageId, next, message);
-    },
-    [onMessageFeedback],
-  );
+  // Reading aloud is about the message on screen: it stops when the user
+  // sends a new one, opens another conversation, or the message goes away.
+  const { speakingId, stop: stopSpeech } = speech;
+  const spokenStillShown = speakingId === null || messages.some((m) => feedbackKeyOf(m) === speakingId);
+  const speechScope = useRef({ conversationId, userMessageCount });
+  useEffect(() => {
+    const previous = speechScope.current;
+    speechScope.current = { conversationId, userMessageCount };
+    if (previous.conversationId !== conversationId || userMessageCount > previous.userMessageCount || !spokenStillShown) stopSpeech();
+  }, [conversationId, userMessageCount, spokenStillShown, stopSpeech]);
 
   // The streaming response is the LAST ASSISTANT message — not necessarily
   // the last message overall: a mid-run steering send appends an optimistic
@@ -613,8 +843,15 @@ export const ChatMessages = ({
             onDownloadFile={onDownloadFile}
             resolveAttachmentUrl={resolveAttachmentUrl}
             requestHeaders={requestHeaders}
-            feedback={feedbackByMessage[msg.id] ?? null}
-            onFeedbackChange={onMessageFeedback ? handleFeedbackChange : undefined}
+            feedbackMode={msg.role === 'assistant' ? feedbackModeOf(msg.serverId, feedbackUrl, conversationId, !!onMessageFeedback) : null}
+            feedback={feedbackEntries[feedbackKeyOf(msg)]}
+            onRate={rate}
+            onSaveComment={saveComment}
+            onSkipComment={skipComment}
+            locale={locale}
+            canSpeak={speech.supported}
+            isSpeaking={speakingId === feedbackKeyOf(msg)}
+            onToggleSpeech={speech.toggle}
             t={t}
           />
         );

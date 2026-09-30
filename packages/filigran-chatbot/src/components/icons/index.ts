@@ -35,5 +35,6 @@ export * from './ThumbsDownIcon';
 export * from './ThumbsUpIcon';
 export * from './TrashIcon';
 export * from './UserPlusIcon';
+export * from './VolumeIcon';
 export * from './WrenchIcon';
 export * from './XCircleIcon';

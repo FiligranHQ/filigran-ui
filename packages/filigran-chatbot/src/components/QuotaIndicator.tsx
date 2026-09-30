@@ -1,5 +1,6 @@
 import type { ChatQuotaStatus } from '../types';
 import { compactCount as compact, translate } from '../utils';
+import { quotaPeriodLabel } from '../utils/quota';
 import { Tooltip } from './Tooltip';
 
 interface QuotaIndicatorProps {
@@ -15,13 +16,20 @@ interface QuotaIndicatorProps {
  * to decorate the composer.
  */
 export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
-  const { used, limit, period } = quota;
+  const { used, limit } = quota;
+  const period = quotaPeriodLabel(quota.period, t);
+  // One allowance for the whole platform: say so, or a user reads colleagues'
+  // consumption as their own.
+  const withScope = (title: string) => (quota.scope === 'global' ? translate(t, '{quota} (shared across all users)', { quota: title }) : title);
 
   // No ceiling: report consumption without implying a limit that isn't there.
   if (limit === null) {
+    const title = withScope(period ? translate(t, 'Usage · {period}', { period }) : t('Usage'));
     return (
-      <Tooltip title={period ? translate(t, 'Usage · {period}', { period }) : t('Usage')}>
-        <span className="text-[0.68rem] tabular-nums text-gray-400 dark:text-white/30">{compact(used)}</span>
+      <Tooltip title={title}>
+        <span className="text-[0.68rem] tabular-nums text-gray-400 dark:text-white/30" role="img" aria-label={`${title} ${compact(used)}`}>
+          {compact(used)}
+        </span>
       </Tooltip>
     );
   }
@@ -40,7 +48,7 @@ export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
 
   const label = `${compact(used)}/${compact(limit)}`;
   const headline = exhausted ? t('Quota reached') : t('Quota');
-  const title = period ? `${headline} · ${period}` : headline;
+  const title = withScope(period ? `${headline} · ${period}` : headline);
 
   return (
     <Tooltip title={title}>

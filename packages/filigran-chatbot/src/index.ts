@@ -7,6 +7,7 @@ export type {
   ChatPanelProps,
   ChatToggleButtonProps,
   ChatMessage,
+  ChatMessagePersistedFeedback,
   ChatAttachment,
   ChatContextBreakdown,
   ChatContextUsage,

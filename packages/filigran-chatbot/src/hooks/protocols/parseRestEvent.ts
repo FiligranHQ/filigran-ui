@@ -2,6 +2,8 @@ import type {
   ChatAttachment,
   ChatContextBreakdown,
   ChatContextUsage,
+  ChatMessage,
+  ChatMessagePersistedFeedback,
   ToolApprovalProposal,
   ToolCallTraceEntry,
   TransferChainEntry,
@@ -244,8 +246,70 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       transferChain: parseTransferChain(evt.transfer_chain),
       isTruncated: evt.is_truncated === true || undefined,
       contextUsage: parseContextUsage(evt),
+      messageId: typeof evt.message_id === 'string' && evt.message_id ? evt.message_id : undefined,
     };
   }
 
   return { action: 'noop' };
+}
+
+/** The `feedback` of a restored entry, or undefined for anything that is not a stored rating. */
+export function parsePersistedFeedback(raw: unknown): ChatMessagePersistedFeedback | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const { rating, comment } = raw as { rating?: unknown; comment?: unknown };
+  if (rating !== 'positive' && rating !== 'negative') return undefined;
+  return { rating, comment: typeof comment === 'string' && comment.trim() ? comment : null };
+}
+
+/**
+ * The messages of a session restore (`POST {sessions}` with a known
+ * `conversation_id`), in order.
+ *
+ * Rows are keyed `restored-<index>`: the key only has to be stable for the
+ * life of the transcript, and a restore replaces the transcript whole. The
+ * entry's own `id` is the message's persisted id, kept as `serverId` for what
+ * is stored against it (feedback); its `created_at` is when it was sent, and
+ * a backend that sends neither still restores - with no time to show
+ * (`timestampUnknown`) rather than the time of the restore.
+ * Entries that are not a user or an assistant message are skipped.
+ */
+export function parseRestoredMessages(raw: unknown): ChatMessage[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ChatMessage[] = [];
+  raw.forEach((item: unknown, i: number) => {
+    if (!item || typeof item !== 'object') return;
+    const m = item as Record<string, unknown>;
+    if (m.role !== 'user' && m.role !== 'assistant') return;
+    const createdAt = typeof m.created_at === 'string' ? new Date(m.created_at) : null;
+    const sentAt = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt : null;
+    out.push({
+      id: `restored-${i}`,
+      serverId: typeof m.id === 'string' && m.id ? m.id : undefined,
+      role: m.role,
+      content: typeof m.content === 'string' ? m.content : '',
+      timestamp: sentAt ?? new Date(),
+      timestampUnknown: sentAt ? undefined : true,
+      feedback: m.role === 'assistant' ? parsePersistedFeedback(m.feedback) : undefined,
+      // Per-message attribution when the backend keeps it — the only way a
+      // thread that changed hands mid-way reads correctly. Nothing records it
+      // today, so this is normally undefined and the conversation's agent
+      // applies to the whole thread.
+      agentName: typeof m.agent_name === 'string' ? m.agent_name : undefined,
+      // Downloadable file chips on both roles: agent-generated deliverables on
+      // assistant messages (their [[FILE:…]] markers are stripped at render
+      // time) and user uploads, so an upload stays downloadable after a reload
+      // and not only in the live session where it is carried on `files`.
+      attachments: parseAttachments(m.attachments),
+      // The reasoning-details affordance, from the same fields the live `done`
+      // event carries.
+      toolNames: Array.isArray(m.tool_names) ? (m.tool_names as string[]) : undefined,
+      toolCallCount: typeof m.tool_call_count === 'number' ? m.tool_call_count : undefined,
+      iterations: typeof m.iterations === 'number' ? m.iterations : undefined,
+      reasoning: typeof m.reasoning === 'string' ? m.reasoning : undefined,
+      toolCallTrace: parseToolCallTrace(m.tool_call_trace),
+      transferChain: parseTransferChain(m.transfer_chain),
+      isTruncated: m.is_truncated === true || undefined,
+    });
+  });
+  return out;
 }

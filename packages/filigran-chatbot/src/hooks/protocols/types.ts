@@ -40,6 +40,8 @@ export type ParsedAction =
       isTruncated?: boolean;
       /** Closing context-window occupancy for the turn. */
       contextUsage?: ChatContextUsage;
+      /** Persisted id of the answer (`message_id`), what its feedback is stored against. */
+      messageId?: string;
     }
   | {
       /**

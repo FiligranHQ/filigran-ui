@@ -1,7 +1,8 @@
 import { type FunctionComponent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatAttachment, ChatMessage, ChatPanelProps, Translate } from '../types';
+import type { ChatAttachment, ChatPanelProps, Translate } from '../types';
 import { hexAlpha, identity } from '../utils';
-import { parseAttachments, parseContextUsage, parseToolCallTrace, parseTransferChain } from '../hooks/protocols/parseRestEvent';
+import { feedbackBaseUrl } from '../utils/feedback';
+import { parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
@@ -66,6 +67,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   notifyOnComplete = true,
   onTaskComplete: onTaskCompleteProp,
   onMessageFeedback: onMessageFeedbackProp,
+  locale,
   disableImagePreviews = false,
   contextUsageEnabled = true,
   composerToolbar,
@@ -471,55 +473,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
         // first is a deliberate answer.
         setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
         if (!data.messages?.length) return;
-        const restored: ChatMessage[] = data.messages.map(
-          (
-            m: {
-              role: string;
-              content: string;
-              attachments?: unknown;
-              tool_names?: unknown;
-              tool_call_count?: unknown;
-              iterations?: unknown;
-              reasoning?: unknown;
-              tool_call_trace?: unknown;
-              transfer_chain?: unknown;
-              is_truncated?: unknown;
-              agent_name?: unknown;
-              context_tokens?: unknown;
-              context_window?: unknown;
-              context_breakdown?: unknown;
-            },
-            i: number,
-          ) => ({
-            id: `restored-${i}`,
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-            timestamp: new Date(),
-            // Per-message attribution when the backend keeps it — the only way
-            // a thread that changed hands mid-way reads correctly. Nothing
-            // records it today, so this is normally undefined and the
-            // conversation's agent applies to the whole thread.
-            agentName: typeof m.agent_name === 'string' ? m.agent_name : undefined,
-            // Re-surface downloadable file chips on conversation restore for
-            // both roles: agent-generated deliverables on assistant messages
-            // (the [[FILE:…]] markers in content are stripped at render time by
-            // ChatMessages) and user-uploaded files on user messages (so an
-            // upload stays downloadable after a page reload, not just in the
-            // live session where it is carried on `files`).
-            attachments: parseAttachments(m.attachments),
-            // Re-surface the reasoning-details affordance ("i" button) on
-            // restored assistant messages — same fields the live `done`
-            // event carries.
-            toolNames: Array.isArray(m.tool_names) ? (m.tool_names as string[]) : undefined,
-            toolCallCount: typeof m.tool_call_count === 'number' ? m.tool_call_count : undefined,
-            iterations: typeof m.iterations === 'number' ? m.iterations : undefined,
-            reasoning: typeof m.reasoning === 'string' ? m.reasoning : undefined,
-            toolCallTrace: parseToolCallTrace(m.tool_call_trace),
-            transferChain: parseTransferChain(m.transfer_chain),
-            isTruncated: m.is_truncated === true || undefined,
-          }),
-        );
-        setMessages(restored);
+        setMessages(parseRestoredMessages(data.messages));
         // The context gauge is conversation state, not per-message: the NEWEST
         // entry that carries a reading is the current occupancy. Scanned from
         // the end so a turn that predates the field (or a user message) falls
@@ -671,6 +625,9 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
               onPlayWaitingGame={onPlayWaitingGame}
               waitingGameUrl={playUrl}
               onMessageFeedback={onMessageFeedback}
+              feedbackUrl={feedbackBaseUrl(apiBaseUrl, apiEndpoints, backendType)}
+              conversationId={conversationId}
+              locale={locale}
               isResumingAfterDecision={isResumingAfterDecision}
               pendingApprovals={pendingApprovals}
               onSubmitApprovalDecisions={submitApprovalDecisions}

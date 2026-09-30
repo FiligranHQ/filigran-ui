@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatPromptTemplate, ChatQuotaStatus } from '../types';
+import { parseQuota } from '../utils/quota';
 
 interface UseComposerExtrasOptions {
   apiBaseUrl: string;
@@ -39,18 +40,6 @@ function parsePrompts(data: unknown): ChatPromptTemplate[] {
     });
   }
   return out;
-}
-
-function parseQuota(data: unknown): ChatQuotaStatus | null {
-  if (!data || typeof data !== 'object') return null;
-  const q = data as Record<string, unknown>;
-  if (typeof q.used !== 'number') return null;
-  return {
-    used: q.used,
-    // Explicitly nullable: absent and null both mean "no ceiling".
-    limit: typeof q.limit === 'number' ? q.limit : null,
-    period: typeof q.period === 'string' ? q.period : '',
-  };
 }
 
 /**
