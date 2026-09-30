@@ -12,6 +12,7 @@ export type {
   ChatContextBreakdown,
   ChatContextUsage,
   ChatConversationSummary,
+  ChatWorkspace,
   ChatFile,
   ChatPromptTemplate,
   ChatQuotaStatus,

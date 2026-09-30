@@ -140,6 +140,23 @@ export interface ApiEndpoints {
    * REST backend only, and not in `singleEndpoint` mode.
    */
   feedback?: string | null;
+  /**
+   * Path of the caller's workspaces, which the conversation list is grouped
+   * by (XTM One serves it at `/chat/workspaces`). The panel lists them with
+   * `GET {workspaces}`, creates one with `POST`, renames one with
+   * `PATCH {workspaces}/{id}` and deletes one with `DELETE {workspaces}/{id}`;
+   * it files a conversation with `PATCH {history}/{conversation_id}` and
+   * `{ workspace_id }`, and starts one inside a workspace by sending
+   * `workspace_id` with the session `POST`.
+   *
+   * No default, for the same reason as {@link ApiEndpoints.approve}: a
+   * proxied host has to expose all of those routes before the panel offers
+   * the feature. Unset (or a backend that refuses the list), the history is
+   * the flat list it always was.
+   *
+   * REST backend only, and not in `singleEndpoint` mode.
+   */
+  workspaces?: string | null;
 }
 
 /** A reusable prompt the user can insert into the composer. */
@@ -590,6 +607,22 @@ export interface ChatConversationSummary {
    * genuinely have no agent.
    */
   agentName?: string;
+  /**
+   * The workspace the conversation is filed in (`null`: none), when the
+   * backend reports it. Undefined on backends that do not.
+   */
+  workspaceId?: string | null;
+}
+
+/** A workspace the conversation list is grouped by. */
+export interface ChatWorkspace {
+  id: string;
+  name: string;
+  /** The caller owns it: a colleague's default shared with them is not theirs. */
+  isOwn: boolean;
+  isDefault: boolean;
+  /** Whether the caller may file conversations into it, rename or delete it. */
+  canManage: boolean;
 }
 
 export interface XtmAgent {

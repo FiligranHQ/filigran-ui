@@ -170,7 +170,13 @@ interface UseChatReturn {
   handleFileAdd: (fileList: FileList | null) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
   handleSendMessage: () => Promise<void>;
-  handleNewChat: () => void;
+  /**
+   * Start a fresh conversation; with *workspaceId* (a string), the session is
+   * created inside that workspace (`workspace_id` on the session `POST`).
+   */
+  handleNewChat: (workspaceId?: string) => void;
+  /** The workspace the next conversation will be created in, if any. */
+  pendingWorkspaceId: string | null;
   handleStopGenerating: () => void;
   setAttachedFiles: React.Dispatch<React.SetStateAction<ChatFile[]>>;
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
@@ -344,6 +350,10 @@ export function useChat({
   const resumeDeadlineRef = useRef(0);
   // Mutex to prevent concurrent session creation
   const creatingSessionRef = useRef<Promise<string | null> | null>(null);
+  // The workspace the next session is created in ("new conversation" inside
+  // a workspace group). A ref for the request, state for the list to show it.
+  const pendingWorkspaceRef = useRef<string | null>(null);
+  const [pendingWorkspaceId, setPendingWorkspaceId] = useState<string | null>(null);
   // Abort controller for in-flight file uploads (cancelled on new chat)
   const uploadAbortRef = useRef<AbortController>(new AbortController());
 
@@ -480,16 +490,23 @@ export function useChat({
 
     const promise = (async () => {
       try {
+        const workspaceId = pendingWorkspaceRef.current;
         const res = await fetch(sessionsUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
-          body: JSON.stringify({ agent_slug: slug }),
+          body: JSON.stringify(workspaceId ? { agent_slug: slug, workspace_id: workspaceId } : { agent_slug: slug }),
         });
         if (!res.ok) return null;
         const data = await res.json();
         const convId = (data?.conversation_id as string) ?? null;
         if (convId) {
+          // Just created: there is no history to restore. Left armed, the
+          // panel's restore would fetch it while the first turn streams and
+          // replace the answer being written with the one message persisted.
+          historyLoadedRef.current = true;
           updateConversationId(convId);
+          pendingWorkspaceRef.current = null;
+          setPendingWorkspaceId(null);
         }
         return convId;
       } catch {
@@ -810,6 +827,18 @@ export function useChat({
       // Collect file_ids from already-uploaded files (uploaded eagerly on selection)
       const fileIds = (userMsg.files ?? []).filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
 
+      // A conversation started inside a workspace is created first, filed
+      // there: the message endpoint would create it in no workspace. Should
+      // that fail (the workspace was archived or is no longer shared), the
+      // message still goes, in a conversation of no workspace, rather than
+      // being lost.
+      if (!conversationIdRef.current && pendingWorkspaceRef.current) {
+        if (!(await ensureConversation(agentSlug))) {
+          pendingWorkspaceRef.current = null;
+          setPendingWorkspaceId(null);
+        }
+      }
+
       // Step 1: Send the message (with file_ids if files were uploaded)
       // Use conversationIdRef to get the latest value (may have been set by eager upload)
       const requestBody = buildRequestBody(backendType, content, {
@@ -1065,7 +1094,12 @@ export function useChat({
     }
   };
 
-  const handleNewChat = () => {
+  const handleNewChat = (workspaceId?: string) => {
+    // A string only: the header and the sidebar pass this as a click handler,
+    // and the click event must never reach the session request.
+    const workspace = typeof workspaceId === 'string' && workspaceId ? workspaceId : null;
+    pendingWorkspaceRef.current = workspace;
+    setPendingWorkspaceId(workspace);
     // Nothing of the abandoned stream may land in the fresh chat.
     streamDeltasRef.current?.close();
     streamDeltasRef.current = null;
@@ -1324,6 +1358,7 @@ export function useChat({
     handlePaste,
     handleSendMessage,
     handleNewChat,
+    pendingWorkspaceId,
     handleStopGenerating,
     setAttachedFiles,
     setMessages,

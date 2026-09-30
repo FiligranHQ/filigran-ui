@@ -6,6 +6,7 @@ import { parseContextUsage, parseRestoredMessages } from '../hooks/protocols/par
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
+import { useWorkspaces } from '../hooks/useWorkspaces';
 import { useSidebarResize } from '../hooks/useSidebarResize';
 import { useAwayCompletionNotice } from '../hooks/useAwayCompletionNotice';
 import { useComposerExtras } from '../hooks/useComposerExtras';
@@ -121,6 +122,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     handlePaste,
     handleSendMessage,
     handleNewChat,
+    pendingWorkspaceId,
     handleStopGenerating,
     setAttachedFiles,
     setMessages,
@@ -165,7 +167,15 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     requestHeaders,
   });
 
-  const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation } = useConversations({
+  const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation, moveConversation } =
+    useConversations({
+      apiBaseUrl,
+      apiEndpoints,
+      backendType,
+      requestHeaders,
+    });
+  // Workspaces group the fullscreen list, when the host names their route.
+  const { workspacesEnabled, workspaces, refreshWorkspaces, createWorkspace, renameWorkspace, deleteWorkspace } = useWorkspaces({
     apiBaseUrl,
     apiEndpoints,
     backendType,
@@ -186,6 +196,12 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
   useEffect(() => {
     if (showConversationSidebar) void refreshConversations();
   }, [showConversationSidebar, conversationId, refreshConversations]);
+
+  // The workspaces change far less often than the conversations: read on
+  // entry, and after every write the sidebar makes (the hook re-reads them).
+  useEffect(() => {
+    if (showConversationSidebar) void refreshWorkspaces();
+  }, [showConversationSidebar, refreshWorkspaces]);
 
   // A finished turn has consumed allowance and may have retitled the chat.
   const wasLoadingRef = useRef(false);
@@ -592,6 +608,24 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
             onDelete={(id) => void handleDeleteConversation(id)}
             onRename={(id, title) => void renameConversation(id, title)}
             onNewChat={handleNewChat}
+            workspaces={
+              workspacesEnabled
+                ? {
+                    list: workspaces,
+                    pendingWorkspaceId,
+                    onCreate: createWorkspace,
+                    onRename: renameWorkspace,
+                    onDelete: async (id) => {
+                      const result = await deleteWorkspace(id);
+                      // Its conversations moved to their owners' default workspaces.
+                      if (result.ok) void refreshConversations();
+                      return result;
+                    },
+                    onMove: moveConversation,
+                    onNewChat: (workspaceId) => handleNewChat(workspaceId),
+                  }
+                : undefined
+            }
             t={t}
           />
         )}

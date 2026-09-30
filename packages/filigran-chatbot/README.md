@@ -258,6 +258,42 @@ Renames a conversation. Body: `{ "title": "..." }`. Only reached from the
 fullscreen sidebar; a backend without the route simply fails the request and
 the row reverts to its previous title.
 
+With [workspaces](#workspaces) on, the same route files a conversation:
+`{ "workspace_id": "uuid" }`, or `{ "workspace_id": null }` to take it out of
+its workspace. A refusal's `detail` is shown under the list.
+
+### Workspaces
+
+The fullscreen conversation list can be grouped by workspace, the way a
+desktop assistant groups its projects: one collapsible group per workspace
+(the collapsed ones are remembered per browser), a conversation started
+inside a workspace with its group's compose button, a workspace created,
+renamed or deleted from the list, and a conversation moved between groups
+from its row menu or by dragging it onto a group.
+
+The feature is off until the host names the route:
+`apiEndpoints.workspaces` has **no default**, for the same reason as
+`apiEndpoints.approve` - a proxied host must expose every route below before
+the panel offers them. A backend that refuses the list (not licensed, an
+older proxy) also leaves the list flat.
+
+| Request | Purpose |
+| --- | --- |
+| `GET {apiBaseUrl}{workspaces}` | The caller's workspaces: a bare array or `{ "workspaces": [...] }` of `{ id, name, is_default, is_own, can_manage, is_archived }`. Archived ones are left out. |
+| `POST {apiBaseUrl}{workspaces}` | Create one: `{ "name": "..." }`. |
+| `PATCH {apiBaseUrl}{workspaces}/{id}` | Rename one: `{ "name": "..." }`. |
+| `DELETE {apiBaseUrl}{workspaces}/{id}` | Delete one (never offered for the default). Its conversations are expected back in no workspace (`workspace_id: null`), never moved to a default; the history is reloaded after the delete. |
+| `PATCH {apiBaseUrl}{history}/{conversation_id}` | File a conversation: `{ "workspace_id": "uuid" \| null }`. |
+| `POST {apiBaseUrl}{sessions}` | Carries `workspace_id` when the conversation is started inside a workspace. |
+
+`GET {history}` entries carry `workspace_id` (`null` for none). A conversation
+in no workspace is a normal state, listed under "Not in a workspace": a new
+conversation starts there unless it is started inside a workspace. A workspace the
+caller may only read (`can_manage: false`) gets a group only while it holds
+one of their conversations, and conversations filed in a workspace the list
+does not return are grouped under "Other workspaces". XTM One serves all of it
+at `/chat/workspaces` and `/chat/sessions`.
+
 ### `DELETE {apiBaseUrl}/chat/sessions/{conversation_id}`
 
 Deletes a conversation from the history menu. Any 2xx response counts as

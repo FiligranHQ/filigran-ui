@@ -525,6 +525,7 @@ const App = () => {
                       'Sidebar mode pushes the page aside (it must not overlay it) and the drag handle resizes it',
                       'Leaving sidebar mode — or closing the panel — removes the push completely',
                       'Fullscreen shows the conversation sidebar: select switches thread, delete removes a row, the collapse toggle works, and the header history menu is gone',
+                      'Signed in to XTM One: the fullscreen list is grouped by workspace — create, rename and delete a workspace, start a conversation inside one, move a row with its menu or by dragging it onto a group',
                     'All 3 modes render with correct positioning/dimensions',
                       'Agent dropdown opens/closes, click-outside dismisses',
                       'Mode switcher transitions between modes',
@@ -577,6 +578,9 @@ const App = () => {
             apiEndpoints={{
               feedback: '/chat/conversations',
               ...(supportsApproval ? { approve: '/chat/messages/approve', pendingApprovals: '/chat/conversations' } : {}),
+              // Workspaces group the fullscreen history. The mock serves none,
+              // so they are named against XTM One only.
+              ...(usingMock ? {} : { workspaces: '/chat/workspaces' }),
             }}
             locale={locale}
             agentDashboardUrl="https://xtm.example.com"
