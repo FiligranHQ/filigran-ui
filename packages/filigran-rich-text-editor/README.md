@@ -122,7 +122,7 @@ The editor comes with a rich toolbar and the following built-in capabilities:
 
 - **Text formatting** — bold, italic, underline, strikethrough, subscript, superscript, code
 - **Headings** — H1 to H6, and paragraph
-- **Lists** — bullet, ordered, and task lists (with nesting)
+- **Lists** — bullet, ordered, and task lists (with nesting). Lists pasted from Microsoft Word desktop are converted to real lists
 - **Text alignment** — left, center, right, justify
 - **Font family** — Arial, Courier New, Georgia, Helvetica, Lucida Sans Unicode, Times New Roman, Trebuchet MS, Verdana
 - **Font size** — Tiny (10px), Small (12px), Normal (14px), Big (18px), Huge (24px)
