@@ -116,8 +116,17 @@ interface Conversation {
    * `meta` is whatever the turn's `done` frame carried (tool names, reasoning,
    * trace, attachments, context figures). Stored so a restore can re-surface
    * it exactly as the real backend does — see the note at the `done` frame.
+   * `id` and `createdAt` come back on a restore as `id` / `created_at`, and so
+   * does the user's rating of an answer (`feedback`).
    */
-  messages: { role: 'user' | 'assistant'; content: string; meta?: Record<string, unknown> }[];
+  messages: {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    createdAt: string;
+    meta?: Record<string, unknown>;
+    feedback?: { rating: 'positive' | 'negative'; comment: string | null };
+  }[];
   /** Context tokens the next turn would carry — drives the composer gauge. */
   contextTokens: number;
 }
@@ -240,8 +249,27 @@ export function mockChatApi(): Plugin {
         }
         if (path === '/chat/quota') {
           // Creeps up as turns are spent, so the indicator visibly moves and
-          // eventually crosses the amber and red thresholds.
-          return json(res, { used: quotaUsed, limit: QUOTA_LIMIT, period: 'monthly' });
+          // eventually crosses the amber and red thresholds. A platform-wide
+          // quota, so the tooltip says it is shared.
+          return json(res, { used: quotaUsed, limit: QUOTA_LIMIT, period: 'monthly', scope: 'global' });
+        }
+
+        // ---- message feedback ----
+        const feedbackRoute = /^\/chat\/conversations\/([^/]+)\/messages\/([^/]+)\/feedback$/.exec(path);
+        if (feedbackRoute && (method === 'POST' || method === 'DELETE')) {
+          const conv = conversations.get(decodeURIComponent(feedbackRoute[1]));
+          const message = conv?.messages.find((m) => m.id === decodeURIComponent(feedbackRoute[2]) && m.role === 'assistant');
+          if (!message) return json(res, { detail: 'Message not found' }, 404);
+          if (method === 'DELETE') {
+            delete message.feedback;
+            res.statusCode = 204;
+            return res.end();
+          }
+          const body = await readBody(req);
+          if (body.rating !== 'positive' && body.rating !== 'negative') return json(res, { detail: 'rating must be positive or negative' }, 422);
+          const comment = typeof body.comment === 'string' && body.comment.trim() ? body.comment.trim().slice(0, 2000) : null;
+          message.feedback = { rating: body.rating, comment };
+          return json(res, message.feedback);
         }
 
         // ---- history list / delete ----
@@ -277,9 +305,12 @@ export function mockChatApi(): Plugin {
               // cards, tool trace and context reading instead of degrading to
               // bare prose.
               messages: existing.messages.map((m) => ({
+                id: m.id,
                 role: m.role,
                 content: m.content,
+                created_at: m.createdAt,
                 ...(m.meta ?? {}),
+                ...(m.role === 'assistant' && m.feedback ? { feedback: m.feedback } : {}),
               })),
             });
           }
@@ -319,11 +350,18 @@ export function mockChatApi(): Plugin {
           if (conv.messages.length === 0 && prompt) conv.title = prompt.slice(0, 48);
           // "long" seeds enough backlog to push past the render window.
           if (history && conv.messages.length < history) {
+            // Dated yesterday, a minute apart, so the footer shows a date on them.
+            const start = Date.now() - 24 * 60 * 60 * 1000 - history * 60 * 1000;
             for (let i = conv.messages.length; i < history; i++) {
-              conv.messages.push({ role: i % 2 === 0 ? 'user' : 'assistant', content: `Backfilled message ${i + 1}` });
+              conv.messages.push({
+                id: `msg-${++seq}`,
+                role: i % 2 === 0 ? 'user' : 'assistant',
+                content: `Backfilled message ${i + 1}`,
+                createdAt: new Date(start + i * 60 * 1000).toISOString(),
+              });
             }
           }
-          conv.messages.push({ role: 'user', content: prompt });
+          conv.messages.push({ id: `msg-${++seq}`, role: 'user', content: prompt, createdAt: new Date().toISOString() });
 
           res.statusCode = 200;
           res.setHeader('Content-Type', 'text/event-stream');
@@ -380,10 +418,12 @@ export function mockChatApi(): Plugin {
             ],
           };
 
-          conv.messages.push({ role: 'assistant', content: answer, meta: turnMeta });
+          // The persisted id rides on `done`: it is what the answer is rated by.
+          const messageId = `msg-${++seq}`;
+          conv.messages.push({ id: messageId, role: 'assistant', content: answer, createdAt: new Date().toISOString(), meta: turnMeta });
           conv.updatedAt = new Date().toISOString();
 
-          send({ type: 'done', content: answer, conversation_id: convId, ...turnMeta });
+          send({ type: 'done', content: answer, conversation_id: convId, message_id: messageId, ...turnMeta });
           return res.end();
         }
 

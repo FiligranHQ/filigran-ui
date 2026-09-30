@@ -460,3 +460,18 @@ export function splitFileMarkers(content: string): FileMarkerPart[] {
   if (tail) parts.push({ type: 'text', value: tail });
   return parts;
 }
+
+/**
+ * The markdown documents an assistant answer is drawn from, in order: each
+ * prose part between its file markers (`splitFileMarkers`), prepared as
+ * `MarkdownMessage` prepares it (`prepareMarkdown`). The transcript parses each
+ * one as a document of its own, and so must anything that reads the answer
+ * (read aloud) to read what the screen shows.
+ */
+export function answerMarkdownSources(content: string): string[] {
+  const sources: string[] = [];
+  for (const part of splitFileMarkers(content)) {
+    if (part.type === 'text' && part.value.trim()) sources.push(prepareMarkdown(part.value));
+  }
+  return sources;
+}

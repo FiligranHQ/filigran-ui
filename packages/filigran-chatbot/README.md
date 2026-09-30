@@ -13,7 +13,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose
 - 📝 **Full Markdown** — Tables (mis-delimited ones repaired), code blocks with copy button, lists, blockquotes, soft line breaks, inline images with a lightbox
 - 🖼️ **Image Previews** — `data:image/*` charts and image attachments render inline, click to expand
-- 📋 **Copy & Rate** — Copy any answer; optional 👍/👎 feedback wired to the host
+- 📋 **Message Footer** — Every message says when it was sent; copy any message, rate an answer 👍/👎 (stored by the backend or handed to the host, with an optional comment on a 👎) and have it read aloud — see [Message feedback](#message-feedback)
 - 🧰 **Composer Toolbar** — Prompt library and quota indicator, both driven by whether the host serves the route; plus a slot for the host's own controls
 - 🧠 **Context Gauge** — Ring + percentage showing how full the model's context window is, so a long chat's silent summarising is visible before it happens
 - 🎙️ **Dictation** — Speech-to-text via the browser's own Web Speech API; no endpoint, no key, hidden where unsupported
@@ -83,7 +83,8 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onWidthChange`     | `(width: number) => void`                 | —            | Called when sidebar width changes during resize                  |
 | `onResizeStart`     | `() => void`                              | —            | Called when resize drag starts                                   |
 | `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
-| `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Enables 👍/👎 on completed assistant answers and receives each rating (`null` clears it). Omit to hide the affordance — the panel stores nothing itself. |
+| `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Receives each rating of an answer (`null` clears it); `id` is the message's persisted id when the backend reported one (`done.message_id`, a restored entry's `id`), else the panel's own. On its own it enables 👍/👎 and the panel stores nothing; with `apiEndpoints.feedback` set it is called once the backend has stored the rating. With neither, no thumbs. |
+| `locale`            | `string`                                  | browser's    | BCP 47 language tag the message times are written in and answers are read aloud in (the platform's language, e.g. `'fr-FR'`) |
 | `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
 | `contextUsageEnabled` | `boolean`                               | `true`       | Show how full the model's context window is for the current conversation (ring + percentage in the composer toolbar). Data-driven, so it stays absent until the backend reports occupancy — see [Context usage](#context-usage). |
 | `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
@@ -175,11 +176,25 @@ Restores conversation history (and, implicitly, resolves the session).
 {
   "conversation_id": "uuid-here",
   "messages": [
-    { "role": "user", "content": "Hello" },
-    { "role": "assistant", "content": "Hi! How can I help?" }
+    { "id": "msg-1", "role": "user", "content": "Hello", "created_at": "2026-06-10T08:30:00Z" },
+    {
+      "id": "msg-2",
+      "role": "assistant",
+      "content": "Hi! How can I help?",
+      "created_at": "2026-06-10T08:30:04Z",
+      "feedback": { "rating": "positive", "comment": null }
+    }
   ]
 }
 ```
+
+`id`, `created_at` and `feedback` are optional. `id` is the message's
+persisted id, what its rating is stored against (see
+[Message feedback](#message-feedback));
+`created_at` (ISO 8601) is when it was sent, shown in its footer - a message
+without one shows no time. `feedback` is the caller's own rating of an
+assistant answer: the thumbs are then locked on it ("Feedback already
+submitted").
 
 The response **should echo a `conversation_id`**. When the stored
 `conversation_id` no longer exists (e.g. the platform was reset but the
@@ -280,8 +295,12 @@ data: {"type": "status", "status": "analyzing"}
 data: {"type": "status", "status": "streaming"}
 data: {"type": "stream", "content": "The weather "}
 data: {"type": "stream", "content": "today is sunny."}
-data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1, "reasoning": "Let me check the weather data first.", "tool_call_trace": [{"name": "search_web", "input": "{\"query\": \"weather\"}", "output": "Sunny, 24C", "success": true}], "transfer_chain": [{"agent_id": "uuid", "agent_name": "General"}], "is_truncated": false}
+data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "message_id": "msg-2", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1, "reasoning": "Let me check the weather data first.", "tool_call_trace": [{"name": "search_web", "input": "{\"query\": \"weather\"}", "output": "Sunny, 24C", "success": true}], "transfer_chain": [{"agent_id": "uuid", "agent_name": "General"}], "is_truncated": false}
 ```
+
+The optional `message_id` on `done` is the answer's persisted id: without it
+(and without a restore naming the message) the answer cannot be rated through
+`apiEndpoints.feedback`.
 
 The optional `reasoning` field on `done` (and on restored session messages)
 carries the accumulated model reasoning / pre-tool preamble prose for the
@@ -530,6 +549,58 @@ abandonment, never the person deciding.
 
 REST backend only: `legacy` and `ag-ui` never meet this gate.
 
+### Message feedback
+
+Every message ends with a footer. An assistant answer (once it has finished
+streaming) shows when it was sent, the "i" reasoning details, **Copy
+response**, 👍 / 👎 and **Read aloud**; a user message shows **Copy message**
+and its time, right-aligned. The time is written in the `locale` prop's
+language (the time alone today, the date and time before; the full date in
+the tooltip). Time and "i" are always visible; the other actions appear when
+the message is hovered or focused, and always on a touch screen. A rating
+given, or the answer being read, stays visible.
+
+The thumbs render when `apiEndpoints.feedback` is set **or**
+`onMessageFeedback` is passed. **Opt-in: `feedback` has no default path**
+(the same choice as `approve`): a host names its route, or the panel stores
+nothing.
+
+```
+POST   {apiBaseUrl}{apiEndpoints.feedback}/{conversation_id}/messages/{message_id}/feedback
+       { "rating": "positive" | "negative", "comment": string | null }
+       -> 200 { "rating": ..., "comment": ... }
+DELETE {apiBaseUrl}{apiEndpoints.feedback}/{conversation_id}/messages/{message_id}/feedback
+       -> 204
+```
+
+Both are sent with `credentials: 'include'` and your `requestHeaders`
+(XTM One: `feedback: '/chat/conversations'`). `message_id` is the answer's
+persisted id — the `done` event's `message_id`, or the restored entry's
+`id` — so an answer the backend did not identify shows no thumbs.
+
+- A thumb is shown as given at once and rolled back, with "Could not submit
+  feedback." (or "Could not retract feedback." for a retraction) under the
+  message, when the backend refuses it or cannot be reached.
+- Clicking the given thumb again retracts it (`DELETE`).
+- Once a 👎 is stored the panel asks what went wrong: **Save** re-posts the
+  rating with the comment (trimmed, at most 2000 characters), **Skip** keeps
+  the rating without one.
+- A rating restored with the conversation (`feedback` on a restored entry) is
+  final: only its thumb is shown, "Feedback already submitted".
+- `onMessageFeedback`, when passed too, is called once the backend has
+  stored the rating. On its own it receives every rating and the panel
+  stores nothing (no comment step, since the callback has nowhere to put
+  one).
+
+REST backend only, and not in `singleEndpoint` mode (there is no per-path
+routing to name a feedback route with).
+
+**Read aloud** uses the browser's own speech synthesis — no endpoint, hidden
+where unsupported, and absent on an answer with nothing to say (code only). It
+reads the answer's text without its markdown or file markers, in the `locale`
+prop's language, one answer at a time; switching conversation, sending a
+message or leaving the panel stops it.
+
 ## Customization
 
 ### Custom Logo
@@ -685,16 +756,26 @@ Every key the package can ask for, grouped by where it appears:
 - `'Copied'`
 - `'Copied!'`
 - `'Copy code'`
+- `'Copy message'`
 - `'Copy response'`
+- `'Could not retract feedback.'`
+- `'Could not submit feedback.'`
 - `'Download'`
 - `'Expand image'`
+- `'Feedback already submitted'`
 - `'Good response'`
 - `'Image could not be loaded'`
 - `'Image preview'`
 - `'Load earlier messages'`
 - `'Loading image…'`
+- `'Read aloud'`
 - `'Reasoning details'`
 - `'Reasoning details — turn limit reached'`
+- `'Save'`
+- `'Skip'`
+- `'Stop reading'`
+- `'Tell us what went wrong (optional)'`
+- `'What could be improved?'`
 
 **Agent status**
 
@@ -787,6 +868,10 @@ Every key the package can ask for, grouped by where it appears:
 - `'Quota reached'`
 - `'Usage'`
 - `'Usage · {period}'`
+- `'this month'`
+- `'this year'`
+- `'today'`
+- `'{quota} (shared across all users)'`
 
 **Notices, errors and timestamps**
 
@@ -823,12 +908,20 @@ backend cannot answer, and there is no mode flag to keep in step.
 | Endpoint | Default path | Response |
 | --- | --- | --- |
 | Prompt library | `GET {apiBaseUrl}/chat/prompts` | `[{ id, title, content, description? }]` (or `{ prompts: [...] }`) |
-| Quota status | `GET {apiBaseUrl}/chat/quota` | `{ used: number, limit: number \| null, period: string }` |
+| Quota status | `GET {apiBaseUrl}/chat/quota` | `{ used: number, limit: number \| null, period: string, scope?: 'user' \| 'global' }` |
 | Agent suggestions | `GET {apiBaseUrl}/chat/suggestions?agent_slug=<slug>` | `["..."]` (or `{ suggestions: [...] }`, or objects with `prompt`/`label`/`text`) |
 
 Set either to `null` in `apiEndpoints` to hide it. `limit: null` means no
 ceiling — the indicator then shows consumption without a bar. The quota is
-re-read whenever a turn finishes.
+re-read whenever a turn finishes. The periods XTM One sets a quota for
+(`daily`, `monthly`, `yearly`) are translated (`today`, `this month`,
+`this year`), any other one is shown as sent; `scope: 'global'` says the
+limit is shared across all users.
+
+A host behind its own proxy points the routes at it, relative to its
+`apiBaseUrl` — OpenCTI and OpenAEV pass
+`{ prompts: '/prompts', quota: '/quota', feedback: '/conversations' }`
+(`feedback`: see [Message feedback](#message-feedback)).
 
 The welcome screen names the selected agent and shows its own suggestions —
 which is also how switching agent is confirmed: the thread resets to that

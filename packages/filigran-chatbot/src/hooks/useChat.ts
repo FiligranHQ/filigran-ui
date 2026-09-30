@@ -957,12 +957,17 @@ export function useChat({
                 }
                 const segId = currentAssistantId;
                 const finalContent = parsed.content || accumulated;
+                // The backend stores a segment when its `done` is sent, and a
+                // restore shows that time: stamping the send time instead would
+                // change the footer on the next reload.
+                const completedAt = new Date();
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === segId
                       ? {
                           ...m,
                           content: finalContent,
+                          timestamp: completedAt,
                           toolNames: parsed.toolNames,
                           toolCallCount: parsed.toolCallCount,
                           iterations: parsed.iterations,
@@ -971,6 +976,7 @@ export function useChat({
                           toolCallTrace: parsed.toolCallTrace,
                           transferChain: parsed.transferChain,
                           isTruncated: parsed.isTruncated,
+                          serverId: parsed.messageId ?? m.serverId,
                         }
                       : m,
                   ),

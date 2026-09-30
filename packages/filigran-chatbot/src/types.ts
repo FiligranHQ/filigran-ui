@@ -125,6 +125,21 @@ export interface ApiEndpoints {
    * both today's generic suggestions and per-agent (later per-user) ones.
    */
   suggestions?: string | null;
+  /**
+   * Base path of the persisted message feedback resource. A rating is sent as
+   * `POST {apiBaseUrl}{feedback}/{conversation_id}/messages/{message_id}/feedback`
+   * with `{ rating: 'positive' | 'negative', comment: string | null }` and
+   * retracted with a `DELETE` on the same URL. XTM One's platform router
+   * serves it at `/chat/conversations`.
+   *
+   * No default, for the same reason as {@link ApiEndpoints.approve}: a host
+   * proxying the chat names the route once it exposes it, and a panel upgraded
+   * before its host never rates into a 404. Unset, the thumbs still render
+   * when the host passes `onMessageFeedback`, as they always did.
+   *
+   * REST backend only, and not in `singleEndpoint` mode.
+   */
+  feedback?: string | null;
 }
 
 /** A reusable prompt the user can insert into the composer. */
@@ -146,8 +161,18 @@ export interface ChatQuotaStatus {
   used: number;
   /** null means unlimited — the indicator then shows usage without a bar. */
   limit: number | null;
-  /** Human-readable period label, e.g. "monthly". */
+  /**
+   * The period the limit applies to: `daily`, `monthly` and `yearly` are
+   * translated ("today", "this month", "this year"), any other value is shown
+   * as sent.
+   */
   period: string;
+  /**
+   * Whose actions count against the limit: `global` is one allowance shared
+   * by every user of the platform, which the indicator says in its tooltip.
+   * Absent reads as the user's own.
+   */
+  scope?: 'user' | 'global';
 }
 
 /**
@@ -351,12 +376,22 @@ export interface ChatPanelProps {
    */
   onTaskComplete?: (title: string, body: string) => void;
   /**
-   * Enables the 👍/👎 affordance on completed assistant messages and receives
-   * each rating. `feedback` is `null` when the user clears a previous rating.
-   * Omit to hide the affordance entirely — the chatbot stores nothing itself,
-   * so a host without a feedback endpoint should not show the buttons.
+   * Receives each rating of an assistant answer. `messageId` is the persisted
+   * id when the backend reported one (`serverId`), else the panel's own id;
+   * `feedback` is `null` when the user clears a previous rating.
+   *
+   * With {@link ApiEndpoints.feedback} set the panel stores the rating itself
+   * and calls this once the backend accepted it. Without it, passing this is
+   * what shows the 👍/👎 affordance: the host stores the rating, so a host with
+   * neither shows no buttons.
    */
   onMessageFeedback?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
+  /**
+   * The user's language as a BCP 47 tag (`'fr'`, `'en-US'`): formats the time
+   * under each message and is the language answers are read aloud in. Default:
+   * the browser's own.
+   */
+  locale?: string;
   /**
    * Disable the inline preview of image attachments (they render as ordinary
    * download cards instead). Previews fetch the image through the host download
@@ -399,10 +434,29 @@ export interface ChatToggleButtonProps {
 }
 
 export interface ChatMessage {
+  /** The panel's own key for the row; stable for the life of the row. */
   id: string;
+  /**
+   * The backend's id for the message: the `done` event's `message_id` for a
+   * live answer, the entry's `id` for a restored one. What feedback is stored
+   * against; absent until the backend reports it.
+   */
+  serverId?: string;
   role: 'user' | 'assistant';
   content: string;
+  /** When the message was sent: the entry's `created_at` for a restored one. */
   timestamp: Date;
+  /**
+   * True for a restored message whose backend did not say when it was sent:
+   * `timestamp` is then the time of the restore, and the footer shows no time
+   * rather than that one.
+   */
+  timestampUnknown?: boolean;
+  /**
+   * The rating the user gave this answer before the conversation was restored.
+   * The panel locks the thumbs on it ("Feedback already submitted").
+   */
+  feedback?: ChatMessagePersistedFeedback;
   /**
    * The agent that produced *this* message, when the backend says so.
    *
@@ -440,6 +494,12 @@ export interface ChatMessage {
    * reasoning-details affordance, mirroring the XTM One web chat.
    */
   isTruncated?: boolean;
+}
+
+/** A rating as the feedback endpoint stores it. */
+export interface ChatMessagePersistedFeedback {
+  rating: 'positive' | 'negative';
+  comment: string | null;
 }
 
 /** One tool call in the reasoning-details execution trace. */
