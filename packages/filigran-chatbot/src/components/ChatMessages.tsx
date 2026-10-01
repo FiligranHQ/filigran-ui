@@ -5,7 +5,15 @@ import { useSpeechReader } from '../hooks/useSpeechReader';
 import { answerMarkdownSources, splitFileMarkers, stripFileMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
 import { formatMessageTime } from '../utils/messageTime';
-import { createScrollFollower, innerBoxScrollsUp, keyScrollsUp, pressTakesScrollbar, swipeScrollsUp, wheelScrollsUp } from '../utils/scrollFollow';
+import {
+  createScrollFollower,
+  innerBoxScrollsUp,
+  keyScrollsUp,
+  pressTakesScrollbar,
+  singleTouchY,
+  swipeScrollsUp,
+  wheelScrollsUp,
+} from '../utils/scrollFollow';
 import { hasSpeakableWords } from '../utils/speech';
 import {
   AlertTriangleIcon,
@@ -45,6 +53,13 @@ const overflowYOf = (node: Element) => getComputedStyle(node).overflowY;
 /** Arrows and Page Up move the caret of a field (the feedback comment), not the thread. */
 function isTypingTarget(target: EventTarget): boolean {
   return target instanceof HTMLElement && (target.isContentEditable || !!target.closest('input, textarea, select'));
+}
+
+const CONTROLS = 'a[href], button, summary, label, input, textarea, select, [role="button"], [role="link"]';
+
+/** A link, a button or a field: a middle click opens it, Shift+Space presses it. */
+function isControl(target: EventTarget): boolean {
+  return target instanceof Element && !!target.closest(CONTROLS);
 }
 
 interface ChatMessagesProps {
@@ -725,25 +740,35 @@ export const ChatMessages = ({
   };
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.defaultPrevented || !keyScrollsUp(event) || isTypingTarget(event.target)) return;
+    if (event.key === ' ' && isControl(event.target)) return;
     leaveFrom(event.currentTarget, event.target);
   };
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     const container = event.currentTarget;
+    const rect = container.getBoundingClientRect();
     const press = {
       button: event.button,
       onContainer: event.target === container,
-      offsetX: event.nativeEvent.offsetX,
+      onControl: isControl(event.target),
+      x: event.clientX - rect.left - container.clientLeft,
+      y: event.clientY - rect.top - container.clientTop,
       clientWidth: container.clientWidth,
+      clientHeight: container.clientHeight,
+      scrollTop: container.scrollTop,
+      scrollHeight: container.scrollHeight,
     };
     if (pressTakesScrollbar(press)) leaveFrom(container, event.target);
   };
+  // A second finger ends the swipe: a pinch is no scroll, and the swipe of
+  // the finger left on the screen is measured afresh from its next touch.
   const handleTouchStart = (event: React.TouchEvent) => {
-    touchAnchorRef.current = event.touches[0]?.clientY ?? null;
+    touchAnchorRef.current = singleTouchY(event.touches);
   };
   const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
-    const y = event.touches[0]?.clientY;
+    const y = singleTouchY(event.touches);
     const anchor = touchAnchorRef.current;
-    if (y === undefined || anchor === null) return;
+    if (y === null) touchAnchorRef.current = null;
+    if (y === null || anchor === null) return;
     if (swipeScrollsUp(anchor, y)) leaveFrom(event.currentTarget, event.target);
     touchAnchorRef.current = Math.min(anchor, y);
   };
@@ -818,16 +843,21 @@ export const ChatMessages = ({
   // handler the controls would collect verdicts with nowhere to send them.
   const awaitingApproval = !!pendingApprovals?.length && !!onSubmitApprovalDecisions;
 
+  // A tab stop of its own, so the keys scroll the thread (and are read as
+  // leaving the bottom) without first focusing something inside it.
   return (
     <div
       ref={scrollRef}
+      role="region"
+      aria-label={t('Conversation transcript')}
+      tabIndex={0}
       onScroll={follower.onScroll}
       onWheel={handleWheel}
       onKeyDown={handleKeyDown}
       onPointerDown={handlePointerDown}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
-      className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable"
+      className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent-50)]"
     >
       {hasEarlierMessages && (
         <div className="flex justify-center">

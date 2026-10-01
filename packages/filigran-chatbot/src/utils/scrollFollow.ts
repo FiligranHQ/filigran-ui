@@ -13,7 +13,9 @@
  * the scrollbar) stop the follow before the scroll they cause, read by the
  * predicates below. A scroll event that moved nothing changes nothing: it is
  * the event of a jump of ours, delivered a frame late, and right after such a
- * gesture it would re-arm the follow the gesture just ended.
+ * gesture it would re-arm the follow the gesture just ended. Each move is read
+ * against the last position that moved more than 1 px, so a slow drift of
+ * sub-pixel steps adds up to a move instead of reading as none at every step.
  */
 
 /** How near the bottom a reader scrolling down must come for the view to follow again. */
@@ -121,7 +123,7 @@ export function createScrollFollower(getBox: () => ScrollBox | null, timers: Scr
       const top = box.scrollTop;
       const movedUp = top < lastTop - 1;
       const movedDown = top > lastTop + 1;
-      lastTop = top;
+      if (movedUp || movedDown) lastTop = top;
       const distance = box.scrollHeight - top - box.clientHeight;
       if (movedUp) {
         // The reader scrolled up — or the browser moved the view to the new end
@@ -168,13 +170,41 @@ export function swipeScrollsUp(anchorY: number, y: number): boolean {
 }
 
 /**
- * A press that hands the view to the reader: the scrollbar of the thread
- * itself (`offsetX` past its content box), or the middle button, which starts
- * the browser's autoscroll on Windows and Linux.
+ * Where the one finger on the screen is. `null` while two or more are down: a
+ * pinch zooms and a first finger can travel down past the slop without the
+ * thread scrolling at all.
  */
-export function pressTakesScrollbar(press: { button: number; onContainer: boolean; offsetX: number; clientWidth: number }): boolean {
-  if (press.button === 1) return true;
-  return press.button === 0 && press.onContainer && press.offsetX >= press.clientWidth;
+export function singleTouchY(touches: ArrayLike<{ clientY: number }>): number | null {
+  return touches.length === 1 ? touches[0].clientY : null;
+}
+
+/** A pointer press on the thread, `x` / `y` measured from its padding box. */
+export interface ScrollPress {
+  button: number;
+  /** The press landed on the container itself, not on its content. */
+  onContainer: boolean;
+  /** The press landed on a link, a button or a field. */
+  onControl: boolean;
+  x: number;
+  y: number;
+  clientWidth: number;
+  clientHeight: number;
+  scrollTop: number;
+  scrollHeight: number;
+}
+
+/**
+ * A press that hands the view to the reader: the middle button away from a
+ * control, which starts the browser's autoscroll on Windows and Linux (on a
+ * link it opens a tab), or the thread's own scrollbar (`x` past its content
+ * box) on the thumb or above it. The track below the thumb pages DOWN, toward
+ * the end the view follows.
+ */
+export function pressTakesScrollbar(press: ScrollPress): boolean {
+  if (press.button === 1) return !press.onControl;
+  if (press.button !== 0 || !press.onContainer || press.x < press.clientWidth) return false;
+  const thumbBottom = ((press.scrollTop + press.clientHeight) / press.scrollHeight) * press.clientHeight;
+  return press.y <= thumbBottom;
 }
 
 /** What `innerBoxScrollsUp` reads of an element. */

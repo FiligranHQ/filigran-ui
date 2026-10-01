@@ -14,11 +14,13 @@ import {
   innerBoxScrollsUp,
   keyScrollsUp,
   pressTakesScrollbar,
+  singleTouchY,
   swipeScrollsUp,
   TOUCH_SLOP_PX,
   wheelScrollsUp,
   type ScrollBox,
   type ScrollNode,
+  type ScrollPress,
 } from './scrollFollow.ts';
 
 interface FakeBox extends ScrollBox {
@@ -277,13 +279,48 @@ test("a tap's jitter is not a swipe; a finger travelling down past the slop is",
   assert.equal(swipeScrollsUp(300, 250), false, 'a finger moving up scrolls down');
 });
 
-test('a press on the scrollbar of the thread, or the middle button, hands the view to the reader', () => {
-  const press = { button: 0, onContainer: true, offsetX: 380, clientWidth: 380 };
-  assert.equal(pressTakesScrollbar(press), true);
-  assert.equal(pressTakesScrollbar({ ...press, offsetX: 200 }), false, 'a press on the content');
-  assert.equal(pressTakesScrollbar({ ...press, onContainer: false, offsetX: 200 }), false);
+test('one finger is a swipe; two are a pinch, which scrolls nothing', () => {
+  assert.equal(singleTouchY([{ clientY: 120 }]), 120);
+  assert.equal(singleTouchY([{ clientY: 120 }, { clientY: 300 }]), null);
+  assert.equal(singleTouchY([]), null);
+});
+
+test('a press on the thumb of the thread, above it, or the middle button off a control hands the view to the reader', () => {
+  // 2000 px of thread scrolled to 800: the thumb runs from 160 to 240 px.
+  const press: ScrollPress = {
+    button: 0,
+    onContainer: true,
+    onControl: false,
+    x: 384,
+    y: 200,
+    clientWidth: 380,
+    clientHeight: 400,
+    scrollTop: 800,
+    scrollHeight: 2000,
+  };
+  assert.equal(pressTakesScrollbar(press), true, 'the thumb');
+  assert.equal(pressTakesScrollbar({ ...press, y: 40 }), true, 'the track above the thumb');
+  assert.equal(pressTakesScrollbar({ ...press, y: 300 }), false, 'the track below the thumb pages toward the end');
+  assert.equal(pressTakesScrollbar({ ...press, x: 200 }), false, 'a press on the content');
+  assert.equal(pressTakesScrollbar({ ...press, onContainer: false }), false);
   assert.equal(pressTakesScrollbar({ ...press, button: 2 }), false);
-  assert.equal(pressTakesScrollbar({ button: 1, onContainer: false, offsetX: 10, clientWidth: 380 }), true, 'autoscroll');
+  const middle = { ...press, button: 1, onContainer: false, x: 10 };
+  assert.equal(pressTakesScrollbar(middle), true, 'autoscroll');
+  assert.equal(pressTakesScrollbar({ ...middle, onControl: true }), false, 'a middle click on a link opens a tab');
+});
+
+test('a slow drift toward the top adds up to a move, a step of 1 px at a time', () => {
+  const box = makeBox(1000);
+  const follower = followerFor(box);
+  box.scrollTop = 599;
+  follower.onScroll();
+  assert.equal(follower.following, true, 'one pixel is not a move');
+  box.scrollTop = 598;
+  follower.onScroll();
+  assert.equal(follower.following, false);
+  box.scrollHeight = 1050;
+  follower.keepUp();
+  assert.deepEqual(box.scrolls, []);
 });
 
 interface FakeNode extends ScrollNode {

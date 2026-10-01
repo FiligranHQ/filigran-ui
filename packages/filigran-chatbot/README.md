@@ -753,6 +753,7 @@ Every key the package can ask for, grouped by where it appears:
 **Messages, markdown and files**
 
 - `'Bad response'`
+- `'Conversation transcript'`
 - `'Copied'`
 - `'Copied!'`
 - `'Copy code'`
