@@ -8,7 +8,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createScrollFollower, FOLLOW_THRESHOLD_PX, type ScrollBox } from './scrollFollow.ts';
+import {
+  createScrollFollower,
+  FOLLOW_THRESHOLD_PX,
+  innerBoxScrollsUp,
+  keyScrollsUp,
+  pressTakesScrollbar,
+  swipeScrollsUp,
+  TOUCH_SLOP_PX,
+  wheelScrollsUp,
+  type ScrollBox,
+  type ScrollNode,
+} from './scrollFollow.ts';
 
 interface FakeBox extends ScrollBox {
   scrollTop: number;
@@ -160,6 +171,37 @@ test('a wheel toward the top stops the follow at once, a smooth scroll of ours i
   assert.equal(box.scrolls.length, 1);
 });
 
+test('the late scroll event of a jump does not re-arm the follow a gesture toward the top just ended', () => {
+  const box = makeBox(1000);
+  const follower = followerFor(box);
+  // A reasoning chunk: the view jumps to the end.
+  box.scrollHeight = 1050;
+  follower.keepUp();
+  // The reader turns the wheel up before that jump's scroll event arrives.
+  follower.leave();
+  follower.onScroll();
+  assert.equal(follower.following, false);
+  box.scrollHeight = 1100;
+  follower.keepUp();
+  assert.equal(box.scrolls.length, 1, 'no jump pulls the reader back down');
+  assert.equal(box.scrollTop, 650);
+});
+
+test('a reader who scrolled up a few pixels is left there, however near the end', () => {
+  const box = makeBox(1000);
+  const follower = followerFor(box);
+  box.scrollTop = 560;
+  follower.onScroll();
+  assert.equal(follower.following, false);
+  box.scrollHeight = 1050;
+  follower.keepUp();
+  // A scroll event that moved nothing changes nothing.
+  follower.onScroll();
+  assert.equal(follower.following, false);
+  assert.deepEqual(box.scrolls, []);
+  assert.equal(box.scrollTop, 560);
+});
+
 test('a wheel toward the top of a thread that fits the panel keeps following', () => {
   const box = makeBox(300);
   const follower = followerFor(box);
@@ -207,4 +249,68 @@ test('a message sent after scrolling up brings the view back and follows again',
   follower.reveal();
   assert.equal(follower.following, true);
   assert.deepEqual(box.scrolls, [{ top: 1100, behavior: 'smooth' }]);
+});
+
+test('a wheel turned toward the top, not a pinch nor a sideways pan, leaves the bottom', () => {
+  assert.equal(wheelScrollsUp({ deltaX: 0, deltaY: -40, ctrlKey: false }), true);
+  assert.equal(wheelScrollsUp({ deltaX: 0, deltaY: 40, ctrlKey: false }), false);
+  assert.equal(wheelScrollsUp({ deltaX: 0, deltaY: -40, ctrlKey: true }), false, 'a trackpad pinch zooms');
+  assert.equal(wheelScrollsUp({ deltaX: -60, deltaY: -20, ctrlKey: false }), false, 'a code block panned sideways');
+});
+
+test('the keys that scroll a focused thread toward its top', () => {
+  const key = (k: string, mods: { shiftKey?: boolean; altKey?: boolean } = {}) =>
+    keyScrollsUp({ key: k, shiftKey: !!mods.shiftKey, altKey: !!mods.altKey });
+  assert.equal(key('ArrowUp'), true);
+  assert.equal(key('PageUp'), true);
+  assert.equal(key('Home'), true);
+  assert.equal(key(' ', { shiftKey: true }), true);
+  assert.equal(key(' '), false, 'Space scrolls down');
+  assert.equal(key('ArrowDown'), false);
+  assert.equal(key('End'), false);
+  assert.equal(key('ArrowUp', { altKey: true }), false);
+});
+
+test("a tap's jitter is not a swipe; a finger travelling down past the slop is", () => {
+  assert.equal(swipeScrollsUp(300, 300 + TOUCH_SLOP_PX), false);
+  assert.equal(swipeScrollsUp(300, 301 + TOUCH_SLOP_PX), true);
+  assert.equal(swipeScrollsUp(300, 250), false, 'a finger moving up scrolls down');
+});
+
+test('a press on the scrollbar of the thread, or the middle button, hands the view to the reader', () => {
+  const press = { button: 0, onContainer: true, offsetX: 380, clientWidth: 380 };
+  assert.equal(pressTakesScrollbar(press), true);
+  assert.equal(pressTakesScrollbar({ ...press, offsetX: 200 }), false, 'a press on the content');
+  assert.equal(pressTakesScrollbar({ ...press, onContainer: false, offsetX: 200 }), false);
+  assert.equal(pressTakesScrollbar({ ...press, button: 2 }), false);
+  assert.equal(pressTakesScrollbar({ button: 1, onContainer: false, offsetX: 10, clientWidth: 380 }), true, 'autoscroll');
+});
+
+interface FakeNode extends ScrollNode {
+  parent: FakeNode | null;
+  overflowY: string;
+}
+
+function makeNode(parent: FakeNode | null, overflowY = 'visible', scroll = { scrollTop: 0, scrollHeight: 100, clientHeight: 100 }): FakeNode {
+  return { parent, overflowY, ...scroll };
+}
+
+const scrollsInside = (target: FakeNode, container: FakeNode) =>
+  innerBoxScrollsUp(
+    target,
+    container,
+    (n) => n.parent,
+    (n) => n.overflowY,
+  );
+
+test('a box inside the thread that can still go up takes the gesture first', () => {
+  const thread = makeNode(null, 'auto', { scrollTop: 500, scrollHeight: 1000, clientHeight: 400 });
+  const codeBlock = makeNode(thread, 'auto', { scrollTop: 40, scrollHeight: 600, clientHeight: 200 });
+  assert.equal(scrollsInside(makeNode(codeBlock), thread), true);
+  const atItsTop = makeNode(thread, 'auto', { scrollTop: 0, scrollHeight: 600, clientHeight: 200 });
+  assert.equal(scrollsInside(makeNode(atItsTop), thread), false, 'at its top, the gesture moves the thread');
+  // The reasoning window clips its prose and pins it to its own end: the gesture goes through it.
+  const reasoning = makeNode(thread, 'hidden', { scrollTop: 120, scrollHeight: 280, clientHeight: 160 });
+  assert.equal(scrollsInside(makeNode(reasoning), thread), false);
+  assert.equal(scrollsInside(thread, thread), false);
 });
