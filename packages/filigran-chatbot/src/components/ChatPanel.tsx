@@ -2,6 +2,7 @@ import { type FunctionComponent, useCallback, useEffect, useMemo, useRef, useSta
 import type { ChatAttachment, ChatPanelProps, Translate } from '../types';
 import { hexAlpha, identity } from '../utils';
 import { feedbackBaseUrl } from '../utils/feedback';
+import { conversationReferencesUrl } from '../utils/conversationRefs';
 import { parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
@@ -124,6 +125,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     handleNewChat,
     pendingWorkspaceId,
     handleStopGenerating,
+    conversationRefs,
+    addConversationRef,
     setAttachedFiles,
     setMessages,
     setContextUsage,
@@ -232,6 +235,19 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     setHistoryMenuOpen(false);
     handleSwitchConversation(id);
   };
+
+  // The `@` conversation menu of the composer, when the host names its route.
+  const conversationReferencesSearchUrl = conversationReferencesUrl(apiBaseUrl, apiEndpoints, backendType);
+
+  // A referenced conversation's chip opens it in the panel when it is one the
+  // conversation list holds, so the list is read as soon as the thread shows
+  // a reference - not only once the history menu has been opened.
+  const openableConversationIds = useMemo(() => new Set(conversations.map((c) => c.conversationId)), [conversations]);
+  const onOpenConversation = useLatestCallback(historyEnabled ? handleSelectConversation : undefined);
+  const threadReferencesConversations = messages.some((m) => (m.conversationRefs?.length ?? 0) > 0);
+  useEffect(() => {
+    if (threadReferencesConversations && historyEnabled) void refreshConversations();
+  }, [threadReferencesConversations, historyEnabled, refreshConversations]);
 
   const handleDeleteConversation = async (id: string) => {
     const deleted = await deleteConversation(id);
@@ -667,6 +683,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
               onSubmitApprovalDecisions={submitApprovalDecisions}
               isSubmittingApproval={isSubmittingApproval}
               approvalError={approvalError}
+              openableConversationIds={openableConversationIds}
+              onOpenConversation={onOpenConversation}
               t={t}
             />
           )}
@@ -688,6 +706,11 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
             quota={quota}
             contextUsage={contextUsageEnabled ? contextUsage : null}
             composerToolbar={composerToolbar}
+            conversationReferences={
+              conversationReferencesSearchUrl
+                ? { url: conversationReferencesSearchUrl, requestHeaders, conversationId, refs: conversationRefs, onPick: addConversationRef }
+                : undefined
+            }
           />
         </div>
       </div>

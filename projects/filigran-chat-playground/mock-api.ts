@@ -6,8 +6,8 @@ import type { Plugin } from 'vite';
  * working panel with nothing else running.
  *
  * It implements the contract documented in the package README — agents,
- * sessions (restore / list / delete), streaming messages, uploads and file
- * downloads — and nothing more. Set `CHAT_API_PROXY=http://host:port` to talk to
+ * sessions (restore / list / delete), streaming messages, uploads, file
+ * downloads and the `@` conversation references — and nothing more. Set `CHAT_API_PROXY=http://host:port` to talk to
  * a real backend instead; the plugin then stays out of the way.
  *
  * The canned answer is deliberately hostile: it carries every markdown shape
@@ -213,6 +213,26 @@ const SUGGESTIONS: Record<string, string[]> = {
 
 const QUOTA_LIMIT = 500;
 
+/**
+ * A conversation shared with the tester, so the `@` menu shows its "Shared
+ * with you" hint, and its chip - not in the tester's own history - stays a
+ * plain label.
+ */
+const SHARED_CONVERSATION = { id: 'shared-1', title: 'Weekly threat brief', updatedAt: '2026-09-28T09:00:00Z' };
+
+/** The `@key` of a title - the XTM One rule, ASCII only: a slug, cut at 48. */
+function referenceKey(title: string, id: string): string {
+  const slug = title
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48)
+    .replace(/-+$/, '');
+  return slug || `conversation-${id.slice(0, 6)}`;
+}
+
 // Context gauge: a 200k window filled 21 % per turn, so five turns land on
 // 21 / 42 / 63 / 84 / 100 % — deliberately stepped to hit every band the
 // indicator has, including the amber one between 80 % and 95 % (where the real
@@ -270,6 +290,23 @@ export function mockChatApi(): Plugin {
           const comment = typeof body.comment === 'string' && body.comment.trim() ? body.comment.trim().slice(0, 2000) : null;
           message.feedback = { rating: body.rating, comment };
           return json(res, message.feedback);
+        }
+
+        // ---- @ conversation references ----
+        if (path === '/chat/conversation-references' && method === 'GET') {
+          const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
+          const exclude = url.searchParams.get('exclude');
+          const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 8, 1), 20);
+          const own = [...conversations.values()]
+            .filter((c) => c.messages.length > 0)
+            .map((c) => ({ id: c.id, title: c.title, updated_at: c.updatedAt, is_own: true }));
+          const shared = { id: SHARED_CONVERSATION.id, title: SHARED_CONVERSATION.title, updated_at: SHARED_CONVERSATION.updatedAt, is_own: false };
+          const list = [...own, shared]
+            .filter((c) => c.id !== exclude && (!q || c.title.toLowerCase().includes(q)))
+            .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+            .slice(0, limit)
+            .map((c) => ({ ...c, key: referenceKey(c.title, c.id) }));
+          return json(res, { conversations: list });
         }
 
         // ---- history list / delete ----
@@ -361,7 +398,20 @@ export function mockChatApi(): Plugin {
               });
             }
           }
-          conv.messages.push({ id: `msg-${++seq}`, role: 'user', content: prompt, createdAt: new Date().toISOString() });
+          // What the message referenced with `@`, kept as the real backend
+          // keeps it, so a restore shows the chips again.
+          const referenced = Array.isArray(body.referenced_conversation_ids) ? body.referenced_conversation_ids.slice(0, 5) : [];
+          const conversationRefs = referenced.flatMap((id) => {
+            const target = id === SHARED_CONVERSATION.id ? SHARED_CONVERSATION : typeof id === 'string' ? conversations.get(id) : undefined;
+            return target && target.id !== convId ? [{ conversation_id: target.id, title: target.title, key: referenceKey(target.title, target.id) }] : [];
+          });
+          conv.messages.push({
+            id: `msg-${++seq}`,
+            role: 'user',
+            content: prompt,
+            createdAt: new Date().toISOString(),
+            ...(conversationRefs.length > 0 ? { meta: { conversation_refs: conversationRefs } } : {}),
+          });
 
           res.statusCode = 200;
           res.setHeader('Content-Type', 'text/event-stream');

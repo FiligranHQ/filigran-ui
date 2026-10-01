@@ -526,6 +526,8 @@ const App = () => {
                       'Leaving sidebar mode — or closing the panel — removes the push completely',
                       'Fullscreen shows the conversation sidebar: select switches thread, delete removes a row, the collapse toggle works, and the header history menu is gone',
                       'Signed in to XTM One: the fullscreen list is grouped by workspace — create, rename and delete a workspace, start a conversation inside one, move a row with its menu or by dragging it onto a group',
+                      '@ in the composer (at the start or after a space, never in a@b) lists your other conversations; typing narrows it, arrows move, Enter / Tab / click insert @key, Escape closes; "No conversation matches" only for a typed text',
+                      'A sent @reference shows as a chip above the message (also after a reload); a chip of a conversation in the history opens it, a shared one is a plain label; while an answer streams, a message with a reference waits instead of steering',
                     'All 3 modes render with correct positioning/dimensions',
                       'Agent dropdown opens/closes, click-outside dismisses',
                       'Mode switcher transitions between modes',
@@ -581,6 +583,9 @@ const App = () => {
               // Workspaces group the fullscreen history. The mock serves none,
               // so they are named against XTM One only.
               ...(usingMock ? {} : { workspaces: '/chat/workspaces' }),
+              // `@` in the composer references another conversation. Served by
+              // the mock too (its own conversations, plus one shared with you).
+              conversationReferences: '/chat/conversation-references',
             }}
             locale={locale}
             agentDashboardUrl="https://xtm.example.com"
