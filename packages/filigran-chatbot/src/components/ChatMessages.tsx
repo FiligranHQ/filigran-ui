@@ -9,6 +9,7 @@ import {
   createScrollFollower,
   innerBoxScrollsUp,
   keyScrollsUp,
+  nextTouchAnchor,
   pressTakesScrollbar,
   singleTouchY,
   swipeScrollsUp,
@@ -760,17 +761,15 @@ export const ChatMessages = ({
     if (pressTakesScrollbar(press)) leaveFrom(container, event.target);
   };
   // A second finger ends the swipe: a pinch is no scroll, and the swipe of
-  // the finger left on the screen is measured afresh from its next touch.
+  // the finger left on the screen is measured afresh from its next move.
   const handleTouchStart = (event: React.TouchEvent) => {
     touchAnchorRef.current = singleTouchY(event.touches);
   };
   const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
     const y = singleTouchY(event.touches);
     const anchor = touchAnchorRef.current;
-    if (y === null) touchAnchorRef.current = null;
-    if (y === null || anchor === null) return;
-    if (swipeScrollsUp(anchor, y)) leaveFrom(event.currentTarget, event.target);
-    touchAnchorRef.current = Math.min(anchor, y);
+    if (y !== null && anchor !== null && swipeScrollsUp(anchor, y)) leaveFrom(event.currentTarget, event.target);
+    touchAnchorRef.current = nextTouchAnchor(anchor, y);
   };
 
   // Switching conversation (restore / new chat) replaces the whole array, so

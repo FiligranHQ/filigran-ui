@@ -13,6 +13,7 @@ import {
   FOLLOW_THRESHOLD_PX,
   innerBoxScrollsUp,
   keyScrollsUp,
+  nextTouchAnchor,
   pressTakesScrollbar,
   singleTouchY,
   swipeScrollsUp,
@@ -283,6 +284,14 @@ test('one finger is a swipe; two are a pinch, which scrolls nothing', () => {
   assert.equal(singleTouchY([{ clientY: 120 }]), 120);
   assert.equal(singleTouchY([{ clientY: 120 }, { clientY: 300 }]), null);
   assert.equal(singleTouchY([]), null);
+});
+
+test('the finger left after a pinch is anchored on its first move', () => {
+  assert.equal(nextTouchAnchor(100, null), null);
+  assert.equal(nextTouchAnchor(null, 240), 240);
+  assert.equal(swipeScrollsUp(240, 260), true);
+  assert.equal(nextTouchAnchor(240, 260), 240);
+  assert.equal(nextTouchAnchor(240, 200), 200);
 });
 
 test('a press on the thumb of the thread, above it, or the middle button off a control hands the view to the reader', () => {

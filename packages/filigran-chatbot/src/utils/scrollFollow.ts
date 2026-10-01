@@ -178,6 +178,16 @@ export function singleTouchY(touches: ArrayLike<{ clientY: number }>): number | 
   return touches.length === 1 ? touches[0].clientY : null;
 }
 
+/**
+ * The swipe anchor after a `touchmove` that found the finger at `y`: none
+ * during a pinch, the finger's own position on its first move after one (no
+ * `touchstart` marks the finger left on the screen), else the highest point.
+ */
+export function nextTouchAnchor(anchor: number | null, y: number | null): number | null {
+  if (y === null) return null;
+  return anchor === null ? y : Math.min(anchor, y);
+}
+
 /** A pointer press on the thread, `x` / `y` measured from its padding box. */
 export interface ScrollPress {
   button: number;
