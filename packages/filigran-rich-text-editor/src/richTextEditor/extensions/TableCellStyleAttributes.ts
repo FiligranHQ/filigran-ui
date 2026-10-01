@@ -1,0 +1,68 @@
+import type { Attribute } from '@tiptap/core';
+
+const BORDER_SIDES = ['top', 'right', 'bottom', 'left'] as const;
+const INVISIBLE_BORDER_STYLES = ['none', 'hidden'];
+const LIGHT_BACKGROUND_MIN_LUMINANCE = 0.179;
+const INVALID_COLOR_SENTINEL = '#010203';
+
+let colorContext: CanvasRenderingContext2D | null | undefined;
+
+const parseBorderSide = (element: HTMLElement, side: typeof BORDER_SIDES[number]): string | null => {
+  const style = element.style.getPropertyValue(`border-${side}-style`);
+  if (!style) return null;
+  if (INVISIBLE_BORDER_STYLES.includes(style)) return `border-${side}: ${style}`;
+  const width = element.style.getPropertyValue(`border-${side}-width`);
+  const color = element.style.getPropertyValue(`border-${side}-color`).replace(/\bwindowtext\b/gi, 'currentcolor');
+  return `border-${side}: ${[width, style, color].filter(Boolean).join(' ')}`;
+};
+
+const toRgba = (color: string): number[] | null => {
+  colorContext ??= document.createElement('canvas').getContext('2d');
+  if (!colorContext) return null;
+  colorContext.fillStyle = INVALID_COLOR_SENTINEL;
+  colorContext.fillStyle = color;
+  const normalized = String(colorContext.fillStyle);
+  if (normalized === INVALID_COLOR_SENTINEL) return null;
+  if (normalized.startsWith('#')) {
+    return [1, 3, 5].map((index) => parseInt(normalized.slice(index, index + 2), 16)).concat(1);
+  }
+  const channels = /rgba?\(([^)]+)\)/.exec(normalized)?.[1].split(',').map((value) => parseFloat(value));
+  return channels ? [...channels.slice(0, 3), channels[3] ?? 1] : null;
+};
+
+const relativeLuminance = ([red, green, blue]: number[]): number => {
+  const [r, g, b] = [red, green, blue].map((channel) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+const backgroundTone = (color: string): 'light' | 'dark' | null => {
+  const rgba = toRgba(color);
+  if (!rgba || rgba[3] < 1) return null;
+  return relativeLuminance(rgba) > LIGHT_BACKGROUND_MIN_LUMINANCE ? 'light' : 'dark';
+};
+
+export const tableCellStyleAttributes: Record<string, Attribute> = {
+  backgroundColor: {
+    default: null,
+    parseHTML: (element: HTMLElement) => element.style.backgroundColor || element.getAttribute('bgcolor') || null,
+    renderHTML: (attributes) => {
+      if (!attributes.backgroundColor) return {};
+      const tone = backgroundTone(attributes.backgroundColor);
+      return {
+        style: `background-color: ${attributes.backgroundColor}`,
+        ...(tone ? { 'data-cell-background': tone } : {}),
+      };
+    },
+  },
+  border: {
+    default: null,
+    parseHTML: (element: HTMLElement) => {
+      const declarations = BORDER_SIDES.map((side) => parseBorderSide(element, side)).filter(Boolean);
+      return declarations.length > 0 ? declarations.join('; ') : null;
+    },
+    renderHTML: (attributes) => (attributes.border ? { style: attributes.border } : {}),
+  },
+};

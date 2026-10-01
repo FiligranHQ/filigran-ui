@@ -121,16 +121,16 @@ import type {
 The editor comes with a rich toolbar and the following built-in capabilities:
 
 - **Text formatting** — bold, italic, underline, strikethrough, subscript, superscript, code
-- **Headings** — H1, H2, H3, and paragraph
-- **Lists** — bullet, ordered, and task lists (with nesting)
+- **Headings** — H1 to H6, and paragraph
+- **Lists** — bullet, ordered, and task lists (with nesting). Lists pasted from Microsoft Word desktop are converted to real lists
 - **Text alignment** — left, center, right, justify
 - **Font family** — Arial, Courier New, Georgia, Helvetica, Lucida Sans Unicode, Times New Roman, Trebuchet MS, Verdana
 - **Font size** — Tiny (10px), Small (12px), Normal (14px), Big (18px), Huge (24px)
 - **Colors** — text color and background color via a color picker
 - **Highlights** — highlight text with custom colors
 - **Links** — insert/edit links via a popover
-- **Images** — insert from URL or paste/drop. Resizable, with alt/title/caption/link options
-- **Tables** — insert via a grid picker, resizable columns, context menu for row/column operations, nested tables, cell split/merge
+- **Images** — insert from URL or paste/drop. Resizable, with alt/title/caption/link options. PNG and JPEG images pasted from Microsoft Word desktop are embedded from the clipboard RTF data
+- **Tables** — insert via a grid picker, resizable columns, context menu for row/column operations, nested tables, cell split/merge. Cell background colors and borders of pasted or loaded content are preserved
 - **Block elements** — blockquote, code block, horizontal rule, page break
 - **Indentation** — increase / decrease indent
 - **Typography** — automatic smart quotes, dashes, ellipsis (TipTap Typography extension)
