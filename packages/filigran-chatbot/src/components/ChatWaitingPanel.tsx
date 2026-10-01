@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Translate } from '../types';
 import { ExternalLinkIcon, GamepadIcon } from './icons';
 
@@ -54,22 +54,6 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-/** Px-from-bottom within which the user is considered "still following". */
-const FOLLOW_THRESHOLD_PX = 140;
-
-/** Nearest vertically-scrollable ancestor of `el`, or null. */
-function findScrollParent(el: HTMLElement | null): HTMLElement | null {
-  let node = el?.parentElement ?? null;
-  while (node) {
-    const oy = getComputedStyle(node).overflowY;
-    if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight) {
-      return node;
-    }
-    node = node.parentElement;
-  }
-  return null;
-}
-
 interface ChatWaitingPanelProps {
   t: Translate;
   /** Host-level override; when false the panel is hidden entirely. */
@@ -78,6 +62,8 @@ interface ChatWaitingPanelProps {
   onPlay?: () => void;
   /** Where the arcade is played, opened in a new tab. */
   playUrl?: string | null;
+  /** The thread's follower: keeps its end in view while the reader is there. */
+  keepEndInView: () => void;
 }
 
 const PLAY_CLASS =
@@ -89,24 +75,19 @@ const PLAY_CLASS =
  * while the agent works. The package ships no game of its own; without a way
  * to reach the arcade the messages stand alone.
  */
-export const ChatWaitingPanel = ({ t, enabled = true, onPlay, playUrl }: ChatWaitingPanelProps) => {
+export const ChatWaitingPanel = ({ t, enabled = true, onPlay, playUrl, keepEndInView }: ChatWaitingPanelProps) => {
   const messages = useMemo(() => defaultMessages(t), [t]);
   const reducedMotion = usePrefersReducedMotion();
   const [msgIndex, setMsgIndex] = useState(0);
-  const rootRef = useRef<HTMLDivElement>(null);
 
   // The panel mounts below the last message but, unlike streamed reasoning or
   // answer text (which auto-scrolls on length change), nothing else triggers a
-  // scroll - so at the bottom it lands under the fold. Reveal it on mount IF
-  // the user is still following the bottom; if they scrolled up, leave them.
+  // scroll - so at the bottom it lands under the fold. It is revealed through
+  // the thread's follower, which only moves a reader still following the end:
+  // one who scrolled up stays where they went, however near the end.
   useEffect(() => {
-    const scroller = findScrollParent(rootRef.current);
-    if (!scroller) return;
-    const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
-    if (distance <= FOLLOW_THRESHOLD_PX) {
-      scroller.scrollTop = scroller.scrollHeight;
-    }
-  }, []);
+    if (enabled) keepEndInView();
+  }, [enabled, keepEndInView]);
 
   // A disabled host arms no timer; `enabled` is a dep so toggling it cleans up.
   useEffect(() => {
@@ -120,7 +101,7 @@ export const ChatWaitingPanel = ({ t, enabled = true, onPlay, playUrl }: ChatWai
   const current = messages[msgIndex % messages.length];
 
   return (
-    <div ref={rootRef} className="ml-11 mt-2.5 max-w-[78%]">
+    <div className="ml-11 mt-2.5 max-w-[78%]">
       {/* Keep the live region scoped to the announced text only: wrapping the
           play link too would re-announce it alongside each message change. */}
       <span className="sr-only" role="status" aria-live="polite">
