@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parsePersistedFeedback, parseRestEvent, parseRestoredMessages } from './parseRestEvent.ts';
+import { parseConversationRefs, parsePersistedFeedback, parseRestEvent, parseRestoredMessages } from './parseRestEvent.ts';
 
 test('a restored entry keeps its persisted id, its time and its rating', () => {
   const [user, answer] = parseRestoredMessages([
@@ -55,6 +55,41 @@ test('entries that are not a user or an assistant message are skipped', () => {
     [['restored-3', 'user', 'Hi']],
   );
   assert.deepEqual(parseRestoredMessages(undefined), []);
+});
+
+test('a restored user message keeps the conversations it referenced', () => {
+  const [question, answer] = parseRestoredMessages([
+    {
+      id: 'm-1',
+      role: 'user',
+      content: 'Compare with @q3-threat-report',
+      conversation_refs: [{ conversation_id: 'c-7', title: 'Q3 threat report', key: 'q3-threat-report' }],
+    },
+    { id: 'm-2', role: 'assistant', content: 'Done.', conversation_refs: [{ conversation_id: 'c-7', title: 'x', key: 'x' }] },
+  ]);
+  assert.deepEqual(question.conversationRefs, [{ conversationId: 'c-7', title: 'Q3 threat report', key: 'q3-threat-report' }]);
+  // Only a user message references anything.
+  assert.equal(answer.conversationRefs, undefined);
+});
+
+test('referenced conversations are read defensively', () => {
+  assert.deepEqual(
+    parseConversationRefs([
+      { conversation_id: 'c-1', title: ' Weekly sync ', key: 'weekly-sync' },
+      { conversation_id: 'c-2' },
+      { conversation_id: 'c-1', title: 'Duplicate', key: 'duplicate' },
+      { title: 'No id', key: 'no-id' },
+      null,
+      'c-3',
+    ]),
+    [
+      { conversationId: 'c-1', title: 'Weekly sync', key: 'weekly-sync' },
+      { conversationId: 'c-2', title: '', key: '' },
+    ],
+  );
+  assert.equal(parseConversationRefs([]), undefined);
+  assert.equal(parseConversationRefs(undefined), undefined);
+  assert.equal(parseConversationRefs({ conversation_id: 'c-1' }), undefined);
 });
 
 test('a stored rating is read only when it is one', () => {

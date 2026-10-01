@@ -11,6 +11,8 @@ export type {
   ChatAttachment,
   ChatContextBreakdown,
   ChatContextUsage,
+  ChatConversationRef,
+  ChatConversationReferenceCandidate,
   ChatConversationSummary,
   ChatWorkspace,
   ChatFile,

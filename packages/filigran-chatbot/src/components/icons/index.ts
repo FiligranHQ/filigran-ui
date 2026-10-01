@@ -28,6 +28,7 @@ export * from './ImageIcon';
 export * from './InfoIcon';
 export * from './MailIcon';
 export * from './MaximizeIcon';
+export * from './MessageSquareIcon';
 export * from './MicIcon';
 export * from './PencilIcon';
 export * from './SearchIcon';

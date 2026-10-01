@@ -9,6 +9,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - ✋ **Tool Approval** — When the agent stops at a tool that needs a human's consent, the turn pauses mid-answer and the reviewer approves, declines with a reason, or approves always — opt-in per host, see [Tool approval](#post-apibaseurlapiendpointsapprove)
 - 🗂️ **Conversation History** — Switch between (and delete) past conversations from a header menu, or from a permanent sidebar in fullscreen mode (collapsible, searchable past 7 entries, rename in place)
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
+- 🔗 **Conversation References** — Type `@` in the composer to point the agent at another conversation; opt-in per host, see [Conversation references](#conversation-references)
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
 - 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose
 - 📝 **Full Markdown** — Tables (mis-delimited ones repaired), code blocks with copy button, lists, blockquotes, soft line breaks, inline images with a lightbox
@@ -294,6 +295,42 @@ one of their conversations, and conversations filed in a workspace the list
 does not return are grouped under "Other workspaces". XTM One serves all of it
 at `/chat/workspaces` and `/chat/sessions`.
 
+### Conversation references
+
+Typing `@` in the composer - at the start of the text or after a space, never
+inside a word or an email (`a@b`) - opens a menu of the user's other
+conversations, searched by title as they type. A pick inserts `@<key> `, and the
+message goes out with the conversations it still references, so the agent reads
+them; a `@word` typed by hand stays plain text, and so does a pick whose `@key`
+is edited out before sending. The arrows move in the menu, Enter or Tab insert,
+Escape closes it.
+
+The feature is off until the host names the route:
+`apiEndpoints.conversationReferences` has **no default**, for the same reason
+as `apiEndpoints.approve` - a proxied host must expose the route, and forward
+the new body field, before the composer offers the menu. Unset, `@` is plain
+text and the message body is unchanged.
+
+| Request | Purpose |
+| --- | --- |
+| `GET {apiBaseUrl}{conversationReferences}?q=<text>&limit=8&exclude=<conversation_id>` | The menu: `{ "conversations": [{ id, title, key, updated_at, is_own }] }` (or a bare array), the conversations the user can open, most recent first, whose title contains `q` (case-insensitive). `q` is omitted for a bare `@`, `exclude` while the conversation is not created yet. `key` is what the pick inserts after `@`, always the backend's own. `is_own: false` marks a conversation shared with the user ("Shared with you"). |
+| `POST {apiBaseUrl}{messages}` | Carries `referenced_conversation_ids: string[]`: the picks the text still holds, in the order they appear, each once, at most 5. Omitted when there is none. |
+| `POST {apiBaseUrl}{sessions}` | A restored user message may carry `conversation_refs: [{ conversation_id, title, key }]`. |
+
+The references of a sent message show as chips above it, also after a reload.
+A chip opens its conversation in the panel when the conversation list holds it
+(the list is read as soon as the thread shows a reference), and is a plain label
+otherwise - a conversation shared with the user, say. While an answer streams,
+a message with a reference waits for it instead of steering the running turn:
+a steer reaches the agent as text alone, so it would never read what the
+message references. Once the text references five conversations the menu says
+so instead of offering more. The picks of an unsent draft are kept with its text, so a
+draft restored when the panel reopens still references what it did.
+
+XTM One serves it at `/chat/conversation-references`; a host behind its own
+proxy names its route, relative to its `apiBaseUrl` (e.g.
+`conversationReferences: '/conversation-references'`).
+
 ### `DELETE {apiBaseUrl}/chat/sessions/{conversation_id}`
 
 Deletes a conversation from the history menu. Any 2xx response counts as
@@ -314,6 +351,9 @@ Sends a message and streams the response via SSE.
   "context": { "url": "/dashboard/analyses/reports/<id>/overview" }
 }
 ```
+
+With [conversation references](#conversation-references) on, a message that
+references another conversation also carries `referenced_conversation_ids`.
 
 The optional `context` object is forwarded verbatim from the `pageContext`
 prop (REST backend only) and is omitted entirely when empty. Use it to make
@@ -772,6 +812,7 @@ Every key the package can ask for, grouped by where it appears:
 
 **Composer**
 
+- `'A message references at most {count} conversations'`
 - `'Ask a question...'`
 - `'Attachments wait for the current response'`
 - `'Dictate a message'`
@@ -779,11 +820,16 @@ Every key the package can ask for, grouped by where it appears:
 - `'Files uploading...'`
 - `'Insert prompt template'`
 - `'Listening...'`
+- `'No conversation matches'`
 - `'No prompt matches'`
+- `'Reference a conversation'`
+- `'Referenced conversations wait for the current response'`
 - `'Search prompts...'`
 - `'Send now'`
+- `'Shared with you'`
 - `'Stop dictation'`
 - `'Stop generating'`
+- `'Untitled conversation'`
 - `'Uses AI. Verify results.'`
 
 **Messages, markdown and files**
@@ -804,6 +850,7 @@ Every key the package can ask for, grouped by where it appears:
 - `'Image preview'`
 - `'Load earlier messages'`
 - `'Loading image…'`
+- `'Open conversation'`
 - `'Read aloud'`
 - `'Reasoning details'`
 - `'Reasoning details — turn limit reached'`

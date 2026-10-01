@@ -1,8 +1,11 @@
 import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
-import type { ChatContextUsage, ChatFile, ChatMode, ChatPromptTemplate, ChatQuotaStatus } from '../types';
+import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatMode, ChatPromptTemplate, ChatQuotaStatus } from '../types';
 import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
+import { useConversationReferenceMenu } from '../hooks/useConversationReferenceMenu';
 import { useDictation } from '../hooks/useDictation';
+import { referencedConversations } from '../utils/conversationRefs';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
+import { ConversationReferenceMenu } from './ConversationReferenceMenu';
 import { PromptPicker } from './PromptPicker';
 import { QuotaIndicator } from './QuotaIndicator';
 import { Tooltip } from './Tooltip';
@@ -35,9 +38,24 @@ interface ChatInputProps {
   contextUsage?: ChatContextUsage | null;
   /** Host-supplied controls appended to the toolbar (see `composerToolbar`). */
   composerToolbar?: React.ReactNode;
+  /**
+   * The `@` conversation menu (`apiEndpoints.conversationReferences`), absent
+   * while the feature is off: `@` is then plain text.
+   */
+  conversationReferences?: {
+    /** `conversationReferencesUrl(...)`. */
+    url: string;
+    requestHeaders?: Record<string, string>;
+    /** The conversation written in: never offered. */
+    conversationId?: string | null;
+    /** The picks the composer holds (see `useChat`). */
+    refs: ChatConversationRef[];
+    onPick: (ref: ChatConversationRef) => void;
+  };
 }
 
 const MAX_TEXTAREA_HEIGHT = 120;
+const NO_REFS: ChatConversationRef[] = [];
 
 export const ChatInput = ({
   inputValue,
@@ -57,9 +75,21 @@ export const ChatInput = ({
   quota,
   contextUsage,
   composerToolbar,
+  conversationReferences,
 }: ChatInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const referenceMenu = useConversationReferenceMenu({
+    url: conversationReferences?.url ?? null,
+    requestHeaders: conversationReferences?.requestHeaders,
+    conversationId: conversationReferences?.conversationId,
+    text: inputValue,
+    onTextChange: onInputChange,
+    textareaRef,
+    refs: conversationReferences?.refs ?? NO_REFS,
+    onPick: (ref) => conversationReferences?.onPick(ref),
+  });
 
   // A dictated phrase lands at the end of the draft while the focus is on the
   // mic, so nothing scrolls the field to it once the text outgrows the cap.
@@ -103,10 +133,13 @@ export const ChatInput = ({
   const hasFilesUploading = isFileManagementEnabled && attachedFiles.some((f) => f.uploadStatus === 'pending');
   const canSend = hasContent && !hasFilesUploading;
   const hasAttachments = isFileManagementEnabled && attachedFiles.length > 0;
+  // A steer reaches the running loop as text alone, so the agent would never
+  // read a conversation it references: such a message waits, like a file.
+  const hasReferences = Boolean(conversationReferences) && referencedConversations(conversationReferences?.refs ?? NO_REFS, inputValue).length > 0;
   // Show the accent Send button NEXT to Stop while generating: text-only
   // sends can steer the running agent. With attachments selected the send
   // must wait for the current response, so only Stop is shown.
-  const showSteerSend = isLoading && canSteer && Boolean(inputValue.trim()) && !hasAttachments;
+  const showSteerSend = isLoading && canSteer && Boolean(inputValue.trim()) && !hasAttachments && !hasReferences;
 
   // Every way of sending goes through here, and only when the matching button
   // would be enabled: Enter must not send while files upload, nor end a
@@ -119,6 +152,8 @@ export const ChatInput = ({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // The menu's keys first (arrows, Enter / Tab, Escape) while it is open.
+    if (referenceMenu.onKeyDown(e)) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send();
@@ -130,11 +165,13 @@ export const ChatInput = ({
   };
 
   const footerText =
-    isLoading && canSteer && !hasAttachments
+    isLoading && canSteer && !hasAttachments && !hasReferences
       ? t('Enter to send now · Esc to stop')
       : isLoading && hasAttachments
         ? t('Attachments wait for the current response')
-        : t('Uses AI. Verify results.');
+        : isLoading && hasReferences
+          ? t('Referenced conversations wait for the current response')
+          : t('Uses AI. Verify results.');
 
   return (
     <div
@@ -173,9 +210,10 @@ export const ChatInput = ({
         </div>
       )}
 
-      {/* items-end keeps the buttons on the last line once the field grows. */}
+      {/* items-end keeps the buttons on the last line once the field grows.
+          `relative` anchors the @ menu, which opens above the field. */}
       <div
-        className={`flex items-end border rounded-xl px-2 py-1 transition-colors ${
+        className={`relative flex items-end border rounded-xl px-2 py-1 transition-colors ${
           dictation.listening ? 'border-red-500/50' : 'border-gray-200 dark:border-white/10 focus-within:border-[var(--chat-accent)]'
         }`}
       >
@@ -206,10 +244,25 @@ export const ChatInput = ({
           value={inputValue}
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          // The caret moved without the text changing: the @ menu follows it.
+          onKeyUp={referenceMenu.sync}
+          onClick={referenceMenu.sync}
+          onFocus={referenceMenu.sync}
+          onBlur={referenceMenu.close}
+          {...referenceMenu.textareaAria}
           onPaste={onPaste}
           rows={1}
           className="flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 filigran-chat-scrollable"
           style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}
+        />
+        <ConversationReferenceMenu
+          view={referenceMenu.view}
+          activeIndex={referenceMenu.activeIndex}
+          listboxId={referenceMenu.listboxId}
+          optionId={referenceMenu.optionId}
+          onHover={referenceMenu.setActiveIndex}
+          onPick={referenceMenu.pick}
+          t={t}
         />
         {dictation.supported && (
           <Tooltip title={dictation.listening ? t('Stop dictation') : t('Dictate a message')}>
