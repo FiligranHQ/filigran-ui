@@ -4,6 +4,7 @@ import type {
   ApiEndpoints,
   BackendType,
   ChatContextUsage,
+  ChatConversationRef,
   ChatFile,
   ChatMessage,
   ToolApprovalDecision,
@@ -13,6 +14,8 @@ import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
 import { parseToolApprovalProposals } from './protocols/parseRestEvent';
 import { createStreamDeltas, type StreamDeltas } from './streamDeltas';
+import { createSessionGate } from '../utils/sessionGate';
+import { conversationReferencesUrl, pruneConversationRefs, referencedConversations, withConversationRef } from '../utils/conversationRefs';
 
 const STORAGE_KEY = 'filigranChatConversationId';
 const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
@@ -48,6 +51,44 @@ function persistDraft(conversationId: string | null, value: string): void {
   } catch {
     /* ignore — see loadDraft */
   }
+}
+
+/**
+ * The `@` picks of a draft, kept beside its text: only a pick makes `@key`
+ * reference a conversation, so a draft restored without them would go out with
+ * its `@key`s as plain text.
+ */
+const DRAFT_REFS_KEY_PREFIX = 'filigranChatDraftRefs:';
+const draftRefsKey = (conversationId: string | null): string => `${DRAFT_REFS_KEY_PREFIX}${conversationId ?? 'new'}`;
+
+function loadDraftRefs(conversationId: string | null): ChatConversationRef[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed: unknown = JSON.parse(sessionStorage.getItem(draftRefsKey(conversationId)) ?? '[]');
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (r): r is ChatConversationRef =>
+        !!r && typeof r === 'object' && typeof r.conversationId === 'string' && typeof r.key === 'string' && typeof r.title === 'string',
+    );
+  } catch {
+    return [];
+  }
+}
+
+function persistDraftRefs(conversationId: string | null, refs: ChatConversationRef[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (refs.length > 0) sessionStorage.setItem(draftRefsKey(conversationId), JSON.stringify(refs));
+    else sessionStorage.removeItem(draftRefsKey(conversationId));
+  } catch {
+    /* ignore — see loadDraft */
+  }
+}
+
+/** A conversation's draft: its text and the `@` picks it still holds. */
+function loadDraftState(conversationId: string | null): { text: string; refs: ChatConversationRef[] } {
+  const text = loadDraft(conversationId);
+  return { text, refs: pruneConversationRefs(loadDraftRefs(conversationId), text) };
 }
 
 /**
@@ -170,8 +211,22 @@ interface UseChatReturn {
   handleFileAdd: (fileList: FileList | null) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
   handleSendMessage: () => Promise<void>;
-  handleNewChat: () => void;
+  /**
+   * Start a fresh conversation; with *workspaceId* (a string), the session is
+   * created inside that workspace (`workspace_id` on the session `POST`).
+   */
+  handleNewChat: (workspaceId?: string) => void;
+  /** The workspace the next conversation will be created in, if any. */
+  pendingWorkspaceId: string | null;
   handleStopGenerating: () => void;
+  /**
+   * The conversations picked from the composer's `@` menu whose `@key` the
+   * draft still holds; sent as `referenced_conversation_ids` with the next
+   * message.
+   */
+  conversationRefs: ChatConversationRef[];
+  /** Record a pick from the `@` menu. */
+  addConversationRef: (ref: ChatConversationRef) => void;
   setAttachedFiles: React.Dispatch<React.SetStateAction<ChatFile[]>>;
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   /**
@@ -217,6 +272,8 @@ function buildRequestBody(
     pageContext?: Record<string, unknown>;
     /** See {@link ApiEndpoints.approve} — derived, never a prop of its own. */
     supportsToolApproval?: boolean;
+    /** See {@link ApiEndpoints.conversationReferences}. */
+    referencedConversationIds?: string[];
   },
 ): Record<string, unknown> {
   switch (backendType) {
@@ -242,6 +299,11 @@ function buildRequestBody(
       // drops nothing meaningful.
       if (opts.supportsToolApproval) {
         body.supports_tool_approval = true;
+      }
+      // Only when the message holds a pick: a host that never named the route
+      // sends exactly the body it always did.
+      if (opts.referencedConversationIds && opts.referencedConversationIds.length > 0) {
+        body.referenced_conversation_ids = opts.referencedConversationIds;
       }
       // Forward arbitrary host page context (e.g. current URL) so the agent
       // knows where the user is. Omitted when empty to keep payloads lean.
@@ -286,8 +348,11 @@ export function useChat({
     return localStorage.getItem(STORAGE_KEY);
   });
   // Seeded from the persisted draft of whichever conversation we mount into,
-  // so re-opening the panel restores what the user had typed.
-  const [inputValue, setInputValue] = useState(() => loadDraft(typeof window === 'undefined' ? null : localStorage.getItem(STORAGE_KEY)));
+  // so re-opening the panel restores what the user had typed - and the
+  // conversations it references.
+  const [initialDraft] = useState(() => loadDraftState(typeof window === 'undefined' ? null : localStorage.getItem(STORAGE_KEY)));
+  const [inputValue, setInputValue] = useState(initialDraft.text);
+  const [conversationRefs, setConversationRefs] = useState<ChatConversationRef[]>(initialDraft.refs);
   const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
   const [transferredAgent, setTransferredAgent] = useState<TransferredAgent | null>(null);
   // How full the model's context window is for this conversation. Conversation
@@ -342,8 +407,13 @@ export function useChat({
   const probedConversationRef = useRef<string | null>(null);
   // When the resume watch stops regardless of what the turn reports.
   const resumeDeadlineRef = useRef(0);
-  // Mutex to prevent concurrent session creation
-  const creatingSessionRef = useRef<Promise<string | null> | null>(null);
+  // One session creation at a time, for the chat on screen: a new chat
+  // abandons the one in flight (see `createSessionGate`).
+  const [sessionGate] = useState(createSessionGate);
+  // The workspace the next session is created in ("new conversation" inside
+  // a workspace group). A ref for the request, state for the list to show it.
+  const pendingWorkspaceRef = useRef<string | null>(null);
+  const [pendingWorkspaceId, setPendingWorkspaceId] = useState<string | null>(null);
   // Abort controller for in-flight file uploads (cancelled on new chat)
   const uploadAbortRef = useRef<AbortController>(new AbortController());
 
@@ -358,6 +428,15 @@ export function useChat({
     }
     return `${apiBaseUrl}${apiEndpoints?.messages ?? '/chat/messages'}`;
   };
+
+  // A pick counts while its `@key` is in the text: editing it out drops it.
+  useEffect(() => {
+    setConversationRefs((prev) => pruneConversationRefs(prev, inputValue));
+  }, [inputValue]);
+
+  const addConversationRef = useCallback((ref: ChatConversationRef) => {
+    setConversationRefs((prev) => withConversationRef(prev, ref));
+  }, []);
 
   // Determine mid-run steering endpoint URL (null disables steering)
   const getSteerUrl = (): string | null => {
@@ -465,42 +544,45 @@ export function useChat({
   }, []);
 
   /**
-   * Ensure a conversation exists. Uses a mutex so concurrent callers
-   * (e.g. multiple files selected at once) share a single session creation.
+   * Ensure a conversation exists. Concurrent callers of the same chat (e.g.
+   * multiple files selected at once) share a single session creation, and a
+   * creation answered after a new chat was started resolves to `null` without
+   * touching the chat that replaced it.
    */
   const ensureConversation = async (slug: string | null | undefined): Promise<string | null> => {
     // Fast path: already have one
     if (conversationIdRef.current) return conversationIdRef.current;
 
     // If another call is already creating, wait for it
-    if (creatingSessionRef.current) return creatingSessionRef.current;
+    if (sessionGate.pending) return sessionGate.pending;
 
     const sessionsUrl = getSessionsUrl();
     if (!sessionsUrl) return null;
 
-    const promise = (async () => {
-      try {
-        const res = await fetch(sessionsUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
-          body: JSON.stringify({ agent_slug: slug }),
-        });
-        if (!res.ok) return null;
-        const data = await res.json();
-        const convId = (data?.conversation_id as string) ?? null;
-        if (convId) {
-          updateConversationId(convId);
-        }
-        return convId;
-      } catch {
-        return null;
-      } finally {
-        creatingSessionRef.current = null;
+    return sessionGate.run(async (isCurrent) => {
+      const workspaceId = pendingWorkspaceRef.current;
+      const res = await fetch(sessionsUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+        body: JSON.stringify(workspaceId ? { agent_slug: slug, workspace_id: workspaceId } : { agent_slug: slug }),
+      });
+      if (!res.ok || !isCurrent()) return null;
+      const data = await res.json();
+      // The user started another chat meanwhile: this conversation is not
+      // its, and neither is the workspace or the history guard to reset.
+      if (!isCurrent()) return null;
+      const convId = (data?.conversation_id as string) ?? null;
+      if (convId) {
+        // Just created: there is no history to restore. Left armed, the
+        // panel's restore would fetch it while the first turn streams and
+        // replace the answer being written with the one message persisted.
+        historyLoadedRef.current = true;
+        updateConversationId(convId);
+        pendingWorkspaceRef.current = null;
+        setPendingWorkspaceId(null);
       }
-    })();
-
-    creatingSessionRef.current = promise;
-    return promise;
+      return convId;
+    });
   };
 
   /**
@@ -741,11 +823,14 @@ export function useChat({
 
   const handleSendMessage = async () => {
     const steerText = inputValue.trim();
+    // The picks the text still holds, when the host still offers the feature.
+    const sentRefs = conversationReferencesUrl(apiBaseUrl, apiEndpoints, backendType) ? referencedConversations(conversationRefs, inputValue) : [];
     if (isLoading) {
       // Mid-run steering — text-only sends while a response is streaming.
       // Attachments keep the legacy wait behavior (the upload + message pair
-      // cannot be injected into a running loop).
-      if (steerText && attachedFiles.length === 0 && getSteerUrl() && conversationIdRef.current) {
+      // cannot be injected into a running loop), and so do references: a steer
+      // reaches the loop as text alone, and the agent would never read them.
+      if (steerText && attachedFiles.length === 0 && sentRefs.length === 0 && getSteerUrl() && conversationIdRef.current) {
         setInputValue('');
         await steerMessage(steerText);
       }
@@ -760,9 +845,11 @@ export function useChat({
       content,
       timestamp: new Date(),
       files: attachedFiles.length > 0 ? [...attachedFiles] : undefined,
+      conversationRefs: sentRefs.length > 0 ? sentRefs : undefined,
     };
     setMessages((prev) => [...prev, userMsg]);
     setInputValue('');
+    setConversationRefs([]);
     // Clear attachment chips after sending so the input returns to a clean state.
     setAttachedFiles([]);
     setIsLoading(true);
@@ -810,6 +897,23 @@ export function useChat({
       // Collect file_ids from already-uploaded files (uploaded eagerly on selection)
       const fileIds = (userMsg.files ?? []).filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
 
+      // A conversation started inside a workspace is created first, filed
+      // there: the message endpoint would create it in no workspace. Should
+      // that fail (the workspace was archived or is no longer shared), the
+      // message still goes, in a conversation of no workspace, rather than
+      // being lost.
+      if (!conversationIdRef.current && pendingWorkspaceRef.current) {
+        const generation = sessionGate.generation;
+        const created = await ensureConversation(agentSlug);
+        // A new chat replaced this one meanwhile: the send went with it, and
+        // the workspace now pending is the new chat's, not this send's.
+        if (sessionGate.generation !== generation) return;
+        if (!created) {
+          pendingWorkspaceRef.current = null;
+          setPendingWorkspaceId(null);
+        }
+      }
+
       // Step 1: Send the message (with file_ids if files were uploaded)
       // Use conversationIdRef to get the latest value (may have been set by eager upload)
       const requestBody = buildRequestBody(backendType, content, {
@@ -818,6 +922,7 @@ export function useChat({
         agentSlug,
         pageContext: pageContextRef.current,
         supportsToolApproval: getApproveUrl() !== null,
+        referencedConversationIds: sentRefs.map((r) => r.conversationId),
       });
       if (fileIds.length > 0) {
         (requestBody as Record<string, unknown>).file_ids = fileIds;
@@ -1065,7 +1170,12 @@ export function useChat({
     }
   };
 
-  const handleNewChat = () => {
+  const handleNewChat = (workspaceId?: string) => {
+    // A string only: the header and the sidebar pass this as a click handler,
+    // and the click event must never reach the session request.
+    const workspace = typeof workspaceId === 'string' && workspaceId ? workspaceId : null;
+    pendingWorkspaceRef.current = workspace;
+    setPendingWorkspaceId(workspace);
     // Nothing of the abandoned stream may land in the fresh chat.
     streamDeltasRef.current?.close();
     streamDeltasRef.current = null;
@@ -1074,9 +1184,11 @@ export function useChat({
     // Cancel any in-flight file uploads
     uploadAbortRef.current.abort();
     uploadAbortRef.current = new AbortController();
-    creatingSessionRef.current = null;
+    // A session still being created was the abandoned chat's.
+    sessionGate.abandon();
     setMessages([]);
     setInputValue('');
+    setConversationRefs([]);
     setAttachedFiles([]);
     setIsLoading(false);
     setAgentStatus(null);
@@ -1112,8 +1224,10 @@ export function useChat({
     if (!isLegacy) {
       updateConversationId(id);
       // `handleNewChat` blanked the composer; bring back this conversation's
-      // own unsent draft, if any.
-      setInputValue(loadDraft(id));
+      // own unsent draft, if any, with its references.
+      const draft = loadDraftState(id);
+      setInputValue(draft.text);
+      setConversationRefs(draft.refs);
     }
   };
 
@@ -1143,9 +1257,12 @@ export function useChat({
   // an empty value removes the entry, so sending (which blanks the composer)
   // also clears the draft — no explicit cleanup needed at the send sites.
   useEffect(() => {
-    const id = window.setTimeout(() => persistDraft(conversationId, inputValue), DRAFT_PERSIST_DELAY_MS);
+    const id = window.setTimeout(() => {
+      persistDraft(conversationId, inputValue);
+      persistDraftRefs(conversationId, conversationRefs);
+    }, DRAFT_PERSIST_DELAY_MS);
     return () => window.clearTimeout(id);
-  }, [inputValue, conversationId]);
+  }, [inputValue, conversationId, conversationRefs]);
 
   // A panel closed mid-stream has no state left for the stream's frames to update.
   useEffect(() => () => streamDeltasRef.current?.close(), []);
@@ -1153,12 +1270,13 @@ export function useChat({
   // Flush the pending draft on unmount. Hosts unmount the panel the instant it
   // is closed, which would otherwise drop anything typed inside the debounce
   // window — exactly the keystrokes the draft exists to protect.
-  const draftFlushRef = useRef({ conversationId, inputValue });
-  draftFlushRef.current = { conversationId, inputValue };
+  const draftFlushRef = useRef({ conversationId, inputValue, conversationRefs });
+  draftFlushRef.current = { conversationId, inputValue, conversationRefs };
   useEffect(
     () => () => {
-      const { conversationId: id, inputValue: value } = draftFlushRef.current;
+      const { conversationId: id, inputValue: value, conversationRefs: refs } = draftFlushRef.current;
       persistDraft(id, value);
+      persistDraftRefs(id, refs);
     },
     [],
   );
@@ -1324,7 +1442,10 @@ export function useChat({
     handlePaste,
     handleSendMessage,
     handleNewChat,
+    pendingWorkspaceId,
     handleStopGenerating,
+    conversationRefs,
+    addConversationRef,
     setAttachedFiles,
     setMessages,
     setContextUsage,
