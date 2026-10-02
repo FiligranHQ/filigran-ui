@@ -151,10 +151,15 @@ function isImageAttachment(att: ChatAttachment): boolean {
  * the focus, and always where nothing hovers (a touch screen). A keyboard user
  * tabbing onto one sees it through `focus-visible` / `focus-within`.
  */
-const REVEAL_ON_HOVER =
-  'opacity-0 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
+const SHOWN_ON_HOVER = 'group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
 const FOOTER_BUTTON = 'p-1 rounded-lg transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
-const REVEALED_BUTTON = `${REVEAL_ON_HOVER} hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]`;
+const ACCENT_ON_HOVER = 'hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]';
+const REVEALED_BUTTON = `opacity-0 ${SHOWN_ON_HOVER} ${ACCENT_ON_HOVER}`;
+/**
+ * The reasoning details button stays dimly in view, so a turn that reasoned is
+ * noticed, and reads like its neighbours once they show.
+ */
+const DIMMED_BUTTON = `opacity-50 ${SHOWN_ON_HOVER} ${ACCENT_ON_HOVER}`;
 /** A control in its "on" state (the given rating, the message being read) stays in view. */
 const ACTIVE_BUTTON = 'opacity-100 text-[var(--chat-accent)]';
 
@@ -632,7 +637,7 @@ const MessageRow = memo(
                         // on hover) so the user notices the warning — mirrors the
                         // XTM One web chat affordance.
                         'opacity-100 text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
-                      : 'opacity-50 hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]'
+                      : DIMMED_BUTTON
                   }`}
                   aria-label={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}
                   aria-haspopup="dialog"

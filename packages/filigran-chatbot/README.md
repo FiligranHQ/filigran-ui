@@ -900,6 +900,15 @@ import '@filigran/chatbot/styles.css';
 
 The component uses Tailwind CSS classes and CSS custom properties for theming. The accent color is applied via `--chat-accent` CSS variable.
 
+The stylesheet is isolated from the host page in both directions. Every utility
+is scoped to the panel (`.filigran-chatbot` and its descendants) and declared
+outside any cascade layer, and the theme variables (`--radius-*`, `--spacing`,
+...) are declared on the panel root. The host's own utilities and `:root`
+tokens - a Tailwind build shipped without layers, such as the Filigran design
+system's - therefore never restyle the panel, and the panel's utilities never
+style the host page. Panel overlays (menus, dialogs, tooltips) render inside
+the panel root, so they keep its styles.
+
 ### Composer toolbar
 
 Two toolbar items are **data-driven rather than mode-driven**: they appear only

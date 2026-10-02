@@ -9,6 +9,7 @@ import dts from 'rollup-plugin-dts';
 import { typescriptPaths } from 'rollup-plugin-typescript-paths';
 import serve from 'rollup-plugin-serve';
 import livereload from 'rollup-plugin-livereload';
+import isolateFromHost from './postcss/isolate-from-host.js';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -35,7 +36,7 @@ const indexConfig = {
     json(),
     typescript(typescriptOptions),
     postcss({
-      plugins: [tailwindcssPostcss()],
+      plugins: [tailwindcssPostcss(), isolateFromHost()],
       extract: 'styles.css',
       modules: false,
       autoModules: false,
