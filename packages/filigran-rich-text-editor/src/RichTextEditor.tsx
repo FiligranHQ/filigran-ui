@@ -41,8 +41,7 @@ import type { Theme } from '@mui/material/styles';
 import { TaskList } from './richTextEditor/extensions/TaskList';
 import { TaskItem } from './richTextEditor/extensions/TaskListItem';
 import { Div } from './richTextEditor/extensions/Div';
-import { WordLists } from './richTextEditor/extensions/WordLists';
-import { WordImages } from './richTextEditor/extensions/WordImages';
+import { WordPaste } from './richTextEditor/extensions/WordPaste';
 
 import './styles/TiptapEditor.css';
 
@@ -278,8 +277,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       PageBreak,
       TableCellSplit,
       Div,
-      WordLists,
-      WordImages,
+      WordPaste,
     ],
     content: initialContentRef.current,
     editable: !disabled,

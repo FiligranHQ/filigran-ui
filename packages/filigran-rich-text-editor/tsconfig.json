@@ -12,6 +12,7 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "dist",
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "allowImportingTsExtensions": true
   }
 }
