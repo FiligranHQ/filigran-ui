@@ -1,6 +1,3 @@
-import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
-
 interface RtfPicture {
   mimeType: string | null;
   hex: string[];
@@ -77,7 +74,7 @@ const hexToBase64 = (hex: string): string => {
   return btoa(binary);
 };
 
-const embedWordImages = (html: string, rtf: string): string => {
+export const embedWordImages = (html: string, rtf: string): string => {
   if (!rtf || !HTML_LOCAL_IMAGE_PATTERN.test(html)) return html;
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const images = Array.from(doc.querySelectorAll('img')).filter((image) =>
@@ -91,33 +88,3 @@ const embedWordImages = (html: string, rtf: string): string => {
   });
   return doc.documentElement.outerHTML;
 };
-
-export const WordImages = Extension.create({
-  name: 'wordImages',
-
-  addProseMirrorPlugins() {
-    let pendingRtf = '';
-    return [
-      new Plugin({
-        key: new PluginKey('wordImages'),
-        props: {
-          handleDOMEvents: {
-            paste: (_view, event) => {
-              pendingRtf = event.clipboardData?.getData('text/rtf') ?? '';
-              return false;
-            },
-            drop: (_view, event) => {
-              pendingRtf = event.dataTransfer?.getData('text/rtf') ?? '';
-              return false;
-            },
-          },
-          transformPastedHTML: (html) => {
-            const rtf = pendingRtf;
-            pendingRtf = '';
-            return embedWordImages(html, rtf);
-          },
-        },
-      }),
-    ];
-  },
-});

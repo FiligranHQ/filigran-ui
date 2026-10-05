@@ -47,9 +47,11 @@ jobs:
     needs: install
     strategy:
       matrix:
-        package: [filigran-chatbot, filigran-icon, filigran-ui]
+        package: [filigran-chatbot, filigran-icon, filigran-rich-text-editor, filigran-ui]
         include:
           - package: filigran-chatbot
+            test: true
+          - package: filigran-rich-text-editor
             test: true
       fail-fast: false
     steps:

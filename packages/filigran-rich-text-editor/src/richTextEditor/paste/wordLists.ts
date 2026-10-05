@@ -1,6 +1,3 @@
-import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
-
 type ListElement = HTMLOListElement | HTMLUListElement;
 
 interface OpenList {
@@ -110,7 +107,7 @@ const createList = (doc: Document, marker: string, format: string | undefined): 
   return list;
 };
 
-const convertWordLists = (html: string): string => {
+export const convertWordLists = (html: string): string => {
   if (!MSO_LIST_PATTERN.test(html)) return html;
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const formats = parseNumberFormats(doc);
@@ -145,18 +142,3 @@ const convertWordLists = (html: string): string => {
   });
   return doc.documentElement.outerHTML;
 };
-
-export const WordLists = Extension.create({
-  name: 'wordLists',
-
-  addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey('wordLists'),
-        props: {
-          transformPastedHTML: convertWordLists,
-        },
-      }),
-    ];
-  },
-});
