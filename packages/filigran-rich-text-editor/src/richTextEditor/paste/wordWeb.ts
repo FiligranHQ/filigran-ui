@@ -6,6 +6,7 @@ interface ListEntry {
   listId: string;
   ordered: boolean;
   start: string | null;
+  type: string | null;
 }
 
 interface OpenList {
@@ -23,6 +24,14 @@ const TRANSPARENT_COLORS = ['transparent', 'rgba(0, 0, 0, 0)'];
 const SPAN_PROPERTIES = ['color', 'background-color', 'font-weight', 'font-style', 'text-decoration-line', 'vertical-align', 'font-size'];
 const CELL_PROPERTY_PATTERN = /^(?:width|background-color|border-(?:top|right|bottom|left)-(?:width|style|color))$/;
 const BLOCK_TAGS = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
+const OL_TYPE_BY_LIST_STYLE: Record<string, string> = {
+  'lower-alpha': 'a',
+  'lower-latin': 'a',
+  'upper-alpha': 'A',
+  'upper-latin': 'A',
+  'lower-roman': 'i',
+  'upper-roman': 'I',
+};
 
 const isAllowedProperty = (element: HTMLElement, property: string): boolean => {
   if (element.tagName === 'SPAN') return SPAN_PROPERTIES.includes(property);
@@ -76,6 +85,7 @@ const toListEntries = (list: ListElement): ListEntry[] => Array.from(list.childr
     listId: item.getAttribute('data-listid') ?? '',
     ordered: list.tagName === 'OL',
     start: list.getAttribute('start'),
+    type: list.tagName === 'OL' ? list.getAttribute('type') ?? OL_TYPE_BY_LIST_STYLE[list.style.listStyleType] ?? null : null,
   }));
 
 const rebuildListRun = (doc: Document, lists: ListElement[]) => {
@@ -89,6 +99,7 @@ const rebuildListRun = (doc: Document, lists: ListElement[]) => {
     if (!current || current.level < entry.level) {
       const element = doc.createElement(entry.ordered ? 'ol' : 'ul');
       if (entry.ordered && entry.start && entry.start !== '1') element.setAttribute('start', entry.start);
+      if (entry.type) element.setAttribute('type', entry.type);
       const parentItem = current?.element.lastElementChild;
       if (parentItem) {
         parentItem.appendChild(element);

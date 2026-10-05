@@ -48,7 +48,8 @@ const extractRtfPictures = (rtf: string): RtfPicture[] => {
         group.picture = { mimeType: null, hex: [] };
         if (!group.alternative) pictures.push(group.picture);
       } else if (word === 'bin') {
-        index += parseInt(parameter ?? '0', 10);
+        const length = parseInt(parameter ?? '0', 10);
+        if (length > 0) index += length;
       } else if (group.picture && MIME_TYPE_BY_BLIP[word]) {
         group.picture.mimeType = MIME_TYPE_BY_BLIP[word];
       }
