@@ -81,3 +81,13 @@ test('Word for the web: rebuilt ordered lists keep their numbering style', () =>
   assert.equal(fromAttribute?.getAttribute('type'), 'a');
   assert.equal(fromStyle?.getAttribute('type'), 'I');
 });
+
+test('Word desktop: binary RTF picture payloads are embedded, and payloads altered on the clipboard are left out', () => {
+  const html = '<p class=MsoNormal><img src="file:///C:/Temp/clip_image001.png"></p>';
+  const header = Buffer.from('89504e470d0a1a0a', 'hex');
+  const binary = String.fromCharCode(...header);
+  const embedded = parseHtml(transformWordHtml(html, `{\\rtf1{\\pict\\pngblip\\bin${header.length} ${binary}}}`)).querySelector('img');
+  assert.equal(embedded?.getAttribute('src'), `data:image/png;base64,${header.toString('base64')}`);
+  const altered = parseHtml(transformWordHtml(html, `{\\rtf1{\\pict\\pngblip\\bin2 \u20ac\u20ac}}`)).querySelector('img');
+  assert.equal(altered?.getAttribute('src'), 'file:///C:/Temp/clip_image001.png');
+});

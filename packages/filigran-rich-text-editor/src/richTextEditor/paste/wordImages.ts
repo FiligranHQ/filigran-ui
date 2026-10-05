@@ -1,6 +1,7 @@
 interface RtfPicture {
   mimeType: string | null;
   hex: string[];
+  lossy: boolean;
 }
 
 interface RtfGroup {
@@ -19,6 +20,13 @@ const HTML_LOCAL_IMAGE_PATTERN = /src\s*=\s*["']?file:/i;
 const CONTROL_WORD_PATTERN = /\\([a-z]+)(-?\d+)? ?/iy;
 const TEXT_RUN_PATTERN = /[^\\{}]+/y;
 const BASE64_CHUNK_SIZE = 0x8000;
+const MAX_BYTE_VALUE = 0xff;
+
+const bytesToHex = (payload: string): string | null => {
+  const codes = Array.from(payload, (char) => char.charCodeAt(0));
+  if (codes.some((code) => code > MAX_BYTE_VALUE)) return null;
+  return codes.map((code) => code.toString(16).padStart(2, '0')).join('');
+};
 
 const extractRtfPictures = (rtf: string): RtfPicture[] => {
   const pictures: RtfPicture[] = [];
@@ -45,11 +53,17 @@ const extractRtfPictures = (rtf: string): RtfPicture[] => {
       if (word === 'nonshppict') {
         group.alternative = true;
       } else if (word === 'pict' && !group.insidePicture) {
-        group.picture = { mimeType: null, hex: [] };
+        group.picture = { mimeType: null, hex: [], lossy: false };
         if (!group.alternative) pictures.push(group.picture);
       } else if (word === 'bin') {
         const length = parseInt(parameter ?? '0', 10);
-        if (length > 0) index += length;
+        if (length > 0) {
+          const payload = rtf.slice(index, index + length);
+          const hex = payload.length === length ? bytesToHex(payload) : null;
+          if (group.picture && hex !== null) group.picture.hex.push(hex);
+          if (group.picture && hex === null) group.picture.lossy = true;
+          index += length;
+        }
       } else if (group.picture && MIME_TYPE_BY_BLIP[word]) {
         group.picture.mimeType = MIME_TYPE_BY_BLIP[word];
       }
@@ -83,9 +97,9 @@ export const embedWordImages = (html: string, rtf: string): string => {
   const pictures = extractRtfPictures(rtf);
   if (images.length === 0 || pictures.length !== images.length) return html;
   images.forEach((image, index) => {
-    const { mimeType, hex } = pictures[index];
+    const { mimeType, hex, lossy } = pictures[index];
     const data = hex.join('');
-    if (mimeType && data) image.setAttribute('src', `data:${mimeType};base64,${hexToBase64(data)}`);
+    if (mimeType && data && !lossy) image.setAttribute('src', `data:${mimeType};base64,${hexToBase64(data)}`);
   });
   return doc.documentElement.outerHTML;
 };
