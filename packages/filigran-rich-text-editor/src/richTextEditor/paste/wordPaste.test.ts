@@ -54,3 +54,30 @@ test('Word desktop: local pictures are embedded from the RTF flavor, skipping al
   const source = parseHtml(transformWordHtml(html, rtf)).querySelector('img')?.getAttribute('src');
   assert.equal(source, `data:image/png;base64,${Buffer.from('89504e470d0a1a0a', 'hex').toString('base64')}`);
 });
+
+test('Word desktop: a marker held entirely inside a supportLists comment still sets the list type and start', () => {
+  const html = "<p class=MsoListParagraph style='mso-list:l0 level1 lfo1'><!--[if !supportLists]><span style='mso-list:Ignore'>3.<span>&nbsp;</span></span><![endif]-->Three</p>";
+  assert.equal(parseHtml(transformWordHtml(html, '')).body.innerHTML, '<ol start="3"><li><p>Three</p></li></ol>');
+});
+
+test('Word desktop: list instances sharing a definition but not an lfo stay separate lists', () => {
+  const marker = (text: string) => `<![if !supportLists]><span style='mso-list:Ignore'>${text}<span>&nbsp;</span></span><![endif]>`;
+  const item = (lfo: string, text: string, content: string) => `<p class=MsoListParagraph style='mso-list:l0 level1 ${lfo}'>${marker(text)}${content}</p>`;
+  const html = item('lfo1', '1.', 'A') + item('lfo1', '2.', 'B') + item('lfo2', '1.', 'C');
+  assert.equal(parseHtml(transformWordHtml(html, '')).body.innerHTML, '<ol><li><p>A</p></li><li><p>B</p></li></ol><ol><li><p>C</p></li></ol>');
+});
+
+test('Word desktop: a negative RTF binary length does not stall the picture scan', () => {
+  const html = '<p class=MsoNormal><img src="file:///C:/Temp/clip_image001.png"></p>';
+  const source = parseHtml(transformWordHtml(html, '{\\rtf1{\\pict\\pngblip\\bin-7 89504e47}}')).querySelector('img')?.getAttribute('src');
+  assert.equal(source, `data:image/png;base64,${Buffer.from('89504e47', 'hex').toString('base64')}`);
+});
+
+test('Word for the web: rebuilt ordered lists keep their numbering style', () => {
+  const list = (attributes: string) => `<div class="ListContainerWrapper"><ol class="NumberListStyle1" role="list" ${attributes}>`
+    + '<li data-aria-level="1" data-listid="5" class="OutlineElement"><p class="Paragraph"><span class="TextRun">Item</span></p></li></ol></div>';
+  const fromAttribute = parseHtml(transformWordHtml(list('type="a"'), '')).querySelector('ol');
+  const fromStyle = parseHtml(transformWordHtml(list('style="list-style-type: upper-roman"'), '')).querySelector('ol');
+  assert.equal(fromAttribute?.getAttribute('type'), 'a');
+  assert.equal(fromStyle?.getAttribute('type'), 'I');
+});

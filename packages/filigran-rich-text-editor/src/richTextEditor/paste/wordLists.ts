@@ -2,16 +2,17 @@ type ListElement = HTMLOListElement | HTMLUListElement;
 
 interface OpenList {
   element: ListElement;
-  listId: string;
+  instance: string;
   level: number;
 }
 
-const MSO_LIST_PATTERN = /mso-list:\s*(l\d+)\s+level(\d+)/i;
+const MSO_LIST_PATTERN = /mso-list:\s*(l\d+)\s+level(\d+)(?:\s+(lfo\d+))?/i;
 const MSO_LIST_IGNORE_PATTERN = /mso-list:\s*ignore/i;
 const LIST_LEVEL_RULE_PATTERN = /@list\s+(l\d+):level(\d+)\s*\{([^}]*)\}/gi;
 const NUMBER_FORMAT_PATTERN = /mso-level-number-format:\s*([\w-]+)/i;
 const SUPPORT_LISTS_START_PATTERN = /^\[if !supportLists\]$/i;
 const SUPPORT_LISTS_END_PATTERN = /^\[endif\]$/i;
+const COMMENTED_MARKER_PATTERN = /^\[if !supportLists\]>([\s\S]*)<!\[endif\]$/i;
 const LETTER_MARKER_PATTERN = /^\(?[a-z]+[.)]$/i;
 const LAST_COUNTER_PATTERN = /([0-9]+|[a-z]+)[.)]?$/i;
 const ROMAN_PATTERN = /^[ivxlcdm]+$/i;
@@ -49,6 +50,13 @@ const extractMarker = (paragraph: HTMLParagraphElement): string => {
   let start: Comment | null = null;
   for (let node = walker.nextNode() as Comment | null; node; node = walker.nextNode() as Comment | null) {
     const data = node.data.trim();
+    const commented = start ? null : COMMENTED_MARKER_PATTERN.exec(data);
+    if (commented) {
+      const holder = doc.createElement('div');
+      holder.innerHTML = commented[1];
+      node.remove();
+      return (holder.textContent ?? '').replace(/\s/g, '');
+    }
     if (!start && SUPPORT_LISTS_START_PATTERN.test(data)) {
       start = node;
     } else if (start && SUPPORT_LISTS_END_PATTERN.test(data)) {
@@ -115,13 +123,14 @@ export const convertWordLists = (html: string): string => {
   const startsRun = paragraphs.map((paragraph) => !isListParagraph(paragraph.previousElementSibling));
   let stack: OpenList[] = [];
   paragraphs.forEach((paragraph, index) => {
-    const [, listId, levelText] = MSO_LIST_PATTERN.exec(paragraph.getAttribute('style') ?? '') ?? [];
+    const [, listId, levelText, lfo = ''] = MSO_LIST_PATTERN.exec(paragraph.getAttribute('style') ?? '') ?? [];
+    const instance = `${listId}:${lfo}`;
     const level = parseInt(levelText, 10);
     const marker = extractMarker(paragraph);
     if (startsRun[index]) stack = [];
     while (stack.length > 0 && stack[stack.length - 1].level > level) stack.pop();
     const top = stack[stack.length - 1];
-    if (top && top.level === level && top.listId !== listId) stack.pop();
+    if (top && top.level === level && top.instance !== instance) stack.pop();
     let current = stack[stack.length - 1];
     if (!current || current.level < level) {
       const element = createList(doc, marker, formats.get(`${listId}:${level}`));
@@ -131,7 +140,7 @@ export const convertWordLists = (html: string): string => {
       } else {
         paragraph.before(element);
       }
-      current = { element, listId, level };
+      current = { element, instance, level };
       stack.push(current);
     }
     paragraph.removeAttribute('style');

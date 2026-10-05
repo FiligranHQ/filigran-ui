@@ -3,7 +3,7 @@ import type { Attribute } from '@tiptap/core';
 const BORDER_SIDES = ['top', 'right', 'bottom', 'left'] as const;
 const INVISIBLE_BORDER_STYLES = ['none', 'hidden'];
 const LIGHT_BACKGROUND_MIN_LUMINANCE = 0.179;
-const INVALID_COLOR_SENTINEL = '#010203';
+const COLOR_SENTINELS = ['#000000', '#ffffff'];
 
 let colorContext: CanvasRenderingContext2D | null | undefined;
 
@@ -18,11 +18,14 @@ const parseBorderSide = (element: HTMLElement, side: typeof BORDER_SIDES[number]
 
 const toRgba = (color: string): number[] | null => {
   colorContext ??= document.createElement('canvas').getContext('2d');
-  if (!colorContext) return null;
-  colorContext.fillStyle = INVALID_COLOR_SENTINEL;
-  colorContext.fillStyle = color;
-  const normalized = String(colorContext.fillStyle);
-  if (normalized === INVALID_COLOR_SENTINEL) return null;
+  const context = colorContext;
+  if (!context) return null;
+  const [normalized, other] = COLOR_SENTINELS.map((sentinel) => {
+    context.fillStyle = sentinel;
+    context.fillStyle = color;
+    return String(context.fillStyle);
+  });
+  if (normalized !== other) return null;
   if (normalized.startsWith('#')) {
     return [1, 3, 5].map((index) => parseInt(normalized.slice(index, index + 2), 16)).concat(1);
   }
