@@ -21,7 +21,7 @@ const REMOVED_SELECTOR = '.WACAltTextDescribedBy, .EOP';
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6';
 const AUTOMATIC_COLORS = ['rgb(0, 0, 0)', 'windowtext', 'black', '#000000', '#000'];
 const TRANSPARENT_COLORS = ['transparent', 'rgba(0, 0, 0, 0)'];
-const SPAN_PROPERTIES = ['color', 'background-color', 'font-weight', 'font-style', 'text-decoration-line', 'vertical-align', 'font-size'];
+const SPAN_PROPERTIES = ['color', 'background-color', 'font-weight', 'font-style', 'text-decoration', 'text-decoration-line', 'vertical-align', 'font-size'];
 const CELL_PROPERTY_PATTERN = /^(?:width|background-color|border-(?:top|right|bottom|left)-(?:width|style|color))$/;
 const BLOCK_TAGS = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
 const OL_TYPE_BY_LIST_STYLE: Record<string, string> = {
@@ -55,7 +55,7 @@ const isMeaningfulValue = (element: HTMLElement, property: string): boolean => {
 const cleanStyle = (element: HTMLElement) => {
   const declarations = Array.from(element.style)
     .filter((property) => isAllowedProperty(element, property) && isMeaningfulValue(element, property))
-    .map((property) => `${property}: ${element.style.getPropertyValue(property)}`);
+    .map((property) => `${property === 'text-decoration-line' ? 'text-decoration' : property}: ${element.style.getPropertyValue(property)}`);
   if (declarations.length > 0) {
     element.setAttribute('style', declarations.join('; '));
   } else {

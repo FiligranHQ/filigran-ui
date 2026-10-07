@@ -47,25 +47,42 @@ const backgroundTone = (color: string): 'light' | 'dark' | null => {
   return relativeLuminance(rgba) > LIGHT_BACKGROUND_MIN_LUMINANCE ? 'light' : 'dark';
 };
 
+const toBackgroundColor = (value: string | null, doc: Document): string | null => {
+  if (!value) return null;
+  const probe = doc.createElement('span');
+  probe.style.backgroundColor = value;
+  return probe.style.backgroundColor || null;
+};
+
+const toBorder = (element: HTMLElement): string | null => {
+  const declarations = BORDER_SIDES.map((side) => parseBorderSide(element, side)).filter(Boolean);
+  return declarations.length > 0 ? declarations.join('; ') : null;
+};
+
 export const tableCellStyleAttributes: Record<string, Attribute> = {
   backgroundColor: {
     default: null,
-    parseHTML: (element: HTMLElement) => element.style.backgroundColor || element.getAttribute('bgcolor') || null,
+    parseHTML: (element: HTMLElement) =>
+      toBackgroundColor(element.style.backgroundColor || element.getAttribute('bgcolor'), element.ownerDocument),
     renderHTML: (attributes) => {
-      if (!attributes.backgroundColor) return {};
-      const tone = backgroundTone(attributes.backgroundColor);
+      const backgroundColor = toBackgroundColor(attributes.backgroundColor, document);
+      if (!backgroundColor) return {};
+      const tone = backgroundTone(backgroundColor);
       return {
-        style: `background-color: ${attributes.backgroundColor}`,
+        style: `background-color: ${backgroundColor}`,
         ...(tone ? { 'data-cell-background': tone } : {}),
       };
     },
   },
   border: {
     default: null,
-    parseHTML: (element: HTMLElement) => {
-      const declarations = BORDER_SIDES.map((side) => parseBorderSide(element, side)).filter(Boolean);
-      return declarations.length > 0 ? declarations.join('; ') : null;
+    parseHTML: (element: HTMLElement) => toBorder(element),
+    renderHTML: (attributes) => {
+      if (!attributes.border) return {};
+      const probe = document.createElement('span');
+      probe.setAttribute('style', attributes.border);
+      const border = toBorder(probe);
+      return border ? { style: border } : {};
     },
-    renderHTML: (attributes) => (attributes.border ? { style: attributes.border } : {}),
   },
 };

@@ -82,12 +82,42 @@ test('Word for the web: rebuilt ordered lists keep their numbering style', () =>
   assert.equal(fromStyle?.getAttribute('type'), 'I');
 });
 
-test('Word desktop: binary RTF picture payloads are embedded, and payloads altered on the clipboard are left out', () => {
+test('Word desktop: binary RTF picture payloads are embedded, and pictures altered on the clipboard are dropped', () => {
   const html = '<p class=MsoNormal><img src="file:///C:/Temp/clip_image001.png"></p>';
   const header = Buffer.from('89504e470d0a1a0a', 'hex');
   const binary = String.fromCharCode(...header);
   const embedded = parseHtml(transformWordHtml(html, `{\\rtf1{\\pict\\pngblip\\bin${header.length} ${binary}}}`)).querySelector('img');
   assert.equal(embedded?.getAttribute('src'), `data:image/png;base64,${header.toString('base64')}`);
   const altered = parseHtml(transformWordHtml(html, `{\\rtf1{\\pict\\pngblip\\bin2 \u20ac\u20ac}}`)).querySelector('img');
-  assert.equal(altered?.getAttribute('src'), 'file:///C:/Temp/clip_image001.png');
+  assert.equal(altered, null);
+});
+
+const png = (hex: string) => `data:image/png;base64,${Buffer.from(hex, 'hex').toString('base64')}`;
+
+test('Word desktop: a drawn shape without a bitmap is dropped instead of receiving another picture', () => {
+  const html = `<p class=MsoNormal><img width=96 height=64 src="${png('89504e47')}"> <img width=200 height=100 src="file:///C:/Temp/clip_image002.png"></p>`;
+  const rtf = '{\\rtf1{\\*\\shppict{\\pict\\picwgoal1440\\pichgoal960\\pngblip 89504e47}}{\\nonshppict{\\pict\\wmetafile8 0100}}}';
+  const sources = Array.from(parseHtml(transformWordHtml(html, rtf)).querySelectorAll('img')).map((image) => image.getAttribute('src'));
+  assert.deepEqual(sources, [png('89504e47')]);
+});
+
+test('Word desktop: a floating picture is embedded from its shape, skipping the shape result rendering', () => {
+  const html = `<p class=MsoNormal><img width=200 height=100 src="file:///C:/Temp/clip_image001.png"> <img width=96 height=64 src="${png('89504e48')}"></p>`;
+  const rtf = '{\\rtf1{\\shp{\\*\\shpinst{\\sp{\\sn pib}{\\sv {\\pict\\picwgoal3000\\pichgoal1500\\pngblip 89504e47}}}}{\\shprslt{\\pict\\wmetafile8 0100}}}'
+    + '{\\*\\shppict{\\pict\\picwgoal1440\\pichgoal960\\pngblip 89504e48}}{\\nonshppict{\\pict\\wmetafile8 0100}}}';
+  const sources = Array.from(parseHtml(transformWordHtml(html, rtf)).querySelectorAll('img')).map((image) => image.getAttribute('src'));
+  assert.deepEqual(sources, [png('89504e47'), png('89504e48')]);
+});
+
+test('Word desktop: HTML without a local picture is returned as is, whatever the RTF', () => {
+  const html = `<p class=MsoNormal><!--[if gte vml 1]><v:imagedata src="file:///C:/Temp/clip_image001.png"/><![endif]--><img src="${png('89504e47')}"></p>`;
+  assert.equal(transformWordHtml(html, '{\\rtf1{\\pict\\pngblip 00}}'), html);
+});
+
+test('Word for the web: underline and strikethrough are kept as text-decoration', () => {
+  const html = '<div class="OutlineElement"><p class="Paragraph"><span class="TextRun" style="text-decoration: underline;">under</span>'
+    + '<span class="TextRun" style="text-decoration: line-through;">struck</span></p></div>';
+  const spans = Array.from(parseHtml(transformWordHtml(html, '')).querySelectorAll('span')).map((span) => span.getAttribute('style'));
+  assert.deepEqual(spans, ['text-decoration: underline', 'text-decoration: line-through']);
+  assert.match(wordWeb, /text-decoration: underline/);
 });
