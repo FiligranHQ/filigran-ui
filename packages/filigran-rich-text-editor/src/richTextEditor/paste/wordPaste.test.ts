@@ -121,3 +121,41 @@ test('Word for the web: underline and strikethrough are kept as text-decoration'
   assert.deepEqual(spans, ['text-decoration: underline', 'text-decoration: line-through']);
   assert.match(wordWeb, /text-decoration: underline/);
 });
+
+const wordMacFixture = readFileSync(new URL('./__fixtures__/word-mac.html', import.meta.url), 'utf8');
+const wordMac = parseHtml(transformWordHtml(wordMacFixture, ''));
+
+test('Word desktop for Mac: headings, mso-list paragraphs and table shading are kept', () => {
+  assert.equal(wordMac.querySelectorAll('h1').length, 1);
+  assert.equal(wordMac.querySelectorAll('h4').length, 1);
+  assert.equal(wordMac.querySelectorAll('p[style*="mso-list"]').length, 0);
+  assert.ok(wordMac.querySelectorAll('li').length > 0);
+  assert.ok(Array.from(wordMac.querySelectorAll('td')).some((cell) => /#A100FF/i.test(cell.getAttribute('style') ?? '')));
+});
+
+test('Word desktop for Mac: review comments are not pasted', () => {
+  assert.equal(wordMac.querySelectorAll('a[href^="#_msocom"], [style*="mso-element:comment"]').length, 0);
+});
+
+test('Word desktop for Mac: a list written directly inside a list is nested in the previous item', () => {
+  assert.equal(wordMac.querySelectorAll('ul > ul, ul > ol, ol > ul, ol > ol').length, 0);
+  assert.equal(Array.from(wordMac.querySelectorAll('li')).filter((item) => ['UL', 'OL'].includes(item.firstElementChild?.tagName ?? '')).length, 0);
+});
+
+test('Word desktop for Mac: a VML picture is embedded from its o:gfxdata', { todo: 'VML pictures are not converted' }, () => {
+  assert.match(wordMac.querySelector('img')?.getAttribute('src') ?? '', /^data:image\/png;base64,/);
+});
+
+test('Word desktop: removing review comments keeps the commented text', () => {
+  const html = "<p class=MsoNormal><span style='mso-comment-continuation:1'>Kept text</span>"
+    + "<span class=MsoCommentReference><![if !supportAnnotations]><a class=msocomanchor href=\"#_msocom_1\" name=\"_msoanchor_1\">[AB1]</a><![endif]>"
+    + "<span style='mso-special-character:comment'>&nbsp;</span></span></p>"
+    + "<div style='mso-element:comment-list'><div style='mso-element:comment'><p class=MsoCommentText>Reviewer remark</p></div></div>";
+  assert.equal(parseHtml(transformWordHtml(html, '')).body.textContent, 'Kept text');
+});
+
+test('lists written directly inside a list are nested in the previous item, or in a new item when there is none', () => {
+  const html = '<ul><ul><li>Orphan</li></ul><li>One</li><span style="mso-bookmark:OLE_LINK1"></span><ol><li>One.a</li></ol><li>Two</li></ul>';
+  assert.equal(parseHtml(transformWordHtml(html, '')).body.innerHTML,
+    '<ul><li><ul><li>Orphan</li></ul></li><li>One<ol><li>One.a</li></ol></li><span style="mso-bookmark:OLE_LINK1"></span><li>Two</li></ul>');
+});
