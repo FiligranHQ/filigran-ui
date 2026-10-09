@@ -1,6 +1,7 @@
 import { mergeAttributes } from '@tiptap/core';
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { Table as TiptapTable, TableView, updateColumns, TableOptions } from '@tiptap/extension-table';
+import { DOMSerializer, type Fragment, type Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { Table as TiptapTable, TableView, updateColumns, type TableOptions } from '@tiptap/extension-table';
+import { tableCellStyleAttributes } from './TableCellStyleAttributes.ts';
 
 /**
  * Custom TableView that re-applies percentage-based column widths stored in
@@ -40,6 +41,42 @@ class CustomTableView extends TableView {
       this.table.style.width = tableWidth;
       this.table.style.minWidth = '';
     }
+
+    const border: string | null = node.attrs.border;
+    border?.split(';').forEach((declaration) => {
+      const [property, value] = declaration.split(/:(.*)/);
+      if (property && value) this.table.style.setProperty(property.trim(), value.trim());
+    });
+  }
+}
+
+const isHeaderRow = (row: Element): boolean =>
+  row.children.length > 0 && Array.from(row.children).every((cell) => cell.tagName === 'TH');
+
+/**
+ * Moves the leading rows made only of header cells of each table into a <thead>.
+ *
+ * ProseMirror tables have no thead node and a node renders its children in a single place, so
+ * Table.renderHTML puts every row in the <tbody>. Without this, a header row loaded from a
+ * <thead> (CKEditor, Word) is saved as a body row and is no longer repeated on each PDF page.
+ */
+class TableSectionSerializer extends DOMSerializer {
+  serializeFragment(
+    fragment: Fragment,
+    options?: { document?: Document },
+    target?: HTMLElement | DocumentFragment,
+  ): HTMLElement | DocumentFragment {
+    const result = super.serializeFragment(fragment, options, target);
+    result.querySelectorAll('table > tbody').forEach((tbody) => {
+      const rows = Array.from(tbody.children);
+      // A table made only of header rows has no body to separate them from: leave it as it is.
+      const firstBodyRow = rows.findIndex((row) => !isHeaderRow(row));
+      if (firstBodyRow <= 0) return;
+      const thead = tbody.ownerDocument.createElement('thead');
+      thead.append(...rows.slice(0, firstBodyRow));
+      tbody.before(thead);
+    });
+    return result;
   }
 }
 
@@ -98,7 +135,17 @@ export const Table = TiptapTable.extend({
         },
         renderHTML: () => ({}), // handled manually in renderHTML
       },
+      border: tableCellStyleAttributes.border,
     };
+  },
+
+  onBeforeCreate() {
+    // getHTML, copy and the PDF export all serialize through the schema's cached DOMSerializer.
+    const { schema } = this.editor;
+    schema.cached.domSerializer = new TableSectionSerializer(
+      DOMSerializer.nodesFromSchema(schema),
+      DOMSerializer.marksFromSchema(schema),
+    );
   },
 
   renderHTML({ node, HTMLAttributes }: { node: ProseMirrorNode; HTMLAttributes: Record<string, unknown> }) {

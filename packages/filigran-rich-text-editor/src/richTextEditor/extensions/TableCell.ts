@@ -1,4 +1,5 @@
 import { TableCell as TiptapTableCell } from '@tiptap/extension-table';
+import { tableCellStyleAttributes } from './TableCellStyleAttributes.ts';
 
 /**
  * Extended TableCell that allows any block content including nested tables.
@@ -24,6 +25,7 @@ export const NestedTableCell = TiptapTableCell.extend({
           };
         },
       },
+      ...tableCellStyleAttributes,
     };
   },
 });

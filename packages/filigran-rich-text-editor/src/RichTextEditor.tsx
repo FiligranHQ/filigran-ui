@@ -1,22 +1,6 @@
 import { Editor, EditorContent, useEditor } from '@tiptap/react';
 import { TextSelection, NodeSelection } from '@tiptap/pm/state';
-import StarterKit from '@tiptap/starter-kit';
-import { ImageWithOptions } from './richTextEditor/extensions/ImageWithOptions';
-import Subscript from '@tiptap/extension-subscript';
-import Superscript from '@tiptap/extension-superscript';
-import TextAlign from '@tiptap/extension-text-align';
-import { Highlight } from './richTextEditor/extensions/Highlight';
-import { TextStyle } from './richTextEditor/extensions/TextStyle';
-import Color from '@tiptap/extension-color';
-import { FontFamily } from '@tiptap/extension-text-style/font-family';
-import { BackgroundColor } from '@tiptap/extension-text-style/background-color';
-import Typography from '@tiptap/extension-typography';
-import Mention from '@tiptap/extension-mention';
-import { TableRow } from '@tiptap/extension-table';
-import { Table } from './richTextEditor/extensions/Table';
-import { NestedTableCell } from './richTextEditor/extensions/TableCell';
-import { NestedTableHeader } from './richTextEditor/extensions/TableHeader';
-import Placeholder from '@tiptap/extension-placeholder';
+import { createEditorExtensions } from './richTextEditor/extensions/editorExtensions';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -33,14 +17,7 @@ import {
 import { EditOutlined } from '@mui/icons-material';
 import { TiptapEditorToolbar } from './richTextEditor/TiptapEditorToolbar';
 import { TableContextMenu } from './richTextEditor/TableContextMenu';
-import { PageBreak } from './richTextEditor/extensions/PageBreak';
-import { TableCellSplit } from './richTextEditor/extensions/TableCellSplit';
-import { FontSize } from './richTextEditor/extensions/FontSize';
-import { Paragraph } from './richTextEditor/extensions/Paragraph';
 import type { Theme } from '@mui/material/styles';
-import { TaskList } from './richTextEditor/extensions/TaskList';
-import { TaskItem } from './richTextEditor/extensions/TaskListItem';
-import { Div } from './richTextEditor/extensions/Div';
 
 import './styles/TiptapEditor.css';
 
@@ -51,6 +28,9 @@ declare module '@mui/material/styles' {
 }
 
 export const TIPTAP_EDITOR_SELECTOR = '.tiptap-editor-content.ProseMirror';
+
+const hasTextContent = (html: string): boolean =>
+  html !== '' && (new DOMParser().parseFromString(html, 'text/html').body.textContent ?? '').trim() !== '';
 
 export interface RichTextEditorAdapter {
   /** Returns the current HTML content */
@@ -95,7 +75,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   className,
 }) => {
   const theme = useTheme<Theme>();
-  const isDark = theme.palette?.mode === 'dark';
   const initialContentRef = useRef(data);
   const onChangeRef = useRef(onChange);
   const onTextSelectionRef = useRef(onTextSelection);
@@ -214,67 +193,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        paragraph: false,
-        link: {
-          autolink: true,
-          linkOnPaste: true,
-          openOnClick: false,
-          HTMLAttributes: {
-            style: `color: ${isDark ? '#00b1ff' : '#0066cc'}`,
-            target: '_blank',
-            rel: 'noopener noreferrer',
-          },
-        },
-      }),
-      ImageWithOptions.configure({
-        inline: false,
-        allowBase64: true,
-        resize: {
-          enabled: true,
-          directions: ['bottom-right', 'bottom-left', 'top-right', 'top-left'],
-          minWidth: 8,
-          minHeight: 8,
-          alwaysPreserveAspectRatio: true,
-        },
-      }),
-      Subscript,
-      Superscript,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Paragraph,
-      Highlight,
-      TextStyle,
-      Color,
-      BackgroundColor,
-      FontFamily,
-      FontSize,
-      Typography,
-      Mention.configure({
-        HTMLAttributes: {
-          class: 'mention',
-        },
-        suggestion: {
-          char: '@',
-          allowSpaces: false,
-          items: async () => [],
-        },
-      }),
-      TaskList,
-      TaskItem.configure({
-        nested: true,
-        HTMLAttributes: { class: 'tiptap-task-item' },
-      }),
-      Table.configure({ resizable: true }),
-      TableRow,
-      NestedTableHeader,
-      NestedTableCell,
-      Placeholder.configure({ placeholder }),
-      PageBreak,
-      TableCellSplit,
-      Div,
-    ],
+    extensions: createEditorExtensions({ placeholder }),
     content: initialContentRef.current,
     editable: !disabled,
     editorProps: {
@@ -284,9 +203,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         ...(id ? { 'data-editor-id': id } : {}),
       },
       handlePaste: (_view, event) => {
-        const items = event.clipboardData?.items;
-        if (!items) return false;
-        for (const item of Array.from(items)) {
+        const clipboardData = event.clipboardData;
+        if (!clipboardData || hasTextContent(clipboardData.getData('text/html'))) return false;
+        for (const item of Array.from(clipboardData.items)) {
           if (item.type.startsWith('image/')) {
             const file = item.getAsFile();
             if (file) {
