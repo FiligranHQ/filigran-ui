@@ -26,6 +26,8 @@ interface ChatThinkingProps {
   onPlayWaitingGame?: () => void;
   /** Where the XTM One arcade is played, opened in a new tab. */
   waitingGameUrl?: string | null;
+  /** The thread's follower: keeps its end in view while the reader is there. */
+  keepEndInView: () => void;
 }
 
 type IconComponent = (props: IconProps) => React.JSX.Element;
@@ -294,7 +296,15 @@ function useSustained(active: boolean, delayMs: number, key = 0): boolean {
   return active && firedKey === key;
 }
 
-export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true, onPlayWaitingGame, waitingGameUrl }: ChatThinkingProps) => {
+export const ChatThinking = ({
+  agentStatus,
+  logoIcon,
+  t,
+  miniGameEnabled = true,
+  onPlayWaitingGame,
+  waitingGameUrl,
+  keepEndInView,
+}: ChatThinkingProps) => {
   const { label, StatusIcon, showDots } = resolveStatusVisual(agentStatus, t);
   const thinkingContent = agentStatus?.thinkingContent;
 
@@ -357,7 +367,7 @@ export const ChatThinking = ({ agentStatus, logoIcon, t, miniGameEnabled = true,
         </div>
       </div>
       {showWaiting ? (
-        <ChatWaitingPanel t={t} enabled={miniGameEnabled} onPlay={onPlayWaitingGame} playUrl={waitingGameUrl} />
+        <ChatWaitingPanel t={t} enabled={miniGameEnabled} onPlay={onPlayWaitingGame} playUrl={waitingGameUrl} keepEndInView={keepEndInView} />
       ) : showReasoning ? (
         <ThinkingTextBubble text={reasoningText} />
       ) : null}

@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git+https://github.com/FiligranHQ/filigran-ui.git"
   },
-  "version": "3.12.0",
+  "version": "3.12.2",
   "type": "module",
   "exports": {
     ".": {
@@ -28,7 +28,7 @@
     "lint-fix": "eslint --fix \"src/**/*.ts*\"",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
-    "test": "node --test \"src/**/*.test.ts\"",
+    "test": "node --test \"src/**/*.test.ts\" \"postcss/**/*.test.js\"",
     "prepack": "yarn build"
   },
   "dependencies": {

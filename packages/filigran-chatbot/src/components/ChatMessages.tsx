@@ -13,7 +13,16 @@ import { useSpeechReader } from '../hooks/useSpeechReader';
 import { answerMarkdownSources, splitFileMarkers, stripFileMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
 import { formatMessageTime } from '../utils/messageTime';
-import { createScrollFollower } from '../utils/scrollFollow';
+import {
+  createScrollFollower,
+  innerBoxScrollsUp,
+  keyScrollsUp,
+  nextTouchAnchor,
+  pressTakesScrollbar,
+  singleTouchY,
+  swipeScrollsUp,
+  wheelScrollsUp,
+} from '../utils/scrollFollow';
 import { hasSpeakableWords } from '../utils/speech';
 import {
   AlertTriangleIcon,
@@ -47,6 +56,21 @@ const RENDER_WINDOW_STEP = 50;
 
 /** How long the copy affordance stays in its confirmed state. */
 const COPY_FEEDBACK_DELAY = 2000;
+
+const parentOf = (node: Element) => node.parentElement;
+const overflowYOf = (node: Element) => getComputedStyle(node).overflowY;
+
+/** Arrows and Page Up move the caret of a field (the feedback comment), not the thread. */
+function isTypingTarget(target: EventTarget): boolean {
+  return target instanceof HTMLElement && (target.isContentEditable || !!target.closest('input, textarea, select'));
+}
+
+const CONTROLS = 'a[href], button, summary, label, input, textarea, select, [role="button"], [role="link"]';
+
+/** A link, a button or a field: a middle click opens it, Shift+Space presses it. */
+function isControl(target: EventTarget): boolean {
+  return target instanceof Element && !!target.closest(CONTROLS);
+}
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
@@ -143,10 +167,15 @@ function isImageAttachment(att: ChatAttachment): boolean {
  * the focus, and always where nothing hovers (a touch screen). A keyboard user
  * tabbing onto one sees it through `focus-visible` / `focus-within`.
  */
-const REVEAL_ON_HOVER =
-  'opacity-0 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
+const SHOWN_ON_HOVER = 'group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
 const FOOTER_BUTTON = 'p-1 rounded-lg transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
-const REVEALED_BUTTON = `${REVEAL_ON_HOVER} hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]`;
+const ACCENT_ON_HOVER = 'hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]';
+const REVEALED_BUTTON = `opacity-0 ${SHOWN_ON_HOVER} ${ACCENT_ON_HOVER}`;
+/**
+ * The reasoning details button stays dimly in view, so a turn that reasoned is
+ * noticed, and reads like its neighbours once they show.
+ */
+const DIMMED_BUTTON = `opacity-50 ${SHOWN_ON_HOVER} ${ACCENT_ON_HOVER}`;
 /** A control in its "on" state (the given rating, the message being read) stays in view. */
 const ACTIVE_BUTTON = 'opacity-100 text-[var(--chat-accent)]';
 
@@ -664,7 +693,7 @@ const MessageRow = memo(
                         // on hover) so the user notices the warning — mirrors the
                         // XTM One web chat affordance.
                         'opacity-100 text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
-                      : 'opacity-50 hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]'
+                      : DIMMED_BUTTON
                   }`}
                   aria-label={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}
                   aria-haspopup="dialog"
@@ -757,26 +786,53 @@ export const ChatMessages = ({
   // bottom (see `createScrollFollower`). It holds no React state: its timer
   // firing after unmount finds no container and does nothing.
   const [follower] = useState(() => createScrollFollower(() => scrollRef.current));
-  const touchYRef = useRef<number | null>(null);
+  // The highest point of the touch in progress: a swipe is measured from it,
+  // so a finger that turns back down counts from where it turned.
+  const touchAnchorRef = useRef<number | null>(null);
 
-  // A wheel or a swipe toward the top is the reader leaving the bottom — but
-  // only over the thread itself: an overlay portalled out of it (the image
-  // lightbox) still bubbles its events here through React, and scrolls nothing
-  // of ours. A mostly sideways wheel is a code block or a table scrolled
-  // horizontally.
-  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (event.deltaY < 0 && Math.abs(event.deltaY) > Math.abs(event.deltaX) && event.currentTarget.contains(event.target as Node)) {
-      follower.leave();
-    }
+  // A gesture toward the top is the reader leaving the bottom — but only where
+  // it moves the thread itself: an overlay portalled out of it (the image
+  // lightbox) still bubbles its events here through React and scrolls nothing
+  // of ours, and a box inside it that can still go up takes the gesture first.
+  const leaveFrom = (container: HTMLDivElement, target: EventTarget) => {
+    if (!(target instanceof Element) || !container.contains(target)) return;
+    if (innerBoxScrollsUp<Element>(target, container, parentOf, overflowYOf)) return;
+    follower.leave();
   };
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (wheelScrollsUp(event)) leaveFrom(event.currentTarget, event.target);
+  };
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented || !keyScrollsUp(event) || isTypingTarget(event.target)) return;
+    if (event.key === ' ' && isControl(event.target)) return;
+    leaveFrom(event.currentTarget, event.target);
+  };
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const container = event.currentTarget;
+    const rect = container.getBoundingClientRect();
+    const press = {
+      button: event.button,
+      onContainer: event.target === container,
+      onControl: isControl(event.target),
+      x: event.clientX - rect.left - container.clientLeft,
+      y: event.clientY - rect.top - container.clientTop,
+      clientWidth: container.clientWidth,
+      clientHeight: container.clientHeight,
+      scrollTop: container.scrollTop,
+      scrollHeight: container.scrollHeight,
+    };
+    if (pressTakesScrollbar(press)) leaveFrom(container, event.target);
+  };
+  // A second finger ends the swipe: a pinch is no scroll, and the swipe of
+  // the finger left on the screen is measured afresh from its next move.
   const handleTouchStart = (event: React.TouchEvent) => {
-    touchYRef.current = event.touches[0]?.clientY ?? null;
+    touchAnchorRef.current = singleTouchY(event.touches);
   };
   const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
-    const y = event.touches[0]?.clientY;
-    if (y === undefined) return;
-    if (touchYRef.current !== null && y > touchYRef.current && event.currentTarget.contains(event.target as Node)) follower.leave();
-    touchYRef.current = y;
+    const y = singleTouchY(event.touches);
+    const anchor = touchAnchorRef.current;
+    if (y !== null && anchor !== null && swipeScrollsUp(anchor, y)) leaveFrom(event.currentTarget, event.target);
+    touchAnchorRef.current = nextTouchAnchor(anchor, y);
   };
 
   // Switching conversation (restore / new chat) replaces the whole array, so
@@ -849,14 +905,21 @@ export const ChatMessages = ({
   // handler the controls would collect verdicts with nowhere to send them.
   const awaitingApproval = !!pendingApprovals?.length && !!onSubmitApprovalDecisions;
 
+  // A tab stop of its own, so the keys scroll the thread (and are read as
+  // leaving the bottom) without first focusing something inside it.
   return (
     <div
       ref={scrollRef}
+      role="region"
+      aria-label={t('Conversation transcript')}
+      tabIndex={0}
       onScroll={follower.onScroll}
       onWheel={handleWheel}
+      onKeyDown={handleKeyDown}
+      onPointerDown={handlePointerDown}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
-      className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable"
+      className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent-50)]"
     >
       {hasEarlierMessages && (
         <div className="flex justify-center">
@@ -889,6 +952,7 @@ export const ChatMessages = ({
                 miniGameEnabled={miniGameEnabled}
                 onPlayWaitingGame={onPlayWaitingGame}
                 waitingGameUrl={waitingGameUrl}
+                keepEndInView={follower.keepUp}
               />
             </div>
           );
@@ -933,6 +997,7 @@ export const ChatMessages = ({
           miniGameEnabled={miniGameEnabled}
           onPlayWaitingGame={onPlayWaitingGame}
           waitingGameUrl={waitingGameUrl}
+          keepEndInView={follower.keepUp}
         />
       )}
       {awaitingApproval && (
