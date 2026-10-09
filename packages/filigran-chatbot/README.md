@@ -9,6 +9,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - ✋ **Tool Approval** — When the agent stops at a tool that needs a human's consent, the turn pauses mid-answer and the reviewer approves, declines with a reason, or approves always — opt-in per host, see [Tool approval](#post-apibaseurlapiendpointsapprove)
 - 🗂️ **Conversation History** — Switch between (and delete) past conversations from a header menu, or from a permanent sidebar in fullscreen mode (collapsible, searchable past 7 entries, rename in place)
 - 🤖 **Multi-Agent Support** — Switch between different AI agents
+- 🔗 **Conversation References** — Type `@` in the composer to point the agent at another conversation; opt-in per host, see [Conversation references](#conversation-references)
 - 📎 **File Attachments** — Upload and paste files (PDF, TXT, images)
 - 📥 **Agent-Generated Files** — Renders downloadable file cards from agent output and strips the `[[FILE:id]]` markers from the prose
 - 📝 **Full Markdown** — Tables (mis-delimited ones repaired), code blocks with copy button, lists, blockquotes, soft line breaks, inline images with a lightbox
@@ -258,6 +259,78 @@ Renames a conversation. Body: `{ "title": "..." }`. Only reached from the
 fullscreen sidebar; a backend without the route simply fails the request and
 the row reverts to its previous title.
 
+With [workspaces](#workspaces) on, the same route files a conversation:
+`{ "workspace_id": "uuid" }`, or `{ "workspace_id": null }` to take it out of
+its workspace. A refusal's `detail` is shown under the list.
+
+### Workspaces
+
+The fullscreen conversation list can be grouped by workspace, the way a
+desktop assistant groups its projects: one collapsible group per workspace
+(the collapsed ones are remembered per browser), a conversation started
+inside a workspace with its group's compose button, a workspace created,
+renamed or deleted from the list, and a conversation moved between groups
+from its row menu or by dragging it onto a group.
+
+The feature is off until the host names the route:
+`apiEndpoints.workspaces` has **no default**, for the same reason as
+`apiEndpoints.approve` - a proxied host must expose every route below before
+the panel offers them. A backend that refuses the list (not licensed, an
+older proxy) also leaves the list flat.
+
+| Request | Purpose |
+| --- | --- |
+| `GET {apiBaseUrl}{workspaces}` | The caller's workspaces: a bare array or `{ "workspaces": [...] }` of `{ id, name, is_default, is_own, can_manage, is_archived }`. Archived ones are left out. |
+| `POST {apiBaseUrl}{workspaces}` | Create one: `{ "name": "..." }`. |
+| `PATCH {apiBaseUrl}{workspaces}/{id}` | Rename one: `{ "name": "..." }`. |
+| `DELETE {apiBaseUrl}{workspaces}/{id}` | Delete one (never offered for the default). Its conversations are expected back in no workspace (`workspace_id: null`), never moved to a default; the history is reloaded after the delete. |
+| `PATCH {apiBaseUrl}{history}/{conversation_id}` | File a conversation: `{ "workspace_id": "uuid" \| null }`. |
+| `POST {apiBaseUrl}{sessions}` | Carries `workspace_id` when the conversation is started inside a workspace. |
+
+`GET {history}` entries carry `workspace_id` (`null` for none). A conversation
+in no workspace is a normal state, listed under "Not in a workspace": a new
+conversation starts there unless it is started inside a workspace. A workspace the
+caller may only read (`can_manage: false`) gets a group only while it holds
+one of their conversations, and conversations filed in a workspace the list
+does not return are grouped under "Other workspaces". XTM One serves all of it
+at `/chat/workspaces` and `/chat/sessions`.
+
+### Conversation references
+
+Typing `@` in the composer - at the start of the text or after a space, never
+inside a word or an email (`a@b`) - opens a menu of the user's other
+conversations, searched by title as they type. A pick inserts `@<key> `, and the
+message goes out with the conversations it still references, so the agent reads
+them; a `@word` typed by hand stays plain text, and so does a pick whose `@key`
+is edited out before sending. The arrows move in the menu, Enter or Tab insert,
+Escape closes it.
+
+The feature is off until the host names the route:
+`apiEndpoints.conversationReferences` has **no default**, for the same reason
+as `apiEndpoints.approve` - a proxied host must expose the route, and forward
+the new body field, before the composer offers the menu. Unset, `@` is plain
+text and the message body is unchanged.
+
+| Request | Purpose |
+| --- | --- |
+| `GET {apiBaseUrl}{conversationReferences}?q=<text>&limit=8&exclude=<conversation_id>` | The menu: `{ "conversations": [{ id, title, key, updated_at, is_own }] }` (or a bare array), the conversations the user can open, most recent first, whose title contains `q` (case-insensitive). `q` is omitted for a bare `@`, `exclude` while the conversation is not created yet. `key` is what the pick inserts after `@`, always the backend's own. `is_own: false` marks a conversation shared with the user ("Shared with you"). |
+| `POST {apiBaseUrl}{messages}` | Carries `referenced_conversation_ids: string[]`: the picks the text still holds, in the order they appear, each once, at most 5. Omitted when there is none. |
+| `POST {apiBaseUrl}{sessions}` | A restored user message may carry `conversation_refs: [{ conversation_id, title, key }]`. |
+
+The references of a sent message show as chips above it, also after a reload.
+A chip opens its conversation in the panel when the conversation list holds it
+(the list is read as soon as the thread shows a reference), and is a plain label
+otherwise - a conversation shared with the user, say. While an answer streams,
+a message with a reference waits for it instead of steering the running turn:
+a steer reaches the agent as text alone, so it would never read what the
+message references. Once the text references five conversations the menu says
+so instead of offering more. The picks of an unsent draft are kept with its text, so a
+draft restored when the panel reopens still references what it did.
+
+XTM One serves it at `/chat/conversation-references`; a host behind its own
+proxy names its route, relative to its `apiBaseUrl` (e.g.
+`conversationReferences: '/conversation-references'`).
+
 ### `DELETE {apiBaseUrl}/chat/sessions/{conversation_id}`
 
 Deletes a conversation from the history menu. Any 2xx response counts as
@@ -278,6 +351,9 @@ Sends a message and streams the response via SSE.
   "context": { "url": "/dashboard/analyses/reports/<id>/overview" }
 }
 ```
+
+With [conversation references](#conversation-references) on, a message that
+references another conversation also carries `referenced_conversation_ids`.
 
 The optional `context` object is forwarded verbatim from the `pageContext`
 prop (REST backend only) and is omitted entirely when empty. Use it to make
@@ -736,6 +812,7 @@ Every key the package can ask for, grouped by where it appears:
 
 **Composer**
 
+- `'A message references at most {count} conversations'`
 - `'Ask a question...'`
 - `'Attachments wait for the current response'`
 - `'Dictate a message'`
@@ -743,11 +820,16 @@ Every key the package can ask for, grouped by where it appears:
 - `'Files uploading...'`
 - `'Insert prompt template'`
 - `'Listening...'`
+- `'No conversation matches'`
 - `'No prompt matches'`
+- `'Reference a conversation'`
+- `'Referenced conversations wait for the current response'`
 - `'Search prompts...'`
 - `'Send now'`
+- `'Shared with you'`
 - `'Stop dictation'`
 - `'Stop generating'`
+- `'Untitled conversation'`
 - `'Uses AI. Verify results.'`
 
 **Messages, markdown and files**
@@ -769,6 +851,7 @@ Every key the package can ask for, grouped by where it appears:
 - `'Image preview'`
 - `'Load earlier messages'`
 - `'Loading image…'`
+- `'Open conversation'`
 - `'Read aloud'`
 - `'Reasoning details'`
 - `'Reasoning details — turn limit reached'`

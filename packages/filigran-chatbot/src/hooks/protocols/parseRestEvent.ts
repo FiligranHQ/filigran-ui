@@ -2,6 +2,7 @@ import type {
   ChatAttachment,
   ChatContextBreakdown,
   ChatContextUsage,
+  ChatConversationRef,
   ChatMessage,
   ChatMessagePersistedFeedback,
   ToolApprovalProposal,
@@ -106,6 +107,28 @@ export function parseToolCallTrace(raw: unknown): ToolCallTraceEntry[] | undefin
       // Only a boolean is honored; a missing/malformed value defaults to
       // success so unknown states never render a false failure icon.
       success: typeof e.success === 'boolean' ? e.success : true,
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/**
+ * Normalize the `conversation_refs` of a restored user message: the
+ * conversations it referenced with `@`, as the backend recorded them. An entry
+ * without a conversation id is skipped; `undefined` when nothing is left.
+ */
+export function parseConversationRefs(raw: unknown): ChatConversationRef[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: ChatConversationRef[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const r = item as Record<string, unknown>;
+    if (typeof r.conversation_id !== 'string' || !r.conversation_id) continue;
+    if (out.some((o) => o.conversationId === r.conversation_id)) continue;
+    out.push({
+      conversationId: r.conversation_id,
+      title: typeof r.title === 'string' ? r.title.trim() : '',
+      key: typeof r.key === 'string' ? r.key : '',
     });
   }
   return out.length > 0 ? out : undefined;
@@ -300,6 +323,8 @@ export function parseRestoredMessages(raw: unknown): ChatMessage[] {
       // time) and user uploads, so an upload stays downloadable after a reload
       // and not only in the live session where it is carried on `files`.
       attachments: parseAttachments(m.attachments),
+      // The conversations a user message referenced with `@`, shown as chips.
+      conversationRefs: m.role === 'user' ? parseConversationRefs(m.conversation_refs) : undefined,
       // The reasoning-details affordance, from the same fields the live `done`
       // event carries.
       toolNames: Array.isArray(m.tool_names) ? (m.tool_names as string[]) : undefined,
