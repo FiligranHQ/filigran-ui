@@ -17,3 +17,8 @@ test('table cells: stored styles are rendered through the CSS parser', () => {
   assert.deepEqual(render('backgroundColor', 'red; position: fixed'), {});
   assert.deepEqual(render('border', 'border-top: 1px solid red; position: fixed; z-index: 9999'), { style: 'border-top: 1px solid red' });
 });
+
+test('table cells: a named background color gets the tone a browser would compute', () => {
+  assert.deepEqual(render('backgroundColor', 'yellow'), { style: 'background-color: yellow', 'data-cell-background': 'light' });
+  assert.deepEqual(render('backgroundColor', 'navy'), { style: 'background-color: navy', 'data-cell-background': 'dark' });
+});
