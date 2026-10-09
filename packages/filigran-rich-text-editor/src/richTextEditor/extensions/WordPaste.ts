@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { transformWordHtml } from '../paste/wordPaste';
+import { transformWordHtml } from '../paste/wordPaste.ts';
 
 export const WordPaste = Extension.create({
   name: 'wordPaste',
