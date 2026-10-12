@@ -870,15 +870,17 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             : undefined
         }
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        PaperProps={{
-          sx: { mt: 0.5 },
-          onKeyDownCapture: (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === 'Escape') {
-              e.preventDefault();
-              e.stopPropagation();
-              if (e.key === 'Enter') applyLink();
-              else closeLinkPopover();
-            }
+        slotProps={{
+          paper: {
+            sx: { mt: 0.5 },
+            onKeyDownCapture: (e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.key === 'Enter') applyLink();
+                else closeLinkPopover();
+              }
+            },
           },
         }}
       >
@@ -912,7 +914,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             autoFocus
             fullWidth
           />
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
             {editor.isActive('link') && (
               <Button size="small" onClick={removeLink} color="error">
                 Remove link
@@ -934,14 +936,16 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             : undefined
         }
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        PaperProps={{
-          sx: { mt: 0.5 },
-          onKeyDownCapture: (e: React.KeyboardEvent) => {
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              e.stopPropagation();
-              closeImagePopover();
-            }
+        slotProps={{
+          paper: {
+            sx: { mt: 0.5 },
+            onKeyDownCapture: (e: React.KeyboardEvent) => {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                closeImagePopover();
+              }
+            },
           },
         }}
       >
@@ -990,7 +994,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                   onChange={(e) => setImagePopover((p) => ({ ...p, title: e.target.value }))}
                   fullWidth
                 />
-                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                   <Button size="small" onClick={closeImagePopover}>
                     Cancel
                   </Button>
@@ -1034,7 +1038,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                     hidden
                   />
                 </Button>
-                <MuiTypography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                <MuiTypography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
                   Image will be embedded in the content.
                 </MuiTypography>
               </Stack>
@@ -1052,20 +1056,22 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             : undefined
         }
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        PaperProps={{
-          sx: { mt: 0.5 },
-          onKeyDownCapture: (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === 'Escape') {
-              e.preventDefault();
-              e.stopPropagation();
-              if (e.key === 'Enter') applyImageOptions();
-              else closeImageOptionsPopover();
-            }
+        slotProps={{
+          paper: {
+            sx: { mt: 0.5 },
+            onKeyDownCapture: (e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.key === 'Enter') applyImageOptions();
+                else closeImageOptionsPopover();
+              }
+            },
           },
         }}
       >
         <Stack sx={{ p: 2, minWidth: 320 }} spacing={1.5}>
-          <MuiTypography variant="subtitle2" color="text.secondary">
+          <MuiTypography variant="subtitle2" sx={{ color: 'text.secondary' }}>
             Image options
           </MuiTypography>
           <TextField
@@ -1100,7 +1106,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             onChange={(e) => setImageOptionsPopover((p) => ({ ...p, href: e.target.value }))}
             fullWidth
           />
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
             <Button size="small" onClick={closeImageOptionsPopover}>
               Cancel
             </Button>
