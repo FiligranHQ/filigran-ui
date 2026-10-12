@@ -507,6 +507,27 @@ chat must forward the request body whole (a proxy rebuilding it from a fixed
 field list silently drops `supports_tool_approval`), never time out the
 streaming turn, and pass SSE keepalives through untouched.
 
+#### Acting on the host page
+
+The same path answers `act_on_page` (XTM One #5559): with `apiEndpoints.approve`
+set **and** `onRelativeLinkClick` passed — the host's opt-in, since it hands the
+panel its navigation — the panel also sends `supports_page_actions: true`, and the
+agent may act on the page the panel is mounted in. The host's proxy must forward
+the approve route's body whole (a `page_action` answer carries no `decisions`). Each step arrives on the stream as a
+`status` frame with `event: "page_action_required"`; the panel performs it
+(`click`, `open` — a hover, for a menu that opens on hover —, `type` then Enter,
+or `navigate` through `onRelativeLinkClick` — never
+a page load, which would end the turn) and POSTs
+`{ conversation_id, page_action: { action_id, ok, error, url, title, snapshot } }`.
+
+The snapshot (`utils/pageSnapshot.ts`) lists one line per element a user could
+act on — `[e1] link "Reports" -> /dashboard/analyses/reports`, with states such as
+`(selected)`, `(pressed)` or `(menu)` for a closed menu
+— and leaves out the panel itself, hidden and inert content, and every password
+value. A state the host shows by styling alone is invisible to it: mark toggles
+with `aria-pressed` and the current item with `aria-current`. A `409` means the
+turn no longer waits for that action, and the panel drops it.
+
 #### Recovering a prompt after a page reload
 
 `approval_required` is a single event on a stream, so a reload loses it —

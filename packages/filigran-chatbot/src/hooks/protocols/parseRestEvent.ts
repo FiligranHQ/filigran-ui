@@ -8,6 +8,7 @@ import type {
   ToolCallTraceEntry,
   TransferChainEntry,
 } from '../../types';
+import type { PageAction } from '../../utils/pageActions';
 import type { ParsedAction, ProtocolContext } from './types';
 
 /** Wire key → the breakdown field it populates. */
@@ -166,6 +167,21 @@ export function parseToolApprovalProposals(raw: unknown): ToolApprovalProposal[]
   return out.length > 0 ? out : undefined;
 }
 
+/** The page action of an `act_on_page` frame, or `undefined` for any other shape. */
+function parsePageAction(raw: unknown): PageAction | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const a = raw as Record<string, unknown>;
+  const str = (v: unknown) => typeof v === 'string' && v.length > 0;
+  if (a.type === 'snapshot') return { type: 'snapshot' };
+  if (a.type === 'navigate' && str(a.path)) return { type: 'navigate', path: a.path as string };
+  if (a.type === 'click' && str(a.ref)) return { type: 'click', ref: a.ref as string };
+  if (a.type === 'open' && str(a.ref)) return { type: 'open', ref: a.ref as string };
+  if (a.type === 'type' && str(a.ref) && typeof a.text === 'string') {
+    return { type: 'type', ref: a.ref as string, text: a.text };
+  }
+  return undefined;
+}
+
 /**
  * Parse an XTM One (REST) SSE event into a normalized action.
  */
@@ -190,6 +206,16 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
     if (st === 'tool_start') {
       ctx.hasUsedTools = true;
       return { action: 'status', status: 'tool_start', tools: evt.tools as string[] | undefined };
+    }
+    if (st === 'tool_progress' && evt.event === 'page_action_required') {
+      const pageAction = parsePageAction(evt.action);
+      if (!pageAction || typeof evt.action_id !== 'string' || !evt.action_id) return { action: 'noop' };
+      return {
+        action: 'page_action_required',
+        actionId: evt.action_id,
+        pageAction,
+        conversationId: typeof evt.conversation_id === 'string' ? evt.conversation_id : undefined,
+      };
     }
     if (st === 'tool_heartbeat') {
       // Liveness signal during a long tool execution (background tasks,

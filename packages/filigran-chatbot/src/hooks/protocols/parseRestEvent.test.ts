@@ -76,3 +76,35 @@ test('the done frame carries the persisted id of the answer', () => {
   const older = parseRestEvent({ type: 'done', content: 'Hi', message_id: '' }, ctx);
   assert.equal(older.action === 'done' ? older.messageId : null, undefined);
 });
+
+test('a page action frame carries the action to perform and its id (#5559)', () => {
+  const ctx = { hasUsedTools: true, activeNodeId: '' };
+  const frame = (action: unknown, extra: Record<string, unknown> = {}) =>
+    parseRestEvent(
+      {
+        type: 'status',
+        status: 'tool_progress',
+        tool: 'act_on_page',
+        event: 'page_action_required',
+        conversation_id: 'c-1',
+        action_id: 'a-1',
+        action,
+        ...extra,
+      },
+      ctx,
+    );
+  assert.deepEqual(frame({ type: 'click', ref: 'e2' }), {
+    action: 'page_action_required',
+    actionId: 'a-1',
+    pageAction: { type: 'click', ref: 'e2' },
+    conversationId: 'c-1',
+  });
+  assert.deepEqual(frame({ type: 'type', ref: 'e3', text: 'apt28' }).action, 'page_action_required');
+  assert.deepEqual(frame({ type: 'navigate', path: '/dashboard' }).action, 'page_action_required');
+  assert.deepEqual(frame({ type: 'snapshot' }).action, 'page_action_required');
+  assert.deepEqual(frame({ type: 'open', ref: 'e4' }).action, 'page_action_required');
+  // Nothing the widget could answer: no id, or an action it does not know.
+  assert.deepEqual(frame({ type: 'click', ref: 'e2' }, { action_id: undefined }), { action: 'noop' });
+  assert.deepEqual(frame({ type: 'run_script', code: 'x' }), { action: 'noop' });
+  assert.deepEqual(frame({ type: 'click' }), { action: 'noop' });
+});

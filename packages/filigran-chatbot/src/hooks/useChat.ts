@@ -13,6 +13,8 @@ import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
 import { parseToolApprovalProposals } from './protocols/parseRestEvent';
 import { createStreamDeltas, type StreamDeltas } from './streamDeltas';
+import { hostTakesPageActions, performPageAction, waitForDomSettle, type PageAction } from '../utils/pageActions';
+import { takePageSnapshot } from '../utils/pageSnapshot';
 
 const STORAGE_KEY = 'filigranChatConversationId';
 const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
@@ -91,6 +93,8 @@ interface UseChatOptions {
   requestHeaders?: Record<string, string>;
   /** Arbitrary host page/application context, sent as `context` on the REST message body. */
   pageContext?: Record<string, unknown>;
+  /** The host's in-app navigation, which `act_on_page` uses to open a path (#5559). */
+  onRelativeLinkClick?: (href: string) => void;
   t: (key: string) => string;
   maxFileCount?: number;
   maxTotalSize?: number;
@@ -217,6 +221,8 @@ function buildRequestBody(
     pageContext?: Record<string, unknown>;
     /** See {@link ApiEndpoints.approve} — derived, never a prop of its own. */
     supportsToolApproval?: boolean;
+    /** Same promise, for `act_on_page` frames (#5559): answered on the approve path. */
+    supportsPageActions?: boolean;
   },
 ): Record<string, unknown> {
   switch (backendType) {
@@ -242,6 +248,9 @@ function buildRequestBody(
       // drops nothing meaningful.
       if (opts.supportsToolApproval) {
         body.supports_tool_approval = true;
+      }
+      if (opts.supportsPageActions) {
+        body.supports_page_actions = true;
       }
       // Forward arbitrary host page context (e.g. current URL) so the agent
       // knows where the user is. Omitted when empty to keep payloads lean.
@@ -273,6 +282,7 @@ export function useChat({
   agentSlug,
   requestHeaders,
   pageContext,
+  onRelativeLinkClick,
   t,
   maxFileCount = DEFAULT_MAX_FILE_COUNT,
   maxTotalSize = DEFAULT_MAX_TOTAL_SIZE,
@@ -327,6 +337,11 @@ export function useChat({
   // on at send time, regardless of when the send handler closure was created.
   const pageContextRef = useRef(pageContext);
   pageContextRef.current = pageContext;
+  // The elements of the last host-page snapshot, by the reference the next
+  // `act_on_page` action names them with (#5559).
+  const pageRefsRef = useRef<Map<string, Element>>(new Map());
+  const onRelativeLinkClickRef = useRef(onRelativeLinkClick);
+  onRelativeLinkClickRef.current = onRelativeLinkClick;
   // Conversation id as the paused turn itself reported it. The decision POST
   // needs an id, and the first turn of a fresh conversation has none yet —
   // `conversationId` is normally learned from `done`, which a paused turn has
@@ -739,6 +754,45 @@ export function useChat({
     }
   };
 
+  /**
+   * Perform one `act_on_page` action on the host page and answer it with a
+   * fresh snapshot (#5559). The answer goes to the approve path, which the host
+   * proxies already forward; the turn waits for it on the open stream.
+   *
+   * A 409 means the turn no longer waits for this action (it timed out or
+   * ended): nothing to retry, so it is dropped.
+   */
+  const answerPageAction = async (actionId: string, action: PageAction, conversationIdHint?: string) => {
+    const approveUrl = getApproveUrl();
+    const convId = conversationIdHint ?? conversationIdRef.current;
+    if (!approveUrl || !convId || typeof document === 'undefined') return;
+    setAgentStatus((prev) => (prev ? { ...prev, status: 'acting_on_page' } : { status: 'acting_on_page' }));
+    const result = await performPageAction(action, pageRefsRef.current, onRelativeLinkClickRef.current);
+    if (action.type !== 'snapshot') await waitForDomSettle(document);
+    const snapshot = takePageSnapshot(document);
+    pageRefsRef.current = snapshot.refs;
+    try {
+      await fetch(approveUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+        body: JSON.stringify({
+          conversation_id: convId,
+          page_action: {
+            action_id: actionId,
+            ok: result.ok,
+            error: result.error ?? null,
+            url: snapshot.url,
+            title: snapshot.title,
+            snapshot: snapshot.text,
+          },
+        }),
+      });
+    } catch {
+      // The turn's own page wait ends it; there is nothing to show here.
+    }
+    setAgentStatus((prev) => (prev?.status === 'acting_on_page' ? { ...prev, status: 'thinking' } : prev));
+  };
+
   const handleSendMessage = async () => {
     const steerText = inputValue.trim();
     if (isLoading) {
@@ -818,6 +872,7 @@ export function useChat({
         agentSlug,
         pageContext: pageContextRef.current,
         supportsToolApproval: getApproveUrl() !== null,
+        supportsPageActions: hostTakesPageActions(getApproveUrl(), onRelativeLinkClickRef.current),
       });
       if (fileIds.length > 0) {
         (requestBody as Record<string, unknown>).file_ids = fileIds;
@@ -984,6 +1039,14 @@ export function useChat({
                 break;
               }
 
+              case 'page_action_required': {
+                deltas.flush();
+                // Not awaited: the stream stays silent until the answer lands,
+                // and the reader must keep draining its keep-alives meanwhile.
+                void answerPageAction(parsed.actionId, parsed.pageAction, parsed.conversationId);
+                break;
+              }
+
               case 'approval_required': {
                 // The turn stops here and the stream goes silent until a
                 // decision is POSTed back. Not an end state: no segment is
@@ -1136,6 +1199,7 @@ export function useChat({
     setIsResumingAfterDecision(false);
     approvalConversationIdRef.current = null;
     approvalDetachedRef.current = false;
+    pageRefsRef.current = new Map();
     setMessages((prev) => prev.filter((m) => !(m.role === 'assistant' && !m.content)));
   };
 
