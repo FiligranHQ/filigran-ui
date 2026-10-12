@@ -215,7 +215,7 @@ export const ChatInput = ({
       <div
         className={`relative flex items-end border rounded-xl px-2 py-1 transition-colors ${
           dictation.listening ? 'border-red-500/50' : 'border-gray-200 dark:border-white/10 focus-within:border-[var(--chat-accent)]'
-        }`}
+        } ${isLoading ? 'filigran-chat-active-border' : ''}`}
       >
         {isFileManagementEnabled && (
           <>

@@ -134,6 +134,53 @@
   }
 }
 
+/* Active border: the agent is working on this input or bubble. A comet of
+   accent colour turns around the element's own edge, a conic gradient on
+   `::before` masked down to a ring. `@property` lets the angle interpolate; the
+   registration is global, so its name is namespaced like the keyframes. Where
+   it is unsupported the comet stays at its start angle instead of turning.
+   Static under reduced motion. The ring sits inside the element's edge, not
+   outside it as in XTM One: the status bubble clips its overflow. */
+@property --chat-active-border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes chat-active-border-spin {
+  to {
+    --chat-active-border-angle: 360deg;
+  }
+}
+.filigran-chat-active-border {
+  position: relative;
+  box-shadow: 0 0 14px -6px color-mix(in srgb, var(--chat-accent) 45%, transparent);
+}
+.filigran-chat-active-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--chat-active-border-angle),
+    transparent 0deg,
+    var(--chat-accent) 70deg,
+    color-mix(in srgb, var(--chat-accent) 25%, transparent) 150deg,
+    transparent 220deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: chat-active-border-spin 3s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .filigran-chat-active-border::before {
+    animation: none;
+    background: color-mix(in srgb, var(--chat-accent) 70%, transparent);
+  }
+}
+
 @keyframes chat-fade-in {
   from {
     opacity: 0;
