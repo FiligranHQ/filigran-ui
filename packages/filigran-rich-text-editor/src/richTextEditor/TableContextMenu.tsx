@@ -8,7 +8,7 @@ import {
   Menu,
   MenuItem,
 } from '@mui/material';
-import { DeleteOutline, MergeType, SplitscreenOutlined, BorderTopOutlined, BorderLeftOutlined, TableChart, AddOutlined, RemoveOutlined } from '@mui/icons-material';
+import { DeleteOutlined, MergeType, SplitscreenOutlined, BorderTopOutlined, BorderLeftOutlined, TableChart, AddOutlined, RemoveOutlined } from '@mui/icons-material';
 
 interface TableContextMenuProps {
   editor: Editor | null;
@@ -181,7 +181,7 @@ export const TableContextMenu: React.FC<TableContextMenuProps> = ({
         onClick={() => runAndClose(() => editor.chain().focus().deleteTable().run())}
         sx={{ color: 'error.main' }}
       >
-        <ListItemIcon><DeleteOutline fontSize="small" color="error" /></ListItemIcon>
+        <ListItemIcon><DeleteOutlined fontSize="small" color="error" /></ListItemIcon>
         <ListItemText>Delete table</ListItemText>
       </MenuItem>
     </Menu>
