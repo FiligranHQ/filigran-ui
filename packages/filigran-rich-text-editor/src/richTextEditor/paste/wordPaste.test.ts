@@ -76,7 +76,7 @@ test('Word desktop: a negative RTF binary length does not stall the picture scan
 
 test('Word for the web: rebuilt ordered lists keep their numbering style', () => {
   const list = (attributes: string) => `<div class="ListContainerWrapper"><ol class="NumberListStyle1" role="list" ${attributes}>`
-    + '<li data-aria-level="1" data-listid="5" class="OutlineElement"><p class="Paragraph"><span class="TextRun">Item</span></p></li></ol></div>';
+    + '<li data-aria-level="1" data-listid="5" class="OutlineElement"><p class="Paragraph"><span class="TextRun SCXW1">Item</span></p></li></ol></div>';
   const fromAttribute = parseHtml(transformWordHtml(list('type="a"'), '')).querySelector('ol');
   const fromStyle = parseHtml(transformWordHtml(list('style="list-style-type: upper-roman"'), '')).querySelector('ol');
   assert.equal(fromAttribute?.getAttribute('type'), 'a');
@@ -156,8 +156,8 @@ test('Word desktop: HTML without a local picture is returned as is, whatever the
 });
 
 test('Word for the web: underline and strikethrough are kept as text-decoration', () => {
-  const html = '<div class="OutlineElement"><p class="Paragraph"><span class="TextRun" style="text-decoration: underline;">under</span>'
-    + '<span class="TextRun" style="text-decoration: line-through;">struck</span></p></div>';
+  const html = '<div class="OutlineElement"><p class="Paragraph"><span class="TextRun SCXW1" style="text-decoration: underline;">under</span>'
+    + '<span class="TextRun SCXW1" style="text-decoration: line-through;">struck</span></p></div>';
   const spans = Array.from(parseHtml(transformWordHtml(html, '')).querySelectorAll('span')).map((span) => span.getAttribute('style'));
   assert.deepEqual(spans, ['text-decoration: underline', 'text-decoration: line-through']);
   assert.match(wordWeb, /text-decoration: underline/);
@@ -243,9 +243,22 @@ test('Word desktop: a picture opening its paragraph moves before it instead of l
     `<img src="${png('89504e47')}"><img src="${png('89504e48')}"><p class="MsoNormal"><br>Quote</p>`);
 });
 
-test('Word desktop: spaces ending a paragraph are dropped, so the saved HTML does not change on reload', () => {
-  const html = wordDesktop("<p class=MsoNormal><span>Text&nbsp; </span></p><h1><span>Title </span><o:p></o:p></h1>");
-  assert.deepEqual(Array.from(parseHtml(transformWordHtml(html, '')).querySelectorAll('p, h1'), (block) => block.textContent), ['Text\u00a0', 'Title']);
+test('Word desktop: a paragraph is split around the pictures inside its text, without spaces left at the edges', () => {
+  const html = wordDesktop(`<p class=MsoNormal><b>A PNG </b><span><img src="${png('89504e47')}"></span> and a JPEG <img src="${png('89504e48')}"> in one paragraph.</p>`);
+  assert.equal(parseHtml(transformWordHtml(html, '')).body.innerHTML,
+    `<p class="MsoNormal"><b>A PNG</b></p><img src="${png('89504e47')}"><p class="MsoNormal">and a JPEG</p>`
+    + `<img src="${png('89504e48')}"><p class="MsoNormal">in one paragraph.</p>`);
+});
+
+test('Word desktop: spaces opening or ending a paragraph are dropped, so the saved HTML does not change on reload', () => {
+  const html = wordDesktop("<p class=MsoNormal><span>Text&nbsp; </span></p><h1><span> Title </span><o:p></o:p></h1>"
+    + `<p class=MsoNormal>Caption <img src="${png('89504e47')}"></p>`);
+  assert.deepEqual(Array.from(parseHtml(transformWordHtml(html, '')).querySelectorAll('p, h1'), (block) => block.textContent), ['Text\u00a0', 'Title', 'Caption']);
+});
+
+test('Word desktop: a footnote list styled only with mso- properties keeps no empty style', () => {
+  const html = wordDesktop("<div style='mso-element:footnote-list'><div style='mso-element:footnote' id=ftn1><p class=MsoFootnoteText>Note</p></div></div>");
+  assert.equal(parseHtml(transformWordHtml(html, '')).querySelectorAll('[style]').length, 0);
 });
 
 test('Word desktop: pictures lost because the clipboard has no RTF are reported, drawn shapes dropped despite an RTF are not', () => {
@@ -257,4 +270,25 @@ test('Word desktop: pictures lost because the clipboard has no RTF are reported,
   const withRtf = { lostPictures: 0 };
   transformWordHtml(html, '{\\rtf1{\\*\\shppict{\\pict\\picwgoal1440\\pichgoal960\\pngblip 89504e47}}}', withRtf);
   assert.equal(withRtf.lostPictures, 0);
+});
+
+test('Word desktop: a level the @list rule declares numbered stays numbered when its marker cannot be read', () => {
+  const html = wordDesktop("<style>@list l0:level1 {mso-level-number-format:decimal-zero;}</style>"
+    + "<p class=MsoListParagraph style='mso-list:l0 level1 lfo1'>First</p><p class=MsoListParagraph style='mso-list:l0 level1 lfo1'>Second</p>");
+  const result = parseHtml(transformWordHtml(html, ''));
+  assert.equal(result.querySelectorAll('ol > li').length, 2);
+  assert.equal(result.querySelector('ul'), null);
+});
+
+test('Word desktop: mso- declarations and the Automatic text color are dropped, an explicit color is kept', () => {
+  const html = wordDesktop("<p class=MsoNormal><span style='color:black;mso-color-alt:windowtext'>Automatic</span> "
+    + "<span style='font-size:10pt;color:windowtext'>Window text</span> <span style='color:black'>Chosen black</span> "
+    + "<span style='color:#A100FF'>Purple</span></p>");
+  const styles = Array.from(parseHtml(transformWordHtml(html, '')).querySelectorAll('span'), (span) => span.getAttribute('style'));
+  assert.deepEqual(styles, [null, 'font-size:10pt', 'color:black', 'color:#A100FF']);
+});
+
+test('Word for the web: a page that merely uses a TextRun class is not converted as Word for the web', () => {
+  const html = '<div style="color: red"><p class="Paragraph"><span class="TextRun">Not Word</span></p></div>';
+  assert.equal(transformWordHtml(html, ''), html);
 });

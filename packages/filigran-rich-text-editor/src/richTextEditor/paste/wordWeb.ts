@@ -16,7 +16,10 @@ interface OpenList {
   ordered: boolean;
 }
 
+// Word for the web HTML: its run and paragraph classes, together with one of its generated markers (SCXW classes,
+// data-contrast attributes), so that a page merely using a "TextRun" class name is not taken for Word.
 const WORD_WEB_PATTERN = /class="[^"]*\b(?:OutlineElement|NormalTextRun|TextRun)\b/;
+const WORD_WEB_MARKER_PATTERN = /\bSCXW\d+|\bdata-contrast=/;
 const REMOVED_SELECTOR = '.WACAltTextDescribedBy, .EOP';
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6';
 const AUTOMATIC_COLORS = ['rgb(0, 0, 0)', 'windowtext', 'black', '#000000', '#000'];
@@ -130,7 +133,7 @@ const convertLists = (doc: Document) => {
 };
 
 export const convertWordWeb = (html: string): string => {
-  if (!WORD_WEB_PATTERN.test(html)) return html;
+  if (!WORD_WEB_PATTERN.test(html) || !WORD_WEB_MARKER_PATTERN.test(html)) return html;
   const doc = new DOMParser().parseFromString(html, 'text/html');
   doc.querySelectorAll(REMOVED_SELECTOR).forEach((element) => element.remove());
   convertHeadings(doc);

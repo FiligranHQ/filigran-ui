@@ -1,7 +1,7 @@
+import { isBlank } from './htmlHelpers.ts';
+
 const PAGE_BREAK_PATTERN = /page-break-before\s*:\s*always/i;
 const PAGE_BREAK_CLASS = 'page-break';
-
-const isBlank = (element: Element): boolean => (element.textContent ?? '').trim() === '' && !element.querySelector('img');
 
 // Word writes a page break as <br style="page-break-before:always">, usually alone in a span between two paragraphs.
 // It becomes the editor page break, in place of the outermost element that holds nothing else.

@@ -1,3 +1,5 @@
+import { cssLengthToPixels, isBlank, styleDeclaration } from './htmlHelpers.ts';
+
 interface RtfPicture {
   mimeType: string | null;
   hex: string[];
@@ -33,8 +35,6 @@ const VML_SHAPE_SELECTOR = 'v\\:shape';
 const VML_IMAGE_DATA_SELECTOR = 'v\\:imagedata';
 const VML_TAG_PREFIX = 'V:';
 const VML_ELEMENT_PATTERN = /<v:[a-z]/i;
-const PIXELS_PER_UNIT: Record<string, number> = { px: 1, pt: 4 / 3, in: 96, cm: 96 / 2.54, mm: 96 / 25.4 };
-const CSS_LENGTH_PATTERN = /^([\d.]+)(pt|px|in|cm|mm)?$/i;
 const PAGE_RULE_PATTERN = /@page\s+WordSection1\s*\{([^}]*)\}/i;
 // A picture at least this share of the Word column wide spans the column.
 const FULL_WIDTH_RATIO = 0.95;
@@ -170,17 +170,12 @@ const gfxdataPictureSource = (gfxdata: string): string | null => {
   return null;
 };
 
-const lengthPx = (value: string): number | null => {
-  const match = CSS_LENGTH_PATTERN.exec(value.trim());
-  return match ? parseFloat(match[1]) * (PIXELS_PER_UNIT[(match[2] ?? 'px').toLowerCase()] ?? 1) : null;
-};
-
 // Width of the text column of the copied Word section, from its @page rule: page width minus side margins.
 const wordColumnWidth = (doc: Document): number | null => {
   const rule = Array.from(doc.querySelectorAll('style')).map((style) => PAGE_RULE_PATTERN.exec(style.textContent ?? '')?.[1]).find(Boolean);
   if (!rule) return null;
-  const pageWidth = lengthPx(/size\s*:\s*(\S+)/i.exec(rule)?.[1] ?? '');
-  const margins = (/(?:^|;)\s*margin\s*:\s*([^;]+)/i.exec(rule)?.[1] ?? '').trim().split(/\s+/).map(lengthPx)
+  const pageWidth = cssLengthToPixels((styleDeclaration(rule, 'size') ?? '').split(/\s+/)[0]);
+  const margins = (styleDeclaration(rule, 'margin') ?? '').split(/\s+/).map(cssLengthToPixels)
     .filter((margin): margin is number => margin !== null);
   if (!pageWidth || margins.length === 0) return null;
   // CSS margin shorthand: top, right, bottom, left, with right defaulting to top and left to right.
@@ -190,8 +185,8 @@ const wordColumnWidth = (doc: Document): number | null => {
 };
 
 const shapeLength = (style: string, property: 'width' | 'height'): number | null => {
-  const value = new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*([^;]+)`, 'i').exec(style)?.[1];
-  const pixels = value ? lengthPx(value) : null;
+  const value = styleDeclaration(style, property);
+  const pixels = value ? cssLengthToPixels(value) : null;
   return pixels && pixels > 0 ? Math.round(pixels) : null;
 };
 
@@ -280,20 +275,20 @@ export const embedWordImages = (html: string, rtf: string, report?: PasteReport)
   return doc.documentElement.outerHTML;
 };
 
-// \s also matches the non-breaking spaces Word puts next to pictures.
-const BLANK_TEXT_PATTERN = /^\s*$/;
+// The editor shows pictures as blocks, so it splits a paragraph around each of its pictures, keeping empty paragraphs
+// and the spaces at the edges of each part. Word puts every picture in a paragraph: that paragraph is split here
+// instead, around each picture, and the parts without content are dropped; the spaces left at the
+// edges are then removed by trimBlockSpaces. In a list item the picture stays: an item has to start with a paragraph.
+const INLINE_WRAPPER_SELECTOR = 'span, b, strong, i, em, u, s, font';
 
-const isBlankBetween = (doc: Document, setBoundaries: (range: Range) => void): boolean => {
-  const range = doc.createRange();
-  setBoundaries(range);
-  return BLANK_TEXT_PATTERN.test(range.toString());
+// Splitting cuts through the inline elements that held the picture: the halves left without content are removed.
+const removeEmptyWrappers = (element: Element) => {
+  Array.from(element.querySelectorAll(INLINE_WRAPPER_SELECTOR)).reverse()
+    .filter((wrapper) => !wrapper.hasChildNodes())
+    .forEach((wrapper) => wrapper.remove());
 };
 
-// Word puts each picture in a paragraph. The editor shows pictures as blocks, so the paragraph would be split around
-// its picture and leave an empty paragraph behind. A picture that opens or closes its paragraph moves out before
-// or after it, and a paragraph left empty is removed. In a list item the picture stays: an item has
-// to start with a paragraph.
-export const liftPictureParagraphs = (html: string): string => {
+export const splitPictureParagraphs = (html: string): string => {
   if (!/<img\b/i.test(html)) return html;
   const doc = new DOMParser().parseFromString(html, 'text/html');
   let changed = false;
@@ -301,18 +296,19 @@ export const liftPictureParagraphs = (html: string): string => {
     if (paragraph.closest('li')) return;
     const pictures = Array.from(paragraph.querySelectorAll('img'));
     if (pictures.length === 0) return;
-    const before = pictures.filter((picture) => isBlankBetween(doc, (range) => {
+    pictures.forEach((picture) => {
+      // Everything before the picture becomes a paragraph of its own, keeping the formatting it sat in.
+      const range = doc.createRange();
       range.setStart(paragraph, 0);
       range.setEndBefore(picture);
-    }));
-    const after = pictures.filter((picture) => !before.includes(picture) && isBlankBetween(doc, (range) => {
-      range.setStartAfter(picture);
-      range.setEnd(paragraph, paragraph.childNodes.length);
-    }));
-    if (before.length === 0 && after.length === 0) return;
-    paragraph.before(...before);
-    paragraph.after(...after);
-    if (BLANK_TEXT_PATTERN.test(paragraph.textContent ?? '') && !paragraph.querySelector('img')) paragraph.remove();
+      const leading = paragraph.cloneNode(false) as HTMLElement;
+      leading.append(range.extractContents());
+      removeEmptyWrappers(leading);
+      if (!isBlank(leading)) paragraph.before(leading);
+      paragraph.before(picture);
+    });
+    removeEmptyWrappers(paragraph);
+    if (isBlank(paragraph)) paragraph.remove();
     changed = true;
   });
   return changed ? doc.documentElement.outerHTML : html;

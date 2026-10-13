@@ -18,6 +18,7 @@ import {
 import { EditOutlined } from '@mui/icons-material';
 import { TiptapEditorToolbar } from './richTextEditor/TiptapEditorToolbar';
 import { TableContextMenu } from './richTextEditor/TableContextMenu';
+import { clipboardImageFile } from './richTextEditor/paste/clipboardImage';
 import type { Theme } from '@mui/material/styles';
 
 import './styles/TiptapEditor.css';
@@ -29,9 +30,6 @@ declare module '@mui/material/styles' {
 }
 
 export const TIPTAP_EDITOR_SELECTOR = '.tiptap-editor-content.ProseMirror';
-
-const hasTextContent = (html: string): boolean =>
-  html !== '' && (new DOMParser().parseFromString(html, 'text/html').body.textContent ?? '').trim() !== '';
 
 export interface RichTextEditorAdapter {
   /** Returns the current HTML content */
@@ -192,7 +190,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   imageEditPosRef.current = imageEditButton?.pos ?? null;
   imageOptionsPopoverOpenRef.current = imageOptionsPopover.open;
 
-  // Pictures a paste could not keep (Word for Mac gives no copy of them): the user is told, to insert them by hand.
+  // Pictures the last paste could not keep because the clipboard held no copy of them (Word for Mac): the user is told,
+  // to insert them by hand. Each paste reports its own count, so a later paste clears the warning.
   const [lostPictures, setLostPictures] = useState(0);
 
   const editor = useEditor({
@@ -207,25 +206,17 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         ...(id ? { 'data-editor-id': id } : {}),
       },
       handlePaste: (_view, event) => {
-        const clipboardData = event.clipboardData;
-        if (!clipboardData || hasTextContent(clipboardData.getData('text/html'))) return false;
-        for (const item of Array.from(clipboardData.items)) {
-          if (item.type.startsWith('image/')) {
-            const file = item.getAsFile();
-            if (file) {
-              const reader = new FileReader();
-              reader.onload = () => {
-                const result = reader.result as string;
-                if (result) {
-                  editorRef.current?.chain().focus().setImage({ src: result }).run();
-                }
-              };
-              reader.readAsDataURL(file);
-              return true;
-            }
+        const file = event.clipboardData ? clipboardImageFile(event.clipboardData) : null;
+        if (!file) return false;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          if (result) {
+            editorRef.current?.chain().focus().setImage({ src: result }).run();
           }
-        }
-        return false;
+        };
+        reader.readAsDataURL(file);
+        return true;
       },
       handleClick: (view, pos, event) => {
         if (disabled) return false;
@@ -630,6 +621,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (!editor || editor.isDestroyed) return;
     if (data !== undefined && data !== editor.getHTML()) {
       editor.commands.setContent(data || '<p></p>', { emitUpdate: false });
+      // A warning about an earlier paste no longer applies to replaced content.
+      setLostPictures(0);
     }
   }, [data, editor]);
 
@@ -705,6 +698,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   return (
     <div
       className={wrapperClassName}
+      // The MUI theme given to the editor, for the CSS rules that depend on it (link color) when the page sets no data-theme.
+      data-theme={theme.palette.mode}
       style={wrapperStyle}
     >
       <div
@@ -725,8 +720,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       </div>
       {lostPictures > 0 && (
         <Alert severity="warning" onClose={() => setLostPictures(0)} sx={{ borderRadius: 0 }}>
-          {lostPictures === 1 ? 'A picture could not be pasted' : `${lostPictures} pictures could not be pasted`}: the clipboard did not contain {lostPictures === 1 ? 'it' : 'them'} (Word for Mac).
-          Insert {lostPictures === 1 ? 'it' : 'them'} with the image button.
+          {lostPictures === 1 ? 'A picture could not be pasted' : `${lostPictures} pictures could not be pasted`}: the clipboard did not contain {lostPictures === 1 ? 'it' : 'them'},
+          as with Word for Mac. Insert {lostPictures === 1 ? 'it' : 'them'} with the image button.
         </Alert>
       )}
       <div

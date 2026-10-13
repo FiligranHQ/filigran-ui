@@ -12,8 +12,9 @@ export const LEGACY_FONT_SIZE_MAP: Record<string, string> = {
   'text-huge': '1.8em',
 };
 
-// Style properties read by the attributes registered on textStyle (Color, BackgroundColor, FontFamily, FontSize).
-const KEPT_STYLE_PATTERN = /(?:^|;)\s*(?:color|background|background-color|font-family|font-size)\s*:/i;
+// Style properties read by the attributes registered on textStyle (Color, BackgroundColor, FontFamily, FontSize),
+// shorthands included: `font` sets the family and size, `background` the color.
+const KEPT_STYLE_PATTERN = /(?:^|;)\s*(?:color|background(?:-color)?|font(?:-family|-size)?)\s*:/i;
 
 /**
  * Extends TipTap's TextStyle mark to also accept legacy editor font-size class

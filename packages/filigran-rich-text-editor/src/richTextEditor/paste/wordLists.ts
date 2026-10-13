@@ -1,3 +1,4 @@
+import { cssLengthToPixels, styleDeclaration } from './htmlHelpers.ts';
 import { listItemAlignment } from './listNesting.ts';
 
 type ListElement = HTMLOListElement | HTMLUListElement;
@@ -32,17 +33,18 @@ const OL_TYPE_BY_NUMBER_FORMAT: Record<string, string> = {
 
 const ROMAN_VALUES: Record<string, number> = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 };
 
+// mso-level-number-format values that do not number the items: typed or picture bullets, and no marker at all.
+const UNNUMBERED_FORMATS = ['bullet', 'image', 'none'];
+
 // Word bullet markers, typed in the Symbol or Wingdings fonts, and the bullet styles they stand for.
 const BULLET_STYLE_BY_MARKER: Record<string, string> = { '·': 'disc', '•': 'disc', o: 'circle', '§': 'square', '▪': 'square', '■': 'square' };
 
 // Browsers indent each list level by 40px: Word's paragraph margin beyond that is kept on the list.
 const LIST_INDENT_PX = 40;
-const MARGIN_LEFT_PATTERN = /(?:^|;)\s*margin-left\s*:\s*(-?[\d.]+)(pt|px|cm|mm|in)/i;
-const PIXELS_PER_UNIT: Record<string, number> = { px: 1, pt: 96 / 72, cm: 96 / 2.54, mm: 96 / 25.4, in: 96 };
 
 const marginLeftPx = (element: Element): number | null => {
-  const match = MARGIN_LEFT_PATTERN.exec(element.getAttribute('style') ?? '');
-  return match ? parseFloat(match[1]) * PIXELS_PER_UNIT[match[2].toLowerCase()] : null;
+  const margin = styleDeclaration(element.getAttribute('style') ?? '', 'margin-left');
+  return margin ? cssLengthToPixels(margin) : null;
 };
 
 interface TopLevelIndent {
@@ -123,9 +125,13 @@ const counterValue = (marker: string, type: string | null): number => {
   return /^[0-9]+$/.test(counter) ? parseInt(counter, 10) : 1;
 };
 
+// A level declared by the @list rule decides the list kind; the marker text is the fallback when there is no rule.
+const isBulletLevel = (marker: string, format: string | undefined): boolean =>
+  (format ? UNNUMBERED_FORMATS.includes(format) : !isOrderedMarker(marker));
+
 const createList = (doc: Document, marker: string, format: string | undefined): ListElement => {
   const mappedType = format ? OL_TYPE_BY_NUMBER_FORMAT[format] : undefined;
-  if (format === 'bullet' || (!mappedType && !isOrderedMarker(marker))) {
+  if (isBulletLevel(marker, format)) {
     const list = doc.createElement('ul');
     const bulletStyle = BULLET_STYLE_BY_MARKER[marker];
     if (bulletStyle) list.setAttribute('type', bulletStyle);

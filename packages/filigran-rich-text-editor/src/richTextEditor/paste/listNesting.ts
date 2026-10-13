@@ -1,7 +1,7 @@
+import { ELEMENT_NODE, isBlank } from './htmlHelpers.ts';
+
 const LIST_PATTERN = /<(?:ul|ol)\b/i;
 const LIST_TAGS = ['UL', 'OL'];
-
-const isBlank = (element: Element): boolean => (element.textContent ?? '').trim() === '' && !element.querySelector('img');
 
 const previousItem = (list: Element): Element | null => {
   let previous = list.previousElementSibling;
@@ -9,7 +9,6 @@ const previousItem = (list: Element): Element | null => {
   return previous?.tagName === 'LI' ? previous : null;
 };
 
-const ELEMENT_NODE = 1;
 const ALIGNMENT_PATTERN = /(?:^|;)\s*text-align\s*:\s*(center|right|justify)\b/i;
 const BLOCK_TAGS = ['P', 'DIV', 'UL', 'OL', 'TABLE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'FIGURE'];
 

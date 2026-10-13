@@ -84,19 +84,37 @@ body[data-theme="dark"] .rich-text-editor-wrapper .ProseMirror pre {
   border-radius: 2px;
 }
 
-/* List indentation and heading sizes that existing OpenCTI content and Word lists pasted with their margins were
-   written for, so that they keep their layout. */
+/* List indentation and heading sizes, in the editor and in displayed content, that existing OpenCTI content and
+   Word lists pasted with their margins were written for, so that they keep their layout. */
 .rich-text-editor-wrapper .ProseMirror ul,
 .rich-text-editor-wrapper .ProseMirror ol {
   padding-left: 40px;
 }
 
-.rich-text-editor-wrapper .ProseMirror h2 {
+.rich-text-editor-wrapper .ProseMirror h2,
+.rich-text-content h2 {
   font-size: 25px;
 }
 
-.rich-text-editor-wrapper .ProseMirror h3 {
+.rich-text-editor-wrapper .ProseMirror h3,
+.rich-text-content h3 {
   font-size: 20px;
+}
+
+/* Browser defaults make headings 5 and 6 smaller than the text: levels 4 to 6 step down to the text size instead. */
+.rich-text-editor-wrapper .ProseMirror h4,
+.rich-text-content h4 {
+  font-size: 18px;
+}
+
+.rich-text-editor-wrapper .ProseMirror h5,
+.rich-text-content h5 {
+  font-size: 16px;
+}
+
+.rich-text-editor-wrapper .ProseMirror h6,
+.rich-text-content h6 {
+  font-size: 14px;
 }
 
 /* Task list - no bullets, checkbox and text on same line */
@@ -245,10 +263,18 @@ body[data-theme="dark"] .rich-text-editor-wrapper .ProseMirror th {
    The saved HTML keeps the original color, used by the light theme and the PDF exports. */
 html[data-theme="dark"] .rich-text-editor-wrapper .ProseMirror [data-cell-background="near-white"],
 body[data-theme="dark"] .rich-text-editor-wrapper .ProseMirror [data-cell-background="near-white"],
+.rich-text-editor-wrapper[data-theme="dark"] .ProseMirror [data-cell-background="near-white"],
 html[data-theme="dark"] .rich-text-content [data-cell-background="near-white"],
 body[data-theme="dark"] .rich-text-content [data-cell-background="near-white"] {
   background-color: rgba(255, 255, 255, 0.06) !important;
   color: inherit;
+}
+
+/* Text set to black in such a cell would be unreadable on that surface: it follows the theme too. */
+html[data-theme="dark"] :is(.rich-text-editor-wrapper .ProseMirror, .rich-text-content) [data-cell-background="near-white"] :is([style^="color: black"], [style*="; color: black"], [style^="color: rgb(0, 0, 0)"], [style*="; color: rgb(0, 0, 0)"], [style^="color: #000000"], [style*="; color: #000000"]),
+body[data-theme="dark"] :is(.rich-text-editor-wrapper .ProseMirror, .rich-text-content) [data-cell-background="near-white"] :is([style^="color: black"], [style*="; color: black"], [style^="color: rgb(0, 0, 0)"], [style*="; color: rgb(0, 0, 0)"], [style^="color: #000000"], [style*="; color: #000000"]),
+.rich-text-editor-wrapper[data-theme="dark"] .ProseMirror [data-cell-background="near-white"] :is([style^="color: black"], [style*="; color: black"], [style^="color: rgb(0, 0, 0)"], [style*="; color: rgb(0, 0, 0)"], [style^="color: #000000"], [style*="; color: #000000"]) {
+  color: inherit !important;
 }
 
 .rich-text-editor-wrapper .ProseMirror [data-cell-background="dark"],
@@ -329,8 +355,10 @@ body[data-theme="dark"] .rich-text-editor-wrapper .ProseMirror .selectedCell::af
   cursor: default;
 }
 
+/* The light link color applies under a light page theme, or a light MUI theme given to the editor (data-theme on the wrapper). */
 html[data-theme="light"] .rich-text-editor-wrapper .ProseMirror a,
-body[data-theme="light"] .rich-text-editor-wrapper .ProseMirror a {
+body[data-theme="light"] .rich-text-editor-wrapper .ProseMirror a,
+.rich-text-editor-wrapper[data-theme="light"] .ProseMirror a {
   color: #0066cc;
 }
 

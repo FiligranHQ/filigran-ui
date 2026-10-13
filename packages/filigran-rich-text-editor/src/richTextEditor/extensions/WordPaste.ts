@@ -3,7 +3,8 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { transformWordHtml } from '../paste/wordPaste.ts';
 
 export interface WordPasteOptions {
-  // Called with the number of pictures a paste could not keep because the clipboard did not hold them (Word for Mac).
+  // Called after every HTML paste with the number of pictures it could not keep because the clipboard did not hold them
+  // (Word for Mac); 0 when none were lost.
   onPicturesLost: ((count: number) => void) | null;
 }
 
@@ -36,7 +37,7 @@ export const WordPaste = Extension.create<WordPasteOptions>({
             pendingRtf = '';
             const report = { lostPictures: 0 };
             const transformed = transformWordHtml(html, rtf, report);
-            if (report.lostPictures > 0) onPicturesLost?.(report.lostPictures);
+            onPicturesLost?.(report.lostPictures);
             return transformed;
           },
         },

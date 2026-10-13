@@ -68,3 +68,9 @@ test('existing content: a span whose style the editor does not keep is not saved
   assert.equal(loadAndSave('<p><span style="mso-bookmark:OLE_LINK1">Text</span> <span style="color: #ff0000">red</span></p>'),
     '<p>Text <span style="color: rgb(255, 0, 0);">red</span></p>');
 });
+
+test('existing content: a span styled with the font shorthand keeps its font family and size', () => {
+  const span = parseHtml(loadAndSave('<p><span style="font: 12px Arial">Text</span></p>')).querySelector('span');
+  assert.equal(span?.style.fontSize, '12px');
+  assert.equal(span?.style.fontFamily, 'Arial');
+});
