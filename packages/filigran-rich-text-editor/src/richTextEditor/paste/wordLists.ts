@@ -1,3 +1,5 @@
+import { listItemAlignment } from './listNesting.ts';
+
 type ListElement = HTMLOListElement | HTMLUListElement;
 
 interface OpenList {
@@ -29,6 +31,23 @@ const OL_TYPE_BY_NUMBER_FORMAT: Record<string, string> = {
 };
 
 const ROMAN_VALUES: Record<string, number> = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 };
+
+// Word bullet markers, typed in the Symbol or Wingdings fonts, and the bullet styles they stand for.
+const BULLET_STYLE_BY_MARKER: Record<string, string> = { '·': 'disc', '•': 'disc', o: 'circle', '§': 'square', '▪': 'square', '■': 'square' };
+
+// Browsers indent each list level by 40px: Word's paragraph margin beyond that is kept on the list.
+const LIST_INDENT_PX = 40;
+const MARGIN_LEFT_PATTERN = /(?:^|;)\s*margin-left\s*:\s*(-?[\d.]+)(pt|px|cm|mm|in)/i;
+const PIXELS_PER_UNIT: Record<string, number> = { px: 1, pt: 96 / 72, cm: 96 / 2.54, mm: 96 / 25.4, in: 96 };
+
+const marginLeftPx = (element: Element): number | null => {
+  const match = MARGIN_LEFT_PATTERN.exec(element.getAttribute('style') ?? '');
+  return match ? parseFloat(match[1]) * PIXELS_PER_UNIT[match[2].toLowerCase()] : null;
+};
+
+interface TopLevelIndent {
+  margin: number | null | undefined;
+}
 
 const parseNumberFormats = (doc: Document): Map<string, string> => {
   const formats = new Map<string, string>();
@@ -106,7 +125,12 @@ const counterValue = (marker: string, type: string | null): number => {
 
 const createList = (doc: Document, marker: string, format: string | undefined): ListElement => {
   const mappedType = format ? OL_TYPE_BY_NUMBER_FORMAT[format] : undefined;
-  if (format === 'bullet' || (!mappedType && !isOrderedMarker(marker))) return doc.createElement('ul');
+  if (format === 'bullet' || (!mappedType && !isOrderedMarker(marker))) {
+    const list = doc.createElement('ul');
+    const bulletStyle = BULLET_STYLE_BY_MARKER[marker];
+    if (bulletStyle) list.setAttribute('type', bulletStyle);
+    return list;
+  }
   const list = doc.createElement('ol');
   const type = mappedType ?? (format ? null : typeFromMarker(marker));
   if (type) list.setAttribute('type', type);
@@ -122,6 +146,7 @@ export const convertWordLists = (html: string): string => {
   const paragraphs = Array.from(doc.body.querySelectorAll('p')).filter(isListParagraph);
   const startsRun = paragraphs.map((paragraph) => !isListParagraph(paragraph.previousElementSibling));
   let stack: OpenList[] = [];
+  const topLevelIndents = new Map<ListElement, TopLevelIndent>();
   paragraphs.forEach((paragraph, index) => {
     const [, listId, levelText, lfo = ''] = MSO_LIST_PATTERN.exec(paragraph.getAttribute('style') ?? '') ?? [];
     const instance = `${listId}:${lfo}`;
@@ -142,12 +167,25 @@ export const convertWordLists = (html: string): string => {
       }
       current = { element, instance, level };
       stack.push(current);
+      if (stack.length === 1) topLevelIndents.set(element, { margin: undefined });
     }
+    // A top-level list takes its items' margin when they all share it; otherwise it keeps none.
+    const indent = stack.length === 1 ? topLevelIndents.get(current.element) : undefined;
+    if (indent && indent.margin !== null) {
+      const margin = marginLeftPx(paragraph);
+      const listMargin = margin === null ? null : Math.round(margin - LIST_INDENT_PX);
+      indent.margin = indent.margin === undefined || indent.margin === listMargin ? listMargin : null;
+    }
+    const alignment = listItemAlignment(paragraph);
     paragraph.removeAttribute('style');
     paragraph.removeAttribute('class');
+    if (alignment) paragraph.setAttribute('style', `text-align: ${alignment}`);
     const item = doc.createElement('li');
     current.element.appendChild(item);
     item.appendChild(paragraph);
+  });
+  topLevelIndents.forEach(({ margin }, list) => {
+    if (margin) list.setAttribute('style', `margin-left: ${margin}px`);
   });
   return doc.documentElement.outerHTML;
 };

@@ -24,12 +24,15 @@ import { TaskList } from './TaskList.ts';
 import { TaskItem } from './TaskListItem.ts';
 import { Div } from './Div.ts';
 import { WordPaste } from './WordPaste.ts';
+import { ListStyle } from './ListStyle.ts';
 
 export interface EditorExtensionOptions {
   placeholder: string;
+  // Called when a paste could not keep some pictures because the clipboard did not hold them (Word for Mac).
+  onPicturesLost?: (count: number) => void;
 }
 
-export const createEditorExtensions = ({ placeholder }: EditorExtensionOptions): Extensions => [
+export const createEditorExtensions = ({ placeholder, onPicturesLost }: EditorExtensionOptions): Extensions => [
   StarterKit.configure({
     paragraph: false,
     link: {
@@ -88,5 +91,6 @@ export const createEditorExtensions = ({ placeholder }: EditorExtensionOptions):
   PageBreak,
   TableCellSplit,
   Div,
-  WordPaste,
+  WordPaste.configure({ onPicturesLost: onPicturesLost ?? null }),
+  ListStyle,
 ];

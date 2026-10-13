@@ -4,6 +4,7 @@ import { createEditorExtensions } from './richTextEditor/extensions/editorExtens
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from '@mui/material/styles';
 import {
+  Alert,
   Box,
   Button,
   IconButton,
@@ -191,9 +192,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   imageEditPosRef.current = imageEditButton?.pos ?? null;
   imageOptionsPopoverOpenRef.current = imageOptionsPopover.open;
 
+  // Pictures a paste could not keep (Word for Mac gives no copy of them): the user is told, to insert them by hand.
+  const [lostPictures, setLostPictures] = useState(0);
+
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: createEditorExtensions({ placeholder }),
+    extensions: createEditorExtensions({ placeholder, onPicturesLost: setLostPictures }),
     content: initialContentRef.current,
     editable: !disabled,
     editorProps: {
@@ -719,6 +723,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         variant={variant}
       />
       </div>
+      {lostPictures > 0 && (
+        <Alert severity="warning" onClose={() => setLostPictures(0)} sx={{ borderRadius: 0 }}>
+          {lostPictures === 1 ? 'A picture could not be pasted' : `${lostPictures} pictures could not be pasted`}: the clipboard did not contain {lostPictures === 1 ? 'it' : 'them'} (Word for Mac).
+          Insert {lostPictures === 1 ? 'it' : 'them'} with the image button.
+        </Alert>
+      )}
       <div
         ref={editorWrapRef}
         style={{ flex: 1, minHeight: 0, overflow: 'auto' }}

@@ -84,9 +84,19 @@ body[data-theme="dark"] .rich-text-editor-wrapper .ProseMirror pre {
   border-radius: 2px;
 }
 
+/* List indentation and heading sizes that existing OpenCTI content and Word lists pasted with their margins were
+   written for, so that they keep their layout. */
 .rich-text-editor-wrapper .ProseMirror ul,
 .rich-text-editor-wrapper .ProseMirror ol {
-  padding-left: 1.5em;
+  padding-left: 40px;
+}
+
+.rich-text-editor-wrapper .ProseMirror h2 {
+  font-size: 25px;
+}
+
+.rich-text-editor-wrapper .ProseMirror h3 {
+  font-size: 20px;
 }
 
 /* Task list - no bullets, checkbox and text on same line */
@@ -225,8 +235,20 @@ body[data-theme="dark"] .rich-text-editor-wrapper .ProseMirror th {
 }
 
 .rich-text-editor-wrapper .ProseMirror [data-cell-background="light"],
-.rich-text-content [data-cell-background="light"] {
+.rich-text-content [data-cell-background="light"],
+.rich-text-editor-wrapper .ProseMirror [data-cell-background="near-white"],
+.rich-text-content [data-cell-background="near-white"] {
   color: #000000;
+}
+
+/* White and grey-white backgrounds (table stripes, banded rows) take the dark theme surface instead of glaring.
+   The saved HTML keeps the original color, used by the light theme and the PDF exports. */
+html[data-theme="dark"] .rich-text-editor-wrapper .ProseMirror [data-cell-background="near-white"],
+body[data-theme="dark"] .rich-text-editor-wrapper .ProseMirror [data-cell-background="near-white"],
+html[data-theme="dark"] .rich-text-content [data-cell-background="near-white"],
+body[data-theme="dark"] .rich-text-content [data-cell-background="near-white"] {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: inherit;
 }
 
 .rich-text-editor-wrapper .ProseMirror [data-cell-background="dark"],

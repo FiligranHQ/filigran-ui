@@ -49,10 +49,22 @@ test('existing content: a legacy table keeps its header row and its border', () 
   const table = parseHtml(loadAndSave(readFixture('legacy-tables.html'))).querySelector('table') as HTMLTableElement;
   assert.equal(table.tHead?.rows.length, 1);
   assert.equal(table.tBodies[0].rows.length, 3);
-  assert.equal(table.style.borderTop, '1px solid rgb(0, 0, 0)');
+  // Its pure black border follows the text color, so it stays visible in the dark theme.
+  assert.match(table.getAttribute('style') ?? '', /border-width: 1px; border-style: solid; border-color: currentcolor/);
 });
 
 test('existing content: links are saved without a theme color', () => {
   const saved = loadAndSave('<p><a href="https://example.com" style="color: #00b1ff">link</a></p>');
   assert.equal(saved, '<p><a target="_blank" rel="noopener noreferrer" href="https://example.com">link</a></p>');
+});
+
+test('existing content: the list indentation and bullet style of a stored list are kept', () => {
+  const saved = loadAndSave('<ul style="margin-left:32px;list-style-type:square;"><li>Item</li></ul>');
+  assert.equal(saved, '<ul style="margin-left: 32px; list-style-type: square;"><li><p>Item</p></li></ul>');
+  assert.equal(loadAndSave(saved), saved);
+});
+
+test('existing content: a span whose style the editor does not keep is not saved as a bare span', () => {
+  assert.equal(loadAndSave('<p><span style="mso-bookmark:OLE_LINK1">Text</span> <span style="color: #ff0000">red</span></p>'),
+    '<p>Text <span style="color: rgb(255, 0, 0);">red</span></p>');
 });
