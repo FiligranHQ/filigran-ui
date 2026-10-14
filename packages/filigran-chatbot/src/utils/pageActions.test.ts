@@ -23,8 +23,8 @@ test('a click reaches the element', async () => {
   assert.equal(clicked, 1);
 });
 
-test('typing sets the value through the native setter, fires input, then presses Enter', async () => {
-  const doc = page('<input id="q">');
+test('typing in a search field sets the value through the native setter, fires input, then presses Enter', async () => {
+  const doc = page('<input id="q" type="search">');
   const el = doc.getElementById('q') as HTMLInputElement;
   const seen: string[] = [];
   el.addEventListener('input', () => seen.push(`input:${el.value}`));
@@ -32,6 +32,33 @@ test('typing sets the value through the native setter, fires input, then presses
   const result = await performPageAction({ type: 'type', ref: 'e1', text: 'apt28' }, new Map([['e1', el]]));
   assert.deepEqual(result, { ok: true });
   assert.deepEqual(seen, ['input:apt28', 'keydown:Enter']);
+});
+
+test('typing in a field of a form with several fields never presses Enter, which would send the form', async () => {
+  const doc = page('<form id="f"><input id="name"><textarea id="persona"></textarea><button>Create</button></form>');
+  const el = doc.getElementById('name') as HTMLInputElement;
+  let submitted = 0;
+  const keys: string[] = [];
+  doc.getElementById('f')!.addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitted++;
+  });
+  el.addEventListener('keydown', (e) => keys.push((e as KeyboardEvent).key));
+  await performPageAction({ type: 'type', ref: 'e1', text: 'Ladybug Sunday' }, new Map([['e1', el]]));
+  assert.equal(el.value, 'Ladybug Sunday');
+  assert.deepEqual([keys, submitted], [[], 0]);
+});
+
+test('typing in the only field of a form presses Enter and sends it, as a search form expects', async () => {
+  const doc = page('<form id="f"><input id="q"><button>Go</button></form>');
+  const el = doc.getElementById('q') as HTMLInputElement;
+  let submitted = 0;
+  doc.getElementById('f')!.addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitted++;
+  });
+  await performPageAction({ type: 'type', ref: 'e1', text: 'apt28' }, new Map([['e1', el]]));
+  assert.equal(submitted, 1);
 });
 
 test('navigating goes through the host callback, and fails without one', async () => {

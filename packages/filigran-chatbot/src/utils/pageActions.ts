@@ -89,6 +89,19 @@ async function openMenu(el: Element): Promise<void> {
   if (!opened && el.getAttribute('aria-expanded') !== 'true') (el as HTMLElement).click();
 }
 
+const TEXT_FIELDS = 'textarea, [contenteditable="true"], input:not([type]), input[type="text"], input[type="search"], input[type="email"], input[type="url"], input[type="tel"], input[type="number"]';
+
+/**
+ * Whether Enter in *el* asks for what was typed - a search, or a form of that
+ * one field - rather than sending a form of several fields, which only its
+ * own button does: typing an agent's name must not create the agent.
+ */
+function entersSearch(el: Element): boolean {
+  if (el.getAttribute('role') === 'searchbox' || (el as HTMLInputElement).type === 'search' || el.closest('[role="search"]')) return true;
+  const form = (el as HTMLInputElement).form;
+  return !!form && form.querySelectorAll(TEXT_FIELDS).length === 1;
+}
+
 function pressEnter(el: Element): void {
   const view = el.ownerDocument.defaultView as (Window & typeof globalThis) | null;
   const Keyboard = view?.KeyboardEvent ?? KeyboardEvent;
@@ -126,7 +139,7 @@ export async function performPageAction(
     }
     (el as HTMLElement).focus?.();
     setValue(el, action.text);
-    pressEnter(el);
+    if (entersSearch(el)) pressEnter(el);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: `failed: ${err instanceof Error ? err.message : String(err)}`.slice(0, 500) };

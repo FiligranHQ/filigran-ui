@@ -515,17 +515,20 @@ panel its navigation — the panel also sends `supports_page_actions: true`, and
 agent may act on the page the panel is mounted in. The host's proxy must forward
 the approve route's body whole (a `page_action` answer carries no `decisions`). Each step arrives on the stream as a
 `status` frame with `event: "page_action_required"`; the panel performs it
-(`click`, `open` — a hover, for a menu that opens on hover —, `type` then Enter,
+(`click`, `open` — a hover, or a click when hovering opens nothing —, `type`, then
+Enter only in a search field or a form of that one field,
 or `navigate` through `onRelativeLinkClick` — never
 a page load, which would end the turn) and POSTs
 `{ conversation_id, page_action: { action_id, ok, error, url, title, snapshot } }`.
 
 The snapshot (`utils/pageSnapshot.ts`) lists one line per element a user could
 act on — `[e1] link "Reports" -> /dashboard/analyses/reports`, with states such as
-`(selected)`, `(pressed)` or `(menu)` for a closed menu
+`(selected)`, `(pressed)`, `(menu)` for a closed menu or `(collapsed)` for a closed
+group
 — and leaves out the panel itself, hidden and inert content, and every password
 value. A state the host shows by styling alone is invisible to it: mark toggles
-with `aria-pressed` and the current item with `aria-current`. A `409` means the
+with `aria-pressed`, the current item with `aria-current`, and a clickable card
+with `role="button"`. A `409` means the
 turn no longer waits for that action, and the panel drops it.
 
 #### Recovering a prompt after a page reload
