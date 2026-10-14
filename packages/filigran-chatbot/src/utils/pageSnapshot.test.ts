@@ -126,6 +126,15 @@ test('a closed menu says so, and its items once open say where they go', () => {
   assert.match(open.text, /\[e2\] menuitem "Groupements" -> \/dashboard\/analyses\/groupings$/m);
 });
 
+test('a collapsed group says so, and a menu stays a menu rather than collapsed', () => {
+  const snap = takePageSnapshot(
+    page('<button aria-expanded="false">Admin</button><button aria-haspopup="menu" aria-expanded="false">Version</button><button>Plain</button>'),
+  );
+  assert.match(snap.text, /^\[e1\] button "Admin" \(collapsed\)$/m);
+  assert.match(snap.text, /^\[e2\] button "Version" \(menu\)$/m);
+  assert.match(snap.text, /^\[e3\] button "Plain"$/m);
+});
+
 test('a row link keeps its cells apart, so its first cell reads as a word', () => {
   const snap = takePageSnapshot(page('<a href="/roles/1"><div>Administrator</div><div>Zone de danger</div><div>1</div><div>12 oct. 2026</div></a>'));
   assert.match(snap.text, /\[e1\] link "Administrator Zone de danger 1 12 oct\. 2026" -> \/roles\/1$/m);

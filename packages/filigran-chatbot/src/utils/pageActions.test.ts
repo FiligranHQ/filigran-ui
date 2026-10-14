@@ -66,13 +66,33 @@ test('the settle wait ends once the page is quiet, and never later than its cap'
   assert.ok(Date.now() - start < 600);
 });
 
-test('opening a menu hovers its trigger the way a pointer does', async () => {
+test('opening a menu hovers its trigger the way a pointer does, and stops there when the menu opens', async () => {
   const doc = page('<a id="m" href="/x" aria-haspopup="menu">Analyses</a>');
   const el = doc.getElementById('m')!;
   const seen: string[] = [];
-  for (const t of ['pointerover', 'pointerenter', 'mouseover', 'mouseenter']) el.addEventListener(t, () => seen.push(t));
+  for (const t of ['pointerover', 'pointerenter', 'mouseover', 'mouseenter', 'click']) el.addEventListener(t, () => seen.push(t));
+  el.addEventListener('mouseenter', () => doc.body.append(doc.createElement('ul')));
   assert.deepEqual(await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]])), { ok: true });
   assert.deepEqual(seen, ['pointerover', 'pointerenter', 'mouseover', 'mouseenter']);
+});
+
+test('a menu that opens on click is clicked when hovering opens nothing', async () => {
+  const doc = page('<button id="m" aria-haspopup="menu" aria-expanded="false">Version</button>');
+  const el = doc.getElementById('m')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  assert.deepEqual(await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]])), { ok: true });
+  assert.equal(clicked, 1);
+});
+
+test('a hover that marks the menu expanded is not followed by a click, which would close it', async () => {
+  const doc = page('<button id="m" aria-haspopup="menu" aria-expanded="false">Tools</button>');
+  const el = doc.getElementById('m')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  el.addEventListener('pointerenter', () => el.setAttribute('aria-expanded', 'true'));
+  await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]]));
+  assert.equal(clicked, 0);
 });
 
 test('page actions are declared only to a host that answers them and lets the panel navigate', () => {

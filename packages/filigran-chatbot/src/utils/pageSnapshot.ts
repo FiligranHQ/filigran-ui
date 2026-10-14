@@ -140,6 +140,9 @@ function states(el: Element): string[] {
   // A menu that opens on hover or click and is closed now: its items are not
   // in the page until it opens (`open` action), so the snapshot says it is there.
   else if ((el.getAttribute('aria-haspopup') ?? 'false') !== 'false') out.push('menu');
+  // A closed disclosure (a collapsed navigation group): what it holds appears
+  // once it is clicked, which its name alone does not say.
+  else if (el.getAttribute('aria-expanded') === 'false') out.push('collapsed');
   if (el.getAttribute('aria-pressed') === 'true') out.push('pressed');
   const current = el.getAttribute('aria-current');
   if (current && current !== 'false') out.push('current');

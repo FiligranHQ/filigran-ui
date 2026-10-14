@@ -55,6 +55,40 @@ function hover(el: Element): void {
   el.dispatchEvent(new Mouse('mouseenter', { ...init, bubbles: false }));
 }
 
+/** Whether *act* adds anything to the page within *ms*: a menu that opened. */
+function addsContent(doc: Document, act: () => void, ms = 300): Promise<boolean> {
+  const view = doc.defaultView as (Window & typeof globalThis) | null;
+  const Observer = view?.MutationObserver ?? globalThis.MutationObserver;
+  if (!Observer) {
+    act();
+    return Promise.resolve(true);
+  }
+  return new Promise((resolve) => {
+    const observer = new Observer((records) => {
+      if (!records.some((r) => r.addedNodes.length > 0)) return;
+      observer.disconnect();
+      clearTimeout(timer);
+      resolve(true);
+    });
+    observer.observe(doc.body ?? doc.documentElement, { subtree: true, childList: true });
+    act();
+    const timer = setTimeout(() => {
+      observer.disconnect();
+      resolve(false);
+    }, ms);
+  });
+}
+
+/**
+ * Open the menu *el* triggers: on hover where it opens on hover (OpenCTI's
+ * navigation), else on click, when hovering added nothing to the page and
+ * left the element closed.
+ */
+async function openMenu(el: Element): Promise<void> {
+  const opened = await addsContent(el.ownerDocument, () => hover(el));
+  if (!opened && el.getAttribute('aria-expanded') !== 'true') (el as HTMLElement).click();
+}
+
 function pressEnter(el: Element): void {
   const view = el.ownerDocument.defaultView as (Window & typeof globalThis) | null;
   const Keyboard = view?.KeyboardEvent ?? KeyboardEvent;
@@ -83,7 +117,7 @@ export async function performPageAction(
     const el = refs.get(action.ref);
     if (!el || !el.isConnected) return { ok: false, error: 'unknown_ref' };
     if (action.type === 'open') {
-      hover(el);
+      await openMenu(el);
       return { ok: true };
     }
     if (action.type === 'click') {
