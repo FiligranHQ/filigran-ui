@@ -2279,7 +2279,7 @@ __metadata:
     typescript: "npm:5.9.3"
   peerDependencies:
     "@mui/icons-material": ">=5"
-    "@mui/material": ">=5"
+    "@mui/material": ">=5.14.0"
     react: ">=18"
     react-color: ">=2"
     react-dom: ">=18"
