@@ -150,13 +150,13 @@ function addsContent(doc: Document, act: () => void, ms = 300): Promise<boolean>
  * phase, so handlers still run: the panel may activate a control but must never
  * cause the page load that would end the turn.
  */
-function withoutDefault(doc: Document, type: string, act: () => void): void {
+function withoutDefault(doc: Document, types: string[], act: () => void): void {
   const suppress = (event: Event) => event.preventDefault();
-  doc.addEventListener(type, suppress, true);
+  for (const type of types) doc.addEventListener(type, suppress, true);
   try {
     act();
   } finally {
-    doc.removeEventListener(type, suppress, true);
+    for (const type of types) doc.removeEventListener(type, suppress, true);
   }
 }
 
@@ -183,13 +183,10 @@ function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: s
       }
     }
   }
-  // An anchor is activated by a click on anything inside it, so a nested
-  // control, a fragment and an empty href would all navigate natively.
-  if (el.closest?.('a[href]')) {
-    withoutDefault(el.ownerDocument, 'click', () => (el as HTMLElement).click());
-  } else {
-    (el as HTMLElement).click();
-  }
+  // A submit control loads its form's action, and a click anywhere inside an
+  // anchor activates it - both end the turn. Their handlers still run.
+  const cancels = el.closest?.('a[href]') ? ['submit', 'click'] : ['submit'];
+  withoutDefault(el.ownerDocument, cancels, () => (el as HTMLElement).click());
   return { ok: true };
 }
 
@@ -249,7 +246,7 @@ function pressEnter(el: Element): void {
   // still reaches the host's own handler, but cannot unload the page.
   const form = (el as HTMLInputElement).form;
   if (form && !down.defaultPrevented) {
-    withoutDefault(el.ownerDocument, 'submit', () => form.requestSubmit?.());
+    withoutDefault(el.ownerDocument, ['submit'], () => form.requestSubmit?.());
   }
 }
 

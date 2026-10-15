@@ -425,3 +425,23 @@ test('a path normalising to a protocol-relative one is refused', async () => {
   }
   assert.deepEqual(seen, []);
 });
+
+test('clicking a submit control runs its handler without the form loading its action', async () => {
+  for (const html of [
+    '<form id="f" action="/save"><button id="b">Save</button></form>',
+    '<form id="f" action="/save"><input id="b" type="submit" value="Save"></form>',
+  ]) {
+    const doc = page(html);
+    const el = doc.getElementById('b')!;
+    let submitted = 0;
+    let defaultPrevented: boolean | null = null;
+    // No preventDefault here: the host relies on the native submission.
+    doc.getElementById('f')!.addEventListener('submit', (e) => {
+      submitted++;
+      defaultPrevented = e.defaultPrevented;
+    });
+    assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), undefined, doc), { ok: true });
+    assert.equal(submitted, 1, html);
+    assert.equal(defaultPrevented, true, html);
+  }
+});

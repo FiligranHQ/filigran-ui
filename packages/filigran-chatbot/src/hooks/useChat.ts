@@ -889,8 +889,8 @@ export function useChat({
     });
     streamDeltasRef.current = deltas;
 
+    const controller = new AbortController();
     try {
-      const controller = new AbortController();
       abortControllerRef.current = controller;
 
       // Collect file_ids from already-uploaded files (uploaded eagerly on selection)
@@ -1143,7 +1143,13 @@ export function useChat({
     } finally {
       deltas.close();
       if (streamDeltasRef.current === deltas) streamDeltasRef.current = null;
-      abortControllerRef.current = null;
+      // Aborted before it is released, or a page action still running on this
+      // turn would keep its signal live with nothing left able to cancel it.
+      // Only this turn's: a replacement already owns the ref by then.
+      if (abortControllerRef.current === controller) {
+        controller.abort();
+        abortControllerRef.current = null;
+      }
       setIsLoading(false);
       setAgentStatus(null);
       hasUsedToolsRef.current = false;
