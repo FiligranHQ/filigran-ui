@@ -1243,8 +1243,17 @@ export function useChat({
     return () => window.clearTimeout(id);
   }, [inputValue, conversationId]);
 
-  // A panel closed mid-stream has no state left for the stream's frames to update.
-  useEffect(() => () => streamDeltasRef.current?.close(), []);
+  // A panel closed mid-stream has no state left for the stream's frames to
+  // update. Aborting the turn as well is what stops a page action outliving the
+  // panel: a hover fallback would otherwise click the host page after it closed.
+  useEffect(
+    () => () => {
+      streamDeltasRef.current?.close();
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+    },
+    [],
+  );
 
   // Flush the pending draft on unmount. Hosts unmount the panel the instant it
   // is closed, which would otherwise drop anything typed inside the debounce

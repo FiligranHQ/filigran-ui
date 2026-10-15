@@ -49,7 +49,7 @@ test('typing in a field of a form with several fields never presses Enter, which
   assert.deepEqual([keys, submitted], [[], 0]);
 });
 
-test('typing in the only field of a form presses Enter and sends it, as a search form expects', async () => {
+test('a form of one plain field is not sent: it is as likely a create dialog as a search', async () => {
   const doc = page('<form id="f"><input id="q"><button>Go</button></form>');
   const el = doc.getElementById('q') as HTMLInputElement;
   let submitted = 0;
@@ -58,7 +58,25 @@ test('typing in the only field of a form presses Enter and sends it, as a search
     submitted++;
   });
   await performPageAction({ type: 'type', ref: 'e1', text: 'apt28' }, new Map([['e1', el]]));
-  assert.equal(submitted, 1);
+  assert.equal(submitted, 0);
+});
+
+test('a field that says it is a search is sent', async () => {
+  for (const html of [
+    '<form id="f"><input id="q" type="search"></form>',
+    '<form id="f"><input id="q" role="searchbox"></form>',
+    '<div role="search"><form id="f"><input id="q"></form></div>',
+  ]) {
+    const doc = page(html);
+    const el = doc.getElementById('q') as HTMLInputElement;
+    let submitted = 0;
+    doc.getElementById('f')!.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitted++;
+    });
+    await performPageAction({ type: 'type', ref: 'e1', text: 'apt28' }, new Map([['e1', el]]));
+    assert.equal(submitted, 1, html);
+  }
 });
 
 test('navigating goes through the host callback, and fails without one', async () => {
@@ -159,13 +177,49 @@ test('Enter is withheld in a form of several fields, counting the ones a text se
   assert.equal(submitted, 0);
 });
 
-test('Enter still sends a form that really has one field', async () => {
-  const doc = page('<form id="f"><input id="q" type="text"></form>');
-  const el = doc.getElementById('q') as HTMLInputElement;
-  let submitted = 0;
-  doc.getElementById('f')!.addEventListener('submit', () => submitted++);
-  await performPageAction({ type: 'type', ref: 'e1', text: 'apt28' }, new Map([['e1', el]]));
-  assert.equal(submitted, 1);
+test('a read-only field is refused rather than written through the native setter (#443 Copilot)', async () => {
+  const doc = page('<input id="r" type="text" readonly value="kept"><textarea id="a" aria-readonly="true">kept</textarea>');
+  for (const id of ['r', 'a']) {
+    const el = doc.getElementById(id) as HTMLInputElement;
+    assert.deepEqual(await performPageAction({ type: 'type', ref: 'e1', text: 'new' }, new Map([['e1', el]]), undefined, doc), {
+      ok: false,
+      error: 'read_only',
+    });
+  }
+  assert.equal((doc.getElementById('r') as HTMLInputElement).value, 'kept');
+});
+
+test('a control disabled by its fieldset is refused like any other (#443 Copilot)', async () => {
+  const doc = page('<fieldset disabled><button id="b">Save</button></fieldset>');
+  const el = doc.getElementById('b')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), undefined, doc), {
+    ok: false,
+    error: 'disabled',
+  });
+  assert.equal(clicked, 0);
+});
+
+test('a menu revealed without adding nodes is seen through aria-expanded, and a tooltip is not mistaken for one', async () => {
+  // Says nothing changed in the DOM, but marks itself expanded: no click.
+  const quiet = page('<button id="m" aria-haspopup="menu" aria-expanded="false">Tools</button>');
+  const qe = quiet.getElementById('m')!;
+  let quietClicks = 0;
+  qe.addEventListener('click', () => quietClicks++);
+  qe.addEventListener('pointerenter', () => qe.setAttribute('aria-expanded', 'true'));
+  await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', qe]]), undefined, quiet);
+  assert.equal(quietClicks, 0);
+
+  // Adds a tooltip but stays closed: the trigger states itself, so the
+  // fallback click still runs rather than trusting the addition.
+  const tip = page('<button id="m" aria-haspopup="menu" aria-expanded="false">Version</button>');
+  const te = tip.getElementById('m')!;
+  let tipClicks = 0;
+  te.addEventListener('click', () => tipClicks++);
+  te.addEventListener('mouseenter', () => tip.body.append(tip.createElement('div')));
+  await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', te]]), undefined, tip);
+  assert.equal(tipClicks, 1);
 });
 
 test('navigate takes host paths only, never another site or a scheme', async () => {

@@ -516,7 +516,9 @@ agent may act on the page the panel is mounted in. The host's proxy must forward
 the approve route's body whole (a `page_action` answer carries no `decisions`). Each step arrives on the stream as a
 `status` frame with `event: "page_action_required"`; the panel performs it
 (`click`, `open` — a hover, or a click when hovering opens nothing —, `type`, then
-Enter only in a search field or a form of that one field,
+Enter only in a field that says it is a search (`type="search"`,
+`role="searchbox"`, or inside `role="search"`), never in a form of one plain
+field, which is as likely a create or rename dialog,
 or `navigate` through `onRelativeLinkClick` — never
 a page load, which would end the turn) and POSTs
 `{ conversation_id, page_action: { action_id, ok, error, url, title, snapshot } }`.
@@ -541,7 +543,8 @@ turn no longer waits for that action, and the panel drops it.
 Actions that would leave the page are refused rather than performed, each
 answered with `ok: false` and a reason: a `navigate` off-site, a `click` on a
 link to another origin or one opening a new tab, a `type` on anything that is
-not a text field, and a target that is disabled. Clicking an in-host link is
+not a text field, a read-only field, and a target that is disabled - including
+one disabled by its `<fieldset>`. Clicking an in-host link is
 routed through `onRelativeLinkClick` rather than clicked, for the same reason a
 `navigate` is. An action this version does not know is answered as
 `unsupported_action` instead of being dropped, so a backend running ahead of the

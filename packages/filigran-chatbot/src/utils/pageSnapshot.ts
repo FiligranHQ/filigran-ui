@@ -141,7 +141,11 @@ function quote(text: string): string {
 
 function states(el: Element): string[] {
   const out: string[] = [];
-  if (el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true') out.push('disabled');
+  // `:disabled` also covers a control disabled by its `<fieldset>`, which has
+  // no attribute of its own; the snapshot would otherwise call it enabled.
+  const fieldset = el.closest?.('fieldset[disabled]');
+  const byFieldset = !!fieldset && !fieldset.querySelector('legend')?.contains(el);
+  if (el.hasAttribute('disabled') || byFieldset || el.getAttribute('aria-disabled') === 'true') out.push('disabled');
   if (el.getAttribute('aria-selected') === 'true') out.push('selected');
   if ((el as HTMLInputElement).checked || el.getAttribute('aria-checked') === 'true') out.push('checked');
   if (el.getAttribute('aria-expanded') === 'true') out.push('expanded');

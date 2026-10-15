@@ -170,35 +170,49 @@ function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: s
   return { ok: true };
 }
 
+/** Whether the menu *el* controls is showing, by what the trigger says about it. */
+function menuShowing(el: Element): boolean {
+  if (el.getAttribute('aria-expanded') === 'true') return true;
+  const id = el.getAttribute('aria-controls');
+  if (!id) return false;
+  const menu = el.ownerDocument.getElementById(id);
+  if (!menu) return false;
+  if ((menu as HTMLElement).hidden || menu.getAttribute('aria-hidden') === 'true') return false;
+  const style = menu.ownerDocument.defaultView?.getComputedStyle(menu);
+  return style?.display !== 'none' && style?.visibility !== 'hidden';
+}
+
 /**
  * Open the menu *el* triggers: on hover where it opens on hover (OpenCTI's
- * navigation), else on click, when hovering added nothing and left it closed.
+ * navigation), else on click. A trigger that says whether it is open is
+ * believed; only one that says nothing falls back to "did the page grow",
+ * which a hover tooltip would otherwise answer for it.
  */
 async function openMenu(el: Element, onNavigate?: (path: string) => void, base?: string, signal?: AbortSignal): Promise<PageActionResult> {
-  const opened = await addsContent(el.ownerDocument, () => hover(el));
-  if (opened || el.getAttribute('aria-expanded') === 'true') return { ok: true };
+  const statesItself = el.hasAttribute('aria-expanded') || el.hasAttribute('aria-controls');
+  if (menuShowing(el)) return { ok: true };
+  const grew = await addsContent(el.ownerDocument, () => hover(el));
   // The turn may have been stopped during the hover wait; the click below would
   // land on the user's page after they asked for it to end.
   if (signal?.aborted) return { ok: false, error: 'aborted' };
+  if (statesItself ? menuShowing(el) : grew) return { ok: true };
   // Through the same guard as a click: a menu trigger is often an anchor, and
   // clicking it raw would load a page and end the turn.
   return clickOrRoute(el, onNavigate, base);
 }
 
-/** Everything in a form a user fills in; Enter is only safe when there is one. */
-const SUBMITTABLE =
-  'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]), select, textarea, [contenteditable="true"]';
-
 /**
- * Whether Enter in *el* asks for what was typed - a search, or a form of that
- * one field - rather than sending a form of several fields, which only its own
- * button does: typing an agent's name must not create the agent. Counting only
- * text inputs would read a username + password form as a single field.
+ * Whether Enter in *el* asks for what was typed. Only a field that says it is a
+ * search: a form of one field is just as likely a create or rename dialog, and
+ * submitting it would commit the change the user has not asked for yet - typing
+ * an agent's name must not create the agent.
  */
 function entersSearch(el: Element): boolean {
-  if (el.getAttribute('role') === 'searchbox' || (el as HTMLInputElement).type === 'search' || el.closest('[role="search"]')) return true;
-  const form = (el as HTMLInputElement).form;
-  return !!form && form.querySelectorAll(SUBMITTABLE).length === 1;
+  return (
+    el.getAttribute('role') === 'searchbox' ||
+    (el as HTMLInputElement).type === 'search' ||
+    el.closest('[role="search"]') !== null
+  );
 }
 
 function pressEnter(el: Element): void {
@@ -215,7 +229,21 @@ function pressEnter(el: Element): void {
 }
 
 function isDisabled(el: Element): boolean {
-  return (el as HTMLButtonElement).disabled === true || el.getAttribute('aria-disabled') === 'true';
+  if (el.getAttribute('aria-disabled') === 'true') return true;
+  if (el.matches?.(':disabled')) return true;
+  // Engines differ on whether `:disabled` covers a control disabled by an
+  // ancestor `<fieldset>`, which carries neither the property nor the
+  // attribute itself - so the ancestor is checked directly, minus the first
+  // `<legend>`, which the spec leaves enabled.
+  const fieldset = el.closest?.('fieldset[disabled]');
+  if (!fieldset) return false;
+  const legend = fieldset.querySelector('legend');
+  return !(legend && legend.contains(el));
+}
+
+/** A field the user cannot edit either: the native setter would still write to it. */
+function isReadOnly(el: Element): boolean {
+  return (el as HTMLInputElement).readOnly === true || el.getAttribute('aria-readonly') === 'true';
 }
 
 export async function performPageAction(
@@ -239,9 +267,10 @@ export async function performPageAction(
     const el = refs.get(action.ref);
     if (!el || !el.isConnected) return { ok: false, error: 'unknown_ref' };
     if (isDisabled(el)) return { ok: false, error: 'disabled' };
-    if (action.type === 'open') return openMenu(el, onNavigate, baseHref(doc ?? el.ownerDocument), signal);
+    if (action.type === 'open') return await openMenu(el, onNavigate, baseHref(doc ?? el.ownerDocument), signal);
     if (action.type === 'click') return clickOrRoute(el, onNavigate, baseHref(doc ?? el.ownerDocument));
     if (!isTypeable(el)) return { ok: false, error: 'not_a_text_field' };
+    if (isReadOnly(el)) return { ok: false, error: 'read_only' };
     (el as HTMLElement).focus?.();
     setValue(el, action.text);
     if (entersSearch(el)) pressEnter(el);
