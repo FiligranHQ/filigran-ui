@@ -109,10 +109,10 @@ function clean(text: string | null | undefined): string {
   return (text ?? '').replace(/\s+/g, ' ').trim();
 }
 
-/** The name a user reads for *el*, in the accessible-name order. */
 /** Roles named by what they contain, where `title` is only a last resort. */
 const NAMED_BY_CONTENT = new Set(['button', 'link', 'tab', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'option', 'treeitem', 'switch']);
 
+/** The name a user reads for *el*, in the accessible-name order. */
 function accessibleName(el: Element, role: string): string {
   const doc = el.ownerDocument;
   // `aria-labelledby` outranks `aria-label`, and is read even when hidden: a

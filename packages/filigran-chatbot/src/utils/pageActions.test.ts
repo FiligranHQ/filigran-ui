@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
 
-import { hostTakesPageActions, isSecretField, performPageAction, waitForDomSettle } from './pageActions.ts';
+import { hostTakesPageActions, isDisabled, isSecretField, performPageAction, waitForDomSettle } from './pageActions.ts';
 import { takePageSnapshot } from './pageSnapshot.ts';
 
 function page(html: string) {
@@ -382,19 +382,31 @@ test('clicking a control inside a link runs its handler without activating the a
   assert.equal(anchorDefaultPrevented, true);
 });
 
-test('an empty or fragment href is clicked without the page reloading', async () => {
-  for (const html of ['<a id="t" href="">Reload</a>', '<a id="t" href="#">Toggle</a>']) {
-    const doc = page(html);
+test('an empty href is clicked without the page reloading, a fragment keeps its jump', async () => {
+  // An empty href reloads the page, so its default is cancelled.
+  const empty = page('<a id="t" href="">Reload</a>');
+  const emptyEl = empty.getElementById('t')!;
+  let emptyPrevented: boolean | null = null;
+  emptyEl.addEventListener('click', (e) => {
+    emptyPrevented = e.defaultPrevented;
+  });
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', emptyEl]]), () => {}, empty), { ok: true });
+  assert.equal(emptyPrevented, true);
+
+  // A fragment moves within the page: its default must stand, or the hash
+  // never changes and nothing happens.
+  for (const href of ['#section', '#/route']) {
+    const doc = page(`<a id="t" href="${href}">Go</a>`);
     const el = doc.getElementById('t')!;
     let clicked = 0;
-    let defaultPrevented: boolean | null = null;
+    let prevented: boolean | null = null;
     el.addEventListener('click', (e) => {
       clicked++;
-      defaultPrevented = e.defaultPrevented;
+      prevented = e.defaultPrevented;
     });
     assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), () => {}, doc), { ok: true });
-    assert.equal(clicked, 1, html);
-    assert.equal(defaultPrevented, true, html);
+    assert.equal(clicked, 1, href);
+    assert.equal(prevented, false, href);
   }
 });
 
@@ -596,5 +608,40 @@ test('a disabled fieldset stops its native controls, not a link inside it', asyn
     assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById(id)!]]), undefined, doc), {
       ok: true,
     });
+  }
+});
+
+test('a one-field form is sent when the field reads as a search, not when it reads as a dialog', async () => {
+  const sends = ['<input id="q" type="text" placeholder="Search…">', '<input id="q" type="text" name="query">', '<input id="q" type="text" aria-label="Filter reports">'];
+  const holds = ['<input id="q" type="text" placeholder="Agent name">', '<input id="q" type="text" name="title">'];
+  for (const [list, expected] of [[sends, 1], [holds, 0]] as const) {
+    for (const field of list) {
+      const doc = page(`<form id="f">${field}</form>`);
+      let submitted = 0;
+      doc.getElementById('f')!.addEventListener('submit', (e) => {
+        e.preventDefault();
+        submitted++;
+      });
+      await performPageAction({ type: 'type', ref: 'e1', text: 'x' }, new Map([['e1', doc.getElementById('q')!]]), undefined, doc);
+      assert.equal(submitted, expected, field);
+    }
+  }
+});
+
+test('the two disabled tests agree, though the modules cannot share one', () => {
+  const cases: Array<[string, boolean]> = [
+    ['<button id="x" disabled>Save</button>', true],
+    ['<a id="x" href="/h" disabled>Help</a>', true],
+    ['<button id="x" aria-disabled="true">Save</button>', true],
+    ['<fieldset disabled><button id="x">Save</button></fieldset>', true],
+    ['<fieldset disabled><a id="x" href="/h">Help</a></fieldset>', false],
+    ['<fieldset disabled><legend><button id="x">Legend</button></legend></fieldset>', false],
+    ['<button id="x">Save</button>', false],
+  ];
+  for (const [html, disabled] of cases) {
+    const doc = page(html);
+    assert.equal(isDisabled(doc.getElementById('x')!), disabled, html);
+    // The snapshot's own test, seen through the state it prints.
+    assert.equal(takePageSnapshot(doc).text.includes('(disabled)'), disabled, html);
   }
 });

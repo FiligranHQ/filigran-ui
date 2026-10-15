@@ -518,9 +518,11 @@ Without that opt-in a frame is answered `page_actions_not_supported`, with the
 page neither read nor acted on. Each step arrives on the stream as a
 `status` frame with `event: "page_action_required"`; the panel performs it
 (`click`, `open` — a hover, or a click when hovering opens nothing —, `type`, then
-Enter only in a field that says it is a search (`type="search"`,
-`role="searchbox"`, or inside `role="search"`), never in a form of one plain
-field, which is as likely a create or rename dialog,
+Enter only in a field that says it is a search - `type="search"`,
+`role="searchbox"`, inside `role="search"`, or named like one (a `name`, `id`,
+`placeholder`, `aria-label` or `title` reading "search", "query", "filter" or
+"find") - never in a form of one unnamed field, which is as likely a create or
+rename dialog,
 or `navigate` through `onRelativeLinkClick` — never
 a page load, which would end the turn) and POSTs
 `{ conversation_id, page_action: { action_id, ok, error, url, title, snapshot } }`.

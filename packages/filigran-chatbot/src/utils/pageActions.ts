@@ -208,7 +208,10 @@ function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: s
   (el as HTMLElement).focus?.();
   // A submit control loads its form's action, and a click anywhere inside an
   // anchor activates it - both end the turn. Their handlers still run.
-  const inAnchor = !!el.closest?.('a[href]');
+  // A fragment moves within the page, so its default stands; anything else an
+  // anchor does loads one.
+  const anchor = el.closest?.('a[href]');
+  const inAnchor = !!anchor && !(anchor.getAttribute('href') ?? '').startsWith('#');
   const cancels = inAnchor ? ['submit', 'click'] : ['submit'];
   const checkable = el.matches?.('input[type="checkbox"], input[type="radio"]') ?? false;
   const before = (el as HTMLInputElement).checked;
@@ -294,12 +297,16 @@ async function openMenu(el: Element, base?: string, signal?: AbortSignal): Promi
  * a search: a one-field form is as likely a create dialog, and typing an
  * agent's name must not create the agent.
  */
+/** Words a search field is labelled with, where a create dialog's is not. */
+const SEARCH_WORDS = /search|query|filter|find|recherche|rechercher/i;
+
 function entersSearch(el: Element): boolean {
-  return (
-    el.getAttribute('role') === 'searchbox' ||
-    (el as HTMLInputElement).type === 'search' ||
-    el.closest('[role="search"]') !== null
-  );
+  if (el.getAttribute('role') === 'searchbox') return true;
+  if ((el as HTMLInputElement).type === 'search') return true;
+  if (el.closest('[role="search"]') !== null) return true;
+  // A plain text input is often the search of a one-field form; only one
+  // that says so, since a create or rename dialog looks the same otherwise.
+  return ['name', 'id', 'placeholder', 'aria-label', 'title'].some((attr) => SEARCH_WORDS.test(el.getAttribute(attr) ?? ''));
 }
 
 function pressEnter(el: Element): void {
@@ -319,13 +326,17 @@ function pressEnter(el: Element): void {
   }
 }
 
-function isDisabled(el: Element): boolean {
+/**
+ * Mirrors `pageSnapshot`'s own test, which cannot be shared: both modules are
+ * loaded by `node --test`, where a runtime relative import does not resolve.
+ * `disabledTestsAgree` in the tests pins them to the same answer.
+ */
+export function isDisabled(el: Element): boolean {
+  // The attribute as authored, so what the snapshot prints `(disabled)` for is
+  // what is refused here - a custom `<a disabled>` included.
+  if (el.hasAttribute('disabled')) return true;
   if (el.getAttribute('aria-disabled') === 'true') return true;
   if (el.matches?.(':disabled')) return true;
-  // Engines differ on whether `:disabled` covers a control disabled by an
-  // ancestor `<fieldset>`, which carries neither the property nor the
-  // attribute itself - so the ancestor is checked directly, minus the first
-  // `<legend>`, which the spec leaves enabled.
   // Only the native form controls a `<fieldset>` governs: a link or an ARIA
   // widget inside a disabled one still works. Its first `<legend>` is exempt.
   if (!el.matches?.('button, input, select, textarea')) return false;

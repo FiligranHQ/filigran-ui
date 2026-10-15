@@ -323,6 +323,10 @@ export function useChat({
 
   const historyLoadedRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Page actions abort on their own: closing the panel must stop them touching
+  // the host page without cancelling the turn, whose answer a host expects to
+  // find in history when the panel reopens.
+  const pageActionControllerRef = useRef<AbortController | null>(null);
   // The running stream's pending deltas, so stopping it can apply them and a
   // new chat can drop them.
   const streamDeltasRef = useRef<StreamDeltas | null>(null);
@@ -777,7 +781,7 @@ export function useChat({
     // The turn's own signal: Stop, New chat and switching conversation abort it,
     // and this runs detached from the stream, so without it a stopped turn would
     // still click the page and then answer for a conversation that is gone.
-    const signal = abortControllerRef.current?.signal;
+    const signal = pageActionControllerRef.current?.signal;
     // The same opt-in that decides whether the capability is advertised, tested
     // again on the way in: an unsolicited frame must not read or act on the page
     // of a host that never offered it. Answered, so the turn does not hang.
@@ -909,8 +913,11 @@ export function useChat({
     streamDeltasRef.current = deltas;
 
     const controller = new AbortController();
+    pageActionControllerRef.current?.abort();
+    const pageActions = new AbortController();
     try {
       abortControllerRef.current = controller;
+      pageActionControllerRef.current = pageActions;
 
       // Collect file_ids from already-uploaded files (uploaded eagerly on selection)
       const fileIds = (userMsg.files ?? []).filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
@@ -1162,13 +1169,10 @@ export function useChat({
     } finally {
       deltas.close();
       if (streamDeltasRef.current === deltas) streamDeltasRef.current = null;
-      // Aborted before it is released, or a page action still running on this
-      // turn would keep its signal live with nothing left able to cancel it.
-      // Only this turn's: a replacement already owns the ref by then.
-      if (abortControllerRef.current === controller) {
-        controller.abort();
-        abortControllerRef.current = null;
-      }
+      // The turn is over, so its page actions are too - but only this turn's:
+      // a replacement already owns the refs by then.
+      if (pageActionControllerRef.current === pageActions) pageActions.abort();
+      if (abortControllerRef.current === controller) abortControllerRef.current = null;
       setIsLoading(false);
       setAgentStatus(null);
       hasUsedToolsRef.current = false;
@@ -1191,6 +1195,8 @@ export function useChat({
     streamDeltasRef.current = null;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    pageActionControllerRef.current?.abort();
+    pageActionControllerRef.current = null;
     // Cancel any in-flight file uploads
     uploadAbortRef.current.abort();
     uploadAbortRef.current = new AbortController();
@@ -1245,6 +1251,8 @@ export function useChat({
     streamDeltasRef.current = null;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    pageActionControllerRef.current?.abort();
+    pageActionControllerRef.current = null;
     setIsLoading(false);
     setAgentStatus(null);
     hasUsedToolsRef.current = false;
@@ -1269,13 +1277,13 @@ export function useChat({
   }, [inputValue, conversationId]);
 
   // A panel closed mid-stream has no state left for the stream's frames to
-  // update. Aborting the turn as well is what stops a page action outliving the
-  // panel: a hover fallback would otherwise click the host page after it closed.
+  // update. Its page actions stop, so a hover fallback cannot click the host
+  // page after the panel closed; the stream itself runs on, which is how its
+  // answer is in history when the panel reopens.
   useEffect(
     () => () => {
       streamDeltasRef.current?.close();
-      abortControllerRef.current?.abort();
-      abortControllerRef.current = null;
+      pageActionControllerRef.current?.abort();
     },
     [],
   );
