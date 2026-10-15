@@ -412,3 +412,16 @@ test('a search form whose handler does not cancel submission still cannot unload
   assert.equal(submitted, 1);
   assert.equal(defaultPrevented, true);
 });
+
+test('a path normalising to a protocol-relative one is refused', async () => {
+  const doc = page('');
+  const seen: string[] = [];
+  const go = (p: string) => seen.push(p);
+  const refs = new Map<string, Element>();
+  // Each passes an origin check but returns `//evil.test/x`, which a host
+  // resolving the value again would send off-site.
+  for (const path of ['/.//evil.test/x', '/..//evil.test/x']) {
+    assert.deepEqual(await performPageAction({ type: 'navigate', path }, refs, go, doc), { ok: false, error: 'external_path' });
+  }
+  assert.deepEqual(seen, []);
+});

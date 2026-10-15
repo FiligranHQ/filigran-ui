@@ -39,7 +39,10 @@ export const toInternalHref = (href?: string, base?: string): string | null => {
     const url = new URL(href, from);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
     if (url.origin !== new URL(from).origin) return null;
-    return `${url.pathname}${url.search}${url.hash}` || '/';
+    const path = `${url.pathname}${url.search}${url.hash}` || '/';
+    // `/.//host/x` normalises to `//host/x`, which passes the origin check here
+    // and then reads as protocol-relative to a host that resolves it again.
+    return path.startsWith('//') ? null : path;
   } catch {
     return null;
   }
