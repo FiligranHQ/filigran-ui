@@ -82,7 +82,9 @@ const MarkdownLink = ({ href, children }: { href?: string; children?: React.Reac
   const { onRelativeLinkClick } = useContext(MarkdownRenderContext);
   const internalHref = toInternalHref(href);
   const routeInternally = internalHref !== null && !!onRelativeLinkClick;
-  const openInNewTab = !routeInternally && !isRelativeHref(href);
+  // A new tab unless the link was authored relative AND stays on this origin:
+  // the second half keeps `/\host` (which resolves off-site) out of this tab.
+  const openInNewTab = !routeInternally && !(isRelativeHref(href) && internalHref !== null);
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (!routeInternally) return;
     event.preventDefault();

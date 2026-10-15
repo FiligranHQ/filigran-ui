@@ -260,3 +260,43 @@ test('a fragment href is an in-page trigger, so it is clicked rather than routed
   assert.equal(clicked, 1);
   assert.deepEqual(seen, []);
 });
+
+// --- Copilot / re-review of bdf7771 -----------------------------------------
+
+test('a stopped turn does not click the page after its hover wait', async () => {
+  const doc = page('<button id="m" aria-haspopup="menu" aria-expanded="false">Version</button>');
+  const el = doc.getElementById('m')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  const controller = new AbortController();
+  const run = performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]]), undefined, doc, controller.signal);
+  controller.abort();
+  assert.deepEqual(await run, { ok: false, error: 'aborted' });
+  assert.equal(clicked, 0);
+});
+
+test('an already aborted turn performs nothing at all', async () => {
+  const doc = page('<button id="b">Go</button>');
+  const el = doc.getElementById('b')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  const controller = new AbortController();
+  controller.abort();
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), undefined, doc, controller.signal), {
+    ok: false,
+    error: 'aborted',
+  });
+  assert.equal(clicked, 0);
+});
+
+test('the open fallback goes through the link guard rather than clicking an anchor raw', async () => {
+  const doc = page('<a id="ext" href="https://evil.test/x" aria-haspopup="menu" aria-expanded="false">Out</a>');
+  const el = doc.getElementById('ext')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  assert.deepEqual(await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]]), () => {}, doc), {
+    ok: false,
+    error: 'external_link',
+  });
+  assert.equal(clicked, 0);
+});

@@ -45,8 +45,16 @@ export const toInternalHref = (href?: string, base?: string): string | null => {
   }
 };
 
-/** Whether *href* stays within the host, by the same resolution. */
-export const isRelativeHref = (href?: string, base?: string): boolean => toInternalHref(href, base) !== null;
+/**
+ * Whether *href* is *written* as a relative reference. Not a safety boundary -
+ * `toInternalHref` is - but the shape a link was authored in: a same-origin
+ * absolute link still opens in a new tab when the host routes nothing.
+ */
+export const isRelativeHref = (href?: string): boolean => {
+  if (!href) return false;
+  if (href.startsWith('//')) return false;
+  return !/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(href);
+};
 
 export interface PageActionResult {
   ok: boolean;
@@ -135,12 +143,42 @@ function addsContent(doc: Document, act: () => void, ms = 300): Promise<boolean>
 }
 
 /**
+ * Click *el*, except where clicking would leave the page and end the turn: an
+ * anchor is routed through the host instead. Only *el* itself, never an
+ * ancestor — a `role="button"` inside a link row has its own handler, and
+ * routing the row's href would skip it.
+ */
+function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: string): PageActionResult {
+  // A fragment is an in-page trigger (`<a href="#">` carrying a handler), not
+  // a destination, so it is clicked like anything else.
+  const href = el.matches?.('a[href]') ? el.getAttribute('href') ?? '' : '';
+  if (href && !href.startsWith('#')) {
+    const internal = toInternalHref(href, base);
+    if (!internal) return { ok: false, error: 'external_link' };
+    const target = el.getAttribute('target');
+    if (target && target !== '_self') return { ok: false, error: 'opens_new_tab' };
+    if (onNavigate) {
+      onNavigate(internal);
+      return { ok: true };
+    }
+  }
+  (el as HTMLElement).click();
+  return { ok: true };
+}
+
+/**
  * Open the menu *el* triggers: on hover where it opens on hover (OpenCTI's
  * navigation), else on click, when hovering added nothing and left it closed.
  */
-async function openMenu(el: Element): Promise<void> {
+async function openMenu(el: Element, onNavigate?: (path: string) => void, base?: string, signal?: AbortSignal): Promise<PageActionResult> {
   const opened = await addsContent(el.ownerDocument, () => hover(el));
-  if (!opened && el.getAttribute('aria-expanded') !== 'true') (el as HTMLElement).click();
+  if (opened || el.getAttribute('aria-expanded') === 'true') return { ok: true };
+  // The turn may have been stopped during the hover wait; the click below would
+  // land on the user's page after they asked for it to end.
+  if (signal?.aborted) return { ok: false, error: 'aborted' };
+  // Through the same guard as a click: a menu trigger is often an anchor, and
+  // clicking it raw would load a page and end the turn.
+  return clickOrRoute(el, onNavigate, base);
 }
 
 /** Everything in a form a user fills in; Enter is only safe when there is one. */
@@ -176,37 +214,15 @@ function isDisabled(el: Element): boolean {
   return (el as HTMLButtonElement).disabled === true || el.getAttribute('aria-disabled') === 'true';
 }
 
-/**
- * Click *el*, except where clicking would leave the page and end the turn: an
- * anchor is routed through the host instead. Only *el* itself, never an
- * ancestor — a `role="button"` inside a link row has its own handler, and
- * routing the row's href would skip it.
- */
-function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: string): PageActionResult {
-  // A fragment is an in-page trigger (`<a href="#">` carrying a handler), not
-  // a destination, so it is clicked like anything else.
-  const href = el.matches?.('a[href]') ? el.getAttribute('href') ?? '' : '';
-  if (href && !href.startsWith('#')) {
-    const internal = toInternalHref(href, base);
-    if (!internal) return { ok: false, error: 'external_link' };
-    const target = el.getAttribute('target');
-    if (target && target !== '_self') return { ok: false, error: 'opens_new_tab' };
-    if (onNavigate) {
-      onNavigate(internal);
-      return { ok: true };
-    }
-  }
-  (el as HTMLElement).click();
-  return { ok: true };
-}
-
 export async function performPageAction(
   action: PageAction,
   refs: Map<string, Element>,
   onNavigate?: (path: string) => void,
   doc?: Document,
+  signal?: AbortSignal,
 ): Promise<PageActionResult> {
   try {
+    if (signal?.aborted) return { ok: false, error: 'aborted' };
     if (action.type === 'snapshot') return { ok: true };
     if (action.type === 'unsupported') return { ok: false, error: `unsupported_action: ${action.requested}`.slice(0, 500) };
     if (action.type === 'navigate') {
@@ -219,10 +235,7 @@ export async function performPageAction(
     const el = refs.get(action.ref);
     if (!el || !el.isConnected) return { ok: false, error: 'unknown_ref' };
     if (isDisabled(el)) return { ok: false, error: 'disabled' };
-    if (action.type === 'open') {
-      await openMenu(el);
-      return { ok: true };
-    }
+    if (action.type === 'open') return openMenu(el, onNavigate, baseHref(doc ?? el.ownerDocument), signal);
     if (action.type === 'click') return clickOrRoute(el, onNavigate, baseHref(doc ?? el.ownerDocument));
     if (!isTypeable(el)) return { ok: false, error: 'not_a_text_field' };
     (el as HTMLElement).focus?.();
@@ -239,8 +252,13 @@ export async function performPageAction(
  * The panel's own subtree is ignored: its status re-renders would otherwise keep
  * resetting the quiet timer until the cap.
  */
-export function waitForDomSettle(doc: Document, { quietMs = 300, maxMs = 3000 }: { quietMs?: number; maxMs?: number } = {}): Promise<void> {
+export function waitForDomSettle(
+  doc: Document,
+  { quietMs = 300, maxMs = 3000, signal }: { quietMs?: number; maxMs?: number; signal?: AbortSignal } = {},
+): Promise<void> {
   return new Promise((resolve) => {
+    // Before anything is set up: a stopped turn has nothing to wait for.
+    if (signal?.aborted) return resolve();
     const view = doc.defaultView as (Window & typeof globalThis) | null;
     const Observer = view?.MutationObserver ?? globalThis.MutationObserver;
     let quiet: ReturnType<typeof setTimeout>;
@@ -248,6 +266,7 @@ export function waitForDomSettle(doc: Document, { quietMs = 300, maxMs = 3000 }:
       clearTimeout(quiet);
       clearTimeout(cap);
       observer?.disconnect();
+      signal?.removeEventListener('abort', done);
       resolve();
     };
     const observer = Observer
@@ -260,5 +279,6 @@ export function waitForDomSettle(doc: Document, { quietMs = 300, maxMs = 3000 }:
     observer?.observe(doc.body ?? doc.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
     quiet = setTimeout(done, quietMs);
     const cap = setTimeout(done, maxMs);
+    signal?.addEventListener('abort', done);
   });
 }

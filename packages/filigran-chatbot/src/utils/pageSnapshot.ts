@@ -33,6 +33,13 @@ const EXPLICIT_ROLES = new Set([
   'treeitem',
 ]);
 
+/**
+ * Roles that wrap other controls rather than being named by their contents: a
+ * `div[role="combobox"]` holds the real input, a `treeitem` its child items.
+ * A native `<select>` is not one - its options are not separate controls.
+ */
+const COMPOSITE_ROLES = new Set(['combobox', 'treeitem']);
+
 /** The role an element is acted on as, or `null` when it is not actionable. */
 function actionableRole(el: Element): string | null {
   const explicit = el.getAttribute('role');
@@ -71,6 +78,9 @@ function spacedText(el: Element): string {
     if (node.nodeType === 3) {
       out += node.textContent ?? '';
     } else if (node.nodeType === 1) {
+      // The walk skips hidden subtrees; without the same test here they would
+      // come back as part of a visible ancestor's name.
+      if (hidden(node as Element)) continue;
       const display = view?.getComputedStyle(node as Element).display ?? '';
       // An unknown display (no layout engine) is read as inline: never split a word.
       const inline = display === '' || display === 'inline' || display === 'contents';
@@ -94,7 +104,7 @@ function accessibleName(el: Element): string {
     const text = clean(
       labelledBy
         .split(/\s+/)
-        .map((id) => doc.getElementById(id)?.textContent ?? '')
+        .map((id) => { const t = doc.getElementById(id); return t && !hidden(t) ? spacedText(t) : ''; })
         .join(' '),
     );
     if (text) return text;
@@ -117,6 +127,9 @@ function accessibleName(el: Element): string {
   if (placeholder) return placeholder;
   const title = clean(el.getAttribute('title'));
   if (title) return title;
+  // Falling back to the contents would hand over what `value()` just masked:
+  // an unlabelled one-time code would arrive as the element's name.
+  if (isSecret(el)) return '';
   return clean(spacedText(el));
 }
 
@@ -216,7 +229,7 @@ export function takePageSnapshot(doc: Document, maxChars = MAX_SNAPSHOT_CHARS): 
         }
         refs.set(ref, el);
       } else if (level) {
-        line = `heading ${quote(clean(el.textContent))} (level ${level})`;
+        line = `heading ${quote(clean(spacedText(el)))} (level ${level})`;
         if (size + line.length + 1 > maxChars) {
           truncated = true;
           return false;
@@ -226,8 +239,10 @@ export function takePageSnapshot(doc: Document, maxChars = MAX_SNAPSHOT_CHARS): 
         lines.push(line);
         size += line.length + 1;
       }
-      // An actionable element's own content is its name, not more elements.
-      if (!role && !walk(el)) return false;
+      // An actionable element's own content is its name, not more elements -
+      // except a composite one, whose content is the controls to act on.
+      const composite = role !== null && COMPOSITE_ROLES.has(role) && el.tagName.toLowerCase() !== 'select';
+      if ((!role || composite) && !walk(el)) return false;
     }
     return true;
   };

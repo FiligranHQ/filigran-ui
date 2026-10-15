@@ -774,44 +774,54 @@ export function useChat({
     const approveUrl = getApproveUrlRef.current();
     const convId = conversationIdHint ?? conversationIdRef.current;
     if (!approveUrl || !convId || typeof document === 'undefined') return;
+    // The turn's own signal: Stop, New chat and switching conversation abort it,
+    // and this runs detached from the stream, so without it a stopped turn would
+    // still click the page and then answer for a conversation that is gone.
+    const signal = abortControllerRef.current?.signal;
     setAgentStatus((prev) => (prev ? { ...prev, status: 'acting_on_page' } : { status: 'acting_on_page' }));
     try {
-      const result = await performPageAction(action, pageRefsRef.current, onRelativeLinkClickRef.current, document);
-      if (action.type !== 'snapshot') await waitForDomSettle(document);
-      // Taking the snapshot can itself throw (a very deep DOM, a host
-      // `getComputedStyle` that raises). The turn is waiting on this answer, so
-      // it still goes out - saying what failed, with no page to report.
+      const result = await performPageAction(action, pageRefsRef.current, onRelativeLinkClickRef.current, document, signal);
+      if (signal?.aborted) return;
+      if (action.type !== 'snapshot') await waitForDomSettle(document, { signal });
+      if (signal?.aborted) return;
+      // The snapshot can throw on its own (a very deep DOM, a host
+      // `getComputedStyle` that raises). Reported apart from the action's own
+      // result: the click did happen, and `ok: false` would have the agent
+      // retry it - a second "Create".
       let page = { text: '', url: '', title: '' };
-      let failure = result.ok ? null : result.error ?? null;
+      let snapshotError: string | null = null;
       try {
         const snapshot = takePageSnapshot(document);
         pageRefsRef.current = snapshot.refs;
         page = { text: snapshot.text, url: snapshot.url, title: snapshot.title };
       } catch (err) {
         pageRefsRef.current = new Map();
-        failure = `snapshot_failed: ${err instanceof Error ? err.message : String(err)}`.slice(0, 500);
+        snapshotError = `${err instanceof Error ? err.message : String(err)}`.slice(0, 500);
       }
       await fetch(approveUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
+        signal,
         body: JSON.stringify({
           conversation_id: convId,
           page_action: {
             action_id: actionId,
-            ok: result.ok && failure === null,
-            error: failure,
+            ok: result.ok,
+            error: result.error ?? null,
             url: page.url,
             title: page.title,
             snapshot: page.text,
+            snapshot_error: snapshotError,
           },
         }),
       });
     } catch {
       // The turn's own page wait ends it; there is nothing to show here.
     } finally {
-      // Always leave the status line: it would otherwise sit on
-      // "Acting on the page…" for the rest of the turn.
-      setAgentStatus((prev) => (prev?.status === 'acting_on_page' ? { ...prev, status: 'thinking' } : prev));
+      // Not for a turn that was stopped: its replacement owns the status line.
+      if (!signal?.aborted) {
+        setAgentStatus((prev) => (prev?.status === 'acting_on_page' ? { ...prev, status: 'thinking' } : prev));
+      }
     }
   };
 

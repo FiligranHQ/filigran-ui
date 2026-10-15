@@ -167,3 +167,29 @@ test('a snapshot cut off at the cap says so, so a partial list is not read as th
   const full = takePageSnapshot(doc);
   assert.ok(!full.text.includes('[truncated]'));
 });
+
+test('a composite control still lists the control inside it (#443 Copilot)', () => {
+  const doc = page('<div role="combobox" aria-label="Agent"><input type="text" aria-label="Agent name" value="clef"></div>');
+  const { text } = takePageSnapshot(doc);
+  assert.ok(text.includes('combobox "Agent"'), text);
+  assert.ok(text.includes('textbox "Agent name"'), text);
+});
+
+test('a native select still keeps its options out of the snapshot', () => {
+  const doc = page('<select aria-label="Mode"><option>fast</option><option>slow</option></select>');
+  const { text } = takePageSnapshot(doc);
+  assert.equal(text.split('\n').filter((l) => l.startsWith('[')).length, 1);
+});
+
+test('hidden text cannot re-enter through a visible ancestor name (#443 Copilot)', () => {
+  const doc = page('<button id="b">Open<span style="display:none">private text</span></button>');
+  const { text } = takePageSnapshot(doc);
+  assert.ok(text.includes('button "Open"'), text);
+  assert.ok(!text.includes('private text'), text);
+});
+
+test("a secret's own contents are not handed over as its name", () => {
+  const doc = page('<div contenteditable="true" autocomplete="one-time-code">123456</div>');
+  const { text } = takePageSnapshot(doc);
+  assert.ok(!text.includes('123456'), text);
+});
