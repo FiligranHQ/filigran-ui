@@ -292,11 +292,6 @@ async function openMenu(el: Element, base?: string, signal?: AbortSignal): Promi
   return clickOrRoute(el, undefined, base);
 }
 
-/**
- * Whether Enter in *el* asks for what was typed. Only a field that says it is
- * a search: a one-field form is as likely a create dialog, and typing an
- * agent's name must not create the agent.
- */
 /** Everything in a form a user fills in, for telling a search from a dialog. */
 const SUBMITTABLE =
   'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]), select, textarea, [contenteditable="true"]';
