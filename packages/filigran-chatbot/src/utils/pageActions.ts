@@ -67,6 +67,9 @@ export interface PageActionResult {
 /** The panel's own subtree, whose mutations must never count as the page reacting. */
 const PANEL_SELECTOR = '.filigran-chatbot';
 
+/** How long a hover is given to open a menu. */
+const HOVER_WAIT_MS = 300;
+
 function insidePanel(node: Node | null): boolean {
   // Duck-typed: `instanceof Element` throws where there is no such global, and
   // the observer swallows the throw, losing the mutation.
@@ -84,6 +87,22 @@ const TYPEABLE =
 
 function isTypeable(el: Element): boolean {
   return el.matches?.(TYPEABLE) ?? false;
+}
+
+/**
+ * Secret fields, by autocomplete. Mirrors `pageSnapshot`'s own test, which
+ * cannot be shared: both modules are loaded by `node --test`, where a runtime
+ * relative import does not resolve. `secretFieldsAgree` in the tests pins them
+ * to the same answer.
+ */
+const SECRET_AUTOCOMPLETE = /^(current-password|new-password|one-time-code|cc-)/;
+
+export function isSecretField(el: Element): boolean {
+  if ((el.getAttribute('type') || '').toLowerCase() === 'password') return true;
+  return (el.getAttribute('autocomplete') || '')
+    .toLowerCase()
+    .split(/\s+/)
+    .some((token) => SECRET_AUTOCOMPLETE.test(token));
 }
 
 /** Set *text* the way a user's typing does, so a React-controlled field sees it. */
@@ -119,7 +138,7 @@ function hover(el: Element): void {
  * The panel's own re-render (the "Acting on the page…" status) lands inside the
  * same window, so its subtree is ignored or every hover would look successful.
  */
-function addsContent(doc: Document, act: () => void, ms = 300): Promise<boolean> {
+function addsContent(doc: Document, act: () => void, ms = HOVER_WAIT_MS): Promise<boolean> {
   const view = doc.defaultView as (Window & typeof globalThis) | null;
   const Observer = view?.MutationObserver ?? globalThis.MutationObserver;
   if (!Observer) {
@@ -190,8 +209,26 @@ function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: s
   return { ok: true };
 }
 
+/** Resolve once *test* holds, or after *ms*. */
+function waitUntil(test: () => boolean, ms: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const tick = () => {
+      if (test()) return resolve(true);
+      if (Date.now() - started >= ms) return resolve(false);
+      setTimeout(tick, 30);
+    };
+    tick();
+  });
+}
+
 /** Whether *el* and every ancestor are rendered: a wrapper hides what it holds. */
 function visible(el: Element): boolean {
+  const details = el.closest?.('details:not([open])');
+  if (details && details !== el) {
+    const summary = Array.from(details.children).find((c) => c.tagName.toLowerCase() === 'summary');
+    if (!summary?.contains(el)) return false;
+  }
   for (let node: Element | null = el; node; node = node.parentElement) {
     if ((node as HTMLElement).hidden || node.hasAttribute('inert')) return false;
     if (node.getAttribute('aria-hidden') === 'true') return false;
@@ -218,17 +255,23 @@ function menuShowing(el: Element): boolean {
  * A trigger stating its own state is believed; only one that says nothing
  * falls back to "did the page grow", which a tooltip would answer for it.
  */
-async function openMenu(el: Element, onNavigate?: (path: string) => void, base?: string, signal?: AbortSignal): Promise<PageActionResult> {
+async function openMenu(el: Element, base?: string, signal?: AbortSignal): Promise<PageActionResult> {
   const statesItself = el.hasAttribute('aria-expanded') || el.hasAttribute('aria-controls');
   if (menuShowing(el)) return { ok: true };
-  const grew = await addsContent(el.ownerDocument, () => hover(el));
+  if (statesItself) {
+    // Waited on for its own state: anything else the hover adds, a tooltip,
+    // says nothing about the menu and would cut the wait short.
+    hover(el);
+    if (await waitUntil(() => menuShowing(el), HOVER_WAIT_MS)) return { ok: true };
+  } else if (await addsContent(el.ownerDocument, () => hover(el))) {
+    return { ok: true };
+  }
   // The turn may have been stopped during the hover wait; the click below would
   // land on the user's page after they asked for it to end.
   if (signal?.aborted) return { ok: false, error: 'aborted' };
-  if (statesItself ? menuShowing(el) : grew) return { ok: true };
-  // Through the same guard as a click: a menu trigger is often an anchor, and
-  // clicking it raw would load a page and end the turn.
-  return clickOrRoute(el, onNavigate, base);
+  // No router: a trigger that happens to be an anchor must run its own click
+  // handler rather than navigate to its href. The link guards still apply.
+  return clickOrRoute(el, undefined, base);
 }
 
 /**
@@ -299,14 +342,20 @@ export async function performPageAction(
     }
     const el = refs.get(action.ref);
     if (!el || !el.isConnected) return { ok: false, error: 'unknown_ref' };
+    // Still in the document is not still reachable: a dialog may have closed or
+    // an ancestor gone inert since the snapshot named it.
+    if (!visible(el)) return { ok: false, error: 'not_visible' };
     if (isDisabled(el)) return { ok: false, error: 'disabled' };
     // The file chooser is an operating-system window: it cannot be driven from
     // here, and the turn would wait behind it.
     if (el.matches?.('input[type="file"]')) return { ok: false, error: 'opens_file_dialog' };
-    if (action.type === 'open') return await openMenu(el, onNavigate, baseHref(doc ?? el.ownerDocument), signal);
+    if (action.type === 'open') return await openMenu(el, baseHref(doc ?? el.ownerDocument), signal);
     if (action.type === 'click') return clickOrRoute(el, onNavigate, baseHref(doc ?? el.ownerDocument));
     if (!isTypeable(el)) return { ok: false, error: 'not_a_text_field' };
     if (isReadOnly(el)) return { ok: false, error: 'read_only' };
+    // A revealed password or one-time code is masked in the snapshot; writing
+    // to it would be filling a credential the panel will not read back.
+    if (isSecretField(el)) return { ok: false, error: 'secret_field' };
     (el as HTMLElement).focus?.();
     setValue(el, action.text);
     if (entersSearch(el)) pressEnter(el);

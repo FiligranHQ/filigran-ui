@@ -545,9 +545,10 @@ turn no longer waits for that action, and the panel drops it.
 Actions that would leave the page are refused rather than performed, each
 answered with `ok: false` and a reason: a `navigate` off-site, a `click` on a
 link to another origin or one opening a new tab, a `type` on anything that is
-not a text field, a read-only field, a file input (whose chooser is an
-operating-system window), and a target that is disabled - including one
-disabled by its `<fieldset>`. A click never completes a native default that
+not a text field, a read-only field, a masked one (a password, one-time code
+or card field), a file input (whose chooser is an operating-system window), a
+target that is disabled - including one disabled by its `<fieldset>` - and one
+no longer visible when the action runs. A click never completes a native default that
 would leave the page: an anchor's navigation and a form's submission are
 cancelled while the host's own handlers still run. Clicking an in-host link is
 routed through `onRelativeLinkClick` rather than clicked, for the same reason a

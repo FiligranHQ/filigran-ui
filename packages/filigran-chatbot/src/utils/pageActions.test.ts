@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
 
-import { hostTakesPageActions, performPageAction, waitForDomSettle } from './pageActions.ts';
+import { hostTakesPageActions, isSecretField, performPageAction, waitForDomSettle } from './pageActions.ts';
 import { takePageSnapshot } from './pageSnapshot.ts';
 
 function page(html: string) {
@@ -480,4 +480,78 @@ test('a menu its trigger says is open is left alone', async () => {
   el.addEventListener('click', () => clicked++);
   assert.deepEqual(await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]]), undefined, doc), { ok: true });
   assert.equal(clicked, 0);
+});
+
+test('a masked field is not writable either', async () => {
+  const doc = page('<input id="p" type="text" autocomplete="current-password" value="kept"><input id="o" type="text" autocomplete="one-time-code">');
+  for (const id of ['p', 'o']) {
+    const el = doc.getElementById(id)!;
+    assert.deepEqual(await performPageAction({ type: 'type', ref: 'e1', text: 'new' }, new Map([['e1', el]]), undefined, doc), {
+      ok: false,
+      error: 'secret_field',
+    });
+  }
+  assert.equal((doc.getElementById('p') as HTMLInputElement).value, 'kept');
+});
+
+test('the two secret tests agree, though the modules cannot share one', () => {
+  const cases: Array<[string, boolean]> = [
+    ['<input id="x" type="password" value="v">', true],
+    ['<input id="x" type="text" autocomplete="current-password" value="v">', true],
+    ['<input id="x" type="text" autocomplete="one-time-code" value="v">', true],
+    ['<input id="x" type="text" autocomplete="billing cc-number" value="v">', true],
+    ['<input id="x" type="text" autocomplete="username" value="v">', false],
+  ];
+  for (const [html, secret] of cases) {
+    const doc = page(html);
+    assert.equal(isSecretField(doc.getElementById('x')!), secret, html);
+    // The snapshot's own test, seen through whether it shows the value.
+    assert.equal(takePageSnapshot(doc).text.includes('"v"'), !secret, html);
+  }
+});
+
+test('a stated trigger waits for its own state, not for whatever the hover adds', async () => {
+  const doc = page('<button id="t" aria-haspopup="menu" aria-expanded="false">Tools</button>');
+  const el = doc.getElementById('t')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  el.addEventListener('pointerenter', () => {
+    // A tooltip at once, the menu only later: the early addition must not end the wait.
+    doc.body.append(doc.createElement('div'));
+    setTimeout(() => el.setAttribute('aria-expanded', 'true'), 100);
+  });
+  assert.deepEqual(await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]]), undefined, doc), { ok: true });
+  assert.equal(clicked, 0);
+});
+
+test('a menu trigger that is an anchor runs its handler rather than following its href', async () => {
+  const doc = page('<a id="t" href="/dashboard/tools" aria-haspopup="menu" aria-expanded="false">Tools</a>');
+  const el = doc.getElementById('t')!;
+  const seen: string[] = [];
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  assert.deepEqual(await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]]), (p) => seen.push(p), doc), { ok: true });
+  assert.equal(clicked, 1);
+  assert.deepEqual(seen, []);
+});
+
+test('a control hidden since the snapshot is refused, not acted on', async () => {
+  const doc = page('<div id="wrap"><button id="b">Save</button></div>');
+  const el = doc.getElementById('b')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  // The dialog closes between snapshot and action.
+  doc.getElementById('wrap')!.setAttribute('style', 'display:none');
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), undefined, doc), {
+    ok: false,
+    error: 'not_visible',
+  });
+  assert.equal(clicked, 0);
+  // Same for an ancestor gone inert.
+  const inert = page('<div id="wrap"><button id="b">Save</button></div>');
+  inert.getElementById('wrap')!.setAttribute('inert', '');
+  assert.deepEqual(
+    await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', inert.getElementById('b')!]]), undefined, inert),
+    { ok: false, error: 'not_visible' },
+  );
 });
