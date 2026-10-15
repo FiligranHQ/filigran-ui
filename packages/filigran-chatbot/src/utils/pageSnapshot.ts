@@ -92,9 +92,10 @@ function spacedText(el: Element): string {
     if (node.nodeType === 3) {
       out += node.textContent ?? '';
     } else if (node.nodeType === 1) {
-      // The walk skips hidden subtrees; without the same test here they would
-      // come back as part of a visible ancestor's name.
-      if (hidden(node as Element)) continue;
+      // The walk skips hidden subtrees, and a secret's value is masked; without
+      // the same tests here both return as part of an ancestor's name, its
+      // value, or a heading above them.
+      if (hidden(node as Element) || isSecret(node as Element)) continue;
       const display = view?.getComputedStyle(node as Element).display ?? '';
       // An unknown display (no layout engine) is read as inline: never split a word.
       const inline = display === '' || display === 'inline' || display === 'contents';

@@ -276,3 +276,20 @@ test('a closed disclosure hides everything but its summary', () => {
   const openText = takePageSnapshot(open).text;
   assert.ok(openText.includes('"More"') && openText.includes('"Delete"'), openText);
 });
+
+test("a secret's value cannot surface through an ancestor's text", () => {
+  const secret = '<textarea autocomplete="one-time-code">123456</textarea>';
+  for (const html of [
+    // Its value, read from the wrapper.
+    `<div role="combobox" aria-label="Code">${secret}</div>`,
+    // Its name, when the wrapper has no label of its own.
+    `<div role="button">${secret}</div>`,
+    // A heading standing above it.
+    `<h1>Title <span>${secret}</span></h1>`,
+  ]) {
+    const { text } = takePageSnapshot(page(html));
+    assert.ok(!text.includes('123456'), `${html}\n${text}`);
+  }
+  // Ordinary content is still read.
+  assert.ok(takePageSnapshot(page('<div role="button"><span>Save changes</span></div>')).text.includes('"Save changes"'));
+});
