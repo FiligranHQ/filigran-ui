@@ -293,3 +293,22 @@ test("a secret's value cannot surface through an ancestor's text", () => {
   // Ordinary content is still read.
   assert.ok(takePageSnapshot(page('<div role="button"><span>Save changes</span></div>')).text.includes('"Save changes"'));
 });
+
+test('a name follows the accessible-name order: labelledby, label, contents, title', () => {
+  // `aria-labelledby` outranks `aria-label`.
+  const both = page('<button aria-labelledby="l" aria-label="From label">Go</button><span id="l">From labelledby</span>');
+  assert.ok(takePageSnapshot(both).text.includes('button "From labelledby"'), takePageSnapshot(both).text);
+  // Visible contents outrank a `title` holding a shortcut.
+  const titled = page('<button title="Alt+R">Reports</button>');
+  assert.ok(takePageSnapshot(titled).text.includes('button "Reports"'), takePageSnapshot(titled).text);
+  // A text field still takes its title, having no contents to read.
+  const field = page('<input type="text" title="Search reports">');
+  assert.ok(takePageSnapshot(field).text.includes('"Search reports"'), takePageSnapshot(field).text);
+});
+
+test('a disabled fieldset marks its native controls only', () => {
+  const doc = page('<fieldset disabled><button>Save</button><a href="/help">Help</a></fieldset>');
+  const { text } = takePageSnapshot(doc);
+  assert.ok(/button "Save" \(disabled\)/.test(text), text);
+  assert.ok(!/link "Help" \(disabled\)/.test(text), text);
+});

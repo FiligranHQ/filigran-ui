@@ -202,10 +202,25 @@ function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: s
       }
     }
   }
+  // Focus first: a click moves no focus of its own, so a field edited just
+  // before would never blur, and a host that commits on blur (a tag input)
+  // would run this activation without the edit.
+  (el as HTMLElement).focus?.();
   // A submit control loads its form's action, and a click anywhere inside an
   // anchor activates it - both end the turn. Their handlers still run.
-  const cancels = el.closest?.('a[href]') ? ['submit', 'click'] : ['submit'];
+  const inAnchor = !!el.closest?.('a[href]');
+  const cancels = inAnchor ? ['submit', 'click'] : ['submit'];
+  const checkable = el.matches?.('input[type="checkbox"], input[type="radio"]') ?? false;
+  const before = (el as HTMLInputElement).checked;
   withoutDefault(el.ownerDocument, cancels, () => (el as HTMLElement).click());
+  // Cancelling the click also rolled back a checkable's own activation, which
+  // is its behaviour rather than the anchor's: applied here instead.
+  if (checkable && inAnchor && (el as HTMLInputElement).checked === before) {
+    const input = el as HTMLInputElement;
+    input.checked = input.type === 'radio' ? true : !before;
+    input.dispatchEvent(new (el.ownerDocument.defaultView?.Event ?? Event)('input', { bubbles: true }));
+    input.dispatchEvent(new (el.ownerDocument.defaultView?.Event ?? Event)('change', { bubbles: true }));
+  }
   return { ok: true };
 }
 
@@ -311,10 +326,13 @@ function isDisabled(el: Element): boolean {
   // ancestor `<fieldset>`, which carries neither the property nor the
   // attribute itself - so the ancestor is checked directly, minus the first
   // `<legend>`, which the spec leaves enabled.
+  // Only the native form controls a `<fieldset>` governs: a link or an ARIA
+  // widget inside a disabled one still works. Its first `<legend>` is exempt.
+  if (!el.matches?.('button, input, select, textarea')) return false;
   const fieldset = el.closest?.('fieldset[disabled]');
   if (!fieldset) return false;
-  const legend = fieldset.querySelector('legend');
-  return !(legend && legend.contains(el));
+  const legend = Array.from(fieldset.children).find((c) => c.tagName.toLowerCase() === 'legend');
+  return !legend?.contains(el);
 }
 
 /** A field the user cannot edit either: the native setter would still write to it. */

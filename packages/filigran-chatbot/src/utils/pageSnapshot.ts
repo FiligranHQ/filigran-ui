@@ -110,14 +110,15 @@ function clean(text: string | null | undefined): string {
 }
 
 /** The name a user reads for *el*, in the accessible-name order. */
-function accessibleName(el: Element): string {
+/** Roles named by what they contain, where `title` is only a last resort. */
+const NAMED_BY_CONTENT = new Set(['button', 'link', 'tab', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'option', 'treeitem', 'switch']);
+
+function accessibleName(el: Element, role: string): string {
   const doc = el.ownerDocument;
-  const fromAttr = clean(el.getAttribute('aria-label'));
-  if (fromAttr) return fromAttr;
+  // `aria-labelledby` outranks `aria-label`, and is read even when hidden: a
+  // visually-hidden span is how an icon button usually gets its name.
   const labelledBy = el.getAttribute('aria-labelledby');
   if (labelledBy) {
-    // Read even when hidden: a visually-hidden span is how an icon button
-    // usually gets its name, and skipping it would leave `button ""`.
     const text = clean(
       labelledBy
         .split(/\s+/)
@@ -126,6 +127,8 @@ function accessibleName(el: Element): string {
     );
     if (text) return text;
   }
+  const fromAttr = clean(el.getAttribute('aria-label'));
+  if (fromAttr) return fromAttr;
   const id = el.getAttribute('id');
   const label = (id && Array.from(doc.getElementsByTagName('label')).find((l) => l.htmlFor === id)) || el.closest('label');
   if (label) {
@@ -148,14 +151,16 @@ function accessibleName(el: Element): string {
   }
   const alt = clean(el.getAttribute('alt')) || clean(el.querySelector('img[alt]')?.getAttribute('alt'));
   if (alt) return alt;
+  // Its contents would hand over what `value()` just masked.
+  const contents = isSecret(el) ? '' : clean(spacedText(el));
+  // A control named by what it shows: the visible words beat a `title`, which
+  // often holds a shortcut rather than a label.
+  if (NAMED_BY_CONTENT.has(role) && contents) return contents;
   const placeholder = clean(el.getAttribute('placeholder'));
   if (placeholder) return placeholder;
   const title = clean(el.getAttribute('title'));
   if (title) return title;
-  // Falling back to the contents would hand over what `value()` just masked:
-  // an unlabelled one-time code would arrive as the element's name.
-  if (isSecret(el)) return '';
-  return clean(spacedText(el));
+  return contents;
 }
 
 function quote(text: string): string {
@@ -164,13 +169,22 @@ function quote(text: string): string {
   return JSON.stringify(text.slice(0, MAX_NAME_CHARS));
 }
 
+/**
+ * Whether an ancestor `<fieldset disabled>` disables *el*. Only the native form
+ * controls it governs - a link or an ARIA widget inside one still works - and
+ * never what sits in its first `<legend>`.
+ */
+function disabledByFieldset(el: Element): boolean {
+  if (!el.matches?.('button, input, select, textarea')) return false;
+  const fieldset = el.closest?.('fieldset[disabled]');
+  if (!fieldset) return false;
+  const legend = Array.from(fieldset.children).find((c) => c.tagName.toLowerCase() === 'legend');
+  return !legend?.contains(el);
+}
+
 function states(el: Element): string[] {
   const out: string[] = [];
-  // `:disabled` also covers a control disabled by its `<fieldset>`, which has
-  // no attribute of its own; the snapshot would otherwise call it enabled.
-  const fieldset = el.closest?.('fieldset[disabled]');
-  const byFieldset = !!fieldset && !fieldset.querySelector('legend')?.contains(el);
-  if (el.hasAttribute('disabled') || byFieldset || el.getAttribute('aria-disabled') === 'true') out.push('disabled');
+  if (el.hasAttribute('disabled') || disabledByFieldset(el) || el.getAttribute('aria-disabled') === 'true') out.push('disabled');
   if (el.getAttribute('aria-selected') === 'true') out.push('selected');
   if ((el as HTMLInputElement).checked || el.getAttribute('aria-checked') === 'true') out.push('checked');
   if (el.getAttribute('aria-expanded') === 'true') out.push('expanded');
@@ -271,7 +285,7 @@ export function takePageSnapshot(doc: Document, maxChars = MAX_SNAPSHOT_CHARS): 
         const ref = `e${refs.size + 1}`;
         const v = value(el, role);
         const st = states(el);
-        line = `[${ref}] ${role} ${quote(accessibleName(el))}${st.length ? ` (${st.join(', ')})` : ''}${v ? ` = ${quote(v)}` : ''}${destination(el)}`;
+        line = `[${ref}] ${role} ${quote(accessibleName(el, role))}${st.length ? ` (${st.join(', ')})` : ''}${v ? ` = ${quote(v)}` : ''}${destination(el)}`;
         if (size + line.length + 1 > budget) {
           truncated = true;
           return false;

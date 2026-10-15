@@ -555,3 +555,46 @@ test('a control hidden since the snapshot is refused, not acted on', async () =>
     { ok: false, error: 'not_visible' },
   );
 });
+
+test('a click moves focus first, so an edit pending on blur is committed', async () => {
+  const doc = page('<input id="q" type="text"><button id="save">Save</button>');
+  const field = doc.getElementById('q') as HTMLInputElement;
+  const order: string[] = [];
+  field.addEventListener('blur', () => order.push('blur'));
+  doc.getElementById('save')!.addEventListener('click', () => order.push('click'));
+  await performPageAction({ type: 'type', ref: 'e1', text: 'apt28' }, new Map([['e1', field]]), undefined, doc);
+  await performPageAction({ type: 'click', ref: 'e2' }, new Map([['e2', doc.getElementById('save')!]]), undefined, doc);
+  assert.deepEqual(order, ['blur', 'click'], 'the field must blur before the button is activated');
+});
+
+test('a checkbox inside a link still toggles, and the link is not followed', async () => {
+  const doc = page('<a id="row" href="/dashboard/row"><input id="c" type="checkbox"></a>');
+  const box = doc.getElementById('c') as HTMLInputElement;
+  const seen: string[] = [];
+  let changed = 0;
+  box.addEventListener('change', () => changed++);
+  let anchorDefaultPrevented: boolean | null = null;
+  doc.getElementById('row')!.addEventListener('click', (e) => {
+    anchorDefaultPrevented = e.defaultPrevented;
+  });
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', box]]), (p) => seen.push(p), doc), { ok: true });
+  assert.equal(box.checked, true);
+  assert.equal(changed, 1);
+  assert.equal(anchorDefaultPrevented, true);
+  assert.deepEqual(seen, []);
+});
+
+test('a disabled fieldset stops its native controls, not a link inside it', async () => {
+  const doc = page('<fieldset disabled><legend><button id="l">Legend</button></legend><button id="b">Save</button><a id="a" href="/help">Help</a></fieldset>');
+  // The native control it governs.
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById('b')!]]), undefined, doc), {
+    ok: false,
+    error: 'disabled',
+  });
+  // A link is not a form control, and the first legend is exempt.
+  for (const id of ['a', 'l']) {
+    assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById(id)!]]), undefined, doc), {
+      ok: true,
+    });
+  }
+});
