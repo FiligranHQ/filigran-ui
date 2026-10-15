@@ -785,9 +785,10 @@ export function useChat({
       if (action.type !== 'snapshot') await waitForDomSettle(document, { signal });
       if (signal?.aborted) return;
       // The snapshot can throw on its own (a very deep DOM, a host
-      // `getComputedStyle` that raises). Reported apart from the action's own
-      // result: the click did happen, and `ok: false` would have the agent
-      // retry it - a second "Create".
+      // `getComputedStyle` that raises). It rides in `error` while `ok` stays
+      // the action's own result: `ok: false` would have the agent retry a click
+      // that already ran, and a field of its own would be dropped unseen by a
+      // backend that does not know it, leaving an empty page and no sign why.
       let page = { text: '', url: '', title: '' };
       let snapshotError: string | null = null;
       try {
@@ -807,11 +808,10 @@ export function useChat({
           page_action: {
             action_id: actionId,
             ok: result.ok,
-            error: result.error ?? null,
+            error: result.error ?? (snapshotError === null ? null : `snapshot_failed: ${snapshotError}`),
             url: page.url,
             title: page.title,
             snapshot: page.text,
-            snapshot_error: snapshotError,
           },
         }),
       });

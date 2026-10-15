@@ -101,10 +101,12 @@ function accessibleName(el: Element): string {
   if (fromAttr) return fromAttr;
   const labelledBy = el.getAttribute('aria-labelledby');
   if (labelledBy) {
+    // Read even when hidden: a visually-hidden span is how an icon button
+    // usually gets its name, and skipping it would leave `button ""`.
     const text = clean(
       labelledBy
         .split(/\s+/)
-        .map((id) => { const t = doc.getElementById(id); return t && !hidden(t) ? spacedText(t) : ''; })
+        .map((id) => doc.getElementById(id)?.textContent ?? '')
         .join(' '),
     );
     if (text) return text;

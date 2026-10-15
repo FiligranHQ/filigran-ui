@@ -193,3 +193,9 @@ test("a secret's own contents are not handed over as its name", () => {
   const { text } = takePageSnapshot(doc);
   assert.ok(!text.includes('123456'), text);
 });
+
+test('an icon button keeps the name of its visually-hidden label (#443 re-review)', () => {
+  const doc = page('<button aria-labelledby="lbl"><svg></svg></button><span id="lbl" style="display:none">Delete report</span>');
+  const { text } = takePageSnapshot(doc);
+  assert.ok(text.includes('button "Delete report"'), text);
+});

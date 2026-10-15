@@ -519,11 +519,11 @@ the approve route's body whole (a `page_action` answer carries no `decisions`). 
 Enter only in a search field or a form of that one field,
 or `navigate` through `onRelativeLinkClick` — never
 a page load, which would end the turn) and POSTs
-`{ conversation_id, page_action: { action_id, ok, error, url, title, snapshot, snapshot_error } }`.
-`ok` and `error` are the action's own outcome; `snapshot_error` is set when the
-action succeeded but the page could not be read back, so a step is never retried
-because its snapshot failed. A stopped turn (Stop, New chat, switching
-conversation) abandons the action instead of acting on the page.
+`{ conversation_id, page_action: { action_id, ok, error, url, title, snapshot } }`.
+`ok` is the action's own outcome, so a step is never retried because reading the
+page back failed; when that read throws, `ok` stands and `error` carries
+`snapshot_failed: …` with an empty snapshot. A stopped turn (Stop, New chat,
+switching conversation) abandons the action instead of acting on the page.
 
 The snapshot (`utils/pageSnapshot.ts`) lists one line per element a user could
 act on — `[e1] link "Reports" -> /dashboard/analyses/reports`, with states such as
