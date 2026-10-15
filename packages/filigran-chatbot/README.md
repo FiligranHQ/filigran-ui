@@ -513,7 +513,9 @@ The same path answers `act_on_page` (XTM One #5559): with `apiEndpoints.approve`
 set **and** `onRelativeLinkClick` passed — the host's opt-in, since it hands the
 panel its navigation — the panel also sends `supports_page_actions: true`, and the
 agent may act on the page the panel is mounted in. The host's proxy must forward
-the approve route's body whole (a `page_action` answer carries no `decisions`). Each step arrives on the stream as a
+the approve route's body whole (a `page_action` answer carries no `decisions`).
+Without that opt-in a frame is answered `page_actions_not_supported`, with the
+page neither read nor acted on. Each step arrives on the stream as a
 `status` frame with `event: "page_action_required"`; the panel performs it
 (`click`, `open` — a hover, or a click when hovering opens nothing —, `type`, then
 Enter only in a field that says it is a search (`type="search"`,

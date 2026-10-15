@@ -778,6 +778,25 @@ export function useChat({
     // and this runs detached from the stream, so without it a stopped turn would
     // still click the page and then answer for a conversation that is gone.
     const signal = abortControllerRef.current?.signal;
+    // The same opt-in that decides whether the capability is advertised, tested
+    // again on the way in: an unsolicited frame must not read or act on the page
+    // of a host that never offered it. Answered, so the turn does not hang.
+    if (!hostTakesPageActions(approveUrl, onRelativeLinkClickRef.current)) {
+      try {
+        await fetch(approveUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
+          signal,
+          body: JSON.stringify({
+            conversation_id: convId,
+            page_action: { action_id: actionId, ok: false, error: 'page_actions_not_supported', url: '', title: '', snapshot: '' },
+          }),
+        });
+      } catch {
+        // Nothing to show: the turn's own wait ends it.
+      }
+      return;
+    }
     setAgentStatus((prev) => (prev ? { ...prev, status: 'acting_on_page' } : { status: 'acting_on_page' }));
     try {
       const result = await performPageAction(action, pageRefsRef.current, onRelativeLinkClickRef.current, document, signal);
