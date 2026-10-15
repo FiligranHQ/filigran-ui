@@ -300,3 +300,15 @@ test('the open fallback goes through the link guard rather than clicking an anch
   });
   assert.equal(clicked, 0);
 });
+
+test('a fragment anchor that opens a tab is still refused (#443 Copilot)', async () => {
+  const doc = page('<a id="t" href="#" target="_blank">Toggle</a>');
+  const el = doc.getElementById('t')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), () => {}, doc), {
+    ok: false,
+    error: 'opens_new_tab',
+  });
+  assert.equal(clicked, 0);
+});

@@ -175,7 +175,9 @@ function isSecret(el: Element): boolean {
 function value(el: Element, role: string): string | null {
   if (!['textbox', 'searchbox', 'combobox'].includes(role)) return null;
   if (isSecret(el)) return null;
-  const v = 'value' in el ? String((el as HTMLInputElement).value ?? '') : clean(el.textContent);
+  // `spacedText`, not `textContent`: a contenteditable's hidden descendants
+  // are excluded from the walk and its name, and must not return as its value.
+  const v = 'value' in el ? String((el as HTMLInputElement).value ?? '') : clean(spacedText(el));
   return v ? v : null;
 }
 

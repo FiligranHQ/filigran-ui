@@ -199,3 +199,10 @@ test('an icon button keeps the name of its visually-hidden label (#443 re-review
   const { text } = takePageSnapshot(doc);
   assert.ok(text.includes('button "Delete report"'), text);
 });
+
+test("a contenteditable's value leaves out its hidden descendants (#443 Copilot)", () => {
+  const doc = page('<div contenteditable="true" aria-label="Notes">shown<span style="display:none">private text</span></div>');
+  const { text } = takePageSnapshot(doc);
+  assert.ok(text.includes('textbox "Notes"'), text);
+  assert.ok(!text.includes('private text'), text);
+});

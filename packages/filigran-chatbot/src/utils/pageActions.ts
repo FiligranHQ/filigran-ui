@@ -149,17 +149,21 @@ function addsContent(doc: Document, act: () => void, ms = 300): Promise<boolean>
  * routing the row's href would skip it.
  */
 function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: string): PageActionResult {
-  // A fragment is an in-page trigger (`<a href="#">` carrying a handler), not
-  // a destination, so it is clicked like anything else.
-  const href = el.matches?.('a[href]') ? el.getAttribute('href') ?? '' : '';
-  if (href && !href.startsWith('#')) {
-    const internal = toInternalHref(href, base);
-    if (!internal) return { ok: false, error: 'external_link' };
+  if (el.matches?.('a[href]')) {
+    // Before the fragment case below: `<a href="#" target="_blank">` still
+    // opens a tab, which leaves the page the turn is acting on.
     const target = el.getAttribute('target');
     if (target && target !== '_self') return { ok: false, error: 'opens_new_tab' };
-    if (onNavigate) {
-      onNavigate(internal);
-      return { ok: true };
+    // A fragment is an in-page trigger carrying a handler, not a destination,
+    // so it is clicked like anything else.
+    const href = el.getAttribute('href') ?? '';
+    if (href && !href.startsWith('#')) {
+      const internal = toInternalHref(href, base);
+      if (!internal) return { ok: false, error: 'external_link' };
+      if (onNavigate) {
+        onNavigate(internal);
+        return { ok: true };
+      }
     }
   }
   (el as HTMLElement).click();
