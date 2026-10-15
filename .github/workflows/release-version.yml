@@ -228,6 +228,25 @@ jobs:
           # Also save to environment for debugging
           echo "UI_ISSUES_TO_CLOSE=$UI_ISSUES" >> $GITHUB_ENV
           echo "ICON_ISSUES_TO_CLOSE=$ICON_ISSUES" >> $GITHUB_ENV
+      # `yarn npm publish` with no usable token opens an interactive npm login,
+      # which a runner cannot answer: it hangs, then dies as "unexpected empty
+      # event loop" (exit 42) after the whole build. Checked here instead, so
+      # the run fails in seconds and says why.
+      - name: Verify NPM authentication
+        if: env.FILIGRAN_CHATBOT_VERSION != '' || env.FILIGRAN_ICON_VERSION != '' || env.FILIGRAN_RTE_VERSION != '' || env.FILIGRAN_UI_VERSION != ''
+        run: |
+          set -euo pipefail
+          if [ -z "${YARN_NPM_AUTH_TOKEN:-}" ]; then
+            echo "::error title=NPM token missing::The NPM_TOKEN secret is empty or not available to this run, so publishing would fall back to an interactive browser login and fail as exit 42. Set NPM_TOKEN to an npm Automation token with publish rights on @filigran."
+            exit 1
+          fi
+          if ! who=$(yarn npm whoami --publish 2>&1); then
+            echo "::error title=NPM authentication rejected::$who. NPM_TOKEN is set but the publish registry does not accept it - an expired token, or one that is not an Automation token where the account enforces 2FA."
+            exit 1
+          fi
+          echo "Publishing to npm as $who"
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Build packages
         run: |
           if [ -n "$FILIGRAN_CHATBOT_VERSION" ]; then
