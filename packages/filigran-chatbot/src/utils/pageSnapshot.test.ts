@@ -252,3 +252,16 @@ test('the header and the truncation marker are inside the cap, never added on to
   assert.ok(tiny.text.length <= 40, `got ${tiny.text.length}`);
   assert.ok(tiny.text.endsWith('[truncated]'), tiny.text);
 });
+
+test('an input button is named by its value, not left blank', () => {
+  const doc = page('<input type="submit" value="Save"><input type="reset" value="Clear"><input type="submit"><input type="reset">');
+  const { text } = takePageSnapshot(doc);
+  for (const name of ['button "Save"', 'button "Clear"', 'button "Submit"', 'button "Reset"']) {
+    assert.ok(text.includes(name), `${name} missing from:\n${text}`);
+  }
+});
+
+test('a file input is a chooser, not a text field', () => {
+  const doc = page('<input type="file" aria-label="Attach">');
+  assert.ok(takePageSnapshot(doc).text.includes('button "Attach"'));
+});

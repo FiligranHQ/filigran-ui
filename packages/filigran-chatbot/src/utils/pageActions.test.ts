@@ -445,3 +445,15 @@ test('clicking a submit control runs its handler without the form loading its ac
     assert.equal(defaultPrevented, true, html);
   }
 });
+
+test('a file input is refused rather than opening an operating-system chooser', async () => {
+  const doc = page('<input id="f" type="file" aria-label="Attach">');
+  const el = doc.getElementById('f')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), undefined, doc), {
+    ok: false,
+    error: 'opens_file_dialog',
+  });
+  assert.equal(clicked, 0);
+});

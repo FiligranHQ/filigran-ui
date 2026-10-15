@@ -289,6 +289,9 @@ export async function performPageAction(
     const el = refs.get(action.ref);
     if (!el || !el.isConnected) return { ok: false, error: 'unknown_ref' };
     if (isDisabled(el)) return { ok: false, error: 'disabled' };
+    // The file chooser is an operating-system window: it cannot be driven from
+    // here, and the turn would wait behind it.
+    if (el.matches?.('input[type="file"]')) return { ok: false, error: 'opens_file_dialog' };
     if (action.type === 'open') return await openMenu(el, onNavigate, baseHref(doc ?? el.ownerDocument), signal);
     if (action.type === 'click') return clickOrRoute(el, onNavigate, baseHref(doc ?? el.ownerDocument));
     if (!isTypeable(el)) return { ok: false, error: 'not_a_text_field' };

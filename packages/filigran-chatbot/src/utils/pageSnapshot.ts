@@ -66,6 +66,9 @@ function actionableRole(el: Element): string | null {
     if (['button', 'submit', 'reset', 'image'].includes(type)) return 'button';
     if (type === 'checkbox' || type === 'radio') return type;
     if (type === 'search') return 'searchbox';
+    // Opens a chooser rather than taking text; calling it a textbox invites a
+    // `type` that is refused anyway.
+    if (type === 'file') return 'button';
     return 'textbox';
   }
   if (el.getAttribute('contenteditable') === 'true') return 'textbox';
@@ -133,6 +136,14 @@ function accessibleName(el: Element): string {
         .join(' '),
     );
     if (own || clean(label.textContent)) return own || clean(label.textContent);
+  }
+  // An `<input>` button carries its label in `value`, not in any content.
+  const tag = el.tagName.toLowerCase();
+  const type = (el.getAttribute('type') || '').toLowerCase();
+  if (tag === 'input' && ['submit', 'reset', 'button'].includes(type)) {
+    const value = clean(el.getAttribute('value'));
+    if (value) return value;
+    if (type !== 'button') return type === 'submit' ? 'Submit' : 'Reset';
   }
   const alt = clean(el.getAttribute('alt')) || clean(el.querySelector('img[alt]')?.getAttribute('alt'));
   if (alt) return alt;

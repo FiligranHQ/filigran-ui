@@ -545,8 +545,11 @@ turn no longer waits for that action, and the panel drops it.
 Actions that would leave the page are refused rather than performed, each
 answered with `ok: false` and a reason: a `navigate` off-site, a `click` on a
 link to another origin or one opening a new tab, a `type` on anything that is
-not a text field, a read-only field, and a target that is disabled - including
-one disabled by its `<fieldset>`. Clicking an in-host link is
+not a text field, a read-only field, a file input (whose chooser is an
+operating-system window), and a target that is disabled - including one
+disabled by its `<fieldset>`. A click never completes a native default that
+would leave the page: an anchor's navigation and a form's submission are
+cancelled while the host's own handlers still run. Clicking an in-host link is
 routed through `onRelativeLinkClick` rather than clicked, for the same reason a
 `navigate` is. An action this version does not know is answered as
 `unsupported_action` instead of being dropped, so a backend running ahead of the
