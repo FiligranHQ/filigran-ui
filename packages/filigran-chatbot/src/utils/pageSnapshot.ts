@@ -143,10 +143,8 @@ function states(el: Element): string[] {
 }
 
 /**
- * Autocomplete tokens whose value never leaves the page. `type=password` alone
- * misses a revealed password (a "show password" toggle flips it to `text`),
- * card fields and one-time codes, all of which would otherwise ride along in
- * every snapshot.
+ * Secret fields, by autocomplete: `type=password` alone misses a revealed
+ * password, card fields and one-time codes.
  */
 const SECRET_AUTOCOMPLETE = /^(current-password|new-password|one-time-code|cc-)/;
 

@@ -342,9 +342,8 @@ export function useChat({
   const pageRefsRef = useRef<Map<string, Element>>(new Map());
   const onRelativeLinkClickRef = useRef(onRelativeLinkClick);
   onRelativeLinkClickRef.current = onRelativeLinkClick;
-  // A page action is answered from the closure of the render that started the
-  // turn, which may be many steps old by then: a header rotated mid-turn would
-  // otherwise be sent stale, and a silent 401 stalls the turn.
+  // A page action answers from the closure of the render that began the turn,
+  // so a header rotated since would go out stale and 401 the answer.
   const requestHeadersRef = useRef(requestHeaders);
   requestHeadersRef.current = requestHeaders;
   // Conversation id as the paused turn itself reported it. The decision POST
@@ -776,11 +775,22 @@ export function useChat({
     const convId = conversationIdHint ?? conversationIdRef.current;
     if (!approveUrl || !convId || typeof document === 'undefined') return;
     setAgentStatus((prev) => (prev ? { ...prev, status: 'acting_on_page' } : { status: 'acting_on_page' }));
-    const result = await performPageAction(action, pageRefsRef.current, onRelativeLinkClickRef.current);
-    if (action.type !== 'snapshot') await waitForDomSettle(document);
-    const snapshot = takePageSnapshot(document);
-    pageRefsRef.current = snapshot.refs;
     try {
+      const result = await performPageAction(action, pageRefsRef.current, onRelativeLinkClickRef.current, document);
+      if (action.type !== 'snapshot') await waitForDomSettle(document);
+      // Taking the snapshot can itself throw (a very deep DOM, a host
+      // `getComputedStyle` that raises). The turn is waiting on this answer, so
+      // it still goes out - saying what failed, with no page to report.
+      let page = { text: '', url: '', title: '' };
+      let failure = result.ok ? null : result.error ?? null;
+      try {
+        const snapshot = takePageSnapshot(document);
+        pageRefsRef.current = snapshot.refs;
+        page = { text: snapshot.text, url: snapshot.url, title: snapshot.title };
+      } catch (err) {
+        pageRefsRef.current = new Map();
+        failure = `snapshot_failed: ${err instanceof Error ? err.message : String(err)}`.slice(0, 500);
+      }
       await fetch(approveUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
@@ -788,18 +798,21 @@ export function useChat({
           conversation_id: convId,
           page_action: {
             action_id: actionId,
-            ok: result.ok,
-            error: result.error ?? null,
-            url: snapshot.url,
-            title: snapshot.title,
-            snapshot: snapshot.text,
+            ok: result.ok && failure === null,
+            error: failure,
+            url: page.url,
+            title: page.title,
+            snapshot: page.text,
           },
         }),
       });
     } catch {
       // The turn's own page wait ends it; there is nothing to show here.
+    } finally {
+      // Always leave the status line: it would otherwise sit on
+      // "Acting on the page…" for the rest of the turn.
+      setAgentStatus((prev) => (prev?.status === 'acting_on_page' ? { ...prev, status: 'thinking' } : prev));
     }
-    setAgentStatus((prev) => (prev?.status === 'acting_on_page' ? { ...prev, status: 'thinking' } : prev));
   };
 
   const handleSendMessage = async () => {

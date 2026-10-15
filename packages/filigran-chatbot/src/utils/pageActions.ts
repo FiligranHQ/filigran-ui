@@ -15,45 +15,38 @@ export type PageAction =
 
 /**
  * Whether the panel may declare `supports_page_actions` (#5559). Passing
- * `onRelativeLinkClick` is the host's opt-in: its proxy must forward the approve
- * body whole, and one that relays only tool approvals would leave every step
- * waiting out its timeout on an answer the proxy refused.
+ * `onRelativeLinkClick` is the host's opt-in: a proxy that relays tool
+ * approvals but not page answers would stall every step on its timeout.
  */
 export function hostTakesPageActions(approveUrl: string | null, onNavigate?: (path: string) => void): boolean {
   return approveUrl !== null && typeof onNavigate === 'function';
 }
 
+/** The document's own address, which every href is resolved against. */
+function baseHref(doc?: Document): string | undefined {
+  return doc?.defaultView?.location?.href ?? (typeof window === 'undefined' ? undefined : window.location.href);
+}
+
 /**
- * Which hrefs may be handed to the host's router. Backends emit absolute links
- * so they work from any chat surface, so a same-origin absolute URL reduces to
- * a path rather than being rejected; everything else — other origins, `//host`,
- * `javascript:` — must never reach `onRelativeLinkClick`.
- *
- * It lives here, rather than beside its other caller (`MarkdownMessage`),
- * because this module is loaded by `node --test`, where a runtime relative
- * import cannot resolve (see the note in `rollup.config.js`).
+ * The host-internal form of *href*, or null when it leads anywhere else.
+ * Resolved and origin-compared even when it looks relative: `/\evil.com` and
+ * ` //evil.com` do not, and resolve to another origin.
  */
-export const isRelativeHref = (href?: string): boolean => {
-  if (!href) return false;
-  if (href.startsWith('//')) return false;
-  return !/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(href);
+export const toInternalHref = (href?: string, base?: string): string | null => {
+  const from = base ?? baseHref();
+  if (!href || !from) return null;
+  try {
+    const url = new URL(href, from);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    if (url.origin !== new URL(from).origin) return null;
+    return `${url.pathname}${url.search}${url.hash}` || '/';
+  } catch {
+    return null;
+  }
 };
 
-/** The host-internal form of *href* (`pathname + search + hash`), or null when it points elsewhere. */
-export const toInternalHref = (href?: string): string | null => {
-  if (!href) return null;
-  if (isRelativeHref(href)) return href;
-  if (typeof window === 'undefined') return null;
-  try {
-    const url = new URL(href, window.location.href);
-    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.origin === window.location.origin) {
-      return `${url.pathname}${url.search}${url.hash}` || '/';
-    }
-  } catch {
-    /* malformed URL — treat as external */
-  }
-  return null;
-};
+/** Whether *href* stays within the host, by the same resolution. */
+export const isRelativeHref = (href?: string, base?: string): boolean => toInternalHref(href, base) !== null;
 
 export interface PageActionResult {
   ok: boolean;
@@ -64,9 +57,8 @@ export interface PageActionResult {
 const PANEL_SELECTOR = '.filigran-chatbot';
 
 function insidePanel(node: Node | null): boolean {
-  // Duck-typed rather than `instanceof Element`: the host's document may come
-  // from another realm (and under the test runner there is no such global), and
-  // a throw here would be swallowed by the observer, losing the mutation.
+  // Duck-typed: `instanceof Element` throws where there is no such global, and
+  // the observer swallows the throw, losing the mutation.
   const el = (node && 'closest' in node ? node : node?.parentElement) as Element | null | undefined;
   return !!el?.closest?.(PANEL_SELECTOR);
 }
@@ -186,16 +178,18 @@ function isDisabled(el: Element): boolean {
 
 /**
  * Click *el*, except where clicking would leave the page and end the turn: an
- * anchor is routed through the host instead, and one that leads off-site (or
- * opens a tab) is refused rather than followed.
+ * anchor is routed through the host instead. Only *el* itself, never an
+ * ancestor — a `role="button"` inside a link row has its own handler, and
+ * routing the row's href would skip it.
  */
-function clickOrRoute(el: Element, onNavigate?: (path: string) => void): PageActionResult {
-  const anchor = el.closest('a[href]');
-  if (anchor) {
-    const target = anchor.getAttribute('target');
-    const href = anchor.getAttribute('href') ?? '';
-    const internal = toInternalHref(href);
+function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: string): PageActionResult {
+  // A fragment is an in-page trigger (`<a href="#">` carrying a handler), not
+  // a destination, so it is clicked like anything else.
+  const href = el.matches?.('a[href]') ? el.getAttribute('href') ?? '' : '';
+  if (href && !href.startsWith('#')) {
+    const internal = toInternalHref(href, base);
     if (!internal) return { ok: false, error: 'external_link' };
+    const target = el.getAttribute('target');
     if (target && target !== '_self') return { ok: false, error: 'opens_new_tab' };
     if (onNavigate) {
       onNavigate(internal);
@@ -210,13 +204,14 @@ export async function performPageAction(
   action: PageAction,
   refs: Map<string, Element>,
   onNavigate?: (path: string) => void,
+  doc?: Document,
 ): Promise<PageActionResult> {
   try {
     if (action.type === 'snapshot') return { ok: true };
     if (action.type === 'unsupported') return { ok: false, error: `unsupported_action: ${action.requested}`.slice(0, 500) };
     if (action.type === 'navigate') {
       if (!onNavigate) return { ok: false, error: 'navigation_unavailable' };
-      const path = toInternalHref(action.path);
+      const path = toInternalHref(action.path, baseHref(doc));
       if (!path) return { ok: false, error: 'external_path' };
       onNavigate(path);
       return { ok: true };
@@ -228,7 +223,7 @@ export async function performPageAction(
       await openMenu(el);
       return { ok: true };
     }
-    if (action.type === 'click') return clickOrRoute(el, onNavigate);
+    if (action.type === 'click') return clickOrRoute(el, onNavigate, baseHref(doc ?? el.ownerDocument));
     if (!isTypeable(el)) return { ok: false, error: 'not_a_text_field' };
     (el as HTMLElement).focus?.();
     setValue(el, action.text);

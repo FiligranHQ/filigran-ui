@@ -62,11 +62,14 @@ test('typing in the only field of a form presses Enter and sends it, as a search
 });
 
 test('navigating goes through the host callback, and fails without one', async () => {
+  // The document is what the path is resolved against, so a host page is needed
+  // to tell an in-host path from one that leaves (#443 re-review).
+  const doc = page('');
   const paths: string[] = [];
-  const ok = await performPageAction({ type: 'navigate', path: '/dashboard/x' }, new Map(), (p) => paths.push(p));
+  const ok = await performPageAction({ type: 'navigate', path: '/dashboard/x' }, new Map(), (p) => paths.push(p), doc);
   assert.deepEqual(ok, { ok: true });
   assert.deepEqual(paths, ['/dashboard/x']);
-  assert.deepEqual(await performPageAction({ type: 'navigate', path: '/x' }, new Map()), {
+  assert.deepEqual(await performPageAction({ type: 'navigate', path: '/x' }, new Map(), undefined, doc), {
     ok: false,
     error: 'navigation_unavailable',
   });
@@ -166,14 +169,27 @@ test('Enter still sends a form that really has one field', async () => {
 });
 
 test('navigate takes host paths only, never another site or a scheme', async () => {
+  const doc = page('');
   const seen: string[] = [];
   const go = (p: string) => seen.push(p);
   const refs = new Map<string, Element>();
-  assert.deepEqual(await performPageAction({ type: 'navigate', path: '/dashboard' }, refs, go), { ok: true });
+  assert.deepEqual(await performPageAction({ type: 'navigate', path: '/dashboard' }, refs, go, doc), { ok: true });
   for (const path of ['https://evil.test/x', '//evil.test/x', 'javascript:alert(1)']) {
-    assert.deepEqual(await performPageAction({ type: 'navigate', path }, refs, go), { ok: false, error: 'external_path' });
+    assert.deepEqual(await performPageAction({ type: 'navigate', path }, refs, go, doc), { ok: false, error: 'external_path' });
   }
   assert.deepEqual(seen, ['/dashboard']);
+});
+
+test('a path that only looks relative cannot leave the host (#443 re-review)', async () => {
+  const doc = page('');
+  const seen: string[] = [];
+  const go = (p: string) => seen.push(p);
+  const refs = new Map<string, Element>();
+  // Each of these resolves to another origin although it starts with '/' or a space.
+  for (const path of ['/\\evil.test/x', '/\t/evil.test/x', ' //evil.test/x']) {
+    assert.deepEqual(await performPageAction({ type: 'navigate', path }, refs, go, doc), { ok: false, error: 'external_path' });
+  }
+  assert.deepEqual(seen, []);
 });
 
 test('a disabled target is reported rather than silently doing nothing', async () => {
@@ -193,12 +209,12 @@ test('clicking a link routes it through the host instead of loading a page, and 
   const go = (p: string) => seen.push(p);
   let clicked = 0;
   for (const id of ['in', 'out', 'tab']) doc.getElementById(id)!.addEventListener('click', () => clicked++);
-  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById('in')!]]), go), { ok: true });
-  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById('out')!]]), go), {
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById('in')!]]), go, doc), { ok: true });
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById('out')!]]), go, doc), {
     ok: false,
     error: 'external_link',
   });
-  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById('tab')!]]), go), {
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById('tab')!]]), go, doc), {
     ok: false,
     error: 'opens_new_tab',
   });
@@ -221,4 +237,26 @@ test('the panel re-rendering while an action runs does not read as the page reac
   el.addEventListener('mouseenter', () => doc.getElementById('status')!.append(doc.createElement('b')));
   await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]]));
   assert.equal(clicked, 1);
+});
+
+test('a control inside a link row keeps its own click, rather than routing the row (#443 re-review)', async () => {
+  const doc = page('<a id="row" href="/dashboard/row"><span id="btn" role="button">Edit</span></a>');
+  const seen: string[] = [];
+  let clicked = 0;
+  doc.getElementById('btn')!.addEventListener('click', () => clicked++);
+  const el = doc.getElementById('btn')!;
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), (p) => seen.push(p), doc), { ok: true });
+  assert.equal(clicked, 1);
+  assert.deepEqual(seen, []);
+});
+
+test('a fragment href is an in-page trigger, so it is clicked rather than routed', async () => {
+  const doc = page('<a id="t" href="#">Toggle</a>');
+  const seen: string[] = [];
+  let clicked = 0;
+  const el = doc.getElementById('t')!;
+  el.addEventListener('click', () => clicked++);
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), (p) => seen.push(p), doc), { ok: true });
+  assert.equal(clicked, 1);
+  assert.deepEqual(seen, []);
 });

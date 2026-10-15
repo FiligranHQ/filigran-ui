@@ -179,10 +179,8 @@ function parsePageAction(raw: unknown): PageAction {
   if (a.type === 'type' && str(a.ref) && typeof a.text === 'string') {
     return { type: 'type', ref: a.ref as string, text: a.text };
   }
-  // A shape this version does not know is still answered, with an error: the
-  // backend holds the turn open until the action it asked for comes back, so
-  // dropping it would stall until its timeout. Version skew is expected while
-  // the two sides ship apart.
+  // Answered, not dropped: the backend holds the turn open until the action
+  // comes back, so an unknown shape would stall until its timeout.
   return { type: 'unsupported', requested: typeof a.type === 'string' ? a.type.slice(0, 64) : 'unknown' };
 }
 
