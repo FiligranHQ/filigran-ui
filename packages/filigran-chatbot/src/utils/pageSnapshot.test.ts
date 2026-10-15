@@ -206,3 +206,19 @@ test("a contenteditable's value leaves out its hidden descendants (#443 Copilot)
   assert.ok(text.includes('textbox "Notes"'), text);
   assert.ok(!text.includes('private text'), text);
 });
+
+test('the shapes named in review stay out of the snapshot, and nested items stay in', () => {
+  // An unlabelled secret textarea: masked as a value, and not leaked as a name.
+  const otp = page('<textarea autocomplete="one-time-code">123456</textarea>');
+  assert.ok(!takePageSnapshot(otp).text.includes('123456'));
+  // The `hidden` attribute and `aria-hidden`, not only `display:none`.
+  for (const html of ['<button>Open<span hidden>private text</span></button>', '<button>Open<span aria-hidden="true">private text</span></button>']) {
+    const { text } = takePageSnapshot(page(html));
+    assert.ok(text.includes('button "Open"'), text);
+    assert.ok(!text.includes('private text'), text);
+  }
+  // An expanded treeitem keeps its children.
+  const tree = page('<div role="treeitem" aria-expanded="true" aria-label="Reports"><div role="treeitem" aria-label="APT28"></div></div>');
+  const lines = takePageSnapshot(tree).text;
+  assert.ok(lines.includes('treeitem "Reports"') && lines.includes('treeitem "APT28"'), lines);
+});
