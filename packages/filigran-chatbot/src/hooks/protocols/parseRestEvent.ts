@@ -167,9 +167,9 @@ export function parseToolApprovalProposals(raw: unknown): ToolApprovalProposal[]
   return out.length > 0 ? out : undefined;
 }
 
-/** The page action of an `act_on_page` frame, or `undefined` for any other shape. */
-function parsePageAction(raw: unknown): PageAction | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
+/** The page action of an `act_on_page` frame; anything unreadable becomes `unsupported`, never nothing. */
+function parsePageAction(raw: unknown): PageAction {
+  if (!raw || typeof raw !== 'object') return { type: 'unsupported', requested: 'malformed' };
   const a = raw as Record<string, unknown>;
   const str = (v: unknown) => typeof v === 'string' && v.length > 0;
   if (a.type === 'snapshot') return { type: 'snapshot' };
@@ -179,7 +179,11 @@ function parsePageAction(raw: unknown): PageAction | undefined {
   if (a.type === 'type' && str(a.ref) && typeof a.text === 'string') {
     return { type: 'type', ref: a.ref as string, text: a.text };
   }
-  return undefined;
+  // A shape this version does not know is still answered, with an error: the
+  // backend holds the turn open until the action it asked for comes back, so
+  // dropping it would stall until its timeout. Version skew is expected while
+  // the two sides ship apart.
+  return { type: 'unsupported', requested: typeof a.type === 'string' ? a.type.slice(0, 64) : 'unknown' };
 }
 
 /**
@@ -208,8 +212,10 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       return { action: 'status', status: 'tool_start', tools: evt.tools as string[] | undefined };
     }
     if (st === 'tool_progress' && evt.event === 'page_action_required') {
+      // Without an action_id there is nothing to answer against, so that frame
+      // alone is dropped; every other shape is answered.
+      if (typeof evt.action_id !== 'string' || !evt.action_id) return { action: 'noop' };
       const pageAction = parsePageAction(evt.action);
-      if (!pageAction || typeof evt.action_id !== 'string' || !evt.action_id) return { action: 'noop' };
       return {
         action: 'page_action_required',
         actionId: evt.action_id,

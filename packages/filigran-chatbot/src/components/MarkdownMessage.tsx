@@ -6,6 +6,7 @@ import { CheckIcon, CopyIcon } from './icons';
 import { ChatImage } from './ChatImage';
 import { identity, markdownUrlTransform, prepareMarkdown } from '../utils';
 import { MarkdownBlockSplitter } from '../utils/markdownBlocks';
+import { isRelativeHref, toInternalHref } from '../utils/pageActions';
 
 interface MarkdownMessageProps {
   content: string;
@@ -22,45 +23,6 @@ interface MarkdownMessageProps {
   t?: (key: string) => string;
 }
 
-const isRelativeHref = (href?: string) => {
-  if (!href) return false;
-  if (href.startsWith('//')) return false;
-  const hasAbsoluteScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(href);
-  return !hasAbsoluteScheme;
-};
-
-/**
- * Resolve an href to its host-app-internal form, or null when it points
- * elsewhere.
- *
- * Internal links must route through the host application's router
- * (`onRelativeLinkClick`) instead of a full page load / new tab. Two shapes
- * qualify:
- *
- * 1. Relative hrefs (`/dashboard/...`) — kept as-is.
- * 2. Absolute http(s) hrefs on the SAME origin as the embedding page
- *    (e.g. `https://octi.example.com/dashboard/id/<uuid>`) — reduced to
- *    `pathname + search + hash`. Backends intentionally emit absolute links
- *    (so links work from any chat surface); when the chatbot is embedded in
- *    that very platform the link must still navigate in-app.
- *
- * Anything else (other origins, non-http schemes, malformed URLs) returns
- * null and falls back to a regular new-tab anchor.
- */
-const toInternalHref = (href?: string): string | null => {
-  if (!href) return null;
-  if (isRelativeHref(href)) return href;
-  if (typeof window === 'undefined') return null;
-  try {
-    const url = new URL(href, window.location.href);
-    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.origin === window.location.origin) {
-      return `${url.pathname}${url.search}${url.hash}` || '/';
-    }
-  } catch {
-    /* malformed URL — treat as external */
-  }
-  return null;
-};
 
 /**
  * What the element renderers need from the message they render.

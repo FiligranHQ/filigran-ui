@@ -342,6 +342,11 @@ export function useChat({
   const pageRefsRef = useRef<Map<string, Element>>(new Map());
   const onRelativeLinkClickRef = useRef(onRelativeLinkClick);
   onRelativeLinkClickRef.current = onRelativeLinkClick;
+  // A page action is answered from the closure of the render that started the
+  // turn, which may be many steps old by then: a header rotated mid-turn would
+  // otherwise be sent stale, and a silent 401 stalls the turn.
+  const requestHeadersRef = useRef(requestHeaders);
+  requestHeadersRef.current = requestHeaders;
   // Conversation id as the paused turn itself reported it. The decision POST
   // needs an id, and the first turn of a fresh conversation has none yet —
   // `conversationId` is normally learned from `done`, which a paused turn has
@@ -397,6 +402,10 @@ export function useChat({
     if (!path) return null;
     return `${apiBaseUrl}${path}`;
   };
+  // Same reason as `requestHeadersRef`: the answer must resolve the route
+  // against the endpoints as they are now, not as they were at turn start.
+  const getApproveUrlRef = useRef(getApproveUrl);
+  getApproveUrlRef.current = getApproveUrl;
 
   /**
    * Determine the pause-recovery URL for one conversation, or null when the
@@ -763,7 +772,7 @@ export function useChat({
    * ended): nothing to retry, so it is dropped.
    */
   const answerPageAction = async (actionId: string, action: PageAction, conversationIdHint?: string) => {
-    const approveUrl = getApproveUrl();
+    const approveUrl = getApproveUrlRef.current();
     const convId = conversationIdHint ?? conversationIdRef.current;
     if (!approveUrl || !convId || typeof document === 'undefined') return;
     setAgentStatus((prev) => (prev ? { ...prev, status: 'acting_on_page' } : { status: 'acting_on_page' }));
@@ -774,7 +783,7 @@ export function useChat({
     try {
       await fetch(approveUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+        headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
         body: JSON.stringify({
           conversation_id: convId,
           page_action: {

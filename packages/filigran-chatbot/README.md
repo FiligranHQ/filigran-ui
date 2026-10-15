@@ -525,11 +525,23 @@ The snapshot (`utils/pageSnapshot.ts`) lists one line per element a user could
 act on — `[e1] link "Reports" -> /dashboard/analyses/reports`, with states such as
 `(selected)`, `(pressed)`, `(menu)` for a closed menu or `(collapsed)` for a closed
 group
-— and leaves out the panel itself, hidden and inert content, and every password
-value. A state the host shows by styling alone is invisible to it: mark toggles
+— and leaves out the panel itself, hidden and inert content, and every secret
+value: a `type="password"` field, and anything whose `autocomplete` marks it as a
+password, a one-time code or a card field, so a revealed password is masked too.
+A list cut off at the size cap ends with `[truncated]`. A state the host shows by
+styling alone is invisible to it: mark toggles
 with `aria-pressed`, the current item with `aria-current`, and a clickable card
 with `role="button"`. A `409` means the
 turn no longer waits for that action, and the panel drops it.
+
+Actions that would leave the page are refused rather than performed, each
+answered with `ok: false` and a reason: a `navigate` off-site, a `click` on a
+link to another origin or one opening a new tab, a `type` on anything that is
+not a text field, and a target that is disabled. Clicking an in-host link is
+routed through `onRelativeLinkClick` rather than clicked, for the same reason a
+`navigate` is. An action this version does not know is answered as
+`unsupported_action` instead of being dropped, so a backend running ahead of the
+panel is not left waiting out its timeout.
 
 #### Recovering a prompt after a page reload
 

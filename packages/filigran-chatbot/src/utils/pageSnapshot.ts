@@ -1,15 +1,8 @@
 /**
  * The host page as `act_on_page` reads it (#5559): one line per element a user
- * could act on, each with a reference (`e1`, `e2`, ...) the next action names
- * it by, plus the headings as context. The panel itself is never part of it.
- *
- * Format, one element per line:
- *
- *   # <document title> — <path?query>
- *   heading "Reports" (level 1)
- *   [e1] link "APT28 campaign" -> /dashboard/analyses/reports/1
- *   [e2] button "Create" (disabled)
- *   [e3] searchbox "Search" = "apt28"
+ * could act on, keyed by a reference the next action names it by. The panel
+ * itself is never part of it. The line format is in the README, under "Acting
+ * on the host page".
  */
 
 export const MAX_SNAPSHOT_CHARS = 20_000;
@@ -149,9 +142,26 @@ function states(el: Element): string[] {
   return out;
 }
 
+/**
+ * Autocomplete tokens whose value never leaves the page. `type=password` alone
+ * misses a revealed password (a "show password" toggle flips it to `text`),
+ * card fields and one-time codes, all of which would otherwise ride along in
+ * every snapshot.
+ */
+const SECRET_AUTOCOMPLETE = /^(current-password|new-password|one-time-code|cc-)/;
+
+function isSecret(el: Element): boolean {
+  if ((el.getAttribute('type') || '').toLowerCase() === 'password') return true;
+  // The attribute may carry section/billing tokens before the field name.
+  return (el.getAttribute('autocomplete') || '')
+    .toLowerCase()
+    .split(/\s+/)
+    .some((token) => SECRET_AUTOCOMPLETE.test(token));
+}
+
 function value(el: Element, role: string): string | null {
   if (!['textbox', 'searchbox', 'combobox'].includes(role)) return null;
-  if ((el.getAttribute('type') || '').toLowerCase() === 'password') return null;
+  if (isSecret(el)) return null;
   const v = 'value' in el ? String((el as HTMLInputElement).value ?? '') : clean(el.textContent);
   return v ? v : null;
 }
@@ -188,6 +198,8 @@ export function takePageSnapshot(doc: Document, maxChars = MAX_SNAPSHOT_CHARS): 
   const lines = [`# ${title} — ${url}`];
   let size = lines[0].length;
   const refs = new Map<string, Element>();
+  // Without a marker the agent reads a list cut off at the cap as the whole page.
+  let truncated = false;
 
   const walk = (node: Element): boolean => {
     for (const el of Array.from(node.children)) {
@@ -200,11 +212,17 @@ export function takePageSnapshot(doc: Document, maxChars = MAX_SNAPSHOT_CHARS): 
         const v = value(el, role);
         const st = states(el);
         line = `[${ref}] ${role} ${quote(accessibleName(el))}${st.length ? ` (${st.join(', ')})` : ''}${v ? ` = ${quote(v)}` : ''}${destination(el)}`;
-        if (size + line.length + 1 > maxChars) return false;
+        if (size + line.length + 1 > maxChars) {
+          truncated = true;
+          return false;
+        }
         refs.set(ref, el);
       } else if (level) {
         line = `heading ${quote(clean(el.textContent))} (level ${level})`;
-        if (size + line.length + 1 > maxChars) return false;
+        if (size + line.length + 1 > maxChars) {
+          truncated = true;
+          return false;
+        }
       }
       if (line) {
         lines.push(line);
@@ -216,6 +234,7 @@ export function takePageSnapshot(doc: Document, maxChars = MAX_SNAPSHOT_CHARS): 
     return true;
   };
   if (doc.body) walk(doc.body);
+  if (truncated) lines.push('[truncated]');
 
   return { text: lines.join('\n'), url, title, refs };
 }

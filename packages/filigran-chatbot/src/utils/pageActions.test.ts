@@ -130,3 +130,95 @@ test('page actions are declared only to a host that answers them and lets the pa
   assert.equal(hostTakesPageActions('/chat/messages/approve', undefined), false);
   assert.equal(hostTakesPageActions(null, navigate), false);
 });
+
+// --- #443 review ------------------------------------------------------------
+
+test('type is refused on anything that is not a text field, instead of overwriting it', async () => {
+  const doc = page('<select id="s"><option>a</option><option>b</option></select><a id="l" href="/x">Go</a>');
+  const select = doc.getElementById('s')!;
+  assert.deepEqual(await performPageAction({ type: 'type', ref: 'e1', text: 'x' }, new Map([['e1', select]])), {
+    ok: false,
+    error: 'not_a_text_field',
+  });
+  // The options are still there: nothing was written over them.
+  assert.equal(select.querySelectorAll('option').length, 2);
+  const link = doc.getElementById('l')!;
+  assert.equal((await performPageAction({ type: 'type', ref: 'e1', text: 'x' }, new Map([['e1', link]]))).ok, false);
+  assert.equal(link.textContent, 'Go');
+});
+
+test('Enter is withheld in a form of several fields, counting the ones a text selector misses', async () => {
+  const doc = page('<form id="f"><input id="u" type="text"><input type="password"></form>');
+  const el = doc.getElementById('u') as HTMLInputElement;
+  let submitted = 0;
+  doc.getElementById('f')!.addEventListener('submit', () => submitted++);
+  await performPageAction({ type: 'type', ref: 'e1', text: 'admin' }, new Map([['e1', el]]));
+  assert.equal(submitted, 0);
+});
+
+test('Enter still sends a form that really has one field', async () => {
+  const doc = page('<form id="f"><input id="q" type="text"></form>');
+  const el = doc.getElementById('q') as HTMLInputElement;
+  let submitted = 0;
+  doc.getElementById('f')!.addEventListener('submit', () => submitted++);
+  await performPageAction({ type: 'type', ref: 'e1', text: 'apt28' }, new Map([['e1', el]]));
+  assert.equal(submitted, 1);
+});
+
+test('navigate takes host paths only, never another site or a scheme', async () => {
+  const seen: string[] = [];
+  const go = (p: string) => seen.push(p);
+  const refs = new Map<string, Element>();
+  assert.deepEqual(await performPageAction({ type: 'navigate', path: '/dashboard' }, refs, go), { ok: true });
+  for (const path of ['https://evil.test/x', '//evil.test/x', 'javascript:alert(1)']) {
+    assert.deepEqual(await performPageAction({ type: 'navigate', path }, refs, go), { ok: false, error: 'external_path' });
+  }
+  assert.deepEqual(seen, ['/dashboard']);
+});
+
+test('a disabled target is reported rather than silently doing nothing', async () => {
+  const doc = page('<button id="b" disabled>Save</button><button id="a" aria-disabled="true">Send</button>');
+  for (const id of ['b', 'a']) {
+    const el = doc.getElementById(id)!;
+    let clicked = 0;
+    el.addEventListener('click', () => clicked++);
+    assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]])), { ok: false, error: 'disabled' });
+    assert.equal(clicked, 0);
+  }
+});
+
+test('clicking a link routes it through the host instead of loading a page, and refuses one that leaves', async () => {
+  const doc = page('<a id="in" href="/dashboard/reports">R</a><a id="out" href="https://evil.test/x">X</a><a id="tab" href="/x" target="_blank">T</a>');
+  const seen: string[] = [];
+  const go = (p: string) => seen.push(p);
+  let clicked = 0;
+  for (const id of ['in', 'out', 'tab']) doc.getElementById(id)!.addEventListener('click', () => clicked++);
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById('in')!]]), go), { ok: true });
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById('out')!]]), go), {
+    ok: false,
+    error: 'external_link',
+  });
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', doc.getElementById('tab')!]]), go), {
+    ok: false,
+    error: 'opens_new_tab',
+  });
+  assert.deepEqual(seen, ['/dashboard/reports']);
+  assert.equal(clicked, 0);
+});
+
+test('an action this version does not know is answered with an error, not left unanswered', async () => {
+  const result = await performPageAction({ type: 'unsupported', requested: 'run_script' }, new Map());
+  assert.equal(result.ok, false);
+  assert.match(result.error ?? '', /unsupported_action: run_script/);
+});
+
+test('the panel re-rendering while an action runs does not read as the page reacting', async () => {
+  const doc = page('<div class="filigran-chatbot"><span id="status">Thinking…</span></div><button id="m" aria-haspopup="menu" aria-expanded="false">Version</button>');
+  const el = doc.getElementById('m')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  // Only the panel changes on hover: the menu opens on click, so the fallback must still run.
+  el.addEventListener('mouseenter', () => doc.getElementById('status')!.append(doc.createElement('b')));
+  await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]]));
+  assert.equal(clicked, 1);
+});

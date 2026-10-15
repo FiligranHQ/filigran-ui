@@ -144,3 +144,26 @@ test('an inline element does not split a word', () => {
   const snap = takePageSnapshot(page('<button>Re<b>ports</b></button>'));
   assert.match(snap.text, /\[e1\] button "Reports"$/m);
 });
+
+// --- #443 review ------------------------------------------------------------
+
+test('a secret is masked by its autocomplete, not only by type=password', () => {
+  const doc = page(`
+    <input type="text" autocomplete="current-password" value="hunter2" aria-label="Password">
+    <input type="text" autocomplete="one-time-code" value="123456" aria-label="Code">
+    <input type="text" autocomplete="billing cc-number" value="4111111111111111" aria-label="Card">
+    <input type="text" autocomplete="username" value="antoine" aria-label="User">
+  `);
+  const { text } = takePageSnapshot(doc);
+  for (const secret of ['hunter2', '123456', '4111111111111111']) assert.ok(!text.includes(secret), `leaked ${secret}`);
+  // A field that is not a secret still shows its value.
+  assert.ok(text.includes('antoine'));
+});
+
+test('a snapshot cut off at the cap says so, so a partial list is not read as the whole page', () => {
+  const doc = page(Array.from({ length: 200 }, (_, i) => `<button>Button number ${i}</button>`).join(''));
+  const { text } = takePageSnapshot(doc, 400);
+  assert.ok(text.endsWith('[truncated]'), text.slice(-80));
+  const full = takePageSnapshot(doc);
+  assert.ok(!full.text.includes('[truncated]'));
+});

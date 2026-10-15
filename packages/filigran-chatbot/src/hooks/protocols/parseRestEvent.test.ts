@@ -103,8 +103,21 @@ test('a page action frame carries the action to perform and its id (#5559)', () 
   assert.deepEqual(frame({ type: 'navigate', path: '/dashboard' }).action, 'page_action_required');
   assert.deepEqual(frame({ type: 'snapshot' }).action, 'page_action_required');
   assert.deepEqual(frame({ type: 'open', ref: 'e4' }).action, 'page_action_required');
-  // Nothing the widget could answer: no id, or an action it does not know.
+  // Without an id there is nothing to answer against, so that frame is dropped.
   assert.deepEqual(frame({ type: 'click', ref: 'e2' }, { action_id: undefined }), { action: 'noop' });
-  assert.deepEqual(frame({ type: 'run_script', code: 'x' }), { action: 'noop' });
-  assert.deepEqual(frame({ type: 'click' }), { action: 'noop' });
+  // An action this version does not know is still answered: the backend holds
+  // the turn open for it, so a `noop` would stall until its timeout (#443 review).
+  assert.deepEqual(frame({ type: 'run_script', code: 'x' }), {
+    action: 'page_action_required',
+    actionId: 'a-1',
+    pageAction: { type: 'unsupported', requested: 'run_script' },
+    conversationId: 'c-1',
+  });
+  // Same for a known name whose arguments are missing.
+  assert.deepEqual(frame({ type: 'click' }), {
+    action: 'page_action_required',
+    actionId: 'a-1',
+    pageAction: { type: 'unsupported', requested: 'click' },
+    conversationId: 'c-1',
+  });
 });
