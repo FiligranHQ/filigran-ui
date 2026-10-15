@@ -143,6 +143,21 @@ function addsContent(doc: Document, act: () => void, ms = 300): Promise<boolean>
 }
 
 /**
+ * Run *act*, cancelling the default action of whatever event it fires. Capture
+ * phase, so handlers still run: the panel may activate a control but must never
+ * cause the page load that would end the turn.
+ */
+function withoutDefault(doc: Document, type: string, act: () => void): void {
+  const suppress = (event: Event) => event.preventDefault();
+  doc.addEventListener(type, suppress, true);
+  try {
+    act();
+  } finally {
+    doc.removeEventListener(type, suppress, true);
+  }
+}
+
+/**
  * Click *el*, routing an anchor through the host so the page is not left and
  * the turn ended. Only *el* itself: a control inside a link row has its own
  * handler, which routing the row would skip.
@@ -165,7 +180,13 @@ function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: s
       }
     }
   }
-  (el as HTMLElement).click();
+  // An anchor is activated by a click on anything inside it, so a nested
+  // control, a fragment and an empty href would all navigate natively.
+  if (el.closest?.('a[href]')) {
+    withoutDefault(el.ownerDocument, 'click', () => (el as HTMLElement).click());
+  } else {
+    (el as HTMLElement).click();
+  }
   return { ok: true };
 }
 
@@ -221,8 +242,12 @@ function pressEnter(el: Element): void {
   el.dispatchEvent(new Keyboard('keyup', init));
   // A synthetic key event never triggers the browser's implicit submission, so
   // a form the field belongs to is submitted unless a handler took the key.
+  // Its native submission is cancelled: `requestSubmit` still validates and
+  // still reaches the host's own handler, but cannot unload the page.
   const form = (el as HTMLInputElement).form;
-  if (form && !down.defaultPrevented) form.requestSubmit?.();
+  if (form && !down.defaultPrevented) {
+    withoutDefault(el.ownerDocument, 'submit', () => form.requestSubmit?.());
+  }
 }
 
 function isDisabled(el: Element): boolean {

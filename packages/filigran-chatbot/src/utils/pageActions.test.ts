@@ -367,3 +367,48 @@ test('a fragment anchor that opens a tab is still refused', async () => {
   });
   assert.equal(clicked, 0);
 });
+
+test('clicking a control inside a link runs its handler without activating the anchor', async () => {
+  const doc = page('<a id="row" href="/dashboard/row"><span id="btn" role="button">Edit</span></a>');
+  let clicked = 0;
+  let anchorDefaultPrevented: boolean | null = null;
+  doc.getElementById('btn')!.addEventListener('click', () => clicked++);
+  doc.getElementById('row')!.addEventListener('click', (e) => {
+    anchorDefaultPrevented = e.defaultPrevented;
+  });
+  const el = doc.getElementById('btn')!;
+  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), () => {}, doc), { ok: true });
+  assert.equal(clicked, 1);
+  assert.equal(anchorDefaultPrevented, true);
+});
+
+test('an empty or fragment href is clicked without the page reloading', async () => {
+  for (const html of ['<a id="t" href="">Reload</a>', '<a id="t" href="#">Toggle</a>']) {
+    const doc = page(html);
+    const el = doc.getElementById('t')!;
+    let clicked = 0;
+    let defaultPrevented: boolean | null = null;
+    el.addEventListener('click', (e) => {
+      clicked++;
+      defaultPrevented = e.defaultPrevented;
+    });
+    assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), () => {}, doc), { ok: true });
+    assert.equal(clicked, 1, html);
+    assert.equal(defaultPrevented, true, html);
+  }
+});
+
+test('a search form whose handler does not cancel submission still cannot unload the page', async () => {
+  const doc = page('<form id="f" action="/search"><input id="q" type="search"></form>');
+  const el = doc.getElementById('q') as HTMLInputElement;
+  let submitted = 0;
+  let defaultPrevented: boolean | null = null;
+  // Deliberately no preventDefault: the host relies on the native submission.
+  doc.getElementById('f')!.addEventListener('submit', (e) => {
+    submitted++;
+    defaultPrevented = e.defaultPrevented;
+  });
+  await performPageAction({ type: 'type', ref: 'e1', text: 'apt28' }, new Map([['e1', el]]), undefined, doc);
+  assert.equal(submitted, 1);
+  assert.equal(defaultPrevented, true);
+});
