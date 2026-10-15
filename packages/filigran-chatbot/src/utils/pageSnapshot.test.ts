@@ -222,3 +222,35 @@ test('the shapes named in review stay out of the snapshot, and nested items stay
   const lines = takePageSnapshot(tree).text;
   assert.ok(lines.includes('treeitem "Reports"') && lines.includes('treeitem "APT28"'), lines);
 });
+
+test('a link row exposes the control nested inside it (#443 Copilot)', () => {
+  const doc = page('<a href="/dashboard/row" aria-label="Row"><span role="button">Edit</span></a>');
+  const { text, refs } = takePageSnapshot(doc);
+  assert.ok(text.includes('link "Row"'), text);
+  assert.ok(text.includes('button "Edit"'), text);
+  // The nested control has a reference of its own, not the row's.
+  const editRef = [...refs].find(([, el]) => el.getAttribute('role') === 'button');
+  assert.ok(editRef, 'no reference for the nested control');
+});
+
+test('a value cannot break its line or impersonate another row (#443 Copilot)', () => {
+  const doc = page('<textarea aria-label="Notes">line one\nline two</textarea>');
+  const { text } = takePageSnapshot(doc);
+  const refLines = text.split('\n').filter((l) => l.startsWith('['));
+  assert.equal(refLines.length, 1, text);
+  assert.ok(refLines[0].includes('\\n'), refLines[0]);
+});
+
+test('the header and the truncation marker are inside the cap, never added on top', () => {
+  const many = page(Array.from({ length: 200 }, (_, i) => `<button>Button number ${i}</button>`).join(''));
+  for (const cap of [60, 120, 400, 1000]) {
+    const { text } = takePageSnapshot(many, cap);
+    assert.ok(text.length <= cap, `cap ${cap}: got ${text.length}`);
+  }
+  // A header longer than the whole budget is cut and still marked.
+  const doc = page('<button>Go</button>');
+  doc.title = 'T'.repeat(400);
+  const tiny = takePageSnapshot(doc, 40);
+  assert.ok(tiny.text.length <= 40, `got ${tiny.text.length}`);
+  assert.ok(tiny.text.endsWith('[truncated]'), tiny.text);
+});

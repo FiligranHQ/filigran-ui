@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
 
 import { hostTakesPageActions, performPageAction, waitForDomSettle } from './pageActions.ts';
+import { takePageSnapshot } from './pageSnapshot.ts';
 
 function page(html: string) {
   const window = new Window({ url: 'http://opencti.test/dashboard' });
@@ -294,12 +295,16 @@ test('the panel re-rendering while an action runs does not read as the page reac
 });
 
 test('a control inside a link row keeps its own click, rather than routing the row (#443 re-review)', async () => {
-  const doc = page('<a id="row" href="/dashboard/row"><span id="btn" role="button">Edit</span></a>');
+  const doc = page('<a id="row" href="/dashboard/row" aria-label="Row"><span id="btn" role="button">Edit</span></a>');
   const seen: string[] = [];
   let clicked = 0;
   doc.getElementById('btn')!.addEventListener('click', () => clicked++);
-  const el = doc.getElementById('btn')!;
-  assert.deepEqual(await performPageAction({ type: 'click', ref: 'e1' }, new Map([['e1', el]]), (p) => seen.push(p), doc), { ok: true });
+  // Through the snapshot's own reference map, so this also proves the walk
+  // exposes the nested control at all (#443 Copilot).
+  const { refs } = takePageSnapshot(doc);
+  const entry = [...refs].find(([, el]) => el.getAttribute('role') === 'button');
+  assert.ok(entry, 'the snapshot gave the nested control no reference');
+  assert.deepEqual(await performPageAction({ type: 'click', ref: entry[0] }, refs, (p) => seen.push(p), doc), { ok: true });
   assert.equal(clicked, 1);
   assert.deepEqual(seen, []);
 });

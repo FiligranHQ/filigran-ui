@@ -7,6 +7,8 @@
 
 export const MAX_SNAPSHOT_CHARS = 20_000;
 const MAX_NAME_CHARS = 80;
+const MAX_URL_CHARS = 500;
+const TRUNCATION_MARKER = '[truncated]';
 
 export interface PageSnapshot {
   text: string;
@@ -33,12 +35,23 @@ const EXPLICIT_ROLES = new Set([
   'treeitem',
 ]);
 
+/** Anything that could carry an actionable role, for the descent test below. */
+const MAYBE_ACTIONABLE = 'a[href], button, summary, select, textarea, input, [contenteditable="true"], [role]';
+
 /**
- * Roles that wrap other controls rather than being named by their contents: a
- * `div[role="combobox"]` holds the real input, a `treeitem` its child items.
- * A native `<select>` is not one - its options are not separate controls.
+ * Whether an actionable element wraps further controls - a link row holding an
+ * Edit button, a `div[role="combobox"]` holding the real input, a `treeitem`
+ * holding its children. Those must get references of their own; a plain link
+ * or button is named by its contents instead, and a native `<select>`'s
+ * options are not controls.
  */
-const COMPOSITE_ROLES = new Set(['combobox', 'treeitem']);
+function wrapsControls(el: Element): boolean {
+  if (el.tagName.toLowerCase() === 'select') return false;
+  for (const child of Array.from(el.querySelectorAll(MAYBE_ACTIONABLE))) {
+    if (actionableRole(child)) return true;
+  }
+  return false;
+}
 
 /** The role an element is acted on as, or `null` when it is not actionable. */
 function actionableRole(el: Element): string | null {
@@ -136,7 +149,9 @@ function accessibleName(el: Element): string {
 }
 
 function quote(text: string): string {
-  return `"${text.slice(0, MAX_NAME_CHARS).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  // JSON quoting, so a newline in a textarea value cannot split one control
+  // across lines or make its text read as another `[e2] button "…"` row.
+  return JSON.stringify(text.slice(0, MAX_NAME_CHARS));
 }
 
 function states(el: Element): string[] {
@@ -212,13 +227,22 @@ function hidden(el: Element): boolean {
 
 export function takePageSnapshot(doc: Document, maxChars = MAX_SNAPSHOT_CHARS): PageSnapshot {
   const loc = doc.defaultView?.location;
-  const url = loc ? `${loc.pathname}${loc.search}` : '';
-  const title = clean(doc.title);
-  const lines = [`# ${title} — ${url}`];
-  let size = lines[0].length;
-  const refs = new Map<string, Element>();
-  // Without a marker the agent reads a list cut off at the cap as the whole page.
+  const url = (loc ? `${loc.pathname}${loc.search}` : '').slice(0, MAX_URL_CHARS);
+  const title = clean(doc.title).slice(0, MAX_NAME_CHARS);
+  // Without a marker the agent reads a list cut off at the cap as the whole
+  // page, so its room is taken out of the budget before anything is listed -
+  // as is the header's, which a long title and path could otherwise blow on
+  // their own.
+  const budget = Math.max(0, maxChars - (TRUNCATION_MARKER.length + 1));
   let truncated = false;
+  let header = `# ${title} — ${url}`;
+  if (header.length > budget) {
+    header = header.slice(0, budget);
+    truncated = true;
+  }
+  const lines = [header];
+  let size = header.length;
+  const refs = new Map<string, Element>();
 
   const walk = (node: Element): boolean => {
     for (const el of Array.from(node.children)) {
@@ -231,14 +255,14 @@ export function takePageSnapshot(doc: Document, maxChars = MAX_SNAPSHOT_CHARS): 
         const v = value(el, role);
         const st = states(el);
         line = `[${ref}] ${role} ${quote(accessibleName(el))}${st.length ? ` (${st.join(', ')})` : ''}${v ? ` = ${quote(v)}` : ''}${destination(el)}`;
-        if (size + line.length + 1 > maxChars) {
+        if (size + line.length + 1 > budget) {
           truncated = true;
           return false;
         }
         refs.set(ref, el);
       } else if (level) {
         line = `heading ${quote(clean(spacedText(el)))} (level ${level})`;
-        if (size + line.length + 1 > maxChars) {
+        if (size + line.length + 1 > budget) {
           truncated = true;
           return false;
         }
@@ -248,14 +272,13 @@ export function takePageSnapshot(doc: Document, maxChars = MAX_SNAPSHOT_CHARS): 
         size += line.length + 1;
       }
       // An actionable element's own content is its name, not more elements -
-      // except a composite one, whose content is the controls to act on.
-      const composite = role !== null && COMPOSITE_ROLES.has(role) && el.tagName.toLowerCase() !== 'select';
-      if ((!role || composite) && !walk(el)) return false;
+      // unless it wraps controls of its own, which need their own references.
+      if ((!role || wrapsControls(el)) && !walk(el)) return false;
     }
     return true;
   };
-  if (doc.body) walk(doc.body);
-  if (truncated) lines.push('[truncated]');
+  if (doc.body && !truncated) walk(doc.body);
+  if (truncated) lines.push(TRUNCATION_MARKER);
 
   return { text: lines.join('\n'), url, title, refs };
 }
