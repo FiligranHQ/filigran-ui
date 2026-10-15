@@ -225,6 +225,16 @@ export const ImageWithOptions = Image.extend<ImageWithOptionsOptions>({
         };
       };
 
+      // The resizable view sets a pixel height: an image wider than the editor would then be squeezed by max-width.
+      // The height follows the width instead, keeping the image proportions.
+      const keepProportions = (w: unknown, h: unknown) => {
+        const imageWidth = Number(w);
+        const imageHeight = Number(h);
+        if (!(imageWidth > 0 && imageHeight > 0)) return;
+        img.style.height = 'auto';
+        img.style.aspectRatio = `${imageWidth} / ${imageHeight}`;
+      };
+
       if (resizeEnabled && resizeOpts) {
         const { directions, minWidth, minHeight, alwaysPreserveAspectRatio } = resizeOpts;
         const nodeView = new ResizableNodeView({
@@ -235,6 +245,7 @@ export const ImageWithOptions = Image.extend<ImageWithOptionsOptions>({
           onResize: (w, h) => {
             img.style.width = `${w}px`;
             img.style.height = `${h}px`;
+            keepProportions(w, h);
           },
           onCommit: (w, h) => {
             const pos = getPos();
@@ -251,6 +262,7 @@ export const ImageWithOptions = Image.extend<ImageWithOptionsOptions>({
             preserveAspectRatio: alwaysPreserveAspectRatio === true,
           },
         });
+        keepProportions(width, height);
 
         /* Always use figure wrapper when resize is on so we can show/update caption in update() */
         const figure = document.createElement('figure');

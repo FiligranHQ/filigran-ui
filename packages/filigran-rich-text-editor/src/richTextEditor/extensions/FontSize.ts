@@ -1,5 +1,5 @@
 import { FontSize as FontSizeBase } from '@tiptap/extension-text-style/font-size';
-import { LEGACY_FONT_SIZE_MAP } from './TextStyle';
+import { LEGACY_FONT_SIZE_MAP } from './TextStyle.ts';
 
 /**
  * Extends TipTap's FontSize to read font size from legacy editor classes when no
