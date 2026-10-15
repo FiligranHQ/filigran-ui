@@ -265,3 +265,14 @@ test('a file input is a chooser, not a text field', () => {
   const doc = page('<input type="file" aria-label="Attach">');
   assert.ok(takePageSnapshot(doc).text.includes('button "Attach"'));
 });
+
+test('a closed disclosure hides everything but its summary', () => {
+  const closed = page('<details><summary>More</summary><button>Delete</button></details>');
+  const closedText = takePageSnapshot(closed).text;
+  assert.ok(closedText.includes('"More"'), closedText);
+  assert.ok(!closedText.includes('Delete'), closedText);
+
+  const open = page('<details open><summary>More</summary><button>Delete</button></details>');
+  const openText = takePageSnapshot(open).text;
+  assert.ok(openText.includes('"More"') && openText.includes('"Delete"'), openText);
+});

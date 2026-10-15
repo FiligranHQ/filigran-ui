@@ -457,3 +457,27 @@ test('a file input is refused rather than opening an operating-system chooser', 
   });
   assert.equal(clicked, 0);
 });
+
+test('a menu hidden by an ancestor is not mistaken for an open one', async () => {
+  // With a stated collapsed state, and without one: neither may report success
+  // without activating the trigger.
+  for (const expanded of ['aria-expanded="false" ', '']) {
+    const doc = page(
+      `<button id="t" ${expanded}aria-controls="m">Tools</button><div style="display:none"><ul id="m"><li>Item</li></ul></div>`,
+    );
+    const el = doc.getElementById('t')!;
+    let clicked = 0;
+    el.addEventListener('click', () => clicked++);
+    assert.deepEqual(await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]]), undefined, doc), { ok: true });
+    assert.equal(clicked, 1, `expanded=${JSON.stringify(expanded)}`);
+  }
+});
+
+test('a menu its trigger says is open is left alone', async () => {
+  const doc = page('<button id="t" aria-expanded="true" aria-controls="m">Tools</button><ul id="m"><li>Item</li></ul>');
+  const el = doc.getElementById('t')!;
+  let clicked = 0;
+  el.addEventListener('click', () => clicked++);
+  assert.deepEqual(await performPageAction({ type: 'open', ref: 'e1' }, new Map([['e1', el]]), undefined, doc), { ok: true });
+  assert.equal(clicked, 0);
+});

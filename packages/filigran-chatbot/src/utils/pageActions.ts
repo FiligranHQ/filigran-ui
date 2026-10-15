@@ -190,16 +190,27 @@ function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: s
   return { ok: true };
 }
 
+/** Whether *el* and every ancestor are rendered: a wrapper hides what it holds. */
+function visible(el: Element): boolean {
+  for (let node: Element | null = el; node; node = node.parentElement) {
+    if ((node as HTMLElement).hidden || node.hasAttribute('inert')) return false;
+    if (node.getAttribute('aria-hidden') === 'true') return false;
+    const style = node.ownerDocument.defaultView?.getComputedStyle(node);
+    if (style?.display === 'none' || style?.visibility === 'hidden') return false;
+  }
+  return true;
+}
+
 /** Whether the menu *el* controls is showing, by what the trigger says about it. */
 function menuShowing(el: Element): boolean {
-  if (el.getAttribute('aria-expanded') === 'true') return true;
+  const expanded = el.getAttribute('aria-expanded');
+  if (expanded === 'true') return true;
+  // A stated collapsed state settles it, whatever the target looks like.
+  if (expanded === 'false') return false;
   const id = el.getAttribute('aria-controls');
   if (!id) return false;
   const menu = el.ownerDocument.getElementById(id);
-  if (!menu) return false;
-  if ((menu as HTMLElement).hidden || menu.getAttribute('aria-hidden') === 'true') return false;
-  const style = menu.ownerDocument.defaultView?.getComputedStyle(menu);
-  return style?.display !== 'none' && style?.visibility !== 'hidden';
+  return !!menu && visible(menu);
 }
 
 /**

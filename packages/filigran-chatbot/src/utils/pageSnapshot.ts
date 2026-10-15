@@ -228,6 +228,13 @@ function destination(el: Element): string {
 
 function hidden(el: Element): boolean {
   if (el.classList.contains('filigran-chatbot')) return true;
+  // A closed `<details>` renders nothing but its first `<summary>`, though its
+  // descendants keep ordinary computed styles.
+  const details = el.closest?.('details:not([open])');
+  if (details && details !== el) {
+    const summary = Array.from(details.children).find((c) => c.tagName.toLowerCase() === 'summary');
+    if (!summary?.contains(el)) return true;
+  }
   if ((el as HTMLElement).hidden || el.hasAttribute('inert')) return true;
   if (el.getAttribute('aria-hidden') === 'true') return true;
   const style = el.ownerDocument.defaultView?.getComputedStyle(el);
