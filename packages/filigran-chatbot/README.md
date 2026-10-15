@@ -520,8 +520,9 @@ page neither read nor acted on. Each step arrives on the stream as a
 (`click`, `open` — a hover, or a click when hovering opens nothing —, `type`, then
 Enter only in a field that says it is a search - `type="search"`,
 `role="searchbox"`, inside `role="search"`, or named like one (a `name`, `id`,
-`placeholder`, `aria-label` or `title` reading "search", "query", "filter" or
-"find") - never in a form of one unnamed field, which is as likely a create or
+`placeholder`, `aria-label` or `title` whose whole words include "search",
+"query", "filter" or "find", and only when it is the form's sole field) - never
+in a form of one unnamed field, which is as likely a create or
 rename dialog,
 or `navigate` through `onRelativeLinkClick` — never
 a page load, which would end the turn) and POSTs

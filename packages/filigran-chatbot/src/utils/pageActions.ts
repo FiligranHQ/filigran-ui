@@ -297,16 +297,27 @@ async function openMenu(el: Element, base?: string, signal?: AbortSignal): Promi
  * a search: a one-field form is as likely a create dialog, and typing an
  * agent's name must not create the agent.
  */
-/** Words a search field is labelled with, where a create dialog's is not. */
-const SEARCH_WORDS = /search|query|filter|find|recherche|rechercher/i;
+/** Everything in a form a user fills in, for telling a search from a dialog. */
+const SUBMITTABLE =
+  'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]), select, textarea, [contenteditable="true"]';
 
+/** Words a search field is labelled with, where a create dialog's is not. */
+const SEARCH_WORDS = /\b(search|query|filter|find|recherche|rechercher)\b/i;
+
+/**
+ * Whether Enter in *el* asks for what was typed. Only a field that says it is a
+ * search: a form of one field is just as likely a create or rename dialog, and
+ * submitting it would commit the change the user has not asked for yet.
+ */
 function entersSearch(el: Element): boolean {
   if (el.getAttribute('role') === 'searchbox') return true;
   if ((el as HTMLInputElement).type === 'search') return true;
   if (el.closest('[role="search"]') !== null) return true;
-  // A plain text input is often the search of a one-field form; only one
-  // that says so, since a create or rename dialog looks the same otherwise.
-  return ['name', 'id', 'placeholder', 'aria-label', 'title'].some((attr) => SEARCH_WORDS.test(el.getAttribute(attr) ?? ''));
+  if (!['name', 'id', 'placeholder', 'aria-label', 'title'].some((attr) => SEARCH_WORDS.test(el.getAttribute(attr) ?? ''))) return false;
+  // Named like a search, but a "Filter name" beside other fields is a dialog
+  // saving a filter, not a search: only the form's sole field is sent.
+  const form = (el as HTMLInputElement).form;
+  return !form || form.querySelectorAll(SUBMITTABLE).length === 1;
 }
 
 function pressEnter(el: Element): void {

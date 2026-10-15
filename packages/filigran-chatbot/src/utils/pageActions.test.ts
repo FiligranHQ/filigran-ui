@@ -645,3 +645,22 @@ test('the two disabled tests agree, though the modules cannot share one', () => 
     assert.equal(takePageSnapshot(doc).text.includes('(disabled)'), disabled, html);
   }
 });
+
+test('a word inside another word is not a search, and a named field beside others is not either', async () => {
+  const holds = [
+    '<form id="f"><input id="q" type="text" aria-label="Research report title"></form>',
+    '<form id="f"><input id="q" type="text" name="findings-name"></form>',
+    // "Filter name" reads like a search but sits in a dialog saving a filter.
+    '<form id="f"><input id="q" type="text" aria-label="Filter name"><input type="text" aria-label="Description"></form>',
+  ];
+  for (const html of holds) {
+    const doc = page(html);
+    let submitted = 0;
+    doc.getElementById('f')!.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitted++;
+    });
+    await performPageAction({ type: 'type', ref: 'e1', text: 'x' }, new Map([['e1', doc.getElementById('q')!]]), undefined, doc);
+    assert.equal(submitted, 0, html);
+  }
+});

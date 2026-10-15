@@ -782,31 +782,36 @@ export function useChat({
     // and this runs detached from the stream, so without it a stopped turn would
     // still click the page and then answer for a conversation that is gone.
     const signal = pageActionControllerRef.current?.signal;
-    // The same opt-in that decides whether the capability is advertised, tested
-    // again on the way in: an unsolicited frame must not read or act on the page
-    // of a host that never offered it. Answered, so the turn does not hang.
-    if (!hostTakesPageActions(approveUrl, onRelativeLinkClickRef.current)) {
+    // The stream outlives a closed panel, so the turn is still waiting: it is
+    // answered without the page and without the aborted signal, which would
+    // cancel the request too and leave it waiting out its timeout per step.
+    const refuse = async (error: string) => {
       try {
         await fetch(approveUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
-          signal,
           body: JSON.stringify({
             conversation_id: convId,
-            page_action: { action_id: actionId, ok: false, error: 'page_actions_not_supported', url: '', title: '', snapshot: '' },
+            page_action: { action_id: actionId, ok: false, error, url: '', title: '', snapshot: '' },
           }),
         });
       } catch {
-        // Nothing to show: the turn's own wait ends it.
+        // The turn's own page wait ends it; there is nothing to show here.
       }
-      return;
+    };
+    if (signal?.aborted) return refuse('panel_closed');
+    // The same opt-in that decides whether the capability is advertised, tested
+    // again on the way in: an unsolicited frame must not read or act on the page
+    // of a host that never offered it. Answered, so the turn does not hang.
+    if (!hostTakesPageActions(approveUrl, onRelativeLinkClickRef.current)) {
+      return refuse('page_actions_not_supported');
     }
     setAgentStatus((prev) => (prev ? { ...prev, status: 'acting_on_page' } : { status: 'acting_on_page' }));
     try {
       const result = await performPageAction(action, pageRefsRef.current, onRelativeLinkClickRef.current, document, signal);
-      if (signal?.aborted) return;
+      if (signal?.aborted) return refuse('panel_closed');
       if (action.type !== 'snapshot') await waitForDomSettle(document, { signal });
-      if (signal?.aborted) return;
+      if (signal?.aborted) return refuse('panel_closed');
       // The snapshot can throw on its own (a very deep DOM, a host
       // `getComputedStyle` that raises). It rides in `error` while `ok` stays
       // the action's own result: `ok: false` would have the agent retry a click
