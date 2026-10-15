@@ -82,7 +82,7 @@ test('a field that says it is a search is sent', async () => {
 
 test('navigating goes through the host callback, and fails without one', async () => {
   // The document is what the path is resolved against, so a host page is needed
-  // to tell an in-host path from one that leaves (#443 re-review).
+  // to tell an in-host path from one that leaves.
   const doc = page('');
   const paths: string[] = [];
   const ok = await performPageAction({ type: 'navigate', path: '/dashboard/x' }, new Map(), (p) => paths.push(p), doc);
@@ -153,8 +153,6 @@ test('page actions are declared only to a host that answers them and lets the pa
   assert.equal(hostTakesPageActions(null, navigate), false);
 });
 
-// --- #443 review ------------------------------------------------------------
-
 test('type is refused on anything that is not a text field, instead of overwriting it', async () => {
   const doc = page('<select id="s"><option>a</option><option>b</option></select><a id="l" href="/x">Go</a>');
   const select = doc.getElementById('s')!;
@@ -178,7 +176,7 @@ test('Enter is withheld in a form of several fields, counting the ones a text se
   assert.equal(submitted, 0);
 });
 
-test('a read-only field is refused rather than written through the native setter (#443 Copilot)', async () => {
+test('a read-only field is refused rather than written through the native setter', async () => {
   const doc = page('<input id="r" type="text" readonly value="kept"><textarea id="a" aria-readonly="true">kept</textarea>');
   for (const id of ['r', 'a']) {
     const el = doc.getElementById(id) as HTMLInputElement;
@@ -190,7 +188,7 @@ test('a read-only field is refused rather than written through the native setter
   assert.equal((doc.getElementById('r') as HTMLInputElement).value, 'kept');
 });
 
-test('a control disabled by its fieldset is refused like any other (#443 Copilot)', async () => {
+test('a control disabled by its fieldset is refused like any other', async () => {
   const doc = page('<fieldset disabled><button id="b">Save</button></fieldset>');
   const el = doc.getElementById('b')!;
   let clicked = 0;
@@ -235,7 +233,7 @@ test('navigate takes host paths only, never another site or a scheme', async () 
   assert.deepEqual(seen, ['/dashboard']);
 });
 
-test('a path that only looks relative cannot leave the host (#443 re-review)', async () => {
+test('a path that only looks relative cannot leave the host', async () => {
   const doc = page('');
   const seen: string[] = [];
   const go = (p: string) => seen.push(p);
@@ -294,13 +292,13 @@ test('the panel re-rendering while an action runs does not read as the page reac
   assert.equal(clicked, 1);
 });
 
-test('a control inside a link row keeps its own click, rather than routing the row (#443 re-review)', async () => {
+test('a control inside a link row keeps its own click, rather than routing the row', async () => {
   const doc = page('<a id="row" href="/dashboard/row" aria-label="Row"><span id="btn" role="button">Edit</span></a>');
   const seen: string[] = [];
   let clicked = 0;
   doc.getElementById('btn')!.addEventListener('click', () => clicked++);
   // Through the snapshot's own reference map, so this also proves the walk
-  // exposes the nested control at all (#443 Copilot).
+  // exposes the nested control at all.
   const { refs } = takePageSnapshot(doc);
   const entry = [...refs].find(([, el]) => el.getAttribute('role') === 'button');
   assert.ok(entry, 'the snapshot gave the nested control no reference');
@@ -319,8 +317,6 @@ test('a fragment href is an in-page trigger, so it is clicked rather than routed
   assert.equal(clicked, 1);
   assert.deepEqual(seen, []);
 });
-
-// --- Copilot / re-review of bdf7771 -----------------------------------------
 
 test('a stopped turn does not click the page after its hover wait', async () => {
   const doc = page('<button id="m" aria-haspopup="menu" aria-expanded="false">Version</button>');
@@ -360,7 +356,7 @@ test('the open fallback goes through the link guard rather than clicking an anch
   assert.equal(clicked, 0);
 });
 
-test('a fragment anchor that opens a tab is still refused (#443 Copilot)', async () => {
+test('a fragment anchor that opens a tab is still refused', async () => {
   const doc = page('<a id="t" href="#" target="_blank">Toggle</a>');
   const el = doc.getElementById('t')!;
   let clicked = 0;

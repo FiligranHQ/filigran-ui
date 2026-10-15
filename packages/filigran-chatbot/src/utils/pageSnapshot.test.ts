@@ -145,8 +145,6 @@ test('an inline element does not split a word', () => {
   assert.match(snap.text, /\[e1\] button "Reports"$/m);
 });
 
-// --- #443 review ------------------------------------------------------------
-
 test('a secret is masked by its autocomplete, not only by type=password', () => {
   const doc = page(`
     <input type="text" autocomplete="current-password" value="hunter2" aria-label="Password">
@@ -168,7 +166,7 @@ test('a snapshot cut off at the cap says so, so a partial list is not read as th
   assert.ok(!full.text.includes('[truncated]'));
 });
 
-test('a composite control still lists the control inside it (#443 Copilot)', () => {
+test('a composite control still lists the control inside it', () => {
   const doc = page('<div role="combobox" aria-label="Agent"><input type="text" aria-label="Agent name" value="clef"></div>');
   const { text } = takePageSnapshot(doc);
   assert.ok(text.includes('combobox "Agent"'), text);
@@ -181,7 +179,7 @@ test('a native select still keeps its options out of the snapshot', () => {
   assert.equal(text.split('\n').filter((l) => l.startsWith('[')).length, 1);
 });
 
-test('hidden text cannot re-enter through a visible ancestor name (#443 Copilot)', () => {
+test('hidden text cannot re-enter through a visible ancestor name', () => {
   const doc = page('<button id="b">Open<span style="display:none">private text</span></button>');
   const { text } = takePageSnapshot(doc);
   assert.ok(text.includes('button "Open"'), text);
@@ -194,13 +192,13 @@ test("a secret's own contents are not handed over as its name", () => {
   assert.ok(!text.includes('123456'), text);
 });
 
-test('an icon button keeps the name of its visually-hidden label (#443 re-review)', () => {
+test('an icon button keeps the name of its visually-hidden label', () => {
   const doc = page('<button aria-labelledby="lbl"><svg></svg></button><span id="lbl" style="display:none">Delete report</span>');
   const { text } = takePageSnapshot(doc);
   assert.ok(text.includes('button "Delete report"'), text);
 });
 
-test("a contenteditable's value leaves out its hidden descendants (#443 Copilot)", () => {
+test("a contenteditable's value leaves out its hidden descendants", () => {
   const doc = page('<div contenteditable="true" aria-label="Notes">shown<span style="display:none">private text</span></div>');
   const { text } = takePageSnapshot(doc);
   assert.ok(text.includes('textbox "Notes"'), text);
@@ -223,7 +221,7 @@ test('the shapes named in review stay out of the snapshot, and nested items stay
   assert.ok(lines.includes('treeitem "Reports"') && lines.includes('treeitem "APT28"'), lines);
 });
 
-test('a link row exposes the control nested inside it (#443 Copilot)', () => {
+test('a link row exposes the control nested inside it', () => {
   const doc = page('<a href="/dashboard/row" aria-label="Row"><span role="button">Edit</span></a>');
   const { text, refs } = takePageSnapshot(doc);
   assert.ok(text.includes('link "Row"'), text);
@@ -233,7 +231,7 @@ test('a link row exposes the control nested inside it (#443 Copilot)', () => {
   assert.ok(editRef, 'no reference for the nested control');
 });
 
-test('a value cannot break its line or impersonate another row (#443 Copilot)', () => {
+test('a value cannot break its line or impersonate another row', () => {
   const doc = page('<textarea aria-label="Notes">line one\nline two</textarea>');
   const { text } = takePageSnapshot(doc);
   const refLines = text.split('\n').filter((l) => l.startsWith('['));

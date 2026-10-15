@@ -143,10 +143,9 @@ function addsContent(doc: Document, act: () => void, ms = 300): Promise<boolean>
 }
 
 /**
- * Click *el*, except where clicking would leave the page and end the turn: an
- * anchor is routed through the host instead. Only *el* itself, never an
- * ancestor — a `role="button"` inside a link row has its own handler, and
- * routing the row's href would skip it.
+ * Click *el*, routing an anchor through the host so the page is not left and
+ * the turn ended. Only *el* itself: a control inside a link row has its own
+ * handler, which routing the row would skip.
  */
 function clickOrRoute(el: Element, onNavigate?: (path: string) => void, base?: string): PageActionResult {
   if (el.matches?.('a[href]')) {
@@ -183,10 +182,9 @@ function menuShowing(el: Element): boolean {
 }
 
 /**
- * Open the menu *el* triggers: on hover where it opens on hover (OpenCTI's
- * navigation), else on click. A trigger that says whether it is open is
- * believed; only one that says nothing falls back to "did the page grow",
- * which a hover tooltip would otherwise answer for it.
+ * Open the menu *el* triggers: by hover where that opens it, else by click.
+ * A trigger stating its own state is believed; only one that says nothing
+ * falls back to "did the page grow", which a tooltip would answer for it.
  */
 async function openMenu(el: Element, onNavigate?: (path: string) => void, base?: string, signal?: AbortSignal): Promise<PageActionResult> {
   const statesItself = el.hasAttribute('aria-expanded') || el.hasAttribute('aria-controls');
@@ -202,10 +200,9 @@ async function openMenu(el: Element, onNavigate?: (path: string) => void, base?:
 }
 
 /**
- * Whether Enter in *el* asks for what was typed. Only a field that says it is a
- * search: a form of one field is just as likely a create or rename dialog, and
- * submitting it would commit the change the user has not asked for yet - typing
- * an agent's name must not create the agent.
+ * Whether Enter in *el* asks for what was typed. Only a field that says it is
+ * a search: a one-field form is as likely a create dialog, and typing an
+ * agent's name must not create the agent.
  */
 function entersSearch(el: Element): boolean {
   return (

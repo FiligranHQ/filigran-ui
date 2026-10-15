@@ -39,11 +39,9 @@ const EXPLICIT_ROLES = new Set([
 const MAYBE_ACTIONABLE = 'a[href], button, summary, select, textarea, input, [contenteditable="true"], [role]';
 
 /**
- * Whether an actionable element wraps further controls - a link row holding an
- * Edit button, a `div[role="combobox"]` holding the real input, a `treeitem`
- * holding its children. Those must get references of their own; a plain link
- * or button is named by its contents instead, and a native `<select>`'s
- * options are not controls.
+ * Whether an actionable element wraps further controls, which need references
+ * of their own. A plain link is named by its contents; a `<select>`'s are not
+ * controls.
  */
 function wrapsControls(el: Element): boolean {
   if (el.tagName.toLowerCase() === 'select') return false;

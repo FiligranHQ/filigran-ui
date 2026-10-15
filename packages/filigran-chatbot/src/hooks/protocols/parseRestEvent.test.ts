@@ -106,7 +106,7 @@ test('a page action frame carries the action to perform and its id (#5559)', () 
   // Without an id there is nothing to answer against, so that frame is dropped.
   assert.deepEqual(frame({ type: 'click', ref: 'e2' }, { action_id: undefined }), { action: 'noop' });
   // An action this version does not know is still answered: the backend holds
-  // the turn open for it, so a `noop` would stall until its timeout (#443 review).
+  // the turn open for it, so a `noop` would stall until its timeout.
   assert.deepEqual(frame({ type: 'run_script', code: 'x' }), {
     action: 'page_action_required',
     actionId: 'a-1',
