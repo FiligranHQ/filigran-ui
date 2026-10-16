@@ -230,18 +230,20 @@ jobs:
           echo "ICON_ISSUES_TO_CLOSE=$ICON_ISSUES" >> $GITHUB_ENV
       # `yarn npm publish` with no usable token opens an interactive npm login,
       # which a runner cannot answer: it hangs, then dies as "unexpected empty
-      # event loop" (exit 42) after the whole build. Checked here instead, so
-      # the run fails in seconds and says why.
+      # event loop" (exit 42) after the whole build. A cheap identity check
+      # here fails in seconds instead, and says what it did and did not prove.
       - name: Verify NPM authentication
         if: env.FILIGRAN_CHATBOT_VERSION != '' || env.FILIGRAN_ICON_VERSION != '' || env.FILIGRAN_RTE_VERSION != '' || env.FILIGRAN_UI_VERSION != ''
         run: |
           set -euo pipefail
           if [ -z "${YARN_NPM_AUTH_TOKEN:-}" ]; then
-            echo "::error title=NPM token missing::The NPM_TOKEN secret is empty or not available to this run, so publishing would fall back to an interactive browser login and fail as exit 42. Set NPM_TOKEN to an npm Automation token with publish rights on @filigran."
+            echo "::error title=NPM token missing::The NPM_TOKEN secret is empty or not available to this run, so publishing would fall back to an interactive browser login and fail as exit 42. Set NPM_TOKEN to an unexpired npm granular access token with write access to the @filigran packages, or move the workflow to trusted publishing (OIDC)."
             exit 1
           fi
+          # Identity only: this says nothing about write access to the packages,
+          # nor about publish-time 2FA, and a registry outage fails it too.
           if ! who=$(yarn npm whoami --publish 2>&1); then
-            echo "::error title=NPM authentication rejected::$who. NPM_TOKEN is set but the publish registry does not accept it - an expired token, or one that is not an Automation token where the account enforces 2FA."
+            echo "::error title=NPM identity check failed::Could not confirm who NPM_TOKEN belongs to on the publish registry. Yarn said: $who. A rejected or expired token is the usual cause - granular tokens last 90 days at most - but a network or registry failure looks the same here."
             exit 1
           fi
           echo "Publishing to npm as $who"
