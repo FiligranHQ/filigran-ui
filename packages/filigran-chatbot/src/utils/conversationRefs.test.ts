@@ -289,6 +289,10 @@ test('a settled answer forgets the remembered rows it should have listed', () =>
 
   // "hi" answered without Bob: deleted or unshared since. Alice does not match "hi": kept.
   assert.deepEqual(rememberAnswer(seen, { query: 'hi', items: [], failed: false }), [alice]);
+  // A backend that does not match by key answers the typed key with nothing:
+  // that proves no absence, and "Hi Bob" stays (the case the memory is for).
+  assert.equal(rememberAnswer(seen, { query: 'hi-bob', items: [], failed: false }), seen);
+  assert.equal(rememberAnswer([bob], { query: 'hi-bo', items: [], failed: false }).length, 1);
   // Bob listed: kept, as the latest version.
   const renamed = { ...bob, title: 'Hi Bob!' };
   assert.deepEqual(rememberAnswer(seen, { query: 'hi', items: [renamed], failed: false }), [alice, renamed]);

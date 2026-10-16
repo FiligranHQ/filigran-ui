@@ -196,8 +196,11 @@ export function rememberCandidates(
 /**
  * *seen* after a search answer: the rows a settled answer should have listed
  * and did not are forgotten (deleted or unshared since), then its rows are
- * remembered. Only a complete answer (under a page) proves an absence; the
- * conversation written in is excluded by the request, not gone.
+ * remembered. An absence is proven only under the narrowest contract every
+ * backend keeps - the title contains `q` as typed - and by a complete answer
+ * (under a page): a backend that does not match by key yet answers `hi-bob`
+ * with nothing, and "Hi Bob" must stay. The conversation written in is
+ * excluded by the request, not gone.
  */
 export function rememberAnswer(
   seen: ChatConversationReferenceCandidate[],
@@ -208,7 +211,8 @@ export function rememberAnswer(
   const query = search.query;
   const listed = new Set(search.items.map((c) => c.id));
   const complete = search.items.length < REFERENCE_MENU_LIMIT;
-  const kept = complete ? seen.filter((c) => c.id === exclude || listed.has(c.id) || !referenceMatches(query, c)) : seen;
+  const q = query.toLowerCase();
+  const kept = complete ? seen.filter((c) => c.id === exclude || listed.has(c.id) || !c.title.toLowerCase().includes(q)) : seen;
   return rememberCandidates(kept.length === seen.length ? seen : kept, search.items);
 }
 
