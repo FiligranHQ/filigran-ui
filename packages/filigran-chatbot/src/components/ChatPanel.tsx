@@ -139,6 +139,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     agentSlug: selectedAgent?.slug,
     requestHeaders,
     pageContext,
+    onRelativeLinkClick: onRelativeLinkClickProp ? onRelativeLinkClick : undefined,
     t,
     maxFileCount,
     maxTotalSize,

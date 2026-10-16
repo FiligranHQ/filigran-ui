@@ -106,6 +106,8 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
       // host wiring `ChatMessages` without a decision handler) — otherwise the
       // prompt replaces this bubble entirely.
       return { label: t('Waiting for your approval…'), StatusIcon: AlertTriangleIcon, showDots: false };
+    case 'acting_on_page':
+      return { label: t('Acting on the page…'), StatusIcon: SparklesIcon, showDots: true };
     case 'analyzing':
       return { label: t('Analyzing results…'), StatusIcon: SparklesIcon, showDots: false };
     case 'steering':
