@@ -172,6 +172,29 @@ export function referenceMatches(query: string, candidate: { key: string; title:
   return words.length > 0 && words.every((w) => title.includes(w));
 }
 
+/** How many conversations the menu remembers to match locally (`rememberCandidates`). */
+export const REMEMBERED_CANDIDATES_LIMIT = 200;
+
+/**
+ * *seen* with *items* added: the latest version of each conversation, most
+ * recent last, at most `REMEMBERED_CANDIDATES_LIMIT`. *seen* itself when
+ * nothing changes, so a state holding it does not re-render.
+ */
+export function rememberCandidates(
+  seen: ChatConversationReferenceCandidate[],
+  items: ChatConversationReferenceCandidate[],
+): ChatConversationReferenceCandidate[] {
+  if (items.length === 0) return seen;
+  const ids = new Set(items.map((c) => c.id));
+  const next = [...seen.filter((c) => !ids.has(c.id)), ...items];
+  return next.length > REMEMBERED_CANDIDATES_LIMIT ? next.slice(next.length - REMEMBERED_CANDIDATES_LIMIT) : next;
+}
+
+/** A pick of the draft as a menu row (a pick does not say whose it is: read as the user's own). */
+export function refAsCandidate(ref: ChatConversationRef): ChatConversationReferenceCandidate {
+  return { id: ref.conversationId, title: ref.title, key: ref.key, isOwn: true };
+}
+
 /** What the menu shows. */
 export type ReferenceMenuView =
   | { kind: 'closed' }
@@ -198,20 +221,19 @@ export function referenceMenuView(options: {
   /** The conversation written in, never offered. */
   exclude?: string | null;
   /**
-   * The picks the draft already holds: offered first when the typed text
-   * matches their key or their title, so editing `@hi-bob` finds "Hi Bob"
-   * whatever the search answered.
+   * The conversations already met (the menu's past answers, the draft's
+   * picks), matched here by key or title after the search's own answer: an
+   * edited `@hi-bob`, or one a keystroke broke, still finds "Hi Bob" whatever
+   * the search answered.
    */
-  picked?: ChatConversationRef[];
+  known?: ChatConversationReferenceCandidate[];
 }): ReferenceMenuView {
-  const { trigger, dismissed, search, referenced, exclude, picked = [] } = options;
+  const { trigger, dismissed, search, referenced, exclude, known = [] } = options;
   if (!trigger || dismissed) return { kind: 'closed' };
   if (referenced >= MAX_REFERENCED_CONVERSATIONS) return { kind: 'full' };
   if (search.failed) return { kind: 'closed' };
-  const known: ChatConversationReferenceCandidate[] = trigger.query
-    ? picked.filter((r) => referenceMatches(trigger.query, r)).map((r) => ({ id: r.conversationId, title: r.title, key: r.key, isOwn: true }))
-    : [];
-  const merged = [...known, ...search.items.filter((c) => !known.some((k) => k.id === c.id))];
+  const local = trigger.query ? known.filter((c) => referenceMatches(trigger.query, c) && !search.items.some((s) => s.id === c.id)) : [];
+  const merged = [...search.items, ...local].slice(0, REFERENCE_MENU_LIMIT);
   const items = exclude ? merged.filter((c) => c.id !== exclude) : merged;
   if (items.length > 0) return { kind: 'results', items };
   if (trigger.query && search.query === trigger.query) return { kind: 'empty' };

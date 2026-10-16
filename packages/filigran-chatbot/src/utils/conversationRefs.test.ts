@@ -7,16 +7,20 @@ import assert from 'node:assert/strict';
 import {
   EMPTY_REFERENCE_SEARCH,
   MAX_REFERENCED_CONVERSATIONS,
+  REFERENCE_MENU_LIMIT,
+  REMEMBERED_CANDIDATES_LIMIT,
   conversationReferencesUrl,
   insertConversationReference,
   parseReferenceCandidates,
   pruneConversationRefs,
+  refAsCandidate,
   referenceMatches,
   referenceMenuView,
   referenceSearchUrl,
   referenceTokens,
   referenceTrigger,
   referencedConversations,
+  rememberCandidates,
   withConversationRef,
 } from './conversationRefs.ts';
 import type { ChatConversationRef, ChatConversationReferenceCandidate } from '../types';
@@ -206,30 +210,34 @@ test('a typed key finds its conversation by key or by the words of its title', (
   assert.equal(referenceMatches('weekly', jp), false);
 });
 
-test('editing a picked @key offers that conversation again, whatever the search answered', () => {
-  const picked: ChatConversationRef[] = [{ conversationId: 'c-bob', title: 'Hi Bob', key: 'hi-bob' }];
-  const base = { dismissed: false, referenced: 1, picked };
+test('an edited @key finds a conversation already met, whatever the search answered', () => {
   const bob = { id: 'c-bob', key: 'hi-bob', title: 'Hi Bob', isOwn: true };
+  const base = { dismissed: false, referenced: 0, known: [bob] };
 
-  // The search found nothing for the key typed back: the pick is still offered.
+  // The search found nothing for the key typed back.
   assert.deepEqual(referenceMenuView({ ...base, trigger: { anchor: 0, query: 'Hi-Bob' }, search: { query: 'Hi-Bob', items: [], failed: false } }), {
     kind: 'results',
     items: [bob],
   });
-  // The search found it too: offered once, first.
+  // A keystroke broke the key (the pick is pruned from the draft): still found, by its title.
+  assert.deepEqual(referenceMenuView({ ...base, trigger: { anchor: 0, query: 'hi-bo' }, search: { query: 'hi-bo', items: [], failed: false } }), {
+    kind: 'results',
+    items: [bob],
+  });
+  // The search's own answer first, each conversation once.
   assert.deepEqual(
     referenceMenuView({
       ...base,
       trigger: { anchor: 0, query: 'hi' },
       search: { query: 'hi', items: [candidate('c-other', 'hi-there'), { ...bob, isOwn: false }], failed: false },
     }),
-    { kind: 'results', items: [bob, candidate('c-other', 'hi-there')] },
+    { kind: 'results', items: [candidate('c-other', 'hi-there'), { ...bob, isOwn: false }] },
   );
-  // Neither the key nor the title matches: no menu entry for it.
+  // Neither the key nor the title matches.
   assert.deepEqual(referenceMenuView({ ...base, trigger: { anchor: 0, query: 'alice' }, search: { query: 'alice', items: [], failed: false } }), {
     kind: 'empty',
   });
-  // An empty @ does not list the picks, and the conversation written in is never offered.
+  // An empty @ does not list what was met, and the conversation written in is never offered.
   assert.deepEqual(referenceMenuView({ ...base, trigger: { anchor: 0, query: '' }, search: { query: '', items: [], failed: false } }), {
     kind: 'closed',
   });
@@ -237,4 +245,29 @@ test('editing a picked @key offers that conversation again, whatever the search 
     referenceMenuView({ ...base, exclude: 'c-bob', trigger: { anchor: 0, query: 'hi-bob' }, search: { query: 'hi-bob', items: [], failed: false } }),
     { kind: 'empty' },
   );
+  // Never more rows than a search page.
+  const many = Array.from({ length: 12 }, (_, i) => candidate(`c-${i}`, `hi-${i}`));
+  const view = referenceMenuView({ ...base, known: many, trigger: { anchor: 0, query: 'hi' }, search: { query: 'hi', items: [], failed: false } });
+  assert.equal(view.kind === 'results' ? view.items.length : -1, REFERENCE_MENU_LIMIT);
+});
+
+test('the conversations met are remembered once each, latest version, bounded', () => {
+  const a = candidate('c-a');
+  const b = candidate('c-b');
+  const seen = rememberCandidates([], [a, b]);
+  assert.deepEqual(seen, [a, b]);
+  assert.equal(rememberCandidates(seen, []), seen);
+  const renamed = { ...a, title: 'renamed' };
+  assert.deepEqual(rememberCandidates(seen, [renamed]), [b, renamed]);
+  const flood = Array.from({ length: REMEMBERED_CANDIDATES_LIMIT + 5 }, (_, i) => candidate(`f-${i}`));
+  const bounded = rememberCandidates(seen, flood);
+  assert.equal(bounded.length, REMEMBERED_CANDIDATES_LIMIT);
+  assert.equal(bounded[bounded.length - 1].id, `f-${REMEMBERED_CANDIDATES_LIMIT + 4}`);
+  // A pick reads as a row of the user's own.
+  assert.deepEqual(refAsCandidate({ conversationId: 'c-1', title: 'Hi Bob', key: 'hi-bob' }), {
+    id: 'c-1',
+    title: 'Hi Bob',
+    key: 'hi-bob',
+    isOwn: true,
+  });
 });

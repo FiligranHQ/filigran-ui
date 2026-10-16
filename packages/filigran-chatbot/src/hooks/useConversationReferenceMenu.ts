@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import type { ChatConversationRef, ChatConversationReferenceCandidate } from '../types';
 import {
   insertConversationReference,
+  refAsCandidate,
   referenceMenuView,
+  rememberCandidates,
   referenceTrigger,
   referencedConversations,
   type ReferenceMenuView,
@@ -90,6 +92,14 @@ export function useConversationReferenceMenu({
 
   const search = useConversationReferenceSearch({ url, query: trigger?.query ?? null, exclude: conversationId, requestHeaders });
 
+  // Every conversation the menu has offered, matched locally by key and title
+  // (`referenceMenuView`'s `known`), with the draft's picks.
+  const [seen, setSeen] = useState<ChatConversationReferenceCandidate[]>([]);
+  useEffect(() => {
+    setSeen((prev) => rememberCandidates(prev, search.items));
+  }, [search]);
+  const known = useMemo(() => rememberCandidates(refs.map(refAsCandidate), seen), [refs, seen]);
+
   // Every new answer starts on its first row.
   useEffect(() => {
     setActiveIndex(0);
@@ -101,7 +111,7 @@ export function useConversationReferenceMenu({
     search,
     referenced: referencedConversations(refs, text).length,
     exclude: conversationId,
-    picked: refs,
+    known,
   });
   const items = view.kind === 'results' ? view.items : [];
   const active = Math.min(activeIndex, Math.max(items.length - 1, 0));
