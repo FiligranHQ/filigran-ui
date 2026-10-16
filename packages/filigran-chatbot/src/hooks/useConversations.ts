@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatConversationSummary } from '../types';
+import { refusalMessage, revertMove } from '../utils/workspaces';
 
 interface UseConversationsOptions {
   apiBaseUrl: string;
@@ -19,6 +20,12 @@ interface UseConversationsReturn {
   deleteConversation: (id: string) => Promise<boolean>;
   /** Rename a conversation server-side. Returns true on success. */
   renameConversation: (id: string, title: string) => Promise<boolean>;
+  /**
+   * File a conversation into a workspace (`null` takes it out of one) with
+   * `PATCH {history}/{id}`. Resolves to `null` on success, or the backend's
+   * reason (an empty string when it gave none).
+   */
+  moveConversation: (id: string, workspaceId: string | null) => Promise<string | null>;
 }
 
 /**
@@ -38,7 +45,9 @@ function parseConversation(raw: unknown): ChatConversationSummary | null {
   const updatedAt = typeof c.updated_at === 'string' ? c.updated_at : typeof c.created_at === 'string' ? c.created_at : undefined;
   const messageCount = typeof c.message_count === 'number' ? c.message_count : undefined;
   const agentName = typeof c.agent_name === 'string' && c.agent_name ? c.agent_name : undefined;
-  return { conversationId: id, title, updatedAt, messageCount, agentName };
+  // Present (string or null) only when the backend reports filing at all.
+  const workspaceId = typeof c.workspace_id === 'string' && c.workspace_id ? c.workspace_id : c.workspace_id === null ? null : undefined;
+  return { conversationId: id, title, updatedAt, messageCount, agentName, workspaceId };
 }
 
 /**
@@ -138,5 +147,34 @@ export function useConversations({
     [historyEnabled, sessionsUrl, requestHeaders, conversations],
   );
 
-  return { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation };
+  const moveConversation = useCallback(
+    async (id: string, workspaceId: string | null): Promise<string | null> => {
+      if (!historyEnabled) return '';
+      // Optimistic, like a rename: the row moves under the pointer that
+      // dropped it, and goes back if the backend refuses. Only this row, and
+      // only while it is still where this move put it: other moves may have
+      // landed, or the list been refreshed, while this one was in flight.
+      const previous = conversations.find((c) => c.conversationId === id)?.workspaceId;
+      const revert = () => setConversations((prev) => revertMove(prev, id, workspaceId, previous));
+      setConversations((prev) => prev.map((c) => (c.conversationId === id ? { ...c, workspaceId } : c)));
+      try {
+        const res = await fetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+          body: JSON.stringify({ workspace_id: workspaceId }),
+        });
+        if (!res.ok) {
+          revert();
+          return (await refusalMessage(res)) ?? '';
+        }
+        return null;
+      } catch {
+        revert();
+        return '';
+      }
+    },
+    [historyEnabled, sessionsUrl, requestHeaders, conversations],
+  );
+
+  return { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation, moveConversation };
 }

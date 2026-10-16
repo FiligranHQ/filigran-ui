@@ -2,10 +2,13 @@ import { type FunctionComponent, useCallback, useEffect, useMemo, useRef, useSta
 import type { ChatAttachment, ChatPanelProps, Translate } from '../types';
 import { hexAlpha, identity } from '../utils';
 import { feedbackBaseUrl } from '../utils/feedback';
+import { conversationReferencesUrl } from '../utils/conversationRefs';
+import { pendingWorkspaceStillFileable, returnRefreshDue } from '../utils/workspaces';
 import { parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
+import { useWorkspaces } from '../hooks/useWorkspaces';
 import { useSidebarResize } from '../hooks/useSidebarResize';
 import { useAwayCompletionNotice } from '../hooks/useAwayCompletionNotice';
 import { useComposerExtras } from '../hooks/useComposerExtras';
@@ -121,7 +124,11 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     handlePaste,
     handleSendMessage,
     handleNewChat,
+    pendingWorkspaceId,
+    clearPendingWorkspace,
     handleStopGenerating,
+    conversationRefs,
+    addConversationRef,
     setAttachedFiles,
     setMessages,
     setContextUsage,
@@ -166,12 +173,27 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     requestHeaders,
   });
 
-  const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation } = useConversations({
+  const { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation, moveConversation } =
+    useConversations({
+      apiBaseUrl,
+      apiEndpoints,
+      backendType,
+      requestHeaders,
+    });
+  // Workspaces group the fullscreen list, when the host names their route.
+  const { workspacesEnabled, workspaces, refreshWorkspaces, createWorkspace, renameWorkspace, deleteWorkspace } = useWorkspaces({
     apiBaseUrl,
     apiEndpoints,
     backendType,
     requestHeaders,
   });
+  // A pending workspace deleted, archived or unshared elsewhere leaves the
+  // refreshed list: the next conversation must not be created in it.
+  useEffect(() => {
+    if (workspacesEnabled && pendingWorkspaceId && !pendingWorkspaceStillFileable(pendingWorkspaceId, workspaces)) {
+      clearPendingWorkspace(pendingWorkspaceId);
+    }
+  }, [workspacesEnabled, workspaces, pendingWorkspaceId, clearPendingWorkspace]);
   const [historyMenuOpen, setHistoryMenuOpen] = useState(false);
 
   // Fullscreen shows the conversation list permanently, so it has to be
@@ -188,17 +210,50 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     if (showConversationSidebar) void refreshConversations();
   }, [showConversationSidebar, conversationId, refreshConversations]);
 
+  // The workspaces are also changed elsewhere (the XTM One web chat, another
+  // tab): read on entry, after every write the sidebar makes (the hook
+  // re-reads them), on each conversation switch, at the end of each turn and
+  // on each return to the page - a group deleted there must not linger here.
+  useEffect(() => {
+    if (showConversationSidebar) void refreshWorkspaces();
+  }, [showConversationSidebar, conversationId, refreshWorkspaces]);
+
+  // Back to the page (from the XTM One tab, say): both lists may have moved.
+  const lastReturnRefreshRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!showConversationSidebar) return;
+    const onReturn = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (!returnRefreshDue(now, lastReturnRefreshRef.current)) return;
+      lastReturnRefreshRef.current = now;
+      void refreshConversations();
+      void refreshWorkspaces();
+    };
+    document.addEventListener('visibilitychange', onReturn);
+    window.addEventListener('focus', onReturn);
+    return () => {
+      document.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
+    };
+  }, [showConversationSidebar, refreshConversations, refreshWorkspaces]);
+
   // A finished turn has consumed allowance and may have retitled the chat.
   const wasLoadingRef = useRef(false);
   useEffect(() => {
     if (wasLoadingRef.current && !isLoading) {
       refreshQuota();
       // The backend titles a conversation from its first message, so the row
-      // stays "New conversation" until the turn is read back.
-      if (showConversationSidebar) void refreshConversations();
+      // stays "New conversation" until the turn is read back. A conversation
+      // that could not be created in its workspace (deleted elsewhere) is
+      // read back unfiled: the workspaces are re-read with it.
+      if (showConversationSidebar) {
+        void refreshConversations();
+        void refreshWorkspaces();
+      }
     }
     wasLoadingRef.current = isLoading;
-  }, [isLoading, refreshQuota, showConversationSidebar, refreshConversations]);
+  }, [isLoading, refreshQuota, showConversationSidebar, refreshConversations, refreshWorkspaces]);
 
   const handleHistoryMenuToggle = () => {
     // Computed from the committed state in the event handler — NOT inside the
@@ -217,6 +272,20 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     setHistoryMenuOpen(false);
     handleSwitchConversation(id);
   };
+
+  // The `@` conversation menu of the composer, when the host names its route.
+  const conversationReferencesSearchUrl = conversationReferencesUrl(apiBaseUrl, apiEndpoints, backendType);
+
+  // A referenced conversation's chip opens it in the panel when it is one the
+  // conversation list holds, so the list is read as soon as the thread shows
+  // a reference - not only once the history menu has been opened - and again
+  // for each conversation switched to, whose chips may name newer ones.
+  const openableConversationIds = useMemo(() => new Set(conversations.map((c) => c.conversationId)), [conversations]);
+  const onOpenConversation = useLatestCallback(historyEnabled ? handleSelectConversation : undefined);
+  const threadReferencesConversations = messages.some((m) => (m.conversationRefs?.length ?? 0) > 0);
+  useEffect(() => {
+    if (threadReferencesConversations && historyEnabled) void refreshConversations();
+  }, [threadReferencesConversations, historyEnabled, refreshConversations, conversationId]);
 
   const handleDeleteConversation = async (id: string) => {
     const deleted = await deleteConversation(id);
@@ -593,6 +662,33 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
             onDelete={(id) => void handleDeleteConversation(id)}
             onRename={(id, title) => void renameConversation(id, title)}
             onNewChat={handleNewChat}
+            workspaces={
+              workspacesEnabled
+                ? {
+                    list: workspaces,
+                    pendingWorkspaceId,
+                    onCreate: createWorkspace,
+                    onRename: renameWorkspace,
+                    onDelete: async (id) => {
+                      const result = await deleteWorkspace(id);
+                      if (result.ok) {
+                        // The next conversation must not be created in it.
+                        clearPendingWorkspace(id);
+                        // Its conversations are back in no workspace (`workspace_id: null`).
+                        void refreshConversations();
+                      }
+                      return result;
+                    },
+                    onMove: moveConversation,
+                    onNewChat: (workspaceId) => {
+                      handleNewChat(workspaceId);
+                      // Still there? Deleted elsewhere, the list drops it and
+                      // the pending workspace with it, before the first send.
+                      void refreshWorkspaces();
+                    },
+                  }
+                : undefined
+            }
             t={t}
           />
         )}
@@ -634,6 +730,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
               onSubmitApprovalDecisions={submitApprovalDecisions}
               isSubmittingApproval={isSubmittingApproval}
               approvalError={approvalError}
+              openableConversationIds={openableConversationIds}
+              onOpenConversation={onOpenConversation}
               t={t}
             />
           )}
@@ -655,6 +753,11 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
             quota={quota}
             contextUsage={contextUsageEnabled ? contextUsage : null}
             composerToolbar={composerToolbar}
+            conversationReferences={
+              conversationReferencesSearchUrl
+                ? { url: conversationReferencesSearchUrl, requestHeaders, conversationId, refs: conversationRefs, onPick: addConversationRef }
+                : undefined
+            }
           />
         </div>
       </div>

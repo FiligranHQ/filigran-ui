@@ -1,5 +1,13 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { AgentStatusState, ChatAttachment, ChatMessage, MessageFeedback, ToolApprovalDecision, ToolApprovalProposal } from '../types';
+import type {
+  AgentStatusState,
+  ChatAttachment,
+  ChatConversationRef,
+  ChatMessage,
+  MessageFeedback,
+  ToolApprovalDecision,
+  ToolApprovalProposal,
+} from '../types';
 import { feedbackKeyOf, useMessageFeedback, type FeedbackEntry } from '../hooks/useMessageFeedback';
 import { useSpeechReader } from '../hooks/useSpeechReader';
 import { answerMarkdownSources, splitFileMarkers, stripFileMarkers } from '../utils';
@@ -24,6 +32,7 @@ import {
   DownloadIcon,
   FileIcon,
   InfoIcon,
+  MessageSquareIcon,
   ThumbsDownIcon,
   ThumbsUpIcon,
   VolumeIcon,
@@ -113,6 +122,13 @@ interface ChatMessagesProps {
   onSubmitApprovalDecisions?: (decisions: ToolApprovalDecision[]) => void;
   isSubmittingApproval?: boolean;
   approvalError?: string | null;
+  /**
+   * The conversations the panel can open, by id: the loaded conversation list.
+   * A referenced conversation's chip opens it through `onOpenConversation`
+   * when it is there, and is a plain label otherwise.
+   */
+  openableConversationIds?: ReadonlySet<string>;
+  onOpenConversation?: (conversationId: string) => void;
   t: (key: string) => string;
 }
 
@@ -373,6 +389,9 @@ interface MessageRowProps {
   /** This message is being read aloud. */
   isSpeaking: boolean;
   onToggleSpeech: (id: string, documents: readonly string[]) => void;
+  /** Given only to a message referencing conversations (see `ChatMessagesProps`). */
+  openableConversationIds?: ReadonlySet<string>;
+  onOpenConversation?: (conversationId: string) => void;
   t: (key: string) => string;
 }
 
@@ -402,6 +421,8 @@ const MessageRow = memo(
     canSpeak,
     isSpeaking,
     onToggleSpeech,
+    openableConversationIds,
+    onOpenConversation,
     t,
   }: MessageRowProps) => {
     const [showReasoning, setShowReasoning] = useState(false);
@@ -565,6 +586,37 @@ const MessageRow = memo(
       return blocks;
     };
 
+    // A conversation the message referenced with `@`: it opens in the panel
+    // when the panel can open it, and otherwise just says what was referenced.
+    const renderConversationRef = (ref: ChatConversationRef, i: number) => {
+      const label = ref.title || (ref.key ? `@${ref.key}` : t('Untitled conversation'));
+      const chip = 'inline-flex items-center gap-1 max-w-[240px] px-2 py-0.5 rounded-full border text-[0.7rem]';
+      const content = (
+        <>
+          <MessageSquareIcon size={13} className="shrink-0" />
+          <span className="truncate">{label}</span>
+        </>
+      );
+      if (onOpenConversation && openableConversationIds?.has(ref.conversationId)) {
+        return (
+          <Tooltip key={`ref-${ref.conversationId}-${i}`} title={t('Open conversation')}>
+            <button
+              type="button"
+              onClick={() => onOpenConversation(ref.conversationId)}
+              className={`${chip} border-[var(--chat-accent-40)] text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]`}
+            >
+              {content}
+            </button>
+          </Tooltip>
+        );
+      }
+      return (
+        <Tooltip key={`ref-${ref.conversationId}-${i}`} title={ref.key ? `@${ref.key}` : ''}>
+          <span className={`${chip} border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60`}>{content}</span>
+        </Tooltip>
+      );
+    };
+
     const hasReasoningDetails =
       (msg.toolNames && msg.toolNames.length > 0) ||
       !!(msg.reasoning ?? '').trim() ||
@@ -602,6 +654,10 @@ const MessageRow = memo(
 
         {!isAssistant && ((msg.files?.length ?? 0) > 0 || (msg.attachments?.length ?? 0) > 0) && (
           <div className="flex gap-1.5 flex-wrap mb-1.5 justify-end">{buildUserFileBlocks()}</div>
+        )}
+
+        {!isAssistant && (msg.conversationRefs?.length ?? 0) > 0 && (
+          <div className="flex gap-1.5 flex-wrap mb-1.5 justify-end max-w-[90%]">{msg.conversationRefs!.map(renderConversationRef)}</div>
         )}
 
         {isAssistant ? (
@@ -706,6 +762,8 @@ export const ChatMessages = ({
   feedbackUrl,
   conversationId,
   locale,
+  openableConversationIds,
+  onOpenConversation,
   t,
 }: ChatMessagesProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -920,6 +978,10 @@ export const ChatMessages = ({
             canSpeak={speech.supported}
             isSpeaking={speakingId === feedbackKeyOf(msg)}
             onToggleSpeech={speech.toggle}
+            // Only to a row that needs them: a new list of openable
+            // conversations must not re-render every row of the thread.
+            openableConversationIds={msg.conversationRefs?.length ? openableConversationIds : undefined}
+            onOpenConversation={msg.conversationRefs?.length ? onOpenConversation : undefined}
             t={t}
           />
         );
