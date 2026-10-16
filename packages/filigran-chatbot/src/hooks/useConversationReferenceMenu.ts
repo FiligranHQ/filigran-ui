@@ -4,6 +4,7 @@ import {
   insertConversationReference,
   refAsCandidate,
   referenceMenuView,
+  rememberAnswer,
   rememberCandidates,
   referenceTrigger,
   referencedConversations,
@@ -94,10 +95,15 @@ export function useConversationReferenceMenu({
 
   // Every conversation the menu has offered, matched locally by key and title
   // (`referenceMenuView`'s `known`), with the draft's picks.
+  // A settled answer also drops the remembered rows it should have listed
+  // (deleted, unshared since); another conversation starts from nothing.
   const [seen, setSeen] = useState<ChatConversationReferenceCandidate[]>([]);
   useEffect(() => {
-    setSeen((prev) => rememberCandidates(prev, search.items));
-  }, [search]);
+    setSeen([]);
+  }, [conversationId]);
+  useEffect(() => {
+    setSeen((prev) => rememberAnswer(prev, search, conversationId));
+  }, [search, conversationId]);
   const known = useMemo(() => rememberCandidates(refs.map(refAsCandidate), seen), [refs, seen]);
 
   // Every new answer starts on its first row.
@@ -119,7 +125,7 @@ export function useConversationReferenceMenu({
   const pick = (candidate: ChatConversationReferenceCandidate) => {
     if (!trigger) return;
     const inserted = insertConversationReference(text, trigger, candidate.key);
-    onPick({ conversationId: candidate.id, title: candidate.title, key: candidate.key });
+    onPick({ conversationId: candidate.id, title: candidate.title, key: candidate.key, isOwn: candidate.isOwn });
     pendingCaretRef.current = inserted.caret;
     onTextChange(inserted.text);
     setTrigger(null);

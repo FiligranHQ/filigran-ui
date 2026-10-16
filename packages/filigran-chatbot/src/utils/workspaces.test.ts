@@ -13,6 +13,7 @@ import {
   isNoopMove,
   isTransientListFailure,
   parseWorkspaces,
+  pendingWorkspaceStillFileable,
   refusalMessage,
   revertMove,
   unfiledEmptyNote,
@@ -181,4 +182,13 @@ test('a group held open by a search or the conversation on screen cannot be togg
   assert.equal(groupCanToggle(group, 'c-2', false), false);
   assert.equal(groupCanToggle(group, null, true), false);
   assert.equal(groupCanToggle({ conversations: [] }, 'c-1', false), true);
+});
+
+test('the next conversation is created only in a workspace the list still offers to file into', () => {
+  const list = [ws('w-1', 'Research'), ws('w-ro', 'Read only', { canManage: false })];
+  assert.equal(pendingWorkspaceStillFileable('w-1', list), true);
+  // Deleted or archived elsewhere: gone from the list.
+  assert.equal(pendingWorkspaceStillFileable('w-gone', list), false);
+  // Narrowed to read-only: listed, but nothing can be filed into it.
+  assert.equal(pendingWorkspaceStillFileable('w-ro', list), false);
 });

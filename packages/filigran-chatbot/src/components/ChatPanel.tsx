@@ -3,6 +3,7 @@ import type { ChatAttachment, ChatPanelProps, Translate } from '../types';
 import { hexAlpha, identity } from '../utils';
 import { feedbackBaseUrl } from '../utils/feedback';
 import { conversationReferencesUrl } from '../utils/conversationRefs';
+import { pendingWorkspaceStillFileable } from '../utils/workspaces';
 import { parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
@@ -186,6 +187,13 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     backendType,
     requestHeaders,
   });
+  // A pending workspace deleted, archived or unshared elsewhere leaves the
+  // refreshed list: the next conversation must not be created in it.
+  useEffect(() => {
+    if (workspacesEnabled && pendingWorkspaceId && !pendingWorkspaceStillFileable(pendingWorkspaceId, workspaces)) {
+      clearPendingWorkspace(pendingWorkspaceId);
+    }
+  }, [workspacesEnabled, workspaces, pendingWorkspaceId, clearPendingWorkspace]);
   const [historyMenuOpen, setHistoryMenuOpen] = useState(false);
 
   // Fullscreen shows the conversation list permanently, so it has to be

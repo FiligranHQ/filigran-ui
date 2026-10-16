@@ -20,6 +20,7 @@ import {
   referenceTokens,
   referenceTrigger,
   referencedConversations,
+  rememberAnswer,
   rememberCandidates,
   withConversationRef,
 } from './conversationRefs.ts';
@@ -270,4 +271,43 @@ test('the conversations met are remembered once each, latest version, bounded', 
     key: 'hi-bob',
     isOwn: true,
   });
+});
+
+test('remembering what is already there keeps the same array', () => {
+  const a = candidate('c-a');
+  const b = candidate('c-b');
+  const seen = rememberCandidates([], [a, b]);
+  assert.equal(rememberCandidates(seen, [{ ...a }, { ...b }]), seen);
+  assert.equal(rememberCandidates(seen, [{ ...a }]), seen);
+  assert.notEqual(rememberCandidates(seen, [{ ...a, isOwn: false }]), seen);
+});
+
+test('a settled answer forgets the remembered rows it should have listed', () => {
+  const bob = { id: 'c-bob', key: 'hi-bob', title: 'Hi Bob', isOwn: true };
+  const alice = { id: 'c-alice', key: 'alice-notes', title: 'Alice notes', isOwn: true };
+  const seen = [bob, alice];
+
+  // "hi" answered without Bob: deleted or unshared since. Alice does not match "hi": kept.
+  assert.deepEqual(rememberAnswer(seen, { query: 'hi', items: [], failed: false }), [alice]);
+  // Bob listed: kept, as the latest version.
+  const renamed = { ...bob, title: 'Hi Bob!' };
+  assert.deepEqual(rememberAnswer(seen, { query: 'hi', items: [renamed], failed: false }), [alice, renamed]);
+  // The conversation written in is excluded by the request, not gone.
+  assert.equal(rememberAnswer(seen, { query: 'hi', items: [], failed: false }, 'c-bob'), seen);
+  // A full page proves no absence: the row may be past it.
+  const page = Array.from({ length: REFERENCE_MENU_LIMIT }, (_, i) => candidate(`c-${i}`, `hi-${i}`));
+  assert.equal(
+    rememberAnswer(seen, { query: 'hi', items: page, failed: false }).some((c) => c.id === 'c-bob'),
+    true,
+  );
+  // Nothing answered, or a failure: nothing forgotten.
+  assert.equal(rememberAnswer(seen, EMPTY_REFERENCE_SEARCH), seen);
+  assert.equal(rememberAnswer(seen, { query: 'hi', items: [], failed: true }), seen);
+  // An answer that changes nothing keeps the same array.
+  assert.equal(rememberAnswer(seen, { query: 'alice', items: [{ ...alice }], failed: false }), seen);
+});
+
+test('a pick keeps whose it is', () => {
+  assert.equal(refAsCandidate({ conversationId: 'c-1', title: 'Shared', key: 'shared', isOwn: false }).isOwn, false);
+  assert.equal(refAsCandidate({ conversationId: 'c-1', title: 'Mine', key: 'mine' }).isOwn, true);
 });

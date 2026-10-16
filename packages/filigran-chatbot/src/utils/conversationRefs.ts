@@ -175,24 +175,46 @@ export function referenceMatches(query: string, candidate: { key: string; title:
 /** How many conversations the menu remembers to match locally (`rememberCandidates`). */
 export const REMEMBERED_CANDIDATES_LIMIT = 200;
 
+const sameCandidate = (a: ChatConversationReferenceCandidate, b: ChatConversationReferenceCandidate) =>
+  a.id === b.id && a.key === b.key && a.title === b.title && a.isOwn === b.isOwn && a.updatedAt === b.updatedAt;
+
 /**
  * *seen* with *items* added: the latest version of each conversation, most
- * recent last, at most `REMEMBERED_CANDIDATES_LIMIT`. *seen* itself when
- * nothing changes, so a state holding it does not re-render.
+ * recent last, at most `REMEMBERED_CANDIDATES_LIMIT`. *seen* itself when every
+ * item is already there as is, so a state holding it does not re-render.
  */
 export function rememberCandidates(
   seen: ChatConversationReferenceCandidate[],
   items: ChatConversationReferenceCandidate[],
 ): ChatConversationReferenceCandidate[] {
-  if (items.length === 0) return seen;
+  if (items.every((item) => seen.some((c) => sameCandidate(c, item)))) return seen;
   const ids = new Set(items.map((c) => c.id));
   const next = [...seen.filter((c) => !ids.has(c.id)), ...items];
   return next.length > REMEMBERED_CANDIDATES_LIMIT ? next.slice(next.length - REMEMBERED_CANDIDATES_LIMIT) : next;
 }
 
-/** A pick of the draft as a menu row (a pick does not say whose it is: read as the user's own). */
+/**
+ * *seen* after a search answer: the rows a settled answer should have listed
+ * and did not are forgotten (deleted or unshared since), then its rows are
+ * remembered. Only a complete answer (under a page) proves an absence; the
+ * conversation written in is excluded by the request, not gone.
+ */
+export function rememberAnswer(
+  seen: ChatConversationReferenceCandidate[],
+  search: ReferenceSearchState,
+  exclude?: string | null,
+): ChatConversationReferenceCandidate[] {
+  if (search.query === null || search.failed) return seen;
+  const query = search.query;
+  const listed = new Set(search.items.map((c) => c.id));
+  const complete = search.items.length < REFERENCE_MENU_LIMIT;
+  const kept = complete ? seen.filter((c) => c.id === exclude || listed.has(c.id) || !referenceMatches(query, c)) : seen;
+  return rememberCandidates(kept.length === seen.length ? seen : kept, search.items);
+}
+
+/** A pick of the draft as a menu row; a pick that does not say whose it is reads as the user's own. */
 export function refAsCandidate(ref: ChatConversationRef): ChatConversationReferenceCandidate {
-  return { id: ref.conversationId, title: ref.title, key: ref.key, isOwn: true };
+  return { id: ref.conversationId, title: ref.title, key: ref.key, isOwn: ref.isOwn ?? true };
 }
 
 /** What the menu shows. */

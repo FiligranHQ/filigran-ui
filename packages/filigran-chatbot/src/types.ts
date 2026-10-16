@@ -657,6 +657,8 @@ export interface ChatConversationRef {
   conversationId: string;
   title: string;
   key: string;
+  /** As the menu offered it: `false` keeps the "Shared with you" hint. Absent reads as the user's own. */
+  isOwn?: boolean;
 }
 
 /** A workspace the conversation list is grouped by. */

@@ -299,7 +299,7 @@ at `/chat/workspaces` and `/chat/sessions`.
 
 Typing `@` in the composer - at the start of the text or after a space, never
 inside a word or an email (`a@b`) - opens a menu of the user's other
-conversations, searched by title as they type. A pick inserts `@<key> `, and the
+conversations, searched by title or key as they type. A pick inserts `@<key> `, and the
 message goes out with the conversations it still references, so the agent reads
 them; a `@word` typed by hand stays plain text, and so does a pick whose `@key`
 is edited out before sending. The arrows move in the menu, Enter or Tab insert,
@@ -313,7 +313,7 @@ text and the message body is unchanged.
 
 | Request | Purpose |
 | --- | --- |
-| `GET {apiBaseUrl}{conversationReferences}?q=<text>&limit=8&exclude=<conversation_id>` | The menu: `{ "conversations": [{ id, title, key, updated_at, is_own }] }` (or a bare array), the conversations the user can open, most recent first, whose title contains `q` (case-insensitive). `q` is omitted for a bare `@`, `exclude` while the conversation is not created yet. `key` is what the pick inserts after `@`, always the backend's own. `is_own: false` marks a conversation shared with the user ("Shared with you"). |
+| `GET {apiBaseUrl}{conversationReferences}?q=<text>&limit=8&exclude=<conversation_id>` | The menu: `{ "conversations": [{ id, title, key, updated_at, is_own }] }` (or a bare array), the conversations the user can open, most recent first, that `q` matches (case-insensitive): every word of `q` (split on spaces, `-` and `_`) is in the title, or the key starts with `q` - so a key typed back (`@hi-bob` for "Hi Bob"), or a key that is not made of the title's words (an accent folded, a title without Latin letters), still finds its conversation. `q` is omitted for a bare `@`, `exclude` while the conversation is not created yet. `key` is what the pick inserts after `@`, always the backend's own. `is_own: false` marks a conversation shared with the user ("Shared with you"). |
 | `POST {apiBaseUrl}{messages}` | Carries `referenced_conversation_ids: string[]`: the picks the text still holds, in the order they appear, each once, at most 5. Omitted when there is none. |
 | `POST {apiBaseUrl}{sessions}` | A restored user message may carry `conversation_refs: [{ conversation_id, title, key }]`. |
 

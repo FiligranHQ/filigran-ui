@@ -301,11 +301,13 @@ export function mockChatApi(): Plugin {
             .filter((c) => c.messages.length > 0)
             .map((c) => ({ id: c.id, title: c.title, updated_at: c.updatedAt, is_own: true }));
           const shared = { id: SHARED_CONVERSATION.id, title: SHARED_CONVERSATION.title, updated_at: SHARED_CONVERSATION.updatedAt, is_own: false };
+          // The contract: every word of `q` in the title, or the key starting with `q`.
+          const words = q.split(/[\s_-]+/).filter(Boolean);
           const list = [...own, shared]
-            .filter((c) => c.id !== exclude && (!q || c.title.toLowerCase().includes(q)))
+            .map((c) => ({ ...c, key: referenceKey(c.title, c.id) }))
+            .filter((c) => c.id !== exclude && (!q || c.key.startsWith(q) || (words.length > 0 && words.every((w) => c.title.toLowerCase().includes(w)))))
             .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-            .slice(0, limit)
-            .map((c) => ({ ...c, key: referenceKey(c.title, c.id) }));
+            .slice(0, limit);
           return json(res, { conversations: list });
         }
 

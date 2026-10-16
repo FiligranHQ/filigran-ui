@@ -69,6 +69,16 @@ export function isNoopMove(
   return !!current && (current.workspaceId ?? null) === destination;
 }
 
+/**
+ * Whether the next conversation can still be created in *pendingId*: the list
+ * read last offers it to file into. One deleted, archived or unshared since
+ * (from another tab, the web chat) is not, and the session request must not
+ * name it.
+ */
+export function pendingWorkspaceStillFileable(pendingId: string, workspaces: ChatWorkspace[]): boolean {
+  return workspaces.some((w) => w.id === pendingId && w.canManage);
+}
+
 /** The workspaces a conversation can be moved into, in the order the list shows them. */
 export function fileableWorkspaces(workspaces: ChatWorkspace[]): ChatWorkspace[] {
   return sortWorkspaces(workspaces.filter((w) => w.canManage));
