@@ -76,3 +76,48 @@ test('the done frame carries the persisted id of the answer', () => {
   const older = parseRestEvent({ type: 'done', content: 'Hi', message_id: '' }, ctx);
   assert.equal(older.action === 'done' ? older.messageId : null, undefined);
 });
+
+test('a page action frame carries the action to perform and its id (#5559)', () => {
+  const ctx = { hasUsedTools: true, activeNodeId: '' };
+  const frame = (action: unknown, extra: Record<string, unknown> = {}) =>
+    parseRestEvent(
+      {
+        type: 'status',
+        status: 'tool_progress',
+        tool: 'act_on_page',
+        event: 'page_action_required',
+        conversation_id: 'c-1',
+        action_id: 'a-1',
+        action,
+        ...extra,
+      },
+      ctx,
+    );
+  assert.deepEqual(frame({ type: 'click', ref: 'e2' }), {
+    action: 'page_action_required',
+    actionId: 'a-1',
+    pageAction: { type: 'click', ref: 'e2' },
+    conversationId: 'c-1',
+  });
+  assert.deepEqual(frame({ type: 'type', ref: 'e3', text: 'apt28' }).action, 'page_action_required');
+  assert.deepEqual(frame({ type: 'navigate', path: '/dashboard' }).action, 'page_action_required');
+  assert.deepEqual(frame({ type: 'snapshot' }).action, 'page_action_required');
+  assert.deepEqual(frame({ type: 'open', ref: 'e4' }).action, 'page_action_required');
+  // Without an id there is nothing to answer against, so that frame is dropped.
+  assert.deepEqual(frame({ type: 'click', ref: 'e2' }, { action_id: undefined }), { action: 'noop' });
+  // An action this version does not know is still answered: the backend holds
+  // the turn open for it, so a `noop` would stall until its timeout.
+  assert.deepEqual(frame({ type: 'run_script', code: 'x' }), {
+    action: 'page_action_required',
+    actionId: 'a-1',
+    pageAction: { type: 'unsupported', requested: 'run_script' },
+    conversationId: 'c-1',
+  });
+  // Same for a known name whose arguments are missing.
+  assert.deepEqual(frame({ type: 'click' }), {
+    action: 'page_action_required',
+    actionId: 'a-1',
+    pageAction: { type: 'unsupported', requested: 'click' },
+    conversationId: 'c-1',
+  });
+});

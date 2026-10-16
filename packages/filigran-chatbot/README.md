@@ -507,6 +507,58 @@ chat must forward the request body whole (a proxy rebuilding it from a fixed
 field list silently drops `supports_tool_approval`), never time out the
 streaming turn, and pass SSE keepalives through untouched.
 
+#### Acting on the host page
+
+The same path answers `act_on_page` (XTM One #5559): with `apiEndpoints.approve`
+set **and** `onRelativeLinkClick` passed — the host's opt-in, since it hands the
+panel its navigation — the panel also sends `supports_page_actions: true`, and the
+agent may act on the page the panel is mounted in. The host's proxy must forward
+the approve route's body whole (a `page_action` answer carries no `decisions`).
+Without that opt-in a frame is answered `page_actions_not_supported`, with the
+page neither read nor acted on. Each step arrives on the stream as a
+`status` frame with `event: "page_action_required"`; the panel performs it
+(`click`, `open` — a hover, or a click when hovering opens nothing —, `type`, then
+Enter only in a field that says it is a search - `type="search"`,
+`role="searchbox"`, inside `role="search"`, or named like one (a `name`, `id`,
+`placeholder`, `aria-label` or `title` whose whole words include "search",
+"query", "filter" or "find", and only when it is the form's sole field) - never
+in a form of one unnamed field, which is as likely a create or
+rename dialog,
+or `navigate` through `onRelativeLinkClick` — never
+a page load, which would end the turn) and POSTs
+`{ conversation_id, page_action: { action_id, ok, error, url, title, snapshot } }`.
+`ok` is the action's own outcome, so a step is never retried because reading the
+page back failed; when that read throws, `ok` stands and `error` carries
+`snapshot_failed: …` with an empty snapshot. A stopped turn (Stop, New chat,
+switching conversation) abandons the action instead of acting on the page.
+
+The snapshot (`utils/pageSnapshot.ts`) lists one line per element a user could
+act on — `[e1] link "Reports" -> /dashboard/analyses/reports`, with states such as
+`(selected)`, `(pressed)`, `(menu)` for a closed menu or `(collapsed)` for a closed
+group
+— and leaves out the panel itself, hidden and inert content, and every secret
+value: a `type="password"` field, and anything whose `autocomplete` marks it as a
+password, a one-time code or a card field, so a revealed password is masked too.
+A list cut off at the size cap ends with `[truncated]`. A state the host shows by
+styling alone is invisible to it: mark toggles
+with `aria-pressed`, the current item with `aria-current`, and a clickable card
+with `role="button"`. A `409` means the
+turn no longer waits for that action, and the panel drops it.
+
+Actions that would leave the page are refused rather than performed, each
+answered with `ok: false` and a reason: a `navigate` off-site, a `click` on a
+link to another origin or one opening a new tab, a `type` on anything that is
+not a text field, a read-only field, a masked one (a password, one-time code
+or card field), a file input (whose chooser is an operating-system window), a
+target that is disabled - including one disabled by its `<fieldset>` - and one
+no longer visible when the action runs. A click never completes a native default that
+would leave the page: an anchor's navigation and a form's submission are
+cancelled while the host's own handlers still run. Clicking an in-host link is
+routed through `onRelativeLinkClick` rather than clicked, for the same reason a
+`navigate` is. An action this version does not know is answered as
+`unsupported_action` instead of being dropped, so a backend running ahead of the
+panel is not left waiting out its timeout.
+
 #### Recovering a prompt after a page reload
 
 `approval_required` is a single event on a stream, so a reload loses it —

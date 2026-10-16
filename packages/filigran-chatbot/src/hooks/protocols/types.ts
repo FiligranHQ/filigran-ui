@@ -1,4 +1,5 @@
 import type { ChatAttachment, ChatContextUsage, ToolApprovalProposal, ToolCallTraceEntry, TransferChainEntry } from '../../types';
+import type { PageAction } from '../../utils/pageActions';
 
 /**
  * Normalized action produced by all protocol parsers.
@@ -57,6 +58,16 @@ export type ParsedAction =
        * conversation has not yet learned its own id — that normally arrives on
        * `done`, which a paused turn has not reached.
        */
+      conversationId?: string;
+    }
+  | {
+      /**
+       * `act_on_page` (#5559) asks the widget to act on the host page and answer
+       * with a fresh snapshot. Not terminal: the turn waits on the same stream.
+       */
+      action: 'page_action_required';
+      actionId: string;
+      pageAction: PageAction;
       conversationId?: string;
     }
   | { action: 'error'; content: string }

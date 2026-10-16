@@ -13,6 +13,8 @@ import type { ParsedAction, ProtocolContext } from './protocols';
 import { parseAgUiEvent, parseLegacyEvent, parseRestEvent } from './protocols';
 import { parseToolApprovalProposals } from './protocols/parseRestEvent';
 import { createStreamDeltas, type StreamDeltas } from './streamDeltas';
+import { hostTakesPageActions, performPageAction, waitForDomSettle, type PageAction } from '../utils/pageActions';
+import { takePageSnapshot } from '../utils/pageSnapshot';
 
 const STORAGE_KEY = 'filigranChatConversationId';
 const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
@@ -91,6 +93,8 @@ interface UseChatOptions {
   requestHeaders?: Record<string, string>;
   /** Arbitrary host page/application context, sent as `context` on the REST message body. */
   pageContext?: Record<string, unknown>;
+  /** The host's in-app navigation, which `act_on_page` uses to open a path (#5559). */
+  onRelativeLinkClick?: (href: string) => void;
   t: (key: string) => string;
   maxFileCount?: number;
   maxTotalSize?: number;
@@ -217,6 +221,8 @@ function buildRequestBody(
     pageContext?: Record<string, unknown>;
     /** See {@link ApiEndpoints.approve} — derived, never a prop of its own. */
     supportsToolApproval?: boolean;
+    /** Same promise, for `act_on_page` frames (#5559): answered on the approve path. */
+    supportsPageActions?: boolean;
   },
 ): Record<string, unknown> {
   switch (backendType) {
@@ -242,6 +248,9 @@ function buildRequestBody(
       // drops nothing meaningful.
       if (opts.supportsToolApproval) {
         body.supports_tool_approval = true;
+      }
+      if (opts.supportsPageActions) {
+        body.supports_page_actions = true;
       }
       // Forward arbitrary host page context (e.g. current URL) so the agent
       // knows where the user is. Omitted when empty to keep payloads lean.
@@ -273,6 +282,7 @@ export function useChat({
   agentSlug,
   requestHeaders,
   pageContext,
+  onRelativeLinkClick,
   t,
   maxFileCount = DEFAULT_MAX_FILE_COUNT,
   maxTotalSize = DEFAULT_MAX_TOTAL_SIZE,
@@ -313,6 +323,10 @@ export function useChat({
 
   const historyLoadedRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Page actions abort on their own: closing the panel must stop them touching
+  // the host page without cancelling the turn, whose answer a host expects to
+  // find in history when the panel reopens.
+  const pageActionControllerRef = useRef<AbortController | null>(null);
   // The running stream's pending deltas, so stopping it can apply them and a
   // new chat can drop them.
   const streamDeltasRef = useRef<StreamDeltas | null>(null);
@@ -327,6 +341,15 @@ export function useChat({
   // on at send time, regardless of when the send handler closure was created.
   const pageContextRef = useRef(pageContext);
   pageContextRef.current = pageContext;
+  // The elements of the last host-page snapshot, by the reference the next
+  // `act_on_page` action names them with (#5559).
+  const pageRefsRef = useRef<Map<string, Element>>(new Map());
+  const onRelativeLinkClickRef = useRef(onRelativeLinkClick);
+  onRelativeLinkClickRef.current = onRelativeLinkClick;
+  // A page action answers from the closure of the render that began the turn,
+  // so a header rotated since would go out stale and 401 the answer.
+  const requestHeadersRef = useRef(requestHeaders);
+  requestHeadersRef.current = requestHeaders;
   // Conversation id as the paused turn itself reported it. The decision POST
   // needs an id, and the first turn of a fresh conversation has none yet —
   // `conversationId` is normally learned from `done`, which a paused turn has
@@ -382,6 +405,10 @@ export function useChat({
     if (!path) return null;
     return `${apiBaseUrl}${path}`;
   };
+  // Same reason as `requestHeadersRef`: the answer must resolve the route
+  // against the endpoints as they are now, not as they were at turn start.
+  const getApproveUrlRef = useRef(getApproveUrl);
+  getApproveUrlRef.current = getApproveUrl;
 
   /**
    * Determine the pause-recovery URL for one conversation, or null when the
@@ -739,6 +766,93 @@ export function useChat({
     }
   };
 
+  /**
+   * Perform one `act_on_page` action on the host page and answer it with a
+   * fresh snapshot (#5559). The answer goes to the approve path, which the host
+   * proxies already forward; the turn waits for it on the open stream.
+   *
+   * A 409 means the turn no longer waits for this action (it timed out or
+   * ended): nothing to retry, so it is dropped.
+   */
+  const answerPageAction = async (actionId: string, action: PageAction, conversationIdHint?: string) => {
+    const approveUrl = getApproveUrlRef.current();
+    const convId = conversationIdHint ?? conversationIdRef.current;
+    if (!approveUrl || !convId || typeof document === 'undefined') return;
+    // The turn's own signal: Stop, New chat and switching conversation abort it,
+    // and this runs detached from the stream, so without it a stopped turn would
+    // still click the page and then answer for a conversation that is gone.
+    const signal = pageActionControllerRef.current?.signal;
+    // The stream outlives a closed panel, so the turn is still waiting: it is
+    // answered without the page and without the aborted signal, which would
+    // cancel the request too and leave it waiting out its timeout per step.
+    const refuse = async (error: string) => {
+      try {
+        await fetch(approveUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
+          body: JSON.stringify({
+            conversation_id: convId,
+            page_action: { action_id: actionId, ok: false, error, url: '', title: '', snapshot: '' },
+          }),
+        });
+      } catch {
+        // The turn's own page wait ends it; there is nothing to show here.
+      }
+    };
+    if (signal?.aborted) return refuse('panel_closed');
+    // The same opt-in that decides whether the capability is advertised, tested
+    // again on the way in: an unsolicited frame must not read or act on the page
+    // of a host that never offered it. Answered, so the turn does not hang.
+    if (!hostTakesPageActions(approveUrl, onRelativeLinkClickRef.current)) {
+      return refuse('page_actions_not_supported');
+    }
+    setAgentStatus((prev) => (prev ? { ...prev, status: 'acting_on_page' } : { status: 'acting_on_page' }));
+    try {
+      const result = await performPageAction(action, pageRefsRef.current, onRelativeLinkClickRef.current, document, signal);
+      if (signal?.aborted) return refuse('panel_closed');
+      if (action.type !== 'snapshot') await waitForDomSettle(document, { signal });
+      if (signal?.aborted) return refuse('panel_closed');
+      // The snapshot can throw on its own (a very deep DOM, a host
+      // `getComputedStyle` that raises). It rides in `error` while `ok` stays
+      // the action's own result: `ok: false` would have the agent retry a click
+      // that already ran, and a field of its own would be dropped unseen by a
+      // backend that does not know it, leaving an empty page and no sign why.
+      let page = { text: '', url: '', title: '' };
+      let snapshotError: string | null = null;
+      try {
+        const snapshot = takePageSnapshot(document);
+        pageRefsRef.current = snapshot.refs;
+        page = { text: snapshot.text, url: snapshot.url, title: snapshot.title };
+      } catch (err) {
+        pageRefsRef.current = new Map();
+        snapshotError = `${err instanceof Error ? err.message : String(err)}`.slice(0, 500);
+      }
+      await fetch(approveUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
+        signal,
+        body: JSON.stringify({
+          conversation_id: convId,
+          page_action: {
+            action_id: actionId,
+            ok: result.ok,
+            error: result.error ?? (snapshotError === null ? null : `snapshot_failed: ${snapshotError}`),
+            url: page.url,
+            title: page.title,
+            snapshot: page.text,
+          },
+        }),
+      });
+    } catch {
+      // The turn's own page wait ends it; there is nothing to show here.
+    } finally {
+      // Not for a turn that was stopped: its replacement owns the status line.
+      if (!signal?.aborted) {
+        setAgentStatus((prev) => (prev?.status === 'acting_on_page' ? { ...prev, status: 'thinking' } : prev));
+      }
+    }
+  };
+
   const handleSendMessage = async () => {
     const steerText = inputValue.trim();
     if (isLoading) {
@@ -803,9 +917,12 @@ export function useChat({
     });
     streamDeltasRef.current = deltas;
 
+    const controller = new AbortController();
+    pageActionControllerRef.current?.abort();
+    const pageActions = new AbortController();
     try {
-      const controller = new AbortController();
       abortControllerRef.current = controller;
+      pageActionControllerRef.current = pageActions;
 
       // Collect file_ids from already-uploaded files (uploaded eagerly on selection)
       const fileIds = (userMsg.files ?? []).filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
@@ -818,6 +935,7 @@ export function useChat({
         agentSlug,
         pageContext: pageContextRef.current,
         supportsToolApproval: getApproveUrl() !== null,
+        supportsPageActions: hostTakesPageActions(getApproveUrl(), onRelativeLinkClickRef.current),
       });
       if (fileIds.length > 0) {
         (requestBody as Record<string, unknown>).file_ids = fileIds;
@@ -984,6 +1102,14 @@ export function useChat({
                 break;
               }
 
+              case 'page_action_required': {
+                deltas.flush();
+                // Not awaited: the stream stays silent until the answer lands,
+                // and the reader must keep draining its keep-alives meanwhile.
+                void answerPageAction(parsed.actionId, parsed.pageAction, parsed.conversationId);
+                break;
+              }
+
               case 'approval_required': {
                 // The turn stops here and the stream goes silent until a
                 // decision is POSTed back. Not an end state: no segment is
@@ -1048,7 +1174,10 @@ export function useChat({
     } finally {
       deltas.close();
       if (streamDeltasRef.current === deltas) streamDeltasRef.current = null;
-      abortControllerRef.current = null;
+      // The turn is over, so its page actions are too - but only this turn's:
+      // a replacement already owns the refs by then.
+      if (pageActionControllerRef.current === pageActions) pageActions.abort();
+      if (abortControllerRef.current === controller) abortControllerRef.current = null;
       setIsLoading(false);
       setAgentStatus(null);
       hasUsedToolsRef.current = false;
@@ -1071,6 +1200,8 @@ export function useChat({
     streamDeltasRef.current = null;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    pageActionControllerRef.current?.abort();
+    pageActionControllerRef.current = null;
     // Cancel any in-flight file uploads
     uploadAbortRef.current.abort();
     uploadAbortRef.current = new AbortController();
@@ -1125,6 +1256,8 @@ export function useChat({
     streamDeltasRef.current = null;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    pageActionControllerRef.current?.abort();
+    pageActionControllerRef.current = null;
     setIsLoading(false);
     setAgentStatus(null);
     hasUsedToolsRef.current = false;
@@ -1136,6 +1269,7 @@ export function useChat({
     setIsResumingAfterDecision(false);
     approvalConversationIdRef.current = null;
     approvalDetachedRef.current = false;
+    pageRefsRef.current = new Map();
     setMessages((prev) => prev.filter((m) => !(m.role === 'assistant' && !m.content)));
   };
 
@@ -1147,8 +1281,17 @@ export function useChat({
     return () => window.clearTimeout(id);
   }, [inputValue, conversationId]);
 
-  // A panel closed mid-stream has no state left for the stream's frames to update.
-  useEffect(() => () => streamDeltasRef.current?.close(), []);
+  // A panel closed mid-stream has no state left for the stream's frames to
+  // update. Its page actions stop, so a hover fallback cannot click the host
+  // page after the panel closed; the stream itself runs on, which is how its
+  // answer is in history when the panel reopens.
+  useEffect(
+    () => () => {
+      streamDeltasRef.current?.close();
+      pageActionControllerRef.current?.abort();
+    },
+    [],
+  );
 
   // Flush the pending draft on unmount. Hosts unmount the panel the instant it
   // is closed, which would otherwise drop anything typed inside the debounce
