@@ -222,6 +222,8 @@ interface UseChatReturn {
   handleNewChat: (workspaceId?: string) => void;
   /** The workspace the next conversation will be created in, if any. */
   pendingWorkspaceId: string | null;
+  /** Forget *workspaceId* as the next conversation's workspace (it was deleted). */
+  clearPendingWorkspace: (workspaceId: string) => void;
   handleStopGenerating: () => void;
   /**
    * The conversations picked from the composer's `@` menu whose `@key` the
@@ -586,12 +588,13 @@ export function useChat({
     const sessionsUrl = getSessionsUrl();
     if (!sessionsUrl) return null;
 
-    return sessionGate.run(async (isCurrent) => {
+    return sessionGate.run(async (isCurrent, signal) => {
       const workspaceId = pendingWorkspaceRef.current;
       const res = await fetch(sessionsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
         body: JSON.stringify(workspaceId ? { agent_slug: slug, workspace_id: workspaceId } : { agent_slug: slug }),
+        signal,
       });
       if (!res.ok || !isCurrent()) return null;
       const data = await res.json();
@@ -969,6 +972,9 @@ export function useChat({
     setIsLoading(true);
     setAgentStatus({ status: 'thinking' });
     hasUsedToolsRef.current = false;
+    // The chat this turn belongs to: a new chat (or a switch) moves the gate
+    // on, and the turn's end must then leave the replacing chat's state alone.
+    const turnGeneration = sessionGate.generation;
 
     const assistantId = crypto.randomUUID();
     setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
@@ -1283,19 +1289,24 @@ export function useChat({
       // a replacement already owns the refs by then.
       if (pageActionControllerRef.current === pageActions) pageActions.abort();
       if (abortControllerRef.current === controller) abortControllerRef.current = null;
-      setIsLoading(false);
-      setAgentStatus(null);
-      hasUsedToolsRef.current = false;
-      // The stream is gone, so nothing can carry a decision any more —
-      // whether the turn finished, errored, or was stopped. Leaving the prompt
-      // up would offer an answer to a question nobody is listening for.
-      setPendingApprovals(null);
-      setApprovalError(null);
-      approvalConversationIdRef.current = null;
-      approvalDetachedRef.current = false;
-      // We watched this turn end, so there is nothing for the recovery probe to
-      // find — including on a fresh conversation, whose id only just arrived.
-      probedConversationRef.current = conversationIdRef.current;
+      // An abandoned turn's chat is gone: `handleNewChat` reset the shared
+      // state already, and resetting it again here would cut the Stop button,
+      // the status and the approvals of a turn the new chat started since.
+      if (sessionGate.generation === turnGeneration) {
+        setIsLoading(false);
+        setAgentStatus(null);
+        hasUsedToolsRef.current = false;
+        // The stream is gone, so nothing can carry a decision any more —
+        // whether the turn finished, errored, or was stopped. Leaving the prompt
+        // up would offer an answer to a question nobody is listening for.
+        setPendingApprovals(null);
+        setApprovalError(null);
+        approvalConversationIdRef.current = null;
+        approvalDetachedRef.current = false;
+        // We watched this turn end, so there is nothing for the recovery probe to
+        // find — including on a fresh conversation, whose id only just arrived.
+        probedConversationRef.current = conversationIdRef.current;
+      }
     }
   };
 
@@ -1343,6 +1354,12 @@ export function useChat({
     } else {
       updateConversationId(null);
     }
+  };
+
+  const clearPendingWorkspace = (workspaceId: string) => {
+    if (pendingWorkspaceRef.current !== workspaceId) return;
+    pendingWorkspaceRef.current = null;
+    setPendingWorkspaceId(null);
   };
 
   const handleSwitchConversation = (id: string) => {
@@ -1586,6 +1603,7 @@ export function useChat({
     handleSendMessage,
     handleNewChat,
     pendingWorkspaceId,
+    clearPendingWorkspace,
     handleStopGenerating,
     conversationRefs,
     addConversationRef,

@@ -124,6 +124,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     handleSendMessage,
     handleNewChat,
     pendingWorkspaceId,
+    clearPendingWorkspace,
     handleStopGenerating,
     conversationRefs,
     addConversationRef,
@@ -242,13 +243,14 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
 
   // A referenced conversation's chip opens it in the panel when it is one the
   // conversation list holds, so the list is read as soon as the thread shows
-  // a reference - not only once the history menu has been opened.
+  // a reference - not only once the history menu has been opened - and again
+  // for each conversation switched to, whose chips may name newer ones.
   const openableConversationIds = useMemo(() => new Set(conversations.map((c) => c.conversationId)), [conversations]);
   const onOpenConversation = useLatestCallback(historyEnabled ? handleSelectConversation : undefined);
   const threadReferencesConversations = messages.some((m) => (m.conversationRefs?.length ?? 0) > 0);
   useEffect(() => {
     if (threadReferencesConversations && historyEnabled) void refreshConversations();
-  }, [threadReferencesConversations, historyEnabled, refreshConversations]);
+  }, [threadReferencesConversations, historyEnabled, refreshConversations, conversationId]);
 
   const handleDeleteConversation = async (id: string) => {
     const deleted = await deleteConversation(id);
@@ -634,8 +636,12 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
                     onRename: renameWorkspace,
                     onDelete: async (id) => {
                       const result = await deleteWorkspace(id);
-                      // Its conversations are back in no workspace (`workspace_id: null`).
-                      if (result.ok) void refreshConversations();
+                      if (result.ok) {
+                        // The next conversation must not be created in it.
+                        clearPendingWorkspace(id);
+                        // Its conversations are back in no workspace (`workspace_id: null`).
+                        void refreshConversations();
+                      }
                       return result;
                     },
                     onMove: moveConversation,

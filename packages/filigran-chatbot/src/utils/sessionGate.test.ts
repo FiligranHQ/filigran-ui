@@ -95,3 +95,27 @@ test('a failed request resolves to null and frees the gate', async () => {
   await settle();
   assert.equal(gate.pending, null);
 });
+
+test('a new chat aborts the request in flight; the next one gets its own signal', async () => {
+  const gate = createSessionGate();
+  const signals: AbortSignal[] = [];
+  const answer = deferred();
+  void gate.run((_isCurrent, signal) => {
+    signals.push(signal);
+    return answer.promise;
+  });
+  assert.equal(signals[0].aborted, false);
+  gate.abandon();
+  assert.equal(signals[0].aborted, true);
+
+  void gate.run((_isCurrent, signal) => {
+    signals.push(signal);
+    return Promise.resolve('conv-2');
+  });
+  assert.equal(signals[1].aborted, false);
+  // The abandoned request settling later aborts nothing of the new chat.
+  answer.resolve(null);
+  await settle();
+  gate.abandon();
+  assert.equal(signals[1].aborted, false);
+});

@@ -1,22 +1,9 @@
 import type { ChatConversationSummary, ChatWorkspace } from '../types';
 
 /**
- * The conversation list grouped by workspace, and the workspace payload.
- *
- * The same rule as the XTM One web chat's sidebar, so a person sees the same
- * groups on both surfaces:
- *
- * - every workspace the caller may file into has a group, empty or not - a
- *   workspace just created must be there to drop a conversation onto;
- * - one the caller may only read has a group only while it holds one of their
- *   conversations;
- * - a conversation filed where the list does not reach (an archived
- *   workspace, one no longer shared) lands in one `elsewhere` group rather
- *   than vanishing;
- * - a search keeps the matching conversations and hides the groups it
- *   empties.
- *
- * Kept free of local runtime imports so `node --test` runs it as is.
+ * The conversation list grouped by workspace, by the XTM One web sidebar's
+ * rule so both surfaces show the same groups. No local runtime imports, so
+ * `node --test` runs it as is.
  */
 
 export const ELSEWHERE_GROUP = '__elsewhere__';
@@ -63,6 +50,25 @@ export function sortWorkspaces(workspaces: ChatWorkspace[]): ChatWorkspace[] {
   });
 }
 
+/**
+ * Whether a failed read of the workspace list is a passing one (a timeout, a
+ * rate limit, a server error) that keeps the last list, rather than a refusal
+ * (not licensed, an older proxy) that turns the grouping off.
+ */
+export function isTransientListFailure(status: number): boolean {
+  return status === 408 || status === 429 || (status >= 500 && status !== 501);
+}
+
+/** Whether moving *conversationId* to *destination* would change nothing (it is already there). */
+export function isNoopMove(
+  conversations: Pick<ChatConversationSummary, 'conversationId' | 'workspaceId'>[],
+  conversationId: string,
+  destination: string | null,
+): boolean {
+  const current = conversations.find((c) => c.conversationId === conversationId);
+  return !!current && (current.workspaceId ?? null) === destination;
+}
+
 /** The workspaces a conversation can be moved into, in the order the list shows them. */
 export function fileableWorkspaces(workspaces: ChatWorkspace[]): ChatWorkspace[] {
   return sortWorkspaces(workspaces.filter((w) => w.canManage));
@@ -101,7 +107,8 @@ export function groupConversations(
 
 /**
  * Whether a group shows its conversations: not when collapsed, unless it holds
- * the conversation on screen, and always while searching.
+ * the conversation on screen, and always while searching. A group shown open
+ * for either reason cannot be toggled (`groupCanToggle`).
  */
 export function groupIsOpen(
   key: string,
@@ -113,6 +120,20 @@ export function groupIsOpen(
   if (searching) return true;
   if (activeConversationId && group.conversations.some((c) => c.conversationId === activeConversationId)) return true;
   return !collapsed.has(key);
+}
+
+/**
+ * Whether a group's toggle may fold it: not while it is held open by a search
+ * or by the conversation on screen, where a click would flip a remembered
+ * state nobody sees, which then folds the group later.
+ */
+export function groupCanToggle(
+  group: { conversations: ChatConversationSummary[] },
+  activeConversationId: string | null,
+  searching: boolean,
+): boolean {
+  if (searching) return false;
+  return !(activeConversationId && group.conversations.some((c) => c.conversationId === activeConversationId));
 }
 
 /**

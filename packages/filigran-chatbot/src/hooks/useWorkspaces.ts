@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatWorkspace } from '../types';
-import { parseWorkspaces, refusalMessage } from '../utils/workspaces';
+import { isTransientListFailure, parseWorkspaces, refusalMessage } from '../utils/workspaces';
 
 interface UseWorkspacesOptions {
   apiBaseUrl: string;
@@ -32,6 +32,8 @@ interface UseWorkspacesReturn {
 export function useWorkspaces({ apiBaseUrl, apiEndpoints, backendType = 'rest', requestHeaders }: UseWorkspacesOptions): UseWorkspacesReturn {
   const [workspaces, setWorkspaces] = useState<ChatWorkspace[]>([]);
   const [answered, setAnswered] = useState(false);
+  // Refreshes overlap (after each write, on remount): only the latest answers.
+  const latestRef = useRef(0);
 
   const path = apiEndpoints?.workspaces;
   const configured = backendType === 'rest' && !apiEndpoints?.singleEndpoint && typeof path === 'string' && path.length > 0;
@@ -39,18 +41,25 @@ export function useWorkspaces({ apiBaseUrl, apiEndpoints, backendType = 'rest', 
 
   const refreshWorkspaces = useCallback(async () => {
     if (!url) return;
+    const ticket = ++latestRef.current;
     try {
       const res = await fetch(url, { method: 'GET', headers: { ...(requestHeaders ?? {}) } });
+      if (ticket !== latestRef.current) return;
       if (!res.ok) {
-        setAnswered(false);
-        setWorkspaces([]);
+        // A passing failure keeps the last list: emptying it would turn the
+        // grouped history flat until remount. Only a refusal turns it off.
+        if (!isTransientListFailure(res.status)) {
+          setAnswered(false);
+          setWorkspaces([]);
+        }
         return;
       }
-      setWorkspaces(parseWorkspaces(await res.json()));
+      const list = parseWorkspaces(await res.json());
+      if (ticket !== latestRef.current) return;
+      setWorkspaces(list);
       setAnswered(true);
     } catch {
-      setAnswered(false);
-      setWorkspaces([]);
+      // A network failure or an unreadable body: keep the last list.
     }
   }, [url, requestHeaders]);
 

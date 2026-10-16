@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } 
 import type { ChatConversationSummary, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo } from '../utils';
-import { fileableWorkspaces, groupConversations, groupIsOpen, unfiledEmptyNote } from '../utils/workspaces';
+import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
 import { Dropdown } from './Dropdown';
 import {
   BotIcon,
@@ -153,13 +153,15 @@ export const ConversationSidebar = ({
   const say = (reason: string | null, fallback: string) => setError(reason || t(fallback));
 
   const move = async (conversationId: string, workspaceId: string | null) => {
-    if (!workspaces) return;
+    // A drop on the group the row is already in (or an unfiled row on "Not in
+    // a workspace") is no move: the row menu disables it, the drop ignores it.
+    if (!workspaces || isNoopMove(conversations, conversationId, workspaceId)) return;
     const refusal = await workspaces.onMove(conversationId, workspaceId);
     if (refusal !== null) say(refusal, 'The conversation could not be moved');
   };
 
   const q = query.trim().toLowerCase();
-  const matches = q ? (c: ChatConversationSummary) => (c.title || '').toLowerCase().includes(q) : undefined;
+  const matches = useMemo(() => (q ? (c: ChatConversationSummary) => (c.title || '').toLowerCase().includes(q) : undefined), [q]);
   const filtered = useMemo(() => (matches ? conversations.filter(matches) : conversations), [conversations, matches]);
   const grouped = useMemo(
     () => (workspaces ? groupConversations(conversations, workspaces.list, { matches }) : null),
@@ -295,6 +297,7 @@ export const ConversationSidebar = ({
                 workspace={group.workspace}
                 count={group.conversations.length}
                 open={groupIsOpen(group.key, collapsedGroups, group, activeConversationId, !!q)}
+                toggleable={groupCanToggle(group, activeConversationId, !!q)}
                 pending={!!group.workspace && workspaces.pendingWorkspaceId === group.workspace.id && !activeConversationId}
                 onToggle={() => toggleGroup(group.key)}
                 onNewChat={workspaces.onNewChat}
@@ -456,6 +459,7 @@ const WorkspaceGroupSection = ({
   workspace,
   count,
   open,
+  toggleable,
   pending,
   onToggle,
   onNewChat,
@@ -469,6 +473,8 @@ const WorkspaceGroupSection = ({
   workspace: ChatWorkspace | null;
   count: number;
   open: boolean;
+  /** False while the group is held open (a search, the conversation on screen). */
+  toggleable: boolean;
   /** A new conversation is about to be created in this workspace. */
   pending: boolean;
   onToggle: () => void;
@@ -498,7 +504,13 @@ const WorkspaceGroupSection = ({
             onCancel={() => setRenaming(false)}
           />
         ) : (
-          <button type="button" onClick={onToggle} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
+          <button
+            type="button"
+            onClick={onToggle}
+            disabled={!toggleable}
+            aria-expanded={open}
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-left disabled:cursor-default"
+          >
             <ChevronRightIcon size={12} className={`shrink-0 text-gray-400 dark:text-white/30 transition-transform ${open ? 'rotate-90' : ''}`} />
             <FolderIcon size={14} className="shrink-0 text-[var(--chat-accent)]" />
             <span className="truncate text-[0.8125rem] font-medium text-gray-800 dark:text-white/80">

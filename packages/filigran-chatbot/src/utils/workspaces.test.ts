@@ -7,8 +7,11 @@ import assert from 'node:assert/strict';
 import {
   ELSEWHERE_GROUP,
   fileableWorkspaces,
+  groupCanToggle,
   groupConversations,
   groupIsOpen,
+  isNoopMove,
+  isTransientListFailure,
   parseWorkspaces,
   refusalMessage,
   revertMove,
@@ -152,4 +155,30 @@ test('an empty unfiled group says why, except while searching', () => {
   // the search just found none outside one.
   assert.equal(unfiledEmptyNote({ total: 3, unfiled: 0, loading: false, searching: true }), null);
   assert.equal(unfiledEmptyNote({ total: 0, unfiled: 0, loading: false, searching: true }), null);
+});
+
+test('a passing failure keeps the workspace list, a refusal turns it off', () => {
+  for (const status of [408, 429, 500, 502, 503, 504]) assert.equal(isTransientListFailure(status), true, String(status));
+  for (const status of [400, 401, 403, 404, 405, 501]) assert.equal(isTransientListFailure(status), false, String(status));
+});
+
+test('a move to where the conversation already is changes nothing', () => {
+  const list = [conv('c-1', 'w-1'), conv('c-2'), { conversationId: 'c-3', title: 'c-3', workspaceId: undefined }];
+  assert.equal(isNoopMove(list, 'c-1', 'w-1'), true);
+  assert.equal(isNoopMove(list, 'c-1', 'w-2'), false);
+  assert.equal(isNoopMove(list, 'c-1', null), false);
+  assert.equal(isNoopMove(list, 'c-2', null), true);
+  assert.equal(isNoopMove(list, 'c-3', null), true);
+  assert.equal(isNoopMove(list, 'c-2', 'w-1'), false);
+  // A row the list no longer holds: let the backend answer.
+  assert.equal(isNoopMove(list, 'gone', null), false);
+});
+
+test('a group held open by a search or the conversation on screen cannot be toggled', () => {
+  const group = { conversations: [conv('c-1', 'w-1'), conv('c-2', 'w-1')] };
+  assert.equal(groupCanToggle(group, null, false), true);
+  assert.equal(groupCanToggle(group, 'c-9', false), true);
+  assert.equal(groupCanToggle(group, 'c-2', false), false);
+  assert.equal(groupCanToggle(group, null, true), false);
+  assert.equal(groupCanToggle({ conversations: [] }, 'c-1', false), true);
 });

@@ -101,6 +101,7 @@ export function useConversationReferenceMenu({
     search,
     referenced: referencedConversations(refs, text).length,
     exclude: conversationId,
+    picked: refs,
   });
   const items = view.kind === 'results' ? view.items : [];
   const active = Math.min(activeIndex, Math.max(items.length - 1, 0));

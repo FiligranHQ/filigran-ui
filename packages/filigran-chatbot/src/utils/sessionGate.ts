@@ -1,15 +1,7 @@
 /**
- * The session request of the chat on screen.
- *
- * Creating the conversation is one request shared by every caller of the
- * same chat - several files selected at once, then the send - and it belongs
- * to that chat alone. A new chat (or a switch to another conversation)
- * abandons it: its answer must not become the new chat's conversation, clear
- * the new chat's workspace, or release the request the new chat has started
- * since. `abandon()` moves the chat on; a request reads `isCurrent()` after
- * each await and leaves everything alone once it is false.
- *
- * Kept free of local runtime imports so `node --test` runs it as is.
+ * The one session request of the chat on screen. A new chat abandons it: the
+ * request is aborted, and `isCurrent()` turns false so a late answer touches
+ * nothing. No local runtime imports, so `node --test` runs it as is.
  */
 export interface SessionGate {
   /** Which chat is on screen; compare two readings to tell whether it changed. */
@@ -20,14 +12,15 @@ export interface SessionGate {
    * Join the chat's request, or start it. A request that fails resolves to
    * `null`, like one abandoned.
    */
-  run(request: (isCurrent: () => boolean) => Promise<string | null>): Promise<string | null>;
-  /** A new chat: the request in flight, if any, is no longer its. */
+  run(request: (isCurrent: () => boolean, signal: AbortSignal) => Promise<string | null>): Promise<string | null>;
+  /** A new chat: the request in flight, if any, is aborted and no longer its. */
   abandon(): void;
 }
 
 export function createSessionGate(): SessionGate {
   let generation = 0;
   let pending: Promise<string | null> | null = null;
+  let controller: AbortController | null = null;
   return {
     get generation() {
       return generation;
@@ -38,18 +31,25 @@ export function createSessionGate(): SessionGate {
     run(request) {
       if (pending) return pending;
       const started = generation;
-      const promise = request(() => started === generation).catch(() => null);
+      const own = new AbortController();
+      controller = own;
+      const promise = request(() => started === generation, own.signal).catch(() => null);
       pending = promise;
       // Released once settled, and only while it is still this request's:
       // after a new chat the next request may hold it already.
       void promise.finally(() => {
         if (pending === promise) pending = null;
+        if (controller === own) controller = null;
       });
       return promise;
     },
     abandon() {
       generation += 1;
       pending = null;
+      // The backend would otherwise still create the abandoned conversation,
+      // filed in the workspace it was started in.
+      controller?.abort();
+      controller = null;
     },
   };
 }

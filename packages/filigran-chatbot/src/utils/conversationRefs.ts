@@ -1,19 +1,9 @@
 import type { ApiEndpoints, BackendType, ChatConversationRef, ChatConversationReferenceCandidate } from '../types';
 
 /**
- * The `@` grammar of the composer: what opens the conversation menu, which
- * `@tokens` a message carries, and which picks still count.
- *
- * The same rule as the XTM One web chat, so a message reads the same on both
- * surfaces: a pick from the menu is the only thing that makes `@key` mean a
- * conversation. The composer records it and drops it once its `@key` is edited
- * out of the text, so a bare `@word` typed by hand stays plain text.
- *
- * The web chat writes the rule as the lookbehind `(?<![\w-])@([\w-]*)$`. It is
- * spelled out here instead: the bundle targets ESNext untranspiled, and an
- * engine without lookbehind would refuse the whole module at parse time.
- *
- * Kept free of local runtime imports so `node --test` runs it as is.
+ * The composer's `@` grammar, as in the XTM One web chat: only a pick from the
+ * menu makes `@key` mean a conversation. No regex lookbehind (the bundle ships
+ * untranspiled) and no local runtime imports (`node --test` runs it as is).
  */
 
 /** What one message references at most - the backend's own bound. */
@@ -169,6 +159,19 @@ export interface ReferenceSearchState {
 
 export const EMPTY_REFERENCE_SEARCH: ReferenceSearchState = { query: null, items: [], failed: false };
 
+/**
+ * Whether *candidate* answers the typed *query*, by its key or by its title.
+ * A title's spaces become hyphens in its key (`Hi Bob` is `@hi-bob`), so the
+ * key typed back must also find it by the words of its title.
+ */
+export function referenceMatches(query: string, candidate: { key: string; title: string }): boolean {
+  const q = query.toLowerCase();
+  if (!q || candidate.key.toLowerCase().startsWith(q)) return true;
+  const title = candidate.title.toLowerCase();
+  const words = q.split(/[\s_-]+/).filter(Boolean);
+  return words.length > 0 && words.every((w) => title.includes(w));
+}
+
 /** What the menu shows. */
 export type ReferenceMenuView =
   | { kind: 'closed' }
@@ -194,12 +197,22 @@ export function referenceMenuView(options: {
   referenced: number;
   /** The conversation written in, never offered. */
   exclude?: string | null;
+  /**
+   * The picks the draft already holds: offered first when the typed text
+   * matches their key or their title, so editing `@hi-bob` finds "Hi Bob"
+   * whatever the search answered.
+   */
+  picked?: ChatConversationRef[];
 }): ReferenceMenuView {
-  const { trigger, dismissed, search, referenced, exclude } = options;
+  const { trigger, dismissed, search, referenced, exclude, picked = [] } = options;
   if (!trigger || dismissed) return { kind: 'closed' };
   if (referenced >= MAX_REFERENCED_CONVERSATIONS) return { kind: 'full' };
   if (search.failed) return { kind: 'closed' };
-  const items = exclude ? search.items.filter((c) => c.id !== exclude) : search.items;
+  const known: ChatConversationReferenceCandidate[] = trigger.query
+    ? picked.filter((r) => referenceMatches(trigger.query, r)).map((r) => ({ id: r.conversationId, title: r.title, key: r.key, isOwn: true }))
+    : [];
+  const merged = [...known, ...search.items.filter((c) => !known.some((k) => k.id === c.id))];
+  const items = exclude ? merged.filter((c) => c.id !== exclude) : merged;
   if (items.length > 0) return { kind: 'results', items };
   if (trigger.query && search.query === trigger.query) return { kind: 'empty' };
   return { kind: 'closed' };

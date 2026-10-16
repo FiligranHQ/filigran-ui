@@ -11,6 +11,7 @@ import {
   insertConversationReference,
   parseReferenceCandidates,
   pruneConversationRefs,
+  referenceMatches,
   referenceMenuView,
   referenceSearchUrl,
   referenceTokens,
@@ -189,5 +190,51 @@ test('the menu never offers the conversation written in, and says when the messa
   assert.deepEqual(
     referenceMenuView({ trigger, dismissed: false, referenced: MAX_REFERENCED_CONVERSATIONS, search: { query: '', items, failed: false } }),
     { kind: 'full' },
+  );
+});
+
+test('a typed key finds its conversation by key or by the words of its title', () => {
+  const hiBob = { key: 'hi-bob', title: 'Hi Bob' };
+  assert.equal(referenceMatches('Hi-Bob', hiBob), true);
+  assert.equal(referenceMatches('hi-b', hiBob), true);
+  assert.equal(referenceMatches('bob', hiBob), true);
+  assert.equal(referenceMatches('bob-hi', hiBob), true);
+  assert.equal(referenceMatches('hi-alice', hiBob), false);
+  // A key the backend could not slug from the title (a Japanese title).
+  const jp = { key: 'conversation-1a2b3c', title: '週次レポート' };
+  assert.equal(referenceMatches('conversation-1a', jp), true);
+  assert.equal(referenceMatches('weekly', jp), false);
+});
+
+test('editing a picked @key offers that conversation again, whatever the search answered', () => {
+  const picked: ChatConversationRef[] = [{ conversationId: 'c-bob', title: 'Hi Bob', key: 'hi-bob' }];
+  const base = { dismissed: false, referenced: 1, picked };
+  const bob = { id: 'c-bob', key: 'hi-bob', title: 'Hi Bob', isOwn: true };
+
+  // The search found nothing for the key typed back: the pick is still offered.
+  assert.deepEqual(referenceMenuView({ ...base, trigger: { anchor: 0, query: 'Hi-Bob' }, search: { query: 'Hi-Bob', items: [], failed: false } }), {
+    kind: 'results',
+    items: [bob],
+  });
+  // The search found it too: offered once, first.
+  assert.deepEqual(
+    referenceMenuView({
+      ...base,
+      trigger: { anchor: 0, query: 'hi' },
+      search: { query: 'hi', items: [candidate('c-other', 'hi-there'), { ...bob, isOwn: false }], failed: false },
+    }),
+    { kind: 'results', items: [bob, candidate('c-other', 'hi-there')] },
+  );
+  // Neither the key nor the title matches: no menu entry for it.
+  assert.deepEqual(referenceMenuView({ ...base, trigger: { anchor: 0, query: 'alice' }, search: { query: 'alice', items: [], failed: false } }), {
+    kind: 'empty',
+  });
+  // An empty @ does not list the picks, and the conversation written in is never offered.
+  assert.deepEqual(referenceMenuView({ ...base, trigger: { anchor: 0, query: '' }, search: { query: '', items: [], failed: false } }), {
+    kind: 'closed',
+  });
+  assert.deepEqual(
+    referenceMenuView({ ...base, exclude: 'c-bob', trigger: { anchor: 0, query: 'hi-bob' }, search: { query: 'hi-bob', items: [], failed: false } }),
+    { kind: 'empty' },
   );
 });
