@@ -3,7 +3,7 @@ import type { ChatAttachment, ChatPanelProps, Translate } from '../types';
 import { hexAlpha, identity } from '../utils';
 import { feedbackBaseUrl } from '../utils/feedback';
 import { conversationReferencesUrl } from '../utils/conversationRefs';
-import { pendingWorkspaceStillFileable } from '../utils/workspaces';
+import { pendingWorkspaceStillFileable, returnRefreshDue } from '../utils/workspaces';
 import { parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
@@ -210,11 +210,33 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     if (showConversationSidebar) void refreshConversations();
   }, [showConversationSidebar, conversationId, refreshConversations]);
 
-  // The workspaces change far less often than the conversations: read on
-  // entry, and after every write the sidebar makes (the hook re-reads them).
+  // The workspaces are also changed elsewhere (the XTM One web chat, another
+  // tab): read on entry, after every write the sidebar makes (the hook
+  // re-reads them), on each conversation switch, at the end of each turn and
+  // on each return to the page - a group deleted there must not linger here.
   useEffect(() => {
     if (showConversationSidebar) void refreshWorkspaces();
-  }, [showConversationSidebar, refreshWorkspaces]);
+  }, [showConversationSidebar, conversationId, refreshWorkspaces]);
+
+  // Back to the page (from the XTM One tab, say): both lists may have moved.
+  const lastReturnRefreshRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!showConversationSidebar) return;
+    const onReturn = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (!returnRefreshDue(now, lastReturnRefreshRef.current)) return;
+      lastReturnRefreshRef.current = now;
+      void refreshConversations();
+      void refreshWorkspaces();
+    };
+    document.addEventListener('visibilitychange', onReturn);
+    window.addEventListener('focus', onReturn);
+    return () => {
+      document.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
+    };
+  }, [showConversationSidebar, refreshConversations, refreshWorkspaces]);
 
   // A finished turn has consumed allowance and may have retitled the chat.
   const wasLoadingRef = useRef(false);
@@ -222,11 +244,16 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     if (wasLoadingRef.current && !isLoading) {
       refreshQuota();
       // The backend titles a conversation from its first message, so the row
-      // stays "New conversation" until the turn is read back.
-      if (showConversationSidebar) void refreshConversations();
+      // stays "New conversation" until the turn is read back. A conversation
+      // that could not be created in its workspace (deleted elsewhere) is
+      // read back unfiled: the workspaces are re-read with it.
+      if (showConversationSidebar) {
+        void refreshConversations();
+        void refreshWorkspaces();
+      }
     }
     wasLoadingRef.current = isLoading;
-  }, [isLoading, refreshQuota, showConversationSidebar, refreshConversations]);
+  }, [isLoading, refreshQuota, showConversationSidebar, refreshConversations, refreshWorkspaces]);
 
   const handleHistoryMenuToggle = () => {
     // Computed from the committed state in the event handler — NOT inside the
@@ -653,7 +680,12 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
                       return result;
                     },
                     onMove: moveConversation,
-                    onNewChat: (workspaceId) => handleNewChat(workspaceId),
+                    onNewChat: (workspaceId) => {
+                      handleNewChat(workspaceId);
+                      // Still there? Deleted elsewhere, the list drops it and
+                      // the pending workspace with it, before the first send.
+                      void refreshWorkspaces();
+                    },
                   }
                 : undefined
             }

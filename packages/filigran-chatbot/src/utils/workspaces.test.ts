@@ -14,6 +14,8 @@ import {
   isTransientListFailure,
   parseWorkspaces,
   pendingWorkspaceStillFileable,
+  RETURN_REFRESH_MIN_GAP_MS,
+  returnRefreshDue,
   refusalMessage,
   revertMove,
   unfiledEmptyNote,
@@ -191,4 +193,12 @@ test('the next conversation is created only in a workspace the list still offers
   assert.equal(pendingWorkspaceStillFileable('w-gone', list), false);
   // Narrowed to read-only: listed, but nothing can be filed into it.
   assert.equal(pendingWorkspaceStillFileable('w-ro', list), false);
+});
+
+test('a return to the page re-reads the lists once, not once per event', () => {
+  assert.equal(returnRefreshDue(10_000, null), true);
+  // `focus` right after `visibilitychange`: the same return.
+  assert.equal(returnRefreshDue(10_050, 10_000), false);
+  assert.equal(returnRefreshDue(10_000 + RETURN_REFRESH_MIN_GAP_MS - 1, 10_000), false);
+  assert.equal(returnRefreshDue(10_000 + RETURN_REFRESH_MIN_GAP_MS, 10_000), true);
 });

@@ -79,6 +79,14 @@ export function pendingWorkspaceStillFileable(pendingId: string, workspaces: Cha
   return workspaces.some((w) => w.id === pendingId && w.canManage);
 }
 
+/** The shortest gap between two re-reads on a return to the page (`focus` and `visibilitychange` both fire). */
+export const RETURN_REFRESH_MIN_GAP_MS = 2000;
+
+/** Whether a return to the page re-reads the lists: once per return, not once per event. */
+export function returnRefreshDue(now: number, last: number | null): boolean {
+  return last === null || now - last >= RETURN_REFRESH_MIN_GAP_MS;
+}
+
 /** The workspaces a conversation can be moved into, in the order the list shows them. */
 export function fileableWorkspaces(workspaces: ChatWorkspace[]): ChatWorkspace[] {
   return sortWorkspaces(workspaces.filter((w) => w.canManage));
