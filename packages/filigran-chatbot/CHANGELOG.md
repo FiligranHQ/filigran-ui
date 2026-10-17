@@ -19,6 +19,13 @@ This file starts at 3.10.0; earlier releases are on the
   accessible name, state and in-app destination, so the agent can name the one
   it means.
 - `Acting on the page…` shows on the status line while a step runs.
+- A deck, report or video the assistant made shows as a card where its
+  `[[PRESENTATION:…]]`, `[[REPORT:…]]` or `[[VIDEO:…]]` marker stands (#450):
+  its title, its slides, sections or scenes and length, a video's render
+  progress, and `Open in XTM One`. The marker never shows as text, mid-stream
+  or after a reload, and copy and read aloud skip it. The panel tells XTM One
+  it renders them (`supports_artifacts`); XTM One describes each one in the
+  answer's `artifacts`.
 
 ### Host opt-in
 
@@ -26,6 +33,12 @@ This file starts at 3.10.0; earlier releases are on the
   **and** passes `onRelativeLinkClick`, because its proxy has to forward the
   answer whole. A host that offers neither is unaffected, and a step arriving
   without that opt-in is refused without the page being read or touched.
+- `apiEndpoints.artifacts` (no default; XTM One serves `/chat/artifacts`) lets
+  the deck, report and video cards download them (PDF and PowerPoint for a
+  deck, PDF for a report, MP4 for a rendered video) and follow a video while
+  it renders, through the host's proxy. Without it the cards show and link to
+  XTM One, with no download. A failed download goes to `onDownloadError`, with
+  the name of the file asked for.
 
 ### Security
 

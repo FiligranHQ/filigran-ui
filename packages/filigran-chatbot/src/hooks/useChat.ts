@@ -316,6 +316,9 @@ function buildRequestBody(
       if (opts.supportsPageActions) {
         body.supports_page_actions = true;
       }
+      // The panel renders the deck, report and video markers itself whatever
+      // the host proxies: the cards need no route to show and link to XTM One.
+      body.supports_artifacts = true;
       // Forward arbitrary host page context (e.g. current URL) so the agent
       // knows where the user is. Omitted when empty to keep payloads lean.
       // Guard serialization: the whole body is later JSON.stringify'd, so a
@@ -1201,6 +1204,7 @@ export function useChat({
                           toolCallCount: parsed.toolCallCount,
                           iterations: parsed.iterations,
                           attachments: parsed.attachments,
+                          artifacts: parsed.artifacts,
                           reasoning: parsed.reasoning,
                           toolCallTrace: parsed.toolCallTrace,
                           transferChain: parsed.transferChain,
