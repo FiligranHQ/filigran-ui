@@ -1,4 +1,4 @@
-import type { ChatAttachment, ChatContextUsage, ToolApprovalProposal, ToolCallTraceEntry, TransferChainEntry } from '../../types';
+import type { ChatArtifact, ChatAttachment, ChatContextUsage, ToolApprovalProposal, ToolCallTraceEntry, TransferChainEntry } from '../../types';
 import type { PageAction } from '../../utils/pageActions';
 
 /**
@@ -31,6 +31,8 @@ export type ParsedAction =
       transferAgentId?: string;
       transferAgentName?: string;
       attachments?: ChatAttachment[];
+      /** The decks, reports and videos the answer made (`artifacts`). */
+      artifacts?: ChatArtifact[];
       /** Accumulated model reasoning for the turn (reasoning-details dialog). */
       reasoning?: string;
       /** Per-tool-call execution trace (reasoning-details dialog). */

@@ -1,4 +1,6 @@
 import type {
+  ChatArtifact,
+  ChatArtifactKind,
   ChatAttachment,
   ChatContextBreakdown,
   ChatContextUsage,
@@ -85,6 +87,43 @@ export function parseAttachments(raw: unknown): ChatAttachment[] | undefined {
       fileTag: a.file_tag === 'working_file' ? 'working_file' : 'download_file',
     });
   }
+  return out.length > 0 ? out : undefined;
+}
+
+const ARTIFACT_KINDS: readonly ChatArtifactKind[] = ['presentation', 'report', 'video'];
+
+const countOf = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined);
+
+/**
+ * Normalize one artifact descriptor (`artifacts` entry, or the answer of
+ * `GET {artifacts}/{kind}/{id}`). `undefined` without a known kind and an id:
+ * a card it could not address would offer actions that go nowhere.
+ */
+export function parseArtifact(raw: unknown): ChatArtifact | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const a = raw as Record<string, unknown>;
+  const kind = ARTIFACT_KINDS.find((k) => k === a.kind);
+  if (!kind || typeof a.id !== 'string' || !a.id) return undefined;
+  return {
+    kind,
+    id: a.id,
+    title: typeof a.title === 'string' ? a.title : '',
+    url: typeof a.url === 'string' && a.url ? a.url : undefined,
+    slideRef: typeof a.slide_ref === 'string' && a.slide_ref ? a.slide_ref : undefined,
+    slideCount: countOf(a.slide_count),
+    sectionCount: countOf(a.section_count),
+    sceneCount: countOf(a.scene_count),
+    durationMs: countOf(a.duration_ms),
+    status: typeof a.status === 'string' && a.status ? a.status : undefined,
+    progress: countOf(a.progress),
+    downloads: Array.isArray(a.downloads) ? a.downloads.filter((f): f is string => typeof f === 'string' && !!f) : [],
+  };
+}
+
+/** Normalize the `artifacts` of a `done` event or a restored answer; `undefined` when nothing is usable. */
+export function parseArtifacts(raw: unknown): ChatArtifact[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out = raw.map(parseArtifact).filter((a): a is ChatArtifact => !!a);
   return out.length > 0 ? out : undefined;
 }
 
@@ -294,6 +333,7 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       transferAgentId: evt.transfer_agent_id as string | undefined,
       transferAgentName: evt.transfer_agent_name as string | undefined,
       attachments: parseAttachments(evt.attachments),
+      artifacts: parseArtifacts(evt.artifacts),
       reasoning: typeof evt.reasoning === 'string' ? evt.reasoning : undefined,
       toolCallTrace: parseToolCallTrace(evt.tool_call_trace),
       transferChain: parseTransferChain(evt.transfer_chain),
@@ -353,6 +393,8 @@ export function parseRestoredMessages(raw: unknown): ChatMessage[] {
       // time) and user uploads, so an upload stays downloadable after a reload
       // and not only in the live session where it is carried on `files`.
       attachments: parseAttachments(m.attachments),
+      // The decks, reports and videos an answer made, as cards where their markers stand.
+      artifacts: m.role === 'assistant' ? parseArtifacts(m.artifacts) : undefined,
       // The conversations a user message referenced with `@`, shown as chips.
       conversationRefs: m.role === 'user' ? parseConversationRefs(m.conversation_refs) : undefined,
       // The reasoning-details affordance, from the same fields the live `done`

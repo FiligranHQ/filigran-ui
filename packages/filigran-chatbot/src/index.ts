@@ -9,6 +9,8 @@ export type {
   ChatMessage,
   ChatMessagePersistedFeedback,
   ChatAttachment,
+  ChatArtifact,
+  ChatArtifactKind,
   ChatContextBreakdown,
   ChatContextUsage,
   ChatConversationRef,
