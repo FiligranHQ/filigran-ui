@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { ChatArtifact, ChatArtifactKind, Translate } from '../types';
 import { artifactDownloadLabel, artifactFacts, artifactKindLabel, artifactLink, isRenderInProgress, translate, videoRenderLabel } from '../utils';
+import { pollInTurn } from '../utils/polling';
 import { ClapperboardIcon, DownloadIcon, ExternalLinkIcon, FileTextIcon, PresentationIcon } from './icons';
 import { Spinner } from './Spinner';
 
 /** How often a card asks again about a video that is still rendering, and for how long. */
 const REFRESH_INTERVAL_MS = 10_000;
-const REFRESH_LIMIT = 90;
+const REFRESH_FOR_MS = 15 * 60_000;
 
 const KIND_ICONS: Record<ChatArtifactKind, typeof PresentationIcon> = {
   presentation: PresentationIcon,
@@ -40,24 +41,17 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh }: ArtifactCar
   const following = !!onRefresh && !gaveUp && isRenderInProgress(current);
   useEffect(() => {
     if (!following || !onRefresh) return undefined;
-    let polls = 0;
     let cancelled = false;
-    const timer = setInterval(() => {
-      polls += 1;
-      if (polls > REFRESH_LIMIT) {
-        clearInterval(timer);
-        setGaveUp(true);
-        return;
-      }
-      onRefresh(current.kind, current.id)
-        .then((fresh) => {
+    const stop = pollInTurn(
+      () =>
+        onRefresh(current.kind, current.id).then((fresh) => {
           if (!cancelled && fresh) setCurrent(fresh);
-        })
-        .catch(() => undefined);
-    }, REFRESH_INTERVAL_MS);
+        }),
+      { intervalMs: REFRESH_INTERVAL_MS, forMs: REFRESH_FOR_MS, onGiveUp: () => setGaveUp(true) },
+    );
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      stop();
     };
   }, [following, onRefresh, current.kind, current.id]);
 

@@ -705,7 +705,7 @@ download buttons.
 | Request | Purpose |
 | --- | --- |
 | `POST {apiBaseUrl}{artifacts}/{kind}/{id}/download` | `{ "format": "pdf" }`: the file, saved under its `Content-Disposition` name. A failure goes to `onDownloadError` with the name of the file asked for. |
-| `GET {apiBaseUrl}{artifacts}/{kind}/{id}` | The descriptor as of now: a card asks every 10 seconds, for 15 minutes at most, while its video renders. |
+| `GET {apiBaseUrl}{artifacts}/{kind}/{id}` | The descriptor as of now: a card asks again 10 seconds after each answer, one request at a time, for 15 minutes at most, while its video renders. |
 
 XTM One serves both at `/chat/artifacts`.
 
