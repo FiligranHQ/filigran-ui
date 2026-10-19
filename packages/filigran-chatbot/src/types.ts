@@ -176,6 +176,19 @@ export interface ApiEndpoints {
    * REST backend only, and not in `singleEndpoint` mode.
    */
   conversationReferences?: string | null;
+  /**
+   * Base path of the decks, reports and videos an answer made (XTM One serves
+   * it at `/chat/artifacts`). Their cards download one through
+   * `POST {apiBaseUrl}{artifacts}/{kind}/{id}/download` with `{ format }`, and
+   * follow a video still rendering through `GET {apiBaseUrl}{artifacts}/{kind}/{id}`.
+   *
+   * No default, for the same reason as {@link ApiEndpoints.approve}: a proxied
+   * host has to forward both routes before the cards offer them. Unset, the
+   * cards still render, with `Open in XTM One` and no download.
+   *
+   * REST backend only.
+   */
+  artifacts?: string | null;
 }
 
 /** A reusable prompt the user can insert into the composer. */
@@ -511,6 +524,8 @@ export interface ChatMessage {
   conversationRefs?: ChatConversationRef[];
   /** Agent-generated downloadable files attached to an assistant message. */
   attachments?: ChatAttachment[];
+  /** The decks, reports and videos an assistant message made, in marker order. */
+  artifacts?: ChatArtifact[];
   toolNames?: string[];
   toolCallCount?: number;
   iterations?: number;
@@ -578,6 +593,35 @@ export interface ChatAttachment {
    * `working_file` → de-emphasized scratch/working artifact chip.
    */
   fileTag?: 'download_file' | 'working_file';
+}
+
+/** What an answer can make besides a file. */
+export type ChatArtifactKind = 'presentation' | 'report' | 'video';
+
+/**
+ * A deck, report or video an answer made, as the backend describes it: the
+ * `artifacts` of a `done` event or of a restored answer, sent because the panel
+ * says it renders them (`supports_artifacts`). Rendered as a card where its
+ * `[[PRESENTATION:<id>]]`, `[[REPORT:<id>]]` or `[[VIDEO:<id>]]` marker stands.
+ */
+export interface ChatArtifact {
+  kind: ChatArtifactKind;
+  id: string;
+  title: string;
+  /** The page that shows it in XTM One; linked only when it is http(s). */
+  url?: string;
+  /** The slide a deck's marker points at. */
+  slideRef?: string;
+  slideCount?: number;
+  sectionCount?: number;
+  sceneCount?: number;
+  durationMs?: number;
+  /** A video's newest render: `pending`, `running`, `ready`, `failed` or `cancelled`. */
+  status?: string;
+  /** That render's progress, 0-100. */
+  progress?: number;
+  /** The formats it downloads in: `pdf`, `pptx`, `pptx_native`, `mp4`. Empty until a video is rendered. */
+  downloads: string[];
 }
 
 export interface AgentStatusState {

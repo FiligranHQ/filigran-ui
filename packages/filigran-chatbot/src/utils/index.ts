@@ -1,4 +1,4 @@
-import type { Translate } from '../types';
+import type { ChatArtifact, ChatArtifactKind, Translate } from '../types';
 
 export function hexAlpha(hex: string, alpha: number): string {
   const a = Math.round(alpha * 255)
@@ -395,22 +395,44 @@ export function timeAgo(iso: string | undefined, t: Translate): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-/** Matches a complete `[[FILE:<id>]]` deliverable marker agents embed in prose. */
-const FILE_MARKER_RE = /\[\[FILE:[^\]]+\]\]/g;
+/**
+ * A complete marker an agent embeds in prose: a file (`[[FILE:<id>]]`), or a
+ * deck, report or video it made (`[[PRESENTATION:<id>]]`, optionally naming a
+ * slide as `#/<slide id>`, `[[REPORT:<id>]]`, `[[VIDEO:<id>]]`). The backend
+ * matches the names case-insensitively, and so does this.
+ */
+const ANSWER_MARKER_RE = /\[\[(FILE|PRESENTATION|REPORT|VIDEO):([^\]#]+)(?:#\/([A-Za-z0-9_-]{1,64}))?\]\]/gi;
 
 /**
  * Matches an INCOMPLETE marker at the very end of the string. SSE streams can
- * split a `[[FILE:<id>]]` token before the closing `]]` arrives, so the tail
- * may be `[[FILE`, `[[FILE:`, `[[FILE:abc`, or `[[FILE:abc]` mid-stream. We
- * anchor on the literal `[[FILE` prefix (which is vanishingly unlikely to
- * appear legitimately at the end of prose) so it never clips real content.
+ * split a marker before the closing `]]` arrives, so the tail may be `[[FILE`,
+ * `[[VIDEO:`, `[[REPORT:abc` or `[[FILE:abc]` mid-stream. We anchor on a whole
+ * marker name (vanishingly unlikely to end real prose) so it never clips real
+ * content.
  */
-const PARTIAL_FILE_MARKER_RE = /\[\[FILE(?::[^\]]*)?\]?$/;
+const PARTIAL_ANSWER_MARKER_RE = /\[\[(?:FILE|PRESENTATION|REPORT|VIDEO)(?::[^\]]*)?\]?$/i;
+
+const ANSWER_MARKER_HEADS = ['[[FILE:', '[[PRESENTATION:', '[[REPORT:', '[[VIDEO:'];
+const LONGEST_MARKER_HEAD = Math.max(...ANSWER_MARKER_HEADS.map((head) => head.length));
 
 /**
- * Strip the `[[FILE:<id>]]` markers an agent embeds in its reply to point at
- * generated files. The actual files render as separate download chips, so the
- * raw markers must be removed from the prose. Complete markers are removed
+ * *text* without a trailing start of a marker name (`[`, `[[`, `[[PRES`). Only
+ * for an answer still streaming, where the next chunk may complete it: once
+ * the answer is done, the same text is prose.
+ */
+function withoutMarkerHead(text: string): string {
+  for (let i = Math.max(0, text.length - LONGEST_MARKER_HEAD); i < text.length; i++) {
+    if (text[i] !== '[') continue;
+    const tail = text.slice(i).toUpperCase();
+    if (ANSWER_MARKER_HEADS.some((head) => head.startsWith(tail))) return text.slice(0, i);
+  }
+  return text;
+}
+
+/**
+ * Strip the markers an agent embeds in its reply to point at the files, decks,
+ * reports and videos it made. They render as cards of their own, so the raw
+ * markers must be removed from the prose. Complete markers are removed
  * anywhere; an incomplete marker at the end is also removed so a partially
  * streamed token never flickers as raw `[[FILE:...` text.
  *
@@ -422,9 +444,9 @@ const PARTIAL_FILE_MARKER_RE = /\[\[FILE(?::[^\]]*)?\]?$/;
  * Applied to assistant content only — user-typed text is never touched, so a
  * user who literally types `[[FILE:x]]` still sees their own text.
  */
-export function stripFileMarkers(content: string): string {
+export function stripAnswerMarkers(content: string): string {
   if (!content) return content;
-  const stripped = content.replace(FILE_MARKER_RE, '').replace(PARTIAL_FILE_MARKER_RE, '');
+  const stripped = content.replace(ANSWER_MARKER_RE, '').replace(PARTIAL_ANSWER_MARKER_RE, '');
   if (stripped === content) return content;
   return stripped
     .replace(/[ \t]+\n/g, '\n')
@@ -432,46 +454,151 @@ export function stripFileMarkers(content: string): string {
     .trim();
 }
 
-/** An ordered piece of assistant content: prose text or a file marker. */
-export type FileMarkerPart = { type: 'text'; value: string } | { type: 'file'; fileId: string };
+/** An ordered piece of assistant content: prose text, a file marker or an artifact marker. */
+export type AnswerPart =
+  | { type: 'text'; value: string }
+  | { type: 'file'; fileId: string }
+  | { type: 'artifact'; kind: ChatArtifactKind; id: string; slideRef?: string };
 
 /**
- * Split assistant content into ordered text/file parts around complete
- * `[[FILE:<id>]]` markers, so the renderer can place each download card at the
- * marker's source position (preserving interleaved order). A trailing
- * incomplete marker (an SSE token split mid-stream) is removed from the final
- * text part so it never shows as raw `[[FILE:...` text.
+ * Split assistant content into ordered parts around complete markers, so the
+ * renderer can place each file or artifact card at its marker's source
+ * position (preserving interleaved order). An artifact id is lowercased, the
+ * form the backend describes it in. A trailing incomplete marker (an SSE token
+ * split mid-stream) is removed from the final text part so it never shows as
+ * raw `[[FILE:...` text, and so is, while *streaming*, a chunk that stopped
+ * inside a marker's name (`[[PRES`).
  */
-export function splitFileMarkers(content: string): FileMarkerPart[] {
+export function splitAnswerMarkers(content: string, streaming = false): AnswerPart[] {
   if (!content) return [];
-  const parts: FileMarkerPart[] = [];
-  const re = /\[\[FILE:([^\]]+)\]\]/g;
+  const parts: AnswerPart[] = [];
+  const re = new RegExp(ANSWER_MARKER_RE.source, 'gi');
   let lastIndex = 0;
   let match: RegExpExecArray | null = re.exec(content);
   while (match !== null) {
     if (match.index > lastIndex) {
       parts.push({ type: 'text', value: content.slice(lastIndex, match.index) });
     }
-    parts.push({ type: 'file', fileId: match[1] });
+    const name = match[1].toLowerCase();
+    if (name === 'file') {
+      parts.push({ type: 'file', fileId: match[2] });
+    } else {
+      parts.push({ type: 'artifact', kind: name as ChatArtifactKind, id: match[2].toLowerCase(), slideRef: match[3] || undefined });
+    }
     lastIndex = re.lastIndex;
     match = re.exec(content);
   }
-  const tail = content.slice(lastIndex).replace(PARTIAL_FILE_MARKER_RE, '');
+  const rest = content.slice(lastIndex).replace(PARTIAL_ANSWER_MARKER_RE, '');
+  const tail = streaming ? withoutMarkerHead(rest) : rest;
   if (tail) parts.push({ type: 'text', value: tail });
   return parts;
 }
 
 /**
  * The markdown documents an assistant answer is drawn from, in order: each
- * prose part between its file markers (`splitFileMarkers`), prepared as
+ * prose part between its markers (`splitAnswerMarkers`), prepared as
  * `MarkdownMessage` prepares it (`prepareMarkdown`). The transcript parses each
  * one as a document of its own, and so must anything that reads the answer
  * (read aloud) to read what the screen shows.
  */
 export function answerMarkdownSources(content: string): string[] {
   const sources: string[] = [];
-  for (const part of splitFileMarkers(content)) {
+  for (const part of splitAnswerMarkers(content)) {
     if (part.type === 'text' && part.value.trim()) sources.push(prepareMarkdown(part.value));
   }
   return sources;
+}
+
+/** `kind:id`, how an artifact marker finds the descriptor it renders. */
+export const artifactKey = (kind: string, id: string): string => `${kind}:${id.toLowerCase()}`;
+
+/** A video whose newest render has not finished: its card follows it. */
+export const isRenderInProgress = (artifact: ChatArtifact): boolean =>
+  artifact.kind === 'video' && (artifact.status === 'pending' || artifact.status === 'running');
+
+/** The kind's name, for a card with no title and for its accessible label. */
+export function artifactKindLabel(kind: ChatArtifactKind, t: Translate): string {
+  if (kind === 'presentation') return t('Presentation');
+  if (kind === 'report') return t('Report');
+  return t('Video');
+}
+
+/** The facts line under a card's title: its slides, its sections, or its scenes and length. */
+export function artifactFacts(artifact: ChatArtifact, t: Translate): string {
+  const parts: string[] = [];
+  if (artifact.kind === 'presentation' && artifact.slideCount !== undefined) {
+    parts.push(translate(t, '{count} slides', { count: artifact.slideCount }));
+  }
+  if (artifact.kind === 'report' && artifact.sectionCount !== undefined) {
+    parts.push(translate(t, '{count} sections', { count: artifact.sectionCount }));
+  }
+  if (artifact.kind === 'video') {
+    if (artifact.sceneCount !== undefined) parts.push(translate(t, '{count} scenes', { count: artifact.sceneCount }));
+    const duration = formatVideoDuration(artifact.durationMs);
+    if (duration) parts.push(duration);
+  }
+  return parts.join(' · ');
+}
+
+/** What a video's render is doing, when the card has something to say about it. */
+export function videoRenderLabel(artifact: ChatArtifact, t: Translate): string | undefined {
+  if (artifact.kind !== 'video') return undefined;
+  if (artifact.status === 'running') {
+    return translate(t, 'Rendering {progress}%', { progress: Math.round(artifact.progress ?? 0) });
+  }
+  if (artifact.status === 'pending') return t('Waiting to render');
+  if (artifact.downloads.length > 0) return undefined;
+  if (artifact.status === 'failed' || artifact.status === 'cancelled') return t('The render did not finish');
+  return t('Not rendered yet');
+}
+
+/** The label of a download button. */
+export function artifactDownloadLabel(format: string, t: Translate): string {
+  if (format === 'pdf') return 'PDF';
+  if (format === 'mp4') return 'MP4';
+  if (format === 'pptx') return t('PowerPoint');
+  if (format === 'pptx_native') return t('PowerPoint (editable)');
+  return format.toUpperCase();
+}
+
+/** The XTM One page of a card, linked only when it is http(s). */
+export function artifactLink(artifact: ChatArtifact): string | undefined {
+  if (!artifact.url) return undefined;
+  try {
+    const url = new URL(artifact.url);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The extension a download in *format* is saved with. */
+export function artifactFileExtension(format: string): string {
+  return format === 'pptx_native' ? 'pptx' : format;
+}
+
+/** `m:ss`, the length of a video; `undefined` for nothing to show. */
+export function formatVideoDuration(ms: number | undefined): string | undefined {
+  if (!ms || ms <= 0) return undefined;
+  const total = Math.round(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * The file name a `Content-Disposition` header names: the RFC 5987
+ * `filename*=UTF-8''...` form first, else the quoted `filename="..."`.
+ */
+export function filenameFromContentDisposition(header: string | null | undefined): string | undefined {
+  if (!header) return undefined;
+  const extended = /filename\*\s*=\s*(?:UTF-8|utf-8)''([^;]+)/.exec(header);
+  if (extended) {
+    try {
+      return decodeURIComponent(extended[1].trim().replace(/^"|"$/g, '')) || undefined;
+    } catch {
+      // A malformed escape: fall back to the plain name.
+    }
+  }
+  const plain = /filename\s*=\s*("([^"]*)"|[^;]+)/.exec(header);
+  const name = plain ? (plain[2] ?? plain[1]).trim() : '';
+  return name || undefined;
 }

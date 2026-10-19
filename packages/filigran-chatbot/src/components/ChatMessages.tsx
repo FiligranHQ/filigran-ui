@@ -1,6 +1,8 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type {
   AgentStatusState,
+  ChatArtifact,
+  ChatArtifactKind,
   ChatAttachment,
   ChatConversationRef,
   ChatMessage,
@@ -10,7 +12,7 @@ import type {
 } from '../types';
 import { feedbackKeyOf, useMessageFeedback, type FeedbackEntry } from '../hooks/useMessageFeedback';
 import { useSpeechReader } from '../hooks/useSpeechReader';
-import { answerMarkdownSources, splitFileMarkers, stripFileMarkers } from '../utils';
+import { answerMarkdownSources, artifactKey, splitAnswerMarkers, stripAnswerMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
 import { formatMessageTime } from '../utils/messageTime';
 import {
@@ -38,6 +40,7 @@ import {
   VolumeIcon,
   VolumeOffIcon,
 } from './icons';
+import { ArtifactCard } from './ArtifactCard';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
 import { ChatThinking } from './ChatThinking';
@@ -86,6 +89,10 @@ interface ChatMessagesProps {
    * attachments inline. Attachments stay chips/cards when omitted.
    */
   resolveAttachmentUrl?: (attachment: ChatAttachment) => string | undefined;
+  /** Download a deck, report or video through the host's proxy (`ApiEndpoints.artifacts`). */
+  onDownloadArtifact?: (artifact: ChatArtifact, format: string) => Promise<void>;
+  /** Describe one again, to follow a video that is still rendering. */
+  onRefreshArtifact?: (kind: ChatArtifactKind, id: string) => Promise<ChatArtifact | undefined>;
   /** Auth headers used when fetching previewed images (see `ChatImage`). */
   requestHeaders?: Record<string, string>;
   /** Host-level override for the waiting panel (messages and the invitation to play). */
@@ -375,6 +382,8 @@ interface MessageRowProps {
   onRelativeLinkClick?: (href: string) => void;
   onDownloadFile?: (attachment: ChatAttachment) => void;
   resolveAttachmentUrl?: (attachment: ChatAttachment) => string | undefined;
+  onDownloadArtifact?: (artifact: ChatArtifact, format: string) => Promise<void>;
+  onRefreshArtifact?: (kind: ChatArtifactKind, id: string) => Promise<ChatArtifact | undefined>;
   requestHeaders?: Record<string, string>;
   /** How this answer's thumbs work, or null for none (`feedbackModeOf`). */
   feedbackMode: FeedbackMode | null;
@@ -411,6 +420,8 @@ const MessageRow = memo(
     onRelativeLinkClick,
     onDownloadFile,
     resolveAttachmentUrl,
+    onDownloadArtifact,
+    onRefreshArtifact,
     requestHeaders,
     feedbackMode,
     feedback,
@@ -491,17 +502,25 @@ const MessageRow = memo(
       </span>
     );
 
+    const renderArtifactCard = (artifact: ChatArtifact, key: string) => (
+      <ArtifactCard key={key} artifact={artifact} t={t} onDownload={onDownloadArtifact} onRefresh={onRefreshArtifact} />
+    );
+
     // Render assistant content as an ordered interleave of prose segments and
-    // download cards, so a reply with markers like
-    // `text [[FILE:a]] more text [[FILE:b]]` keeps the cards at their source
-    // position. Cards only render when a download handler is wired
-    // (`onDownloadFile`); attachments whose marker isn't found in the prose are
-    // appended as a fallback. During streaming the attachments aren't hydrated
-    // yet, so only prose (markers stripped) renders.
+    // cards, so a reply with markers like
+    // `text [[FILE:a]] more text [[PRESENTATION:b]]` keeps the cards at their
+    // source position. File cards only render when a download handler is wired
+    // (`onDownloadFile`); a deck, report or video always renders, from its
+    // descriptor. Attachments and artifacts whose marker isn't found in the
+    // prose are appended as a fallback; a marker with no descriptor renders
+    // nothing. During streaming neither is hydrated yet, so only prose (markers
+    // stripped) renders.
     const buildAssistantBlocks = (): React.ReactNode[] => {
-      const parts = splitFileMarkers(msg.content);
+      const parts = splitAnswerMarkers(msg.content, isStreaming);
       const attByFileId = new Map((msg.attachments ?? []).map((a) => [a.fileId, a] as const));
+      const artifactsByKey = new Map((msg.artifacts ?? []).map((a) => [artifactKey(a.kind, a.id), a] as const));
       const used = new Set<string>();
+      const usedArtifacts = new Set<string>();
       const blocks: React.ReactNode[] = [];
 
       parts.forEach((part, i) => {
@@ -519,12 +538,27 @@ const MessageRow = memo(
               </div>,
             );
           }
+        } else if (part.type === 'artifact') {
+          const key = artifactKey(part.kind, part.id);
+          const artifact = artifactsByKey.get(key);
+          if (artifact && !usedArtifacts.has(key)) {
+            usedArtifacts.add(key);
+            blocks.push(renderArtifactCard(artifact, `a-${key}-${i}`));
+          }
         } else if (onDownloadFile) {
           const att = attByFileId.get(part.fileId);
           if (att) {
             used.add(part.fileId);
             blocks.push(renderAttachmentCard(att, `f-${part.fileId}-${i}`));
           }
+        }
+      });
+
+      (msg.artifacts ?? []).forEach((artifact) => {
+        const key = artifactKey(artifact.kind, artifact.id);
+        if (!usedArtifacts.has(key)) {
+          usedArtifacts.add(key);
+          blocks.push(renderArtifactCard(artifact, `orphan-a-${key}`));
         }
       });
 
@@ -627,7 +661,7 @@ const MessageRow = memo(
     // Actions only make sense on a finished answer, so they stay hidden while
     // the message is still streaming.
     const showActions = isAssistant && !isEmpty && !isStreaming;
-    const plainText = stripFileMarkers(msg.content);
+    const plainText = stripAnswerMarkers(msg.content);
     const speechDocuments = useMemo(
       () => (showActions && canSpeak ? answerMarkdownSources(msg.content) : null),
       [showActions, canSpeak, msg.content],
@@ -749,6 +783,8 @@ export const ChatMessages = ({
   onRelativeLinkClick,
   onDownloadFile,
   resolveAttachmentUrl,
+  onDownloadArtifact,
+  onRefreshArtifact,
   requestHeaders,
   miniGameEnabled = true,
   onPlayWaitingGame,
@@ -968,6 +1004,8 @@ export const ChatMessages = ({
             onRelativeLinkClick={onRelativeLinkClick}
             onDownloadFile={onDownloadFile}
             resolveAttachmentUrl={resolveAttachmentUrl}
+            onDownloadArtifact={onDownloadArtifact}
+            onRefreshArtifact={onRefreshArtifact}
             requestHeaders={requestHeaders}
             feedbackMode={msg.role === 'assistant' ? feedbackModeOf(msg.serverId, feedbackUrl, conversationId, !!onMessageFeedback) : null}
             feedback={feedbackEntries[feedbackKeyOf(msg)]}

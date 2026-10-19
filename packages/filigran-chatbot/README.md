@@ -677,6 +677,38 @@ abandonment, never the person deciding.
 
 REST backend only: `legacy` and `ag-ui` never meet this gate.
 
+### Decks, reports and videos
+
+An answer that made a deck, a report or a video carries a marker where it shows
+it: `[[PRESENTATION:<id>]]` (`[[PRESENTATION:<id>#/<slide id>]]` for one
+slide), `[[REPORT:<id>]]`, `[[VIDEO:<id>]]`. The panel sends
+`supports_artifacts: true` with every message and session restore of the REST
+backend, and XTM One then describes each one in the answer's `artifacts`; the
+panel draws a card where its marker stands. A marker is never shown as text, a
+descriptor whose marker is missing renders after the prose, and a marker with
+no descriptor renders nothing.
+
+| Field | Meaning |
+| --- | --- |
+| `kind`, `id`, `title` | `presentation`, `report` or `video`, and what it is called. |
+| `url` | Its page in XTM One: the card's `Open in XTM One` (http(s) only, new tab). |
+| `slide_count`, `slide_ref` | A deck's slides, and the slide its marker named. |
+| `section_count` | A report's sections. |
+| `scene_count`, `duration_ms`, `status`, `progress` | A video's scenes and length, and its newest render (`pending`, `running`, `ready`, `failed`, `cancelled`; progress 0-100). |
+| `downloads` | The formats it downloads in: `pdf`, `pptx`, `pptx_native`, `mp4`. Empty until a video has a finished render. |
+
+The downloads go through the host, like file downloads, once it names the
+route: `apiEndpoints.artifacts` has **no default**, for the same reason as
+`apiEndpoints.approve`. Unset, the cards show and link to XTM One, with no
+download buttons.
+
+| Request | Purpose |
+| --- | --- |
+| `POST {apiBaseUrl}{artifacts}/{kind}/{id}/download` | `{ "format": "pdf" }`: the file, saved under its `Content-Disposition` name. A failure goes to `onDownloadError` with the name of the file asked for. |
+| `GET {apiBaseUrl}{artifacts}/{kind}/{id}` | The descriptor as of now: a card asks again 10 seconds after each answer, one request at a time, for 15 minutes at most, while its video renders. |
+
+XTM One serves both at `/chat/artifacts`.
+
 ### Message feedback
 
 Every message ends with a footer. An assistant answer (once it has finished
@@ -912,6 +944,23 @@ Every key the package can ask for, grouped by where it appears:
 - `'Stop reading'`
 - `'Tell us what went wrong (optional)'`
 - `'What could be improved?'`
+
+**Decks, reports and videos**
+
+- `'Download {format}'`
+- `'Not rendered yet'`
+- `'Open in XTM One'`
+- `'PowerPoint'`
+- `'PowerPoint (editable)'`
+- `'Presentation'`
+- `'Rendering {progress}%'`
+- `'Report'`
+- `'The render did not finish'`
+- `'Video'`
+- `'Waiting to render'`
+- `'{count} scenes'`
+- `'{count} sections'`
+- `'{count} slides'`
 
 **Agent status**
 

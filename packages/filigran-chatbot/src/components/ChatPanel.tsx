@@ -1,10 +1,10 @@
 import { type FunctionComponent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatAttachment, ChatPanelProps, Translate } from '../types';
-import { hexAlpha, identity } from '../utils';
+import type { ChatArtifact, ChatArtifactKind, ChatAttachment, ChatPanelProps, Translate } from '../types';
+import { artifactFileExtension, filenameFromContentDisposition, hexAlpha, identity } from '../utils';
 import { feedbackBaseUrl } from '../utils/feedback';
 import { conversationReferencesUrl } from '../utils/conversationRefs';
 import { pendingWorkspaceStillFileable, returnRefreshDue } from '../utils/workspaces';
-import { parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
+import { parseArtifact, parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
@@ -449,6 +449,54 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
     [resolveAttachmentUrl, requestHeaders, onDownloadError],
   );
 
+  // The decks, reports and videos an answer made are downloaded and followed
+  // through the host's proxy too, once the host names the route
+  // (`apiEndpoints.artifacts`, no default). Without it the cards still show
+  // and link to XTM One.
+  const artifactsBase = backendType === 'rest' && apiEndpoints?.artifacts ? `${apiBaseUrl}${apiEndpoints.artifacts}` : null;
+  const artifactUrl = useCallback(
+    (kind: ChatArtifactKind, id: string) => `${artifactsBase}/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`,
+    [artifactsBase],
+  );
+
+  const handleDownloadArtifact = useCallback(
+    async (artifact: ChatArtifact, format: string) => {
+      const fallbackName = `${artifact.title || artifact.kind}.${artifactFileExtension(format)}`;
+      try {
+        const res = await fetch(`${artifactUrl(artifact.kind, artifact.id)}/download`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+          body: JSON.stringify({ format }),
+        });
+        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = filenameFromContentDisposition(res.headers.get('content-disposition')) ?? fallbackName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+      } catch (err) {
+        // The host's notification path for a failed download, named after the
+        // file the user asked for.
+        onDownloadError?.(err, { fileId: artifact.id, filename: fallbackName, type: format.toUpperCase() });
+      }
+    },
+    [artifactUrl, requestHeaders, onDownloadError],
+  );
+
+  const handleRefreshArtifact = useCallback(
+    async (kind: ChatArtifactKind, id: string) => {
+      const res = await fetch(artifactUrl(kind, id), { credentials: 'include', headers: { ...(requestHeaders ?? {}) } });
+      if (!res.ok) return undefined;
+      return parseArtifact(await res.json());
+    },
+    [artifactUrl, requestHeaders],
+  );
+
   const cssVars = {
     '--chat-accent': accentColor,
     '--chat-accent-10': hexAlpha(accentColor, 0.1),
@@ -511,6 +559,7 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
       body: JSON.stringify({
         conversation_id: conversationId,
         agent_slug: selectedAgent.slug,
+        supports_artifacts: true,
       }),
     })
       .then((res) => {
@@ -717,6 +766,8 @@ export const ChatPanel: FunctionComponent<ChatPanelProps> = ({
               onRelativeLinkClick={onRelativeLinkClick}
               onDownloadFile={canDownload ? handleDownloadFile : undefined}
               resolveAttachmentUrl={canDownload && !disableImagePreviews ? resolveAttachmentUrl : undefined}
+              onDownloadArtifact={artifactsBase ? handleDownloadArtifact : undefined}
+              onRefreshArtifact={artifactsBase ? handleRefreshArtifact : undefined}
               requestHeaders={requestHeaders}
               miniGameEnabled={miniGameEnabled}
               onPlayWaitingGame={onPlayWaitingGame}
