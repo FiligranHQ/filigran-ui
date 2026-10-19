@@ -8,7 +8,36 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
-## 3.13.0 — unreleased
+## 3.14.0 — 2026-10-19
+
+### Added
+
+- A deck, report or video the assistant made shows as a card where its
+  `[[PRESENTATION:…]]`, `[[REPORT:…]]` or `[[VIDEO:…]]` marker stands (#450):
+  its title, its slides, sections or scenes and length, a video's render
+  progress, and `Open in XTM One`. The marker never shows as text, mid-stream
+  or after a reload, and copy and read aloud skip it. The panel tells XTM One
+  it renders them (`supports_artifacts`); XTM One describes each one in the
+  answer's `artifacts`.
+- The fullscreen history can be grouped by workspace (#276): one foldable group
+  per workspace the user can file into, then `Not in a workspace` and
+  `Other workspaces`. A workspace is created, renamed and deleted from the
+  list, and a conversation is started in one, or moved to one from its row menu
+  or by dragging it onto a group.
+
+### Host opt-in
+
+- `apiEndpoints.artifacts` (no default; XTM One serves `/chat/artifacts`) lets
+  the deck, report and video cards download them (PDF and PowerPoint for a
+  deck, PDF for a report, MP4 for a rendered video) and follow a video while
+  it renders, through the host's proxy. Without it the cards show and link to
+  XTM One, with no download. A failed download goes to `onDownloadError`, with
+  the name of the file asked for.
+- `apiEndpoints.workspaces` (no default, like `approve`) turns the workspace
+  groups on, once the host's proxy forwards the workspace routes. A backend
+  that refuses the list leaves the history flat, as before.
+
+## 3.13.0 — 2026-10-16
 
 ### Added
 
@@ -19,13 +48,6 @@ This file starts at 3.10.0; earlier releases are on the
   accessible name, state and in-app destination, so the agent can name the one
   it means.
 - `Acting on the page…` shows on the status line while a step runs.
-- A deck, report or video the assistant made shows as a card where its
-  `[[PRESENTATION:…]]`, `[[REPORT:…]]` or `[[VIDEO:…]]` marker stands (#450):
-  its title, its slides, sections or scenes and length, a video's render
-  progress, and `Open in XTM One`. The marker never shows as text, mid-stream
-  or after a reload, and copy and read aloud skip it. The panel tells XTM One
-  it renders them (`supports_artifacts`); XTM One describes each one in the
-  answer's `artifacts`.
 
 ### Host opt-in
 
@@ -33,12 +55,6 @@ This file starts at 3.10.0; earlier releases are on the
   **and** passes `onRelativeLinkClick`, because its proxy has to forward the
   answer whole. A host that offers neither is unaffected, and a step arriving
   without that opt-in is refused without the page being read or touched.
-- `apiEndpoints.artifacts` (no default; XTM One serves `/chat/artifacts`) lets
-  the deck, report and video cards download them (PDF and PowerPoint for a
-  deck, PDF for a report, MP4 for a rendered video) and follow a video while
-  it renders, through the host's proxy. Without it the cards show and link to
-  XTM One, with no download. A failed download goes to `onDownloadError`, with
-  the name of the file asked for.
 
 ### Security
 
