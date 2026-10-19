@@ -45,6 +45,16 @@ test('a marker cut short at the end of a streamed answer never shows', () => {
   assert.equal(stripAnswerMarkers('Rendering [[VIDEO:abc'), 'Rendering');
 });
 
+test('a chunk that stops inside a marker name is held while the answer streams, and is prose once it is done', () => {
+  for (const tail of ['[', '[[', '[[F', '[[PRES', '[[presentatio', '[[Rep', '[[VID']) {
+    assert.deepEqual(splitAnswerMarkers(`Working on it ${tail}`, true), [{ type: 'text', value: 'Working on it ' }], tail);
+    assert.deepEqual(splitAnswerMarkers(`Working on it ${tail}`), [{ type: 'text', value: `Working on it ${tail}` }], tail);
+  }
+  for (const prose of ['See [the docs', 'An array [[1, 2]', 'Pick [[Q']) {
+    assert.deepEqual(splitAnswerMarkers(prose, true), [{ type: 'text', value: prose }], prose);
+  }
+});
+
 test('copy and read aloud skip every marker, and ordinary prose is left untouched', () => {
   assert.equal(stripAnswerMarkers(`Here is the deck.\n\n[[PRESENTATION:${DECK}]]\n\n[[FILE:a]]`), 'Here is the deck.');
   assert.equal(stripAnswerMarkers('  indented\n'), '  indented\n');

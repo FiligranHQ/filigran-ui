@@ -412,6 +412,23 @@ const ANSWER_MARKER_RE = /\[\[(FILE|PRESENTATION|REPORT|VIDEO):([^\]#]+)(?:#\/([
  */
 const PARTIAL_ANSWER_MARKER_RE = /\[\[(?:FILE|PRESENTATION|REPORT|VIDEO)(?::[^\]]*)?\]?$/i;
 
+const ANSWER_MARKER_HEADS = ['[[FILE:', '[[PRESENTATION:', '[[REPORT:', '[[VIDEO:'];
+const LONGEST_MARKER_HEAD = Math.max(...ANSWER_MARKER_HEADS.map((head) => head.length));
+
+/**
+ * *text* without a trailing start of a marker name (`[`, `[[`, `[[PRES`). Only
+ * for an answer still streaming, where the next chunk may complete it: once
+ * the answer is done, the same text is prose.
+ */
+function withoutMarkerHead(text: string): string {
+  for (let i = Math.max(0, text.length - LONGEST_MARKER_HEAD); i < text.length; i++) {
+    if (text[i] !== '[') continue;
+    const tail = text.slice(i).toUpperCase();
+    if (ANSWER_MARKER_HEADS.some((head) => head.startsWith(tail))) return text.slice(0, i);
+  }
+  return text;
+}
+
 /**
  * Strip the markers an agent embeds in its reply to point at the files, decks,
  * reports and videos it made. They render as cards of their own, so the raw
@@ -449,9 +466,10 @@ export type AnswerPart =
  * position (preserving interleaved order). An artifact id is lowercased, the
  * form the backend describes it in. A trailing incomplete marker (an SSE token
  * split mid-stream) is removed from the final text part so it never shows as
- * raw `[[FILE:...` text.
+ * raw `[[FILE:...` text, and so is, while *streaming*, a chunk that stopped
+ * inside a marker's name (`[[PRES`).
  */
-export function splitAnswerMarkers(content: string): AnswerPart[] {
+export function splitAnswerMarkers(content: string, streaming = false): AnswerPart[] {
   if (!content) return [];
   const parts: AnswerPart[] = [];
   const re = new RegExp(ANSWER_MARKER_RE.source, 'gi');
@@ -470,7 +488,8 @@ export function splitAnswerMarkers(content: string): AnswerPart[] {
     lastIndex = re.lastIndex;
     match = re.exec(content);
   }
-  const tail = content.slice(lastIndex).replace(PARTIAL_ANSWER_MARKER_RE, '');
+  const rest = content.slice(lastIndex).replace(PARTIAL_ANSWER_MARKER_RE, '');
+  const tail = streaming ? withoutMarkerHead(rest) : rest;
   if (tail) parts.push({ type: 'text', value: tail });
   return parts;
 }

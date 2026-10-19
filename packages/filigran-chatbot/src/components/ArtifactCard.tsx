@@ -34,9 +34,10 @@ interface ArtifactCardProps {
 export const ArtifactCard = ({ artifact, t, onDownload, onRefresh }: ArtifactCardProps) => {
   const [current, setCurrent] = useState(artifact);
   const [busyFormat, setBusyFormat] = useState<string | null>(null);
+  const [gaveUp, setGaveUp] = useState(false);
   useEffect(() => setCurrent(artifact), [artifact]);
 
-  const following = !!onRefresh && isRenderInProgress(current);
+  const following = !!onRefresh && !gaveUp && isRenderInProgress(current);
   useEffect(() => {
     if (!following || !onRefresh) return undefined;
     let polls = 0;
@@ -45,6 +46,7 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh }: ArtifactCar
       polls += 1;
       if (polls > REFRESH_LIMIT) {
         clearInterval(timer);
+        setGaveUp(true);
         return;
       }
       onRefresh(current.kind, current.id)

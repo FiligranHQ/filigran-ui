@@ -516,7 +516,7 @@ const MessageRow = memo(
     // nothing. During streaming neither is hydrated yet, so only prose (markers
     // stripped) renders.
     const buildAssistantBlocks = (): React.ReactNode[] => {
-      const parts = splitAnswerMarkers(msg.content);
+      const parts = splitAnswerMarkers(msg.content, isStreaming);
       const attByFileId = new Map((msg.attachments ?? []).map((a) => [a.fileId, a] as const));
       const artifactsByKey = new Map((msg.artifacts ?? []).map((a) => [artifactKey(a.kind, a.id), a] as const));
       const used = new Set<string>();
