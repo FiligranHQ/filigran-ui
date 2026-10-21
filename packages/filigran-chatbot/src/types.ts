@@ -380,9 +380,9 @@ export interface ChatContextBreakdown {
 export interface ChatPanelProps {
   mode: ChatPanelMode;
   /** Shows the close button; inline mode has none. */
-  onClose: () => void;
+  onClose?: () => void;
   /** Shows the view switcher; inline mode has none. */
-  onModeChange: (mode: ChatMode) => void;
+  onModeChange?: (mode: ChatMode) => void;
   topOffset?: number;
   apiBaseUrl: string;
   /** Custom API endpoint configuration. */
@@ -666,8 +666,8 @@ export interface ChatStreamEventInfo {
 
 /** What a host can do to a mounted panel, through its `ref`. */
 export interface ChatPanelHandle {
-  /** Send *text* as the user, leaving the composer's own draft alone. */
-  send: (text: string, options?: ChatSendOptions) => void;
+  /** Send *text* as the user, leaving the composer's own draft alone; resolves to what became of it. */
+  send: (text: string, options?: ChatSendOptions) => Promise<ChatSendOutcome>;
   /** Start a new conversation, in a workspace and with an agent (id or slug) if given. */
   newConversation: (options?: { workspaceId?: string; agent?: string }) => void;
   selectConversation: (conversationId: string) => void;
@@ -689,6 +689,9 @@ export interface ChatSendDraft {
   /** A turn is running: the send would steer it. */
   turnRunning: boolean;
 }
+
+/** What became of a send: it opened a turn, joined the running one, waits for it to end, or went nowhere. */
+export type ChatSendOutcome = 'sent' | 'steered' | 'held' | 'dropped';
 
 /** What `onBeforeSend` decides: `false` takes the send over, an object adjusts it. */
 export type ChatSendDecision = false | { text?: string; extras?: Record<string, unknown> } | void;

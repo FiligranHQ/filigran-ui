@@ -23,7 +23,8 @@ interface ChatWelcomeProps {
   logoIcon: React.ReactNode;
   /** Already translated by the caller — see `ChatPanel`. */
   promptSuggestions: string[];
-  onPromptClick: (prompt: string) => void;
+  /** Left out when nothing can be sent: the suggestions are not offered then. */
+  onPromptClick?: (prompt: string) => void;
   /** Selected agent, so the screen says who is about to answer. */
   agentName?: string;
   agentDescription?: string | null;
@@ -81,6 +82,7 @@ export const ChatWelcome = ({
             ))}
           </div>
         ) : (
+          onPromptClick &&
           promptSuggestions.map((prompt) => (
             <button
               key={prompt}

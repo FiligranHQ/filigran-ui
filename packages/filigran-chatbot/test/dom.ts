@@ -75,6 +75,8 @@ export function sseStream() {
   return {
     response: () => new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }),
     send: (frame: Record<string, unknown>) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(frame)}\n\n`)),
+    /** The connection drops mid-stream. */
+    fail: () => controller.error(new TypeError('network error')),
     close: () => {
       try {
         controller.close();

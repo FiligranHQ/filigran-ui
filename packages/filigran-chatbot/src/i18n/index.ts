@@ -21,10 +21,11 @@ export function catalogFor(locale: string | undefined): Catalog | undefined {
 
 /**
  * The panel's translator: the host's `t` where it translates a key (returns
- * something other than the key), the panel's own catalog otherwise.
+ * something other than the key), the panel's own catalog otherwise. A host
+ * that translates but names no `locale` keeps its English, not the browser's language.
  */
 export function createTranslate(hostT: Translate | undefined, locale: string | undefined): Translate {
-  const catalog = catalogFor(locale);
+  const catalog = locale || !hostT ? catalogFor(locale) : undefined;
   return (key) => {
     const hosted = hostT?.(key);
     if (hosted && hosted !== key) return hosted;

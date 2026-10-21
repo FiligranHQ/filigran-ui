@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ApiEndpoints, BackendType, XtmAgent } from '../types';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 
@@ -27,6 +27,8 @@ interface UseAgentsReturn {
   agentsError: boolean;
   /** True once the list is known (loaded, failed, or not fetched at all). */
   agentsSettled: boolean;
+  /** True when the host serves no agent list: conversations go without one. */
+  agentsDisabled: boolean;
   selectedAgent: XtmAgent | null;
   setSelectedAgent: React.Dispatch<React.SetStateAction<XtmAgent | null>>;
   agentMenuOpen: boolean;
@@ -79,6 +81,8 @@ export function useAgents({
   const reloadAgents = useCallback(() => setReloadNonce((n) => n + 1), []);
   const [selectedAgent, setSelectedAgent] = useState<XtmAgent | null>(null);
   const [agentMenuOpen, setAgentMenuOpen] = useState(false);
+  // Only the latest read lands: a slow earlier one cannot overwrite it.
+  const requestSeqRef = useRef(0);
 
   useEffect(() => {
     // Skip agents fetch if disabled, using single endpoint mode, or legacy backend
@@ -87,8 +91,9 @@ export function useAgents({
       return;
     }
     const agentsUrl = `${apiBaseUrl}${apiEndpoints?.agents ?? '/chat/agents'}`;
+    const seq = ++requestSeqRef.current;
+    const isLatest = () => seq === requestSeqRef.current;
     setAgentsLoading(true);
-    setAgentsError(false);
     fetch(agentsUrl, { headers: requestHeaders })
       .then((res) => {
         // A non-2xx is a failure, not an empty catalogue. Mapping it to `[]`
@@ -98,8 +103,10 @@ export function useAgents({
         return res.json();
       })
       .then((data: unknown) => {
+        if (!isLatest()) return;
         const list = parseAgents(data);
         setAgents(list);
+        setAgentsError(false);
         if (list.length === 0) return;
         const pickStarting = () => {
           const savedSlug = readStorage('local', agentStorageKey);
@@ -110,12 +117,13 @@ export function useAgents({
         setSelectedAgent((prev) => (prev ? (list.find((a) => a.id === prev.id) ?? pickStarting()) : pickStarting()));
       })
       .catch(() => {
-        // A failed reload keeps the list it had.
-        if (reloadNonce > 0) return;
-        setAgents([]);
+        if (!isLatest()) return;
         setAgentsError(true);
+        // A failed reload keeps the list it had.
+        if (reloadNonce === 0) setAgents([]);
       })
       .finally(() => {
+        if (!isLatest()) return;
         setAgentsLoading(false);
         setAgentsSettled(true);
       });
@@ -138,6 +146,7 @@ export function useAgents({
     agentsLoading,
     agentsError,
     agentsSettled,
+    agentsDisabled,
     selectedAgent,
     setSelectedAgent,
     agentMenuOpen,

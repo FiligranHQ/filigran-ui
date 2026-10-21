@@ -111,8 +111,8 @@ import { ChatPanel } from '@filigran/chatbot';
 | `fontFamily`        | `string`                                  | —            | Font of the panel's text |
 | `agentMentions`     | `boolean`                                 | `false`      | `@` also mentions agents of the agent list; the message carries their ids as `mentioned_agent_ids` |
 | `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
-| `onReady`           | `() => void`                              | —            | Called once the panel has chosen its agent and read back the conversation; handle calls made earlier wait for it |
-| `onBeforeSend`      | `(draft) => false \| { text?, extras? } \| void` | — | Sees every send first (`draft.source`: `'composer'` or `'host'`): `false` takes it over, an object rewords it or adds body fields |
+| `onReady`           | `() => void`                              | —            | Called once, when the panel has chosen its agent and read back the conversation on screen; handle calls made earlier wait for it and then run in order |
+| `onBeforeSend`      | `(draft) => false \| { text?, extras? } \| void` | — | Sees every non-empty send first, synchronously (`draft.source`: `'composer'` or `'host'`; `draft.turnRunning`: it would steer): `false` takes it over (the composer keeps its draft), an object rewords it or adds body fields. The panel's own fields cannot be set this way |
 | `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer |
 
 Plain-data props (`requestHeaders`, `apiEndpoints`, `pageContext`, `promptSuggestions`) are compared by content and callback props are called
@@ -145,7 +145,7 @@ chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigatio
 
 | Method | What it does |
 | --- | --- |
-| `send(text, { extras })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body |
+| `send(text, { extras })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body. Resolves to `'sent'`, `'steered'` (joined the running turn), `'held'` (sent when the turn ends) or `'dropped'` (empty, taken over by `onBeforeSend`, or `readOnly`) |
 | `newConversation({ workspaceId, agent })` | Starts a new chat, in a workspace and with an agent (id or slug) if given |
 | `selectConversation(id)` | Opens a conversation |
 | `setDraft(text)` / `focusComposer()` | Fills / focuses the composer |
@@ -181,7 +181,8 @@ const markers = useMemo(
 ```
 
 A card that throws shows `This item could not be loaded.` and leaves the rest
-of the answer on screen. Like `t`, the function props are used as given: keep
+of the answer on screen. A marker's arguments come from the model's answer:
+treat them as untrusted input, never as markup or a URL to follow unchecked. Like `t`, the function props are used as given: keep
 them stable, and a new one re-renders every message, which is also how to
 refresh what they render.
 
@@ -208,7 +209,7 @@ function App() {
 }
 ```
 
-The sidebar width is persisted to `localStorage` under the key `filigranChatSidebarWidth`.
+The sidebar width is persisted to `localStorage` under the key `filigranChatSidebarWidth` (`<storageKeyPrefix>:filigranChatSidebarWidth` with a prefix).
 
 ### `ChatToggleButton`
 
@@ -772,7 +773,7 @@ REST backend only: `legacy` and `ag-ui` never meet this gate.
 ### Turns that outlive their stream
 
 A backend whose turns keep running when their stream drops (XTM One's own web
-chat) opts into three more routes, none with a default:
+chat) opts into six more routes, none with a default:
 
 | `apiEndpoints` key | Request | What it does |
 | --- | --- | --- |
@@ -785,10 +786,12 @@ chat) opts into three more routes, none with a default:
 
 The event stream is opened once the conversation's history is on screen and
 reconnected with backoff while the page is visible; a `401`, `403`, `404` or
-`405` stops it. Every message `POST` then carries the same id in
-`X-Chat-Client-Id`, which the backend uses to never relay a panel's own turn
-back to it; frames naming the `turn_id` of the panel's own turn are dropped
-too. A relayed turn uses the frames of `POST /chat/messages`, plus:
+`405` stops it. With `events` named, every message, steer, decision, Stop and
+"Continue now" carries the same id in `X-Chat-Client-Id`, which the backend
+uses to never relay a panel's own turn back to it; frames naming the `turn_id`
+of the panel's own turn are dropped too. When the panel's own stream drops
+mid-turn, it takes a new id and picks the turn up from the event stream (or
+reads the history back when nothing comes within 15 s). A relayed turn uses the frames of `POST /chat/messages`, plus:
 
 - `{"type": "thinking", "resumed": true, "elapsed_s": 42}` — a turn re-attached
   mid-way: what it wrote so far follows, whole.
@@ -1166,7 +1169,7 @@ To build:
 yarn build
 ```
 
-To run the unit tests (Node's built-in test runner, which runs TypeScript natively from Node 22.18 / 23.6):
+To run the unit tests (Node's built-in test runner, with an esbuild loader for TypeScript and JSX; Node 22.15 or later):
 
 ```bash
 yarn test

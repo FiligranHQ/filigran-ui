@@ -663,7 +663,7 @@ export function filenameFromContentDisposition(header: string | null | undefined
 export function agentIconKind(icon: string | null | undefined): 'image' | 'emoji' | null {
   const value = icon?.trim();
   if (!value) return null;
-  if (/^(https?:\/\/|data:image\/)/i.test(value)) return 'image';
+  if (/^(https:\/\/|data:image\/)/i.test(value)) return 'image';
   if (value.length <= 8 && !/[\p{L}\p{N}]/u.test(value)) return 'emoji';
   return null;
 }

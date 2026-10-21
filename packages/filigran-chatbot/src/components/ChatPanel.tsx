@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import type { ChatArtifact, ChatArtifactKind, ChatAttachment, ChatPanelHandle, ChatPanelProps, Translate } from '../types';
+import type { ChatArtifact, ChatArtifactKind, ChatAttachment, ChatPanelHandle, ChatPanelProps, ChatSendOutcome, Translate } from '../types';
 import { artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
 import { createTranslate } from '../i18n';
 import { feedbackBaseUrl } from '../utils/feedback';
@@ -149,16 +149,26 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
 
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
-  const { agents, agentsLoading, agentsError, agentsSettled, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent, reloadAgents } =
-    useAgents({
-      apiBaseUrl,
-      apiEndpoints,
-      backendType,
-      requestHeaders,
-      storageKeyPrefix,
-      initialAgent,
-      onAgentChange: onAgentChangeProp ? onAgentChange : undefined,
-    });
+  const {
+    agents,
+    agentsLoading,
+    agentsError,
+    agentsSettled,
+    agentsDisabled,
+    selectedAgent,
+    agentMenuOpen,
+    setAgentMenuOpen,
+    handleSwitchAgent,
+    reloadAgents,
+  } = useAgents({
+    apiBaseUrl,
+    apiEndpoints,
+    backendType,
+    requestHeaders,
+    storageKeyPrefix,
+    initialAgent,
+    onAgentChange: onAgentChangeProp ? onAgentChange : undefined,
+  });
 
   // The conversation whose history is on screen: its event stream is followed
   // only from then on, so a relayed turn lands after the restored transcript.
@@ -222,7 +232,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     getRequestExtras: getRequestExtrasProp ? getRequestExtras : undefined,
     onStreamEvent: onStreamEventProp ? onStreamEvent : undefined,
     onConversationTitle: () => void refreshConversationsRef.current(),
-    eventsEnabled: historySettledId !== null,
+    historySettledFor: historySettledId,
     steerAttachments,
     holdSends: holdSendsDuringTurn,
     agentMentionsEnabled,
@@ -455,6 +465,8 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         onDrop: (e: React.DragEvent) => {
           if (!carriesFiles(e)) return;
           e.preventDefault();
+          // The host's own drop zones under the panel do not take the files too.
+          e.stopPropagation();
           dragDepthRef.current = 0;
           setDropping(false);
           handleFileAdd(e.dataTransfer.files);
@@ -719,9 +731,9 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       if (restoringIdRef.current !== conversationId && historySettledId !== conversationId) setHistorySettledId(conversationId);
       return;
     }
-    // The agent goes with the restore, so the list is waited for - but only
-    // while there is one coming.
-    if (!selectedAgent && !agentsSettled) return;
+    // The agent goes with the restore, so it waits for one - unless the host
+    // serves no agent list at all.
+    if (!selectedAgent && !agentsDisabled) return;
     historyLoadedRef.current = true;
     restoringIdRef.current = conversationId;
     setHistorySettledId(null);
@@ -863,6 +875,14 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     if (queueRef.current.length > 0) setQueueTick((n) => n + 1);
   }, [ready, queueTick]);
 
+  // The handle stays the same object for the panel's life: its calls read the latest state.
+  const handleSwitchAgentRef = useRef(handleSwitchAgent);
+  handleSwitchAgentRef.current = handleSwitchAgent;
+  const handleStopGeneratingRef = useRef(handleStopGenerating);
+  handleStopGeneratingRef.current = handleStopGenerating;
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
+
   const onSwitchAgent = (agent: typeof selectedAgent) => {
     if (!agent) return;
     handleSwitchAgent(agent, () => {
@@ -873,17 +893,27 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   useImperativeHandle(
     ref,
     () => ({
-      send: (text, options) => enqueue(() => void handleSendMessageRef.current({ text, extras: options?.extras })),
+      send: (text, options) =>
+        readOnlyRef.current
+          ? Promise.resolve('dropped' as const)
+          : new Promise<ChatSendOutcome>((resolve) =>
+              enqueue(() => {
+                // A new turn resolves as it starts, not when its answer ends.
+                handleSendMessageRef
+                  .current({ text, extras: options?.extras, onSent: () => resolve('sent') })
+                  .then(resolve, () => resolve('dropped'));
+              }),
+            ),
       newConversation: (options) =>
         enqueue(() => {
           const agent = findAgent(agentsRef.current, options?.agent);
-          if (agent && agent.id !== selectedAgentRef.current?.id) handleSwitchAgent(agent);
+          if (agent && agent.id !== selectedAgentRef.current?.id) handleSwitchAgentRef.current(agent);
           handleNewChatRef.current(options?.workspaceId);
         }),
       selectConversation: (id) => enqueue(() => handleSwitchConversationRef.current(id)),
       setDraft: (text) => setInputValue(text),
       focusComposer: () => rootRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus(),
-      stop: () => handleStopGenerating(),
+      stop: () => handleStopGeneratingRef.current(),
       reloadAgents,
       scrollToMessage: (messageId) => {
         const target = [...(rootRef.current?.querySelectorAll<HTMLElement>('[data-message-id]') ?? [])].find(
@@ -896,7 +926,8 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         return true;
       },
     }),
-    [handleSwitchAgent, setInputValue, handleStopGenerating, reloadAgents],
+    // setInputValue and reloadAgents are stable; everything else goes through a ref.
+    [],
   );
 
   const containerClasses = (() => {
@@ -1045,7 +1076,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
                 suggestionsLoading={suggestionsLoading}
                 agentName={selectedAgent?.name}
                 agentDescription={selectedAgent?.description}
-                onPromptClick={setInputValue}
+                onPromptClick={readOnly ? undefined : setInputValue}
                 t={t}
               />
             )

@@ -974,18 +974,26 @@ export const ChatMessages = ({
   // the window must snap back to the tail instead of keeping a widened one.
   const firstMessageId = messages[0]?.id;
   // Older messages fetched from the backend land above the thread: they widen
-  // the window and leave the reader where they were, unlike a switch.
-  const prependedRef = useRef<{ length: number; count: number; scrollHeight: number; scrollTop: number } | null>(null);
+  // the window and leave the reader where they were, unlike a switch. Both
+  // happen before paint, so the thread never shows a jump.
+  const prependedRef = useRef<{ length: number; visible: number; count: number; scrollHeight: number; scrollTop: number } | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const prepended = prependedRef.current;
-    if (prepended?.count) {
-      prependedRef.current = null;
-      setRenderWindow((w) => w + prepended.count);
+    if (prepended && messages.length > prepended.length) {
+      prepended.count = messages.length - prepended.length;
+      setRenderWindow(prepended.visible + prepended.count);
       return;
     }
     setRenderWindow(INITIAL_RENDER_WINDOW);
   }, [firstMessageId]);
+  useLayoutEffect(() => {
+    const prepended = prependedRef.current;
+    if (!prepended?.count || renderWindow !== prepended.visible + prepended.count) return;
+    prependedRef.current = null;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = prepended.scrollTop + (el.scrollHeight - prepended.scrollHeight);
+  });
   const showEarlier = async () => {
     if (messages.length > renderWindow) {
       setRenderWindow((w) => w + RENDER_WINDOW_STEP);
@@ -994,7 +1002,13 @@ export const ChatMessages = ({
     if (!onLoadEarlier || loadingEarlier) return;
     const el = scrollRef.current;
     setLoadingEarlier(true);
-    prependedRef.current = { length: messages.length, count: 0, scrollHeight: el?.scrollHeight ?? 0, scrollTop: el?.scrollTop ?? 0 };
+    prependedRef.current = {
+      length: messages.length,
+      visible: Math.min(messages.length, renderWindow),
+      count: 0,
+      scrollHeight: el?.scrollHeight ?? 0,
+      scrollTop: el?.scrollTop ?? 0,
+    };
     try {
       if ((await onLoadEarlier()) === 0) prependedRef.current = null;
     } finally {
@@ -1013,15 +1027,8 @@ export const ChatMessages = ({
   useLayoutEffect(() => {
     const seen = seenRef.current;
     seenRef.current = { firstMessageId, userMessageCount };
-    const prepended = prependedRef.current;
-    if (prepended && seen && seen.firstMessageId !== firstMessageId && messages.length > prepended.length) {
-      // Counted here, in the commit that shows them: the window effect below
-      // widens by as many.
-      prepended.count = messages.length - prepended.length;
-      const el = scrollRef.current;
-      if (el) el.scrollTop = prepended.scrollTop + (el.scrollHeight - prepended.scrollHeight);
-      return;
-    }
+    // Older messages are not a switch: the reader stays where they were (above).
+    if (prependedRef.current?.count) return;
     if (!seen || seen.firstMessageId !== firstMessageId || userMessageCount > seen.userMessageCount) {
       follower.reveal();
     } else {

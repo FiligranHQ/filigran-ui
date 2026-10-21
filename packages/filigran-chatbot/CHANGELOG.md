@@ -20,12 +20,18 @@ This file starts at 3.10.0; earlier releases are on the
   `onConversationChange`), pick the agent selected first (`initialAgent`,
   `onAgentChange`) and drive the panel through its `ref` (`send`,
   `newConversation`, `selectConversation`, `setDraft`, `focusComposer`,
-  `stop`).
+  `stop`). The handle is the same object for the panel's life, and `send`
+  resolves to what became of the message (`'sent'`, `'steered'`, `'held'` or
+  `'dropped'`).
+- `onClose` and `onModeChange` are optional: the header shows the close
+  button and the view switcher only when they are given.
 - `storageKeyPrefix` namespaces every key the panel keeps in browser storage,
   for a host that mounts more than one panel.
-- `readOnly` hides the composer, with `readOnlyNotice` in its place.
-- `getRequestExtras` adds the host's own fields to each message body (never
-  overriding the panel's), and `onStreamEvent` hands the host every frame
+- `readOnly` hides the composer, with `readOnlyNotice` in its place, and
+  the panel then sends nothing, from the handle or the welcome screen's
+  suggestions.
+- `getRequestExtras` adds the host's own fields to each message body (the
+  panel's own fields, set by it or not, are never taken from there), and `onStreamEvent` hands the host every frame
   received, including those the panel does not render.
 - The panel renders the frames of a backend whose turns outlive their stream:
   a turn re-attached mid-way (`thinking.resumed`), an announced wait
@@ -57,9 +63,6 @@ This file starts at 3.10.0; earlier releases are on the
   route then takes `file_ids`), and `holdSendsDuringTurn` holds a message that
   cannot steer (files, references, mentions, a turn that has just ended) and
   sends it as the next turn, with a way to cancel it meanwhile.
-- Files dragged over the thread attach on drop.
-- A conversation being read back shows a skeleton rather than the welcome
-  screen.
 - `scrollToMessage` on the panel's handle jumps to a message and highlights it.
 - Stable `data-testid`s for host tests: `filigran-chat-panel`,
   `filigran-chat-transcript`, `filigran-chat-user-message`,
@@ -82,18 +85,30 @@ This file starts at 3.10.0; earlier releases are on the
   now an override: the host's wording wins where it translates a key, the
   panel's catalog answers where it returns the key. A host translating every
   key, as before, sees no change. `ChatToggleButton` takes `locale` too.
+  A host that passes `t` but no `locale` keeps the panel in English where its
+  `t` returns the key, rather than the browser's language.
 - A stopped answer says `Stopped`, rather than vanishing when nothing was
   written yet.
 - The Send and attach buttons have accessible names.
+- Files dragged over the thread attach on drop (wherever uploads are on), and
+  the drop does not reach the host's own drop zones.
+- A conversation being read back shows a skeleton rather than the welcome
+  screen.
+- An agent icon shows only from an `https:` URL or a `data:image/` one.
 
 ### Fixed
 
 - A host card for `FILE`, `PRESENTATION`, `REPORT` or `VIDEO` no longer
   appears beside the built-in one; items with no marker go to the host card
   too.
-- A steer, a decision, Stop and "Continue now" carry `X-Chat-Client-Id`, so
-  the backend does not echo a tab's own steering message back to it; an echo
-  that comes anyway is recognised.
+- With `apiEndpoints.events` named, a steer, a decision, Stop and "Continue
+  now" carry `X-Chat-Client-Id` too, so the backend does not echo a tab's own
+  steering message back to it; an echo that comes anyway is recognised.
+- Stop ends a held message's wait and gives it back to the composer; a
+  stopped relayed turn no longer comes back from the event stream; messages
+  held one after another are sent together.
+- "Load earlier messages" keeps the reader where they were, with no jump.
+- A failed agent-list reload keeps its error, and only the latest reload lands.
 
 ### Host opt-in
 
@@ -103,8 +118,9 @@ This file starts at 3.10.0; earlier releases are on the
 - `apiEndpoints.events` (no default): the panel follows the conversation's
   event stream, and renders turns started in another tab or before a reload,
   user messages sent elsewhere, new titles and approvals answered elsewhere.
-  The message `POST` then carries `X-Chat-Client-Id`, so a panel's own turns
-  are never relayed back to it.
+  Every request then carries `X-Chat-Client-Id`, so a panel's own turns are
+  never relayed back to it, and a panel whose own stream drops mid-turn picks
+  the turn up from the event stream under a new id.
 - With `cancel`, `skipWait` or `events` named, a new chat's conversation is
   created before its first message, so Stop, "Continue now" and steering
   reach the backend from the first turn.

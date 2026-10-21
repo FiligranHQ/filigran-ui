@@ -36,9 +36,9 @@ interface ChatHeaderProps {
   modeMenuOpen: boolean;
   onModeMenuToggle: () => void;
   onModeMenuClose: () => void;
-  onModeChange: (mode: ChatMode) => void;
+  onModeChange?: (mode: ChatMode) => void;
   onNewChat: () => void;
-  onClose: () => void;
+  onClose?: () => void;
   logoIcon: React.ReactNode;
   agentDashboardUrl?: string;
   /** Multi-conversation history menu (REST backend). Hidden when false. */
@@ -357,7 +357,7 @@ export const ChatHeader = ({
         </button>
       </Tooltip>
 
-      {mode !== 'inline' && (
+      {mode !== 'inline' && onModeChange && (
         <>
           <Tooltip title={t('Switch view')}>
             <button
@@ -391,7 +391,10 @@ export const ChatHeader = ({
               ))}
             </div>
           </Dropdown>
-
+        </>
+      )}
+      {mode !== 'inline' && onClose && (
+        <>
           <Tooltip title={t('Close')}>
             <button
               type="button"

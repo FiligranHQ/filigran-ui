@@ -52,6 +52,12 @@ const agentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? 
 const restoreRoute = (messages: unknown[]) => (req: RecordedRequest) =>
   req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages }) : undefined;
 const text = () => container.textContent ?? '';
+/** Close what a test left open, inside `act`: the panel answers it with updates. */
+const finish = (...streams: { close: () => void }[]) =>
+  act(async () => {
+    for (const stream of streams) stream.close();
+    await settle();
+  });
 
 test('a steer names its tab, and its echo on the event stream is not shown twice', async () => {
   const turn = sseStream();
@@ -82,8 +88,7 @@ test('a steer names its tab, and its echo on the event stream is not shown twice
   });
   const shown = [...container.querySelectorAll('[data-testid="filigran-chat-user-message"]')].map((e) => e.textContent);
   assert.deepEqual(shown, ['first', 'and also']);
-  turn.close();
-  events.close();
+  await finish(turn, events);
 });
 
 test("a host's card for a built-in kind replaces the built-in one, marker or not", async () => {
@@ -145,7 +150,7 @@ test('the handle waits for the panel to be ready, which the host is told', async
   assert.equal(readyCalls, 1);
   const message = requests.find((r) => r.url === '/api/chat/messages');
   assert.equal((message?.body as { agent_slug?: string })?.agent_slug, 'hunter');
-  stream.close();
+  await finish(stream);
 });
 
 test('the send hook can take a send over, or reword it and add fields', async () => {
@@ -176,7 +181,7 @@ test('the send hook can take a send over, or reword it and add fields', async ()
   assert.equal(body.content, 'APT28');
   assert.equal(body.mode, 'deep_investigation');
   assert.deepEqual(seen, ['host:blocked', 'host:apt28']);
-  stream.close();
+  await finish(stream);
 });
 
 test('a stopped answer says so, even when nothing was written yet', async () => {

@@ -55,6 +55,12 @@ const restoreRoute =
   (req: RecordedRequest) =>
     req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages, ...extra }) : undefined;
 const text = () => container.textContent ?? '';
+/** Close what a test left open, inside `act`: the panel answers it with updates. */
+const finish = (...streams: { close: () => void }[]) =>
+  act(async () => {
+    for (const stream of streams) stream.close();
+    await settle();
+  });
 const button = (label: string) =>
   [...container.querySelectorAll('button')].find((b) => b.textContent?.trim() === label || b.getAttribute('aria-label') === label);
 
@@ -135,7 +141,7 @@ test('a steer refused because the turn just ended is held, then sent as the next
   });
   const sends = requests.filter((r) => r.url === '/api/chat/messages').map((r) => (r.body as { content: string }).content);
   assert.deepEqual(sends, ['first', 'and also this']);
-  second.close();
+  await finish(second);
 });
 
 test("read aloud uses the backend's voice when the host names its route", async () => {
@@ -194,5 +200,5 @@ test('a backend whose turns outlive their stream gets the conversation created b
   });
   assert.deepEqual(requests.find((r) => r.url === '/api/chat/messages/cancel')?.body, { conversation_id: 'c-new' });
   stream.send({ type: 'cancelled' });
-  stream.close();
+  await finish(stream);
 });
