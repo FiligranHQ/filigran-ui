@@ -395,8 +395,8 @@ export interface ChatPanelProps {
   agentDashboardUrl?: string;
   user: { firstName: string };
   /**
-   * The host's translations, over the panel's own catalog: a key it returns
-   * unchanged falls back to the catalog in `locale`.
+   * The host's translations of every key; a key it returns unchanged shows in
+   * English. Given, the panel's own catalog is not used.
    */
   t?: Translate;
   accentColor?: string;
@@ -500,10 +500,10 @@ export interface ChatPanelProps {
    */
   onMessageFeedback?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
   /**
-   * The user's language as a BCP 47 tag (`'fr'`, `'en-US'`): the language the
-   * panel speaks (its own catalog: en, es, fr, ja), formats
-   * the time under each message and is the language answers are read aloud
-   * in. Default: the browser's own.
+   * The user's language as a BCP 47 tag (`'fr'`, `'en-US'`): it formats the
+   * time under each message and is the language answers are read aloud in
+   * (the browser's when unset). With no `t`, it is also the language the panel
+   * speaks from its own catalog (en, es, fr, ja); English when unset.
    */
   locale?: string;
   /**
@@ -711,7 +711,7 @@ export interface ChatToggleButtonProps {
   /** Overrides the built-in label; already translated by the host. */
   label?: string;
   t?: Translate;
-  /** BCP 47 tag of the label's language when the host does not translate it (see `ChatPanelProps.locale`). */
+  /** BCP 47 tag of the label's language when the host passes no `t`; English when unset (see `ChatPanelProps.locale`). */
   locale?: string;
   accentColor?: string;
   icon?: React.ReactNode;
