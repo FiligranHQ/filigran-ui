@@ -19,6 +19,14 @@ import type { Plugin } from 'vite';
  */
 
 const PATH_PREFIX = '/api/xtmone';
+/**
+ * The same API as XTM One's own web chat serves it (`/api/v1/web`): turns
+ * outlive their stream, the conversation has an event stream, and Stop, "Continue
+ * now", older pages, clear-all and read-aloud have routes of their own.
+ */
+const NATIVE_PREFIX = '/api/xtmone-web';
+/** How many messages a web restore returns; older ones are paged. */
+const RESTORE_WINDOW = 50;
 
 /** A 160×100 bar chart in the accent colour — stands in for a code-interpreter
  *  plot, and is obviously *there* when an image preview renders correctly. */
@@ -173,6 +181,34 @@ function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   });
 }
 
+function openSse(res: ServerResponse) {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+}
+
+/** Half a second of a soft tone, as a WAV: what the mock reads every answer aloud with. */
+function toneWav(): Buffer {
+  const rate = 8000;
+  const samples = rate / 2;
+  const buf = Buffer.alloc(44 + samples);
+  buf.write('RIFF', 0);
+  buf.writeUInt32LE(36 + samples, 4);
+  buf.write('WAVEfmt ', 8);
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20);
+  buf.writeUInt16LE(1, 22);
+  buf.writeUInt32LE(rate, 24);
+  buf.writeUInt32LE(rate, 28);
+  buf.writeUInt16LE(1, 32);
+  buf.writeUInt16LE(8, 34);
+  buf.write('data', 36);
+  buf.writeUInt32LE(samples, 40);
+  for (let i = 0; i < samples; i++) buf[44 + i] = 128 + Math.round(30 * Math.sin((2 * Math.PI * 440 * i) / rate));
+  return buf;
+}
+
 function json(res: ServerResponse, payload: unknown, status = 200) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
@@ -247,15 +283,304 @@ export function mockChatApi(): Plugin {
   // Start close to the amber threshold so the indicator is worth looking at.
   let quotaUsed = 360;
 
+
+  // ---- the web chat's turns, which belong to the conversation ----
+  interface ActiveTurn {
+    id: string;
+    convId: string;
+    /** The panel that started it: never relayed back to it. */
+    origin?: string;
+    startedAt: number;
+    cancelled: boolean;
+    /** Ends the wait in progress early. */
+    skip: () => void;
+    /** What a panel attaching mid-turn is replayed. */
+    journal: { status?: Record<string, unknown>; thinking: string; text: string };
+    /** The message streams following it; `null` ends them. */
+    followers: Set<(frame: Record<string, unknown> | null) => void>;
+  }
+  const activeTurns = new Map<string, ActiveTurn>();
+  const listeners = new Map<string, Set<{ clientId?: string; send: (frame: Record<string, unknown>) => void }>>();
+
+  function broadcast(convId: string, frame: Record<string, unknown>, exceptClient?: string) {
+    for (const listener of listeners.get(convId) ?? []) {
+      if (!exceptClient || listener.clientId !== exceptClient) listener.send(frame);
+    }
+  }
+
+  /** Run a turn detached from any stream: it goes on, and is stored, whoever is watching. */
+  function startTurn(conv: Conversation, prompt: string, origin?: string): ActiveTurn {
+    const turn: ActiveTurn = {
+      id: `turn-${++seq}`,
+      convId: conv.id,
+      origin,
+      startedAt: Date.now(),
+      cancelled: false,
+      skip: () => undefined,
+      journal: { thinking: '', text: '' },
+      followers: new Set(),
+    };
+    activeTurns.set(conv.id, turn);
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, ms);
+        turn.skip = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+      });
+    void (async () => {
+      for await (const raw of turnFrames(conv, prompt, { cancelled: () => turn.cancelled, wait })) {
+        const frame: Record<string, unknown> = { ...raw, turn_id: turn.id };
+        if (frame.type === 'stream') turn.journal.text += String(frame.content ?? '');
+        else if (frame.type === 'status' && frame.status === 'thinking_text') turn.journal.thinking += String(frame.content ?? '');
+        else if (frame.type === 'status') turn.journal.status = frame;
+        for (const follow of turn.followers) follow(frame);
+        broadcast(conv.id, frame, origin);
+      }
+      activeTurns.delete(conv.id);
+      for (const follow of turn.followers) follow(null);
+      if (conv.messages.filter((m) => m.role === 'user').length === 1) {
+        broadcast(conv.id, { type: 'conversation_title', conversation_id: conv.id, title: conv.title }, origin);
+      }
+    })();
+    return turn;
+  }
+
+  /** What a panel attaching to a running turn sees first: where it stands. */
+  function replay(turn: ActiveTurn): Record<string, unknown>[] {
+    const frames: Record<string, unknown>[] = [
+      { type: 'thinking', turn_id: turn.id, resumed: true, elapsed_s: Math.round((Date.now() - turn.startedAt) / 1000) },
+    ];
+    if (turn.journal.status) frames.push(turn.journal.status);
+    if (turn.journal.thinking) frames.push({ type: 'status', status: 'thinking_text', content: turn.journal.thinking, turn_id: turn.id });
+    if (turn.journal.text) frames.push({ type: 'stream', content: turn.journal.text, turn_id: turn.id });
+    return frames;
+  }
+
+  /** Stream *turn* to *res* until it ends; a dropped stream leaves the turn running. */
+  function followTurn(turn: ActiveTurn, req: IncomingMessage, res: ServerResponse) {
+    const follow = (frame: Record<string, unknown> | null) => {
+      if (frame) res.write(`data: ${JSON.stringify(frame)}\n\n`);
+      else res.end();
+    };
+    turn.followers.add(follow);
+    req.on('close', () => turn.followers.delete(follow));
+  }
+
+  /** A stored message as a restore (or a page of older ones) returns it. */
+  function restoredEntry(m: Conversation['messages'][number]) {
+    return {
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      created_at: m.createdAt,
+      ...(m.meta ?? {}),
+      ...(m.role === 'assistant' && m.feedback ? { feedback: m.feedback } : {}),
+    };
+  }
+
+  /** Record the user's message in its conversation, creating it if needed. */
+  function prepareTurn(body: Record<string, unknown>) {
+    const prompt = typeof body.content === 'string' ? body.content : '';
+    const { history } = scriptFor(prompt);
+
+    let convId = typeof body.conversation_id === 'string' ? body.conversation_id : '';
+    if (!convId || !conversations.has(convId)) {
+      convId = `conv-${++seq}`;
+      conversations.set(convId, { id: convId, title: 'New conversation', updatedAt: new Date().toISOString(), messages: [], contextTokens: 0 });
+    }
+    const conv = conversations.get(convId)!;
+    // Backends rewrite the title from the first message.
+    if (conv.messages.length === 0 && prompt) conv.title = prompt.slice(0, 48);
+    // "long" seeds enough backlog to push past the render window.
+    if (history && conv.messages.length < history) {
+      // Dated yesterday, a minute apart, so the footer shows a date on them.
+      const start = Date.now() - 24 * 60 * 60 * 1000 - history * 60 * 1000;
+      for (let i = conv.messages.length; i < history; i++) {
+        conv.messages.push({
+          id: `msg-${++seq}`,
+          role: i % 2 === 0 ? 'user' : 'assistant',
+          content: `Backfilled message ${i + 1}`,
+          createdAt: new Date(start + i * 60 * 1000).toISOString(),
+        });
+      }
+    }
+    // What the message referenced with `@`, kept as the real backend
+    // keeps it, so a restore shows the chips again.
+    const referenced = Array.isArray(body.referenced_conversation_ids) ? body.referenced_conversation_ids.slice(0, 5) : [];
+    const conversationRefs = referenced.flatMap((id) => {
+      const target = id === SHARED_CONVERSATION.id ? SHARED_CONVERSATION : typeof id === 'string' ? conversations.get(id) : undefined;
+      return target && target.id !== convId ? [{ conversation_id: target.id, title: target.title, key: referenceKey(target.title, target.id) }] : [];
+    });
+    const userMessage = {
+      id: `msg-${++seq}`,
+      role: 'user' as const,
+      content: prompt,
+      createdAt: new Date().toISOString(),
+      ...(conversationRefs.length > 0 ? { meta: { conversation_refs: conversationRefs } } : {}),
+    };
+    conv.messages.push(userMessage);
+    return { conv, prompt, userMessage };
+  }
+
+  /**
+   * One turn's frames, from the first status to `done`. *wait* is how it
+   * pauses (skippable on the web chat), and *cancelled* is checked between
+   * steps: a stopped turn ends with `cancelled` and stores no answer.
+   */
+  async function* turnFrames(
+    conv: Conversation,
+    prompt: string,
+    { cancelled, wait }: { cancelled: () => boolean; wait: (ms: number) => Promise<unknown> },
+  ): AsyncGenerator<Record<string, unknown>, void> {
+    const { text, stall } = scriptFor(prompt);
+    const waitTurn = prompt.toLowerCase().includes('wait');
+    // The window fills as the thread grows. The real backend hangs these
+    // on the per-iteration `thinking` frame, so the gauge climbs during
+    // the turn rather than jumping at the end.
+    conv.contextTokens = Math.min(conv.contextTokens + CONTEXT_PER_TURN, CONTEXT_WINDOW);
+    yield { type: 'status', status: 'thinking', iteration: 1, context_tokens: conv.contextTokens, context_window: CONTEXT_WINDOW, context_breakdown: mockContextBreakdown(conv.contextTokens) };
+    await wait(300);
+    if (cancelled()) return yield { type: 'cancelled' };
+    yield { type: 'status', status: 'thinking_text', content: 'Working out what the user wants, then checking how the answer will render.' };
+    await wait(400);
+    if (cancelled()) return yield { type: 'cancelled' };
+    if (waitTurn) {
+      // An announced pause, which `Continue now` (skip-wait) ends early.
+      yield { type: 'status', status: 'wait_start', seconds: 20, reason: 'Waiting for the sandbox to start…' };
+      await wait(20000);
+      if (cancelled()) return yield { type: 'cancelled' };
+    }
+    yield { type: 'status', status: 'tool_start', tools: ['search_entities'] };
+    // Heartbeats drive the elapsed counter; the panel ticks between them.
+    yield { type: 'status', status: 'tool_heartbeat', tools: ['search_entities'], elapsed_s: 16 };
+    await wait(stall ? 9000 : 900);
+    if (cancelled()) return yield { type: 'cancelled' };
+    if (stall) yield { type: 'status', status: 'tool_heartbeat', tools: ['search_entities'], elapsed_s: 25 };
+    yield { type: 'status', status: 'streaming' };
+
+    for (let i = 0; i < text.length; i += 24) {
+      yield { type: 'stream', content: text.slice(i, i + 24) };
+      await sleep(12);
+      if (cancelled()) return yield { type: 'cancelled' };
+    }
+
+    quotaUsed += 17;
+    const answer = `${text}\n\n[[FILE:file-${seq}]]`;
+
+    // The turn's metadata, built ONCE and both streamed and stored.
+    //
+    // Storing it is not optional detail: the panel re-fetches the session
+    // the moment the first turn hands it a conversation id, and replaces
+    // the live transcript with what comes back. A restore that returns
+    // only role+content therefore ERASES the reasoning-details button, the
+    // download cards and the tool trace seconds after they appear — which
+    // is a mock artefact, since the real backend re-surfaces these keys
+    // (``_restored_assistant_meta_keys`` in XTM One's platform.py). Kept
+    // as one object so the two paths cannot drift apart and re-introduce
+    // that phantom regression.
+    const turnMeta: Record<string, unknown> = {
+      tool_names: ['search_entities'],
+      tool_call_count: 1,
+      iterations: 2,
+      context_tokens: conv.contextTokens,
+      context_window: CONTEXT_WINDOW,
+      context_breakdown: mockContextBreakdown(conv.contextTokens),
+      reasoning: 'Checked the rendering pipeline end to end, then wrote the answer.',
+      tool_call_trace: [{ name: 'search_entities', input: '{"q":"apt"}', output: '{"hits":3}', success: true }],
+      attachments: [
+        { file_id: `file-${seq}`, filename: 'coverage.png', type: 'png', size: 4096, content_type: 'image/png', file_tag: 'download_file' },
+        { file_id: `scratch-${seq}`, filename: 'notes.txt', type: 'txt', size: 512, content_type: 'text/plain', file_tag: 'working_file' },
+      ],
+    };
+
+    // The persisted id rides on `done`: it is what the answer is rated by.
+    const messageId = `msg-${++seq}`;
+    conv.messages.push({ id: messageId, role: 'assistant', content: answer, createdAt: new Date().toISOString(), meta: turnMeta });
+    conv.updatedAt = new Date().toISOString();
+
+    yield { type: 'done', content: answer, conversation_id: conv.id, message_id: messageId, ...turnMeta };
+  }
+
   return {
     name: 'filigran-mock-chat-api',
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const url = new URL(req.url ?? '/', 'http://localhost');
-        if (!url.pathname.startsWith(PATH_PREFIX)) return next();
-        const path = url.pathname.slice(PATH_PREFIX.length);
+        const native = url.pathname.startsWith(NATIVE_PREFIX);
+        if (!native && !url.pathname.startsWith(PATH_PREFIX)) return next();
+        const path = url.pathname.slice((native ? NATIVE_PREFIX : PATH_PREFIX).length);
         const method = req.method ?? 'GET';
+
+        if (native) {
+          // ---- the conversation's event stream ----
+          const events = /^\/chat\/conversations\/([^/]+)\/events$/.exec(path);
+          if (events && method === 'GET') {
+            const convId = decodeURIComponent(events[1]);
+            if (!conversations.has(convId)) return json(res, { detail: 'Conversation not found' }, 404);
+            openSse(res);
+            const send = (frame: Record<string, unknown>) => res.write(`data: ${JSON.stringify(frame)}\n\n`);
+            const listener = { clientId: url.searchParams.get('client_id') ?? undefined, send };
+            const running = activeTurns.get(convId);
+            if (running && running.origin !== listener.clientId) replay(running).forEach(send);
+            if (!listeners.has(convId)) listeners.set(convId, new Set());
+            listeners.get(convId)!.add(listener);
+            const keepalive = setInterval(() => res.write(': keepalive\n\n'), 15000);
+            req.on('close', () => {
+              clearInterval(keepalive);
+              listeners.get(convId)?.delete(listener);
+            });
+            return;
+          }
+
+          // ---- Stop, "Continue now", what a turn waits on ----
+          if ((path === '/chat/messages/cancel' || path === '/chat/messages/skip-wait') && method === 'POST') {
+            const body = await readBody(req);
+            const turn = typeof body.conversation_id === 'string' ? activeTurns.get(body.conversation_id) : undefined;
+            if (!turn) return json(res, { detail: 'No turn is running' }, 409);
+            if (path.endsWith('/cancel')) turn.cancelled = true;
+            turn.skip();
+            return json(res, { status: 'ok' });
+          }
+          const pending = /^\/chat\/conversations\/([^/]+)\/pending-approvals$/.exec(path);
+          if (pending && method === 'GET') {
+            return json(res, { proposals: [], turn: activeTurns.has(decodeURIComponent(pending[1])) ? 'running' : 'idle' });
+          }
+
+          // ---- steering joins the running turn ----
+          if (path === '/chat/messages/steer' && method === 'POST') {
+            const body = await readBody(req);
+            const turn = typeof body.conversation_id === 'string' ? activeTurns.get(body.conversation_id) : undefined;
+            if (!turn) return json(res, { detail: 'No turn is running' }, 409);
+            const message = { id: `msg-${++seq}`, role: 'user' as const, content: String(body.content ?? ''), createdAt: new Date().toISOString() };
+            conversations.get(turn.convId)?.messages.push(message);
+            broadcast(turn.convId, { type: 'user_message', message: { id: message.id, role: 'user', content: message.content, created_at: message.createdAt } }, req.headers['x-chat-client-id'] as string | undefined);
+            return json(res, { status: 'steered', turn_id: turn.id });
+          }
+
+          // ---- older messages, clear all, read aloud ----
+          const page = /^\/chat\/sessions\/([^/]+)\/messages$/.exec(path);
+          if (page && method === 'GET') {
+            const conv = conversations.get(decodeURIComponent(page[1]));
+            const index = conv?.messages.findIndex((m) => m.id === url.searchParams.get('before')) ?? -1;
+            if (!conv || index < 0) return json(res, { detail: 'Message not found' }, 404);
+            const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 50, 1), 100);
+            const from = Math.max(0, index - limit);
+            return json(res, { messages: conv.messages.slice(from, index).map(restoredEntry), has_more: from > 0 });
+          }
+          if (path === '/chat/sessions' && method === 'DELETE') {
+            conversations.clear();
+            res.statusCode = 204;
+            return res.end();
+          }
+          if (path === '/chat/tts' && method === 'POST') {
+            req.resume();
+            res.setHeader('Content-Type', 'audio/wav');
+            return res.end(toneWav());
+          }
+        }
 
         // ---- agents ----
         if (path === '/chat/agents') return json(res, AGENTS);
@@ -343,20 +668,15 @@ export function mockChatApi(): Plugin {
               // restored turn keeps its reasoning-details button, download
               // cards, tool trace and context reading instead of degrading to
               // bare prose.
-              messages: existing.messages.map((m) => ({
-                id: m.id,
-                role: m.role,
-                content: m.content,
-                created_at: m.createdAt,
-                ...(m.meta ?? {}),
-                ...(m.role === 'assistant' && m.feedback ? { feedback: m.feedback } : {}),
-              })),
+              // The web chat returns the latest messages and pages the rest.
+              messages: (native ? existing.messages.slice(-RESTORE_WINDOW) : existing.messages).map(restoredEntry),
+              ...(native ? { has_more: existing.messages.length > RESTORE_WINDOW } : {}),
             });
           }
           // Mirror the real backend: a stale id transparently becomes a new one.
           const id = `conv-${++seq}`;
           conversations.set(id, { id, title: 'New conversation', updatedAt: new Date().toISOString(), messages: [], contextTokens: 0 });
-          return json(res, { conversation_id: id, messages: [] });
+          return json(res, { conversation_id: id, messages: [], ...(native ? { has_more: false } : {}) });
         }
 
         // ---- uploads ----
@@ -376,107 +696,27 @@ export function mockChatApi(): Plugin {
         // ---- streaming message ----
         if (path === '/chat/messages' && method === 'POST') {
           const body = await readBody(req);
-          const prompt = typeof body.content === 'string' ? body.content : '';
-          const { text, stall, history } = scriptFor(prompt);
-
-          let convId = typeof body.conversation_id === 'string' ? body.conversation_id : '';
-          if (!convId || !conversations.has(convId)) {
-            convId = `conv-${++seq}`;
-            conversations.set(convId, { id: convId, title: 'New conversation', updatedAt: new Date().toISOString(), messages: [], contextTokens: 0 });
-          }
-          const conv = conversations.get(convId)!;
-          // Backends rewrite the title from the first message.
-          if (conv.messages.length === 0 && prompt) conv.title = prompt.slice(0, 48);
-          // "long" seeds enough backlog to push past the render window.
-          if (history && conv.messages.length < history) {
-            // Dated yesterday, a minute apart, so the footer shows a date on them.
-            const start = Date.now() - 24 * 60 * 60 * 1000 - history * 60 * 1000;
-            for (let i = conv.messages.length; i < history; i++) {
-              conv.messages.push({
-                id: `msg-${++seq}`,
-                role: i % 2 === 0 ? 'user' : 'assistant',
-                content: `Backfilled message ${i + 1}`,
-                createdAt: new Date(start + i * 60 * 1000).toISOString(),
-              });
-            }
-          }
-          // What the message referenced with `@`, kept as the real backend
-          // keeps it, so a restore shows the chips again.
-          const referenced = Array.isArray(body.referenced_conversation_ids) ? body.referenced_conversation_ids.slice(0, 5) : [];
-          const conversationRefs = referenced.flatMap((id) => {
-            const target = id === SHARED_CONVERSATION.id ? SHARED_CONVERSATION : typeof id === 'string' ? conversations.get(id) : undefined;
-            return target && target.id !== convId ? [{ conversation_id: target.id, title: target.title, key: referenceKey(target.title, target.id) }] : [];
-          });
-          conv.messages.push({
-            id: `msg-${++seq}`,
-            role: 'user',
-            content: prompt,
-            createdAt: new Date().toISOString(),
-            ...(conversationRefs.length > 0 ? { meta: { conversation_refs: conversationRefs } } : {}),
-          });
-
-          res.statusCode = 200;
-          res.setHeader('Content-Type', 'text/event-stream');
-          res.setHeader('Cache-Control', 'no-cache');
-          res.setHeader('Connection', 'keep-alive');
+          const clientId = typeof req.headers['x-chat-client-id'] === 'string' ? req.headers['x-chat-client-id'] : undefined;
+          const running = native && typeof body.conversation_id === 'string' ? activeTurns.get(body.conversation_id) : undefined;
+          openSse(res);
           const send = (obj: unknown) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
 
-          // The window fills as the thread grows. The real backend hangs these
-          // on the per-iteration `thinking` frame, so the gauge climbs during
-          // the turn rather than jumping at the end.
-          conv.contextTokens = Math.min(conv.contextTokens + CONTEXT_PER_TURN, CONTEXT_WINDOW);
-          send({ type: 'status', status: 'thinking', iteration: 1, context_tokens: conv.contextTokens, context_window: CONTEXT_WINDOW, context_breakdown: mockContextBreakdown(conv.contextTokens) });
-          await sleep(300);
-          send({ type: 'status', status: 'thinking_text', content: 'Working out what the user wants, then checking how the answer will render.' });
-          await sleep(400);
-          send({ type: 'status', status: 'tool_start', tools: ['search_entities'] });
-          // Heartbeats drive the elapsed counter; the panel ticks between them.
-          send({ type: 'status', status: 'tool_heartbeat', tools: ['search_entities'], elapsed_s: 16 });
-          await sleep(stall ? 9000 : 900);
-          if (stall) send({ type: 'status', status: 'tool_heartbeat', tools: ['search_entities'], elapsed_s: 25 });
-          send({ type: 'status', status: 'streaming' });
-
-          for (let i = 0; i < text.length; i += 24) {
-            send({ type: 'stream', content: text.slice(i, i + 24) });
-            await sleep(12);
+          // The web chat's turn is the conversation's: a message sent while one
+          // runs joins it, and this stream follows that turn to its end.
+          if (running) {
+            const conv = conversations.get(running.convId)!;
+            conv.messages.push({ id: `msg-${++seq}`, role: 'user', content: String(body.content ?? ''), createdAt: new Date().toISOString() });
+            send({ type: 'folded_into_active_turn', turn_id: running.id });
+            return followTurn(running, req, res);
           }
 
-          quotaUsed += 17;
-          const answer = `${text}\n\n[[FILE:file-${seq}]]`;
-
-          // The turn's metadata, built ONCE and both streamed and stored.
-          //
-          // Storing it is not optional detail: the panel re-fetches the session
-          // the moment the first turn hands it a conversation id, and replaces
-          // the live transcript with what comes back. A restore that returns
-          // only role+content therefore ERASES the reasoning-details button, the
-          // download cards and the tool trace seconds after they appear — which
-          // is a mock artefact, since the real backend re-surfaces these keys
-          // (``_restored_assistant_meta_keys`` in XTM One's platform.py). Kept
-          // as one object so the two paths cannot drift apart and re-introduce
-          // that phantom regression.
-          const turnMeta: Record<string, unknown> = {
-            tool_names: ['search_entities'],
-            tool_call_count: 1,
-            iterations: 2,
-            context_tokens: conv.contextTokens,
-            context_window: CONTEXT_WINDOW,
-            context_breakdown: mockContextBreakdown(conv.contextTokens),
-            reasoning: 'Checked the rendering pipeline end to end, then wrote the answer.',
-            tool_call_trace: [{ name: 'search_entities', input: '{"q":"apt"}', output: '{"hits":3}', success: true }],
-            attachments: [
-              { file_id: `file-${seq}`, filename: 'coverage.png', type: 'png', size: 4096, content_type: 'image/png', file_tag: 'download_file' },
-              { file_id: `scratch-${seq}`, filename: 'notes.txt', type: 'txt', size: 512, content_type: 'text/plain', file_tag: 'working_file' },
-            ],
-          };
-
-          // The persisted id rides on `done`: it is what the answer is rated by.
-          const messageId = `msg-${++seq}`;
-          conv.messages.push({ id: messageId, role: 'assistant', content: answer, createdAt: new Date().toISOString(), meta: turnMeta });
-          conv.updatedAt = new Date().toISOString();
-
-          send({ type: 'done', content: answer, conversation_id: convId, message_id: messageId, ...turnMeta });
-          return res.end();
+          const { conv, prompt, userMessage } = prepareTurn(body);
+          if (!native) {
+            for await (const frame of turnFrames(conv, prompt, { cancelled: () => false, wait: sleep })) send(frame);
+            return res.end();
+          }
+          broadcast(conv.id, { type: 'user_message', message: { id: userMessage.id, role: 'user', content: userMessage.content, created_at: userMessage.createdAt } }, clientId);
+          return followTurn(startTurn(conv, prompt, clientId), req, res);
         }
 
         // ---- steering ----

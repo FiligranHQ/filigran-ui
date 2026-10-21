@@ -29,6 +29,23 @@ The package is aliased to its **source**, so edits under
   calls them
 - The verification checklist on the page
 
+## XTM One's web chat contract
+
+**XTM One web chat contract (mock)** switches the panel to the routes XTM
+One's own `/chat` page uses (`/api/v1/web`), served by the mock under
+`/api/xtmone-web`. Turns there outlive their stream, as they do on XTM One:
+
+- open a second tab on the same conversation: a turn started in one shows live
+  in the other, and Stop in either ends it for both;
+- reload mid-answer: the panel re-attaches to the turn in progress;
+- ask to **wait**: the agent pauses and `Continue now` ends the pause;
+- ask for a **long thread**: the restore returns the latest 50 messages and
+  `Load earlier messages` pages the rest from the backend.
+
+It is mock-only: those routes take an XTM One login, which the playground
+never keeps (see below). Against a real XTM One they are exercised from XTM
+One's own frontend.
+
 ## Connected to XTM One
 
 The playground is a **registered platform**, authenticating exactly the way
