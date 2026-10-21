@@ -75,7 +75,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `agentDashboardUrl` | `string`                                  | —            | XTM One URL for the "Browse agents" / "Create agent" links and the waiting panel's "Play Space Invaders in XTM One" link (`{url}/chat?arcade=play`, http(s) only) |
 | `miniGameEnabled`   | `boolean`                                 | `true`       | Show the waiting panel during longer waits: rotating messages and the invitation to play XTM One's arcade (the package ships no game of its own) |
 | `onPlayWaitingGame` | `() => void`                              | —            | Open the arcade in place instead of linking to XTM One, for a host that runs it itself (the XTM One floating assistant) |
-| `t`                 | `(key: string) => string`                 | —            | The host's translations, over the panel's own catalog — see [Internationalization](#internationalization) |
+| `t`                 | `(key: string) => string`                 | —            | The host's translations of every key; the panel's own catalog is then not used — see [Internationalization](#internationalization) |
 | `accentColor`       | `string`                                  | `'#7b5cff'`  | Primary accent color (hex)                                       |
 | `logoIcon`          | `React.ReactNode`                         | default icon | Custom logo/icon for the assistant                               |
 | `promptSuggestions` | `string[]`                                | default list | Prompt suggestions shown on welcome screen                       |
@@ -85,7 +85,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onResizeStart`     | `() => void`                              | —            | Called when resize drag starts                                   |
 | `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
 | `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Receives each rating of an answer (`null` clears it); `id` is the message's persisted id when the backend reported one (`done.message_id`, a restored entry's `id`), else the panel's own. On its own it enables 👍/👎 and the panel stores nothing; with `apiEndpoints.feedback` set it is called once the backend has stored the rating. With neither, no thumbs. |
-| `locale`            | `string`                                  | browser's    | BCP 47 language tag of the platform's language (e.g. `'fr-FR'`): the language the panel speaks, its message times are written in and answers are read aloud in |
+| `locale`            | `string`                                  | browser's    | BCP 47 language tag of the platform's language (e.g. `'fr-FR'`): the language its message times are written in and answers are read aloud in (the browser's when unset), and the one the panel speaks when no `t` is passed (English when unset) |
 | `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
 | `contextUsageEnabled` | `boolean`                               | `true`       | Show how full the model's context window is for the current conversation (ring + percentage in the composer toolbar). Data-driven, so it stays absent until the backend reports occupancy — see [Context usage](#context-usage). |
 | `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
@@ -226,7 +226,7 @@ import { ChatToggleButton } from '@filigran/chatbot';
 | `isOpen`      | `boolean`                 | **required** | Whether the chat panel is open                                             |
 | `onToggle`    | `() => void`              | **required** | Called when button is clicked                                              |
 | `label`       | `string`                  | built-in     | Button text, already translated by the host; omit for `t('Ask Assistant')` |
-| `t`           | `(key: string) => string` | —            | The host's translations, over the panel's own catalog                      |
+| `t`           | `(key: string) => string` | —            | The host's translations; the panel's own catalog is then not used          |
 | `locale`      | `string`                  | browser's    | The default label's language                                               |
 | `accentColor` | `string`                  | `'#7b5cff'`  | Button background color                                                    |
 | `icon`        | `React.ReactNode`         | default icon | Custom icon                                                                |
@@ -919,18 +919,19 @@ import { MyLogo } from './icons';
 ### Internationalization
 
 The panel speaks English, French, Spanish and Japanese on its own, the
-languages of XTM One: it ships a catalog for each and picks one from `locale`
-(`fr-FR` reads French; English, or a language it lacks, is its own keys). A
-host in another language translates through `t`, as before. A host with nothing to add only passes `locale`:
+languages of XTM One: it ships a catalog for each, used when the host passes
+`locale` and no `t` (`fr-FR` reads French; English, or a language it lacks, is
+its own keys). Without `locale` it speaks English, whatever the browser's
+language:
 
 ```tsx
 <ChatPanel locale={user.language} /* ... */ />
 ```
 
-`t` is an optional override, asked first for every key — key in, translated
-string out, so any i18n library works. Where it returns something other than
-the key, its wording wins; where it returns the key (a host catalog that does
-not have it), the panel's own catalog answers:
+A host that passes `t` translates the panel itself, as before the catalogs:
+every key goes through it (key in, translated string out, so any i18n library
+works), and a key it returns unchanged shows in English. `locale` then only
+sets the date format and the read-aloud voice:
 
 ```tsx
 import { useTranslation } from 'react-i18next';
@@ -941,7 +942,7 @@ function App() {
 }
 ```
 
-`ChatToggleButton` takes the same `t` and `locale` for its default label.
+`ChatToggleButton` takes the same `t` and `locale` for its default label, by the same rule.
 
 #### Values inside sentences
 

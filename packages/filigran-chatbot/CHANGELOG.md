@@ -78,17 +78,13 @@ This file starts at 3.10.0; earlier releases are on the
   can take a send over, or reword it and add fields to its body.
 - `reloadAgents()` on the handle reads the agent list again, keeping the agent
   picked unless it is gone.
+- The panel ships its own translations (es, fr, ja, beside English), used
+  when the host passes `locale` and no `t`. A host passing `t` translates
+  every key itself, as before, and sees no change; without `locale` the
+  panel stays English. `ChatToggleButton` takes `locale` too, by the same rule.
 
 ### Changed
 
-- The panel ships its own translations (es, fr, ja, beside English) and
-  speaks `locale`'s language without the host translating anything. `t` is
-  now an override: the host's wording wins where it translates a key, the
-  panel's catalog answers where it returns the key. A host translating every
-  key, as before, sees no change. `ChatToggleButton` takes `locale` too.
-  A host that passes `t` but no `locale` keeps the panel in English where its
-  `t` returns the key; a host passing neither now gets the browser's
-  language where the panel has it, rather than English.
 - A stopped answer says `Stopped`, rather than vanishing when nothing was
   written yet.
 - The Send, attach, close and view-switcher buttons have accessible names.
