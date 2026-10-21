@@ -158,6 +158,40 @@ test("read aloud uses the backend's voice when the host names its route", async 
   assert.deepEqual(requests.find((r) => r.url === '/api/chat/tts')?.body, { text: 'Read this aloud.', format: 'mp3' });
 });
 
+test('a long answer is read aloud whole, one bounded request after the other', async () => {
+  const sentence = 'This sentence is part of a very long answer. ';
+  const long = sentence.repeat(200).trim();
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute([{ id: 'm1', role: 'assistant', content: long }]),
+    (req) => (req.url === '/api/chat/tts' ? new Response(new Blob(['mp3'], { type: 'audio/mpeg' })) : undefined),
+  ]);
+  const original = globalThis.Audio;
+  // Each clip ends as soon as it plays.
+  globalThis.Audio = class {
+    onended: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    play() {
+      setTimeout(() => this.onended?.(), 0);
+      return Promise.resolve();
+    }
+    pause() {}
+  } as unknown as typeof Audio;
+  try {
+    await render({ conversationId: 'c1', apiEndpoints: { tts: '/chat/tts' } });
+    await act(async () => {
+      button('Read aloud')!.click();
+      await settle(30);
+    });
+  } finally {
+    globalThis.Audio = original;
+  }
+  const texts = requests.filter((r) => r.url === '/api/chat/tts').map((r) => (r.body as { text: string }).text);
+  assert.ok(texts.length > 1);
+  assert.ok(texts.every((t) => t.length <= 4096));
+  assert.equal(texts.join(' '), long);
+});
+
 test('the host jumps to a message by its id', async () => {
   fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'user', content: 'hello' }])]);
   const ref = createRef<Handle>();

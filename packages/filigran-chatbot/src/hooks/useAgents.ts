@@ -107,7 +107,11 @@ export function useAgents({
         const list = parseAgents(data);
         setAgents(list);
         setAgentsError(false);
-        if (list.length === 0) return;
+        // No agent left: none is picked, so nothing is sent in a removed one's name.
+        if (list.length === 0) {
+          setSelectedAgent(null);
+          return;
+        }
         const pickStarting = () => {
           const savedSlug = readStorage('local', agentStorageKey);
           return findAgent(list, initialAgent) ?? (savedSlug ? list.find((a) => a.slug === savedSlug) : undefined) ?? list[0];

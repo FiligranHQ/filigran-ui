@@ -218,3 +218,17 @@ test('reloading the agents picks up new ones and keeps the agent picked', async 
   await act(async () => picker.click());
   assert.ok(document.body.textContent?.includes('Fresh Agent'));
 });
+
+test('a reload that finds no agent left picks none', async () => {
+  let list: typeof AGENTS = [...AGENTS];
+  fakeBackend([(req) => (req.url === '/api/chat/agents' ? json(list) : undefined)]);
+  const ref = createRef<Handle>();
+  await render({}, ref);
+  assert.ok(text().includes('Hunter'));
+  list = [];
+  await act(async () => {
+    ref.current!.reloadAgents();
+    await settle();
+  });
+  assert.ok(!text().includes('Hunter'), 'the removed agent is no longer shown as picked');
+});

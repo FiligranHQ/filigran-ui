@@ -219,6 +219,10 @@ const fr: Catalog = {
   '{quota} (shared across all users)': '{quota} (partagé entre tous les utilisateurs)',
   '{summary} — click for details': '{summary} — cliquez pour plus de détails',
   '{tool} (+{count} more)…': '{tool} (+{count} autres)…',
+  "The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far.":
+    'Le budget d’itérations de l’agent est épuisé : l’exécution s’est arrêtée avant la fin de toutes les étapes prévues. La réponse finale résume au mieux le travail accompli jusqu’ici.',
+  '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
+    '« Oui, toujours » enregistre une préférence pour vous. Cet outil s’exécutera alors sans demander, y compris lors des exécutions planifiées que personne ne surveille, jusqu’à ce que vous la révoquiez.',
 };
 
 export default fr;

@@ -4,7 +4,7 @@ import { chunkSpeech, createSpeechController, speakableText, type SpeechControll
 const speechSupported = (): boolean =>
   typeof window !== 'undefined' && !!window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function';
 
-/** The most text one request to the host's speech route carries. */
+/** The most text one request to the host's speech route carries; a longer answer takes several. */
 export const TTS_MAX_LENGTH = 4096;
 
 /** The host's speech route (`apiEndpoints.tts`), and the headers it is called with. */
@@ -73,33 +73,41 @@ export function useSpeechReader(locale?: string, tts?: TtsRoute) {
       const playback: { id: string; audio?: HTMLAudioElement; url?: string; abort: AbortController } = { id, abort };
       playbackRef.current = playback;
       setSpeakingId(id);
+      // A long answer goes as several requests, read one after the other.
+      const chunks = chunkSpeech(text, TTS_MAX_LENGTH);
+      let index = 0;
       try {
-        const res = await fetch(route.url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(route.requestHeaders ?? {}) },
-          body: JSON.stringify({ text: text.slice(0, TTS_MAX_LENGTH), format: 'mp3' }),
-          signal: abort.signal,
-        });
-        if (!res.ok) throw new Error(`TTS failed: ${res.status}`);
-        const url = URL.createObjectURL(await res.blob());
-        if (playbackRef.current !== playback) {
-          URL.revokeObjectURL(url);
-          return;
+        for (; index < chunks.length; index += 1) {
+          const res = await fetch(route.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(route.requestHeaders ?? {}) },
+            body: JSON.stringify({ text: chunks[index], format: 'mp3' }),
+            signal: abort.signal,
+          });
+          if (!res.ok) throw new Error(`TTS failed: ${res.status}`);
+          const url = URL.createObjectURL(await res.blob());
+          if (playbackRef.current !== playback) {
+            URL.revokeObjectURL(url);
+            return;
+          }
+          if (playback.url) URL.revokeObjectURL(playback.url);
+          const audio = new Audio(url);
+          playback.audio = audio;
+          playback.url = url;
+          const ended = new Promise<boolean>((resolve) => {
+            audio.onended = () => resolve(true);
+            audio.onerror = () => resolve(false);
+          });
+          await audio.play();
+          if (!(await ended)) throw new Error('TTS playback failed');
+          if (playbackRef.current !== playback) return;
         }
-        const audio = new Audio(url);
-        playback.audio = audio;
-        playback.url = url;
-        const finish = () => {
-          if (playbackRef.current === playback) stopPlayback();
-        };
-        audio.onended = finish;
-        audio.onerror = finish;
-        await audio.play();
+        stopPlayback();
       } catch (err) {
         if (playbackRef.current !== playback || (err instanceof DOMException && err.name === 'AbortError')) return;
-        // The route failed: the browser's voice reads it instead, when there is one.
+        // The route failed: the browser's voice reads what is left, when there is one.
         stopPlayback();
-        speakInBrowser(id, text);
+        speakInBrowser(id, chunks.slice(index).join(' '));
       }
     },
     [speakInBrowser, stopPlayback],

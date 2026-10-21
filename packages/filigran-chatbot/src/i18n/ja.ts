@@ -220,6 +220,10 @@ const ja: Catalog = {
   '{quota} (shared across all users)': '{quota}（全ユーザーで共有）',
   '{summary} — click for details': '{summary} — クリックで詳細を表示',
   '{tool} (+{count} more)…': '{tool}（他 {count} 件）…',
+  "The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far.":
+    'エージェントの反復回数の上限に達したため、予定されたすべてのステップを完了する前に実行が停止しました。最終的な回答は、これまでに行った作業をできる限りまとめたものです。',
+  '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
+    '「はい、常に」を選ぶと、あなたの設定として保存されます。以後、そのツールは確認なしで実行されます（誰も見ていない定期実行を含む）。取り消すまでこの設定は有効です。',
 };
 
 export default ja;

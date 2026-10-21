@@ -75,6 +75,11 @@ class MarkerBoundary extends Component<{ fallback: ReactNode; children: ReactNod
   }
 }
 
+/** A host's card, drawn inside the boundary: a renderer that throws itself is caught too. */
+function HostMarker({ draw }: { draw: () => ReactNode }) {
+  return <>{draw()}</>;
+}
+
 /** How long the copy affordance stays in its confirmed state. */
 const COPY_FEEDBACK_DELAY = 2000;
 
@@ -567,7 +572,7 @@ const MessageRow = memo(
           <MarkerBoundary
             fallback={<p className="pl-1 text-[0.75rem] italic text-gray-400 dark:text-white/40">{t('This item could not be loaded.')}</p>}
           >
-            {renderer.render(args, { message: msg, streaming: isStreaming })}
+            <HostMarker draw={() => renderer.render(args, { message: msg, streaming: isStreaming })} />
           </MarkerBoundary>
         </div>
       );

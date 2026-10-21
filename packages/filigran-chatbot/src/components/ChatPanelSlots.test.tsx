@@ -59,7 +59,7 @@ const text = () => container.textContent ?? '';
 test("a host's marker renders its card in place, and one that throws takes only itself down", async () => {
   fakeBackend([
     agentsRoute,
-    restoreRoute([{ id: 'm1', role: 'assistant', content: 'Before [[WORK_ITEM:w1]] middle [[INVESTIGATION:i1]] after [[OTHER:x]]' }]),
+    restoreRoute([{ id: 'm1', role: 'assistant', content: 'Before [[WORK_ITEM:w1]] middle [[INVESTIGATION:i1]] [[RUNNER:r1]] after [[OTHER:x]]' }]),
   ]);
   const Broken = () => {
     throw new Error('boom');
@@ -72,13 +72,18 @@ test("a host's marker renders its card in place, and one that throws takes only 
       markerRenderers: {
         work_item: { render: (args) => <span>Work item {args}</span> },
         INVESTIGATION: { render: () => <Broken /> },
+        RUNNER: {
+          render: () => {
+            throw new Error('unreadable arguments');
+          },
+        },
       },
     });
   } finally {
     console.error = original;
   }
   assert.ok(text().includes('Work item w1'));
-  assert.ok(text().includes('This item could not be loaded.'));
+  assert.equal(text().split('This item could not be loaded.').length - 1, 2, 'a card that throws, and a renderer that throws itself');
   assert.ok(text().includes('after [[OTHER:x]]'), 'a marker no renderer names stays text');
   assert.ok(!text().includes('[[WORK_ITEM'));
 });
