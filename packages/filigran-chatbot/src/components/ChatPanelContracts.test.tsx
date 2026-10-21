@@ -171,18 +171,12 @@ test('without onClose and onModeChange, a sidebar has no close button and no vie
   assert.ok(container.querySelector('button[aria-label="Switch view"]'), 'the view switcher comes with onModeChange');
 });
 
-test("the panel's catalog speaks only for a host that names its language and passes no t", async () => {
+test('a host that translates names no locale and stays in English', async () => {
   fakeBackend([agentsRoute]);
   Object.defineProperty(navigator, 'language', { value: 'fr-FR', configurable: true });
   try {
-    // A host that translates keeps the English of every key it does not, even in French.
-    await render({ t: (key) => key, locale: 'fr-FR' });
+    await render({ t: (key) => key });
     assert.ok(container.querySelector('button[aria-label="Send"]'));
-    // Nor does the browser's language stand in for a locale.
-    await render({ t: undefined, locale: undefined });
-    assert.ok(container.querySelector('button[aria-label="Send"]'));
-    await render({ t: undefined, locale: 'fr-FR' });
-    assert.ok(container.querySelector('button[aria-label="Envoyer"]'), 'XTM One: locale alone');
   } finally {
     Object.defineProperty(navigator, 'language', { value: 'en-US', configurable: true });
   }

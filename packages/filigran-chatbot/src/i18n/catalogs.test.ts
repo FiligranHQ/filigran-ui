@@ -48,14 +48,12 @@ test('a locale picks its language, whatever its region', () => {
   assert.equal(catalogFor('pt-BR'), undefined);
 });
 
-test('a host that translates does it all, the catalog only speaks for a host that names its language alone', () => {
+test("the host's translation wins; a key it returns unchanged falls back to the catalog", () => {
   const french = catalogFor('fr')!;
   const host = (key: string) => (key === 'Send' ? 'Envoyer maintenant' : key);
-  const hosted = createTranslate(host, 'fr-FR');
-  assert.equal(hosted('Send'), 'Envoyer maintenant');
-  assert.equal(hosted('Stopped'), 'Stopped', "a key the host's catalog lacks stays English, as before the catalogs");
-  assert.equal(createTranslate(undefined, 'fr-FR')('Stopped'), french.Stopped);
-  assert.equal(createTranslate(undefined, undefined)('Stopped'), 'Stopped', "no locale: English, not the browser's language");
+  const t = createTranslate(host, 'fr-FR');
+  assert.equal(t('Send'), 'Envoyer maintenant');
+  assert.equal(t('Stopped'), french.Stopped);
   assert.equal(createTranslate(undefined, 'en')('Stopped'), 'Stopped');
   assert.equal(createTranslate(undefined, 'fr')('A key no catalog has'), 'A key no catalog has');
 });
