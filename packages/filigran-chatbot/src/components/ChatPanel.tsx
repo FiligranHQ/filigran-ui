@@ -28,6 +28,10 @@ const FLOATING_HEIGHT = 560;
 const SIDEBAR_GAP = 6;
 /** How long a message jumped to stays highlighted. */
 const HIGHLIGHT_MS = 2000;
+// A backend down, or out of its gateway's reach: it says nothing of the conversation asked for.
+const BACKEND_DOWN_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
+const RESTORE_RETRY_BASE_MS = 5000;
+const RESTORE_RETRY_MAX_MS = 60000;
 
 /**
  * Fallback suggestions, translated where they are written so extraction sees
@@ -106,6 +110,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     fontFamily,
     onReady: onReadyProp,
     onBeforeSend: onBeforeSendProp,
+    onHeldSendSettled: onHeldSendSettledProp,
     steerAttachments = false,
     holdSendsDuringTurn = false,
     agentMentions: agentMentionsEnabled = false,
@@ -132,6 +137,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   const onAgentChange = useLatestCallback(onAgentChangeProp);
   const getRequestExtras = useLatestCallback(getRequestExtrasProp);
   const onBeforeSend = useLatestCallback(onBeforeSendProp);
+  const onHeldSendSettled = useLatestCallback(onHeldSendSettledProp);
   const onStreamEvent = useLatestCallback(onStreamEventProp);
   const rootRef = useRef<HTMLDivElement>(null);
   // The panel's own catalog in `locale`, under whatever the host translates itself.
@@ -174,6 +180,12 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   // only from then on, so a relayed turn lands after the restored transcript.
   const [historySettledId, setHistorySettledId] = useState<string | null>(null);
   const restoringIdRef = useRef<string | null>(null);
+  // The conversation whose history this panel actually holds: only its event
+  // stream is followed, so a relayed turn never lands in an empty transcript.
+  const [eventsReadyId, setEventsReadyId] = useState<string | null>(null);
+  // A conversation the backend could not be reached for: read back once it can.
+  const [restoreOwedId, setRestoreOwedId] = useState<string | null>(null);
+  const restoreAttemptsRef = useRef(0);
   // Retitled elsewhere, or by the backend after the first answer.
   const refreshConversationsRef = useRef<() => Promise<unknown>>(async () => undefined);
 
@@ -194,6 +206,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     submitApprovalDecisions,
     isResumingAfterDecision,
     historyReloadNonce,
+    reloadHistory,
     historyLoadedRef,
     conversationIdRef,
     handleFileAdd,
@@ -232,11 +245,12 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     getRequestExtras: getRequestExtrasProp ? getRequestExtras : undefined,
     onStreamEvent: onStreamEventProp ? onStreamEvent : undefined,
     onConversationTitle: () => void refreshConversationsRef.current(),
-    historySettledFor: historySettledId,
+    historySettledFor: eventsReadyId,
     steerAttachments,
     holdSends: holdSendsDuringTurn,
     agentMentionsEnabled,
     onBeforeSend: onBeforeSendProp ? onBeforeSend : undefined,
+    onHeldSendSettled: onHeldSendSettledProp ? onHeldSendSettled : undefined,
   });
 
   // A host that owns the conversation (a `?c=` URL) moves the panel with it.
@@ -434,6 +448,29 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       return 0;
     }
   }, [messagesPageBase, conversationIdRef, requestHeaders, setMessages]);
+
+  // An owed read-back is tried again with backoff, and at once when the
+  // browser is back online or the page is shown again.
+  useEffect(() => {
+    if (!restoreOwedId || restoreOwedId !== conversationId) return;
+    const retry = () => {
+      setRestoreOwedId(null);
+      restoreAttemptsRef.current += 1;
+      reloadHistory();
+    };
+    const delay = Math.min(RESTORE_RETRY_MAX_MS, RESTORE_RETRY_BASE_MS * 2 ** restoreAttemptsRef.current);
+    const timer = window.setTimeout(retry, delay);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') retry();
+    };
+    window.addEventListener('online', retry);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('online', retry);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [restoreOwedId, conversationId, reloadHistory]);
 
   // A conversation being read back shows its shape, not the welcome screen.
   const restoreEnabled = backendType === 'rest' && !apiEndpoints?.singleEndpoint && apiEndpoints?.sessions !== null;
@@ -729,6 +766,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     if (historyLoadedRef.current) {
       // Created by this panel, or already restored: nothing to wait for.
       if (restoringIdRef.current !== conversationId && historySettledId !== conversationId) setHistorySettledId(conversationId);
+      if (restoringIdRef.current !== conversationId && eventsReadyId !== conversationId) setEventsReadyId(conversationId);
       return;
     }
     // The agent goes with the restore, so it waits for one - unless the host
@@ -775,10 +813,14 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
           // browser kept an old id) — silently reset so a fresh conversation
           // is created on the next message instead of surfacing an error and
           // forcing the user to click "New conversation". A backend that is
-          // down (5xx) says nothing of the id, which is kept.
-          if (res.status < 500) updateConversationId(null);
+          // down or unreachable through its gateway says nothing of the id,
+          // which is kept and read back once it answers.
+          if (BACKEND_DOWN_STATUSES.has(res.status)) setRestoreOwedId(requestedConversationId);
+          else updateConversationId(null);
           return null;
         }
+        restoreAttemptsRef.current = 0;
+        setEventsReadyId(requestedConversationId);
         return res.json();
       })
       .then((data) => {
@@ -814,7 +856,9 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         }
       })
       // Unreachable: nothing is known of the conversation, whose id is kept.
-      .catch(() => undefined)
+      .catch(() => {
+        if (!isStale()) setRestoreOwedId(requestedConversationId);
+      })
       .finally(() => {
         if (restoringIdRef.current === requestedConversationId) restoringIdRef.current = null;
         if (!isStale()) setHistorySettledId(requestedConversationId);

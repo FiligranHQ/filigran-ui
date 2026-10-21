@@ -73,31 +73,38 @@ export function useSpeechReader(locale?: string, tts?: TtsRoute) {
       const playback: { id: string; audio?: HTMLAudioElement; url?: string; abort: AbortController } = { id, abort };
       playbackRef.current = playback;
       setSpeakingId(id);
-      // A long answer goes as several requests, read one after the other.
+      // A long answer goes as several requests, read one after the other on one
+      // audio element (made while the click is still being handled, which some
+      // browsers ask of playback), the next one fetched while this one plays.
       const chunks = chunkSpeech(text, TTS_MAX_LENGTH);
+      const audio = new Audio();
+      playback.audio = audio;
+      const fetchChunk = async (chunk: string): Promise<Blob> => {
+        const res = await fetch(route.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(route.requestHeaders ?? {}) },
+          body: JSON.stringify({ text: chunk, format: 'mp3' }),
+          signal: abort.signal,
+        });
+        if (!res.ok) throw new Error(`TTS failed: ${res.status}`);
+        return res.blob();
+      };
       let index = 0;
+      let next: Promise<Blob> | null = chunks.length > 0 ? fetchChunk(chunks[0]) : null;
       try {
-        for (; index < chunks.length; index += 1) {
-          const res = await fetch(route.url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(route.requestHeaders ?? {}) },
-            body: JSON.stringify({ text: chunks[index], format: 'mp3' }),
-            signal: abort.signal,
-          });
-          if (!res.ok) throw new Error(`TTS failed: ${res.status}`);
-          const url = URL.createObjectURL(await res.blob());
-          if (playbackRef.current !== playback) {
-            URL.revokeObjectURL(url);
-            return;
-          }
+        for (; next; index += 1) {
+          const blob = await next;
+          if (playbackRef.current !== playback) return;
+          next = index + 1 < chunks.length ? fetchChunk(chunks[index + 1]) : null;
+          // Its failure is met when its turn comes.
+          next?.catch(() => undefined);
           if (playback.url) URL.revokeObjectURL(playback.url);
-          const audio = new Audio(url);
-          playback.audio = audio;
-          playback.url = url;
+          playback.url = URL.createObjectURL(blob);
           const ended = new Promise<boolean>((resolve) => {
             audio.onended = () => resolve(true);
             audio.onerror = () => resolve(false);
           });
+          audio.src = playback.url;
           await audio.play();
           if (!(await ended)) throw new Error('TTS playback failed');
           if (playbackRef.current !== playback) return;

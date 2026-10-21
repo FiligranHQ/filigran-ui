@@ -112,6 +112,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `agentMentions`     | `boolean`                                 | `false`      | `@` also mentions agents of the agent list; the message carries their ids as `mentioned_agent_ids` |
 | `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
 | `onReady`           | `() => void`                              | —            | Called once, when the panel has chosen its agent and read back the conversation on screen; handle calls made earlier wait for it and then run in order |
+| `onHeldSendSettled` | `(text, outcome) => void`                 | —            | What became of a message held until the turn ended (`send` resolved `'held'`): `'sent'`, `'failed'`, `'dropped'`, `'returned'` (given back by Stop) or `'cancelled'` |
 | `onBeforeSend`      | `(draft) => false \| { text?, extras? } \| void` | — | Sees every non-empty send first, synchronously (`draft.source`: `'composer'` or `'host'`; `draft.turnRunning`: it would steer): `false` takes it over (the composer keeps its draft), an object rewords it or adds body fields. The panel's own fields cannot be set this way |
 | `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer |
 
@@ -784,7 +785,8 @@ chat) opts into six more routes, none with a default:
 | `clearAll` | `DELETE {clearAll}` | "Clear all conversations" in the conversation list |
 | `tts` | `POST {tts}` with `{ text, format: 'mp3' }` → audio | Read aloud in the backend's voice; the browser's when it fails |
 
-The event stream is opened once the conversation's history is on screen and
+The event stream is opened once the conversation's history is read back (not
+while it could not be, for want of an agent or a reachable backend) and
 reconnected with backoff while the page is visible; a `401`, `403`, `404` or
 `405` stops it. With `events` named, every message, steer, decision, Stop and
 "Continue now" carries the same id in `X-Chat-Client-Id`, which the backend

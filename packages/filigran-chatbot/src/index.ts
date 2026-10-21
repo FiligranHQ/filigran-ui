@@ -9,6 +9,7 @@ export type {
   ChatSendDraft,
   ChatSendDecision,
   ChatSendOutcome,
+  ChatHeldOutcome,
   ChatStreamEventInfo,
   ChatMarkerContext,
   ChatMarkerRenderer,

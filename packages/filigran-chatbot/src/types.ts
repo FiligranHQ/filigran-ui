@@ -622,6 +622,12 @@ export interface ChatPanelProps {
    */
   onBeforeSend?: (draft: ChatSendDraft) => ChatSendDecision;
   /**
+   * What became of a message held until the turn ended (a send that resolved
+   * `'held'`): sent, refused, dropped, given back to the composer by Stop, or
+   * cancelled (by the user, or a new conversation). Messages held together settle together.
+   */
+  onHeldSendSettled?: (text: string, outcome: ChatHeldOutcome) => void;
+  /**
    * Uploaded files may steer the running turn: the steer route takes
    * `file_ids`. Without it, a message with files waits for the turn to end.
    */
@@ -695,6 +701,9 @@ export interface ChatSendDraft {
  * running one, it waits for that turn to end, it went nowhere, or the backend refused it.
  */
 export type ChatSendOutcome = 'sent' | 'steered' | 'held' | 'dropped' | 'failed';
+
+/** What became of a held message once its turn ended (see `onHeldSendSettled`). */
+export type ChatHeldOutcome = 'sent' | 'failed' | 'dropped' | 'returned' | 'cancelled';
 
 /** What `onBeforeSend` decides: `false` takes the send over, an object adjusts it. */
 export type ChatSendDecision = false | { text?: string; extras?: Record<string, unknown> } | void;

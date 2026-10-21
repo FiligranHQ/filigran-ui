@@ -82,6 +82,9 @@ This file starts at 3.10.0; earlier releases are on the
   when the host passes `locale` and no `t`. A host passing `t` translates
   every key itself, as before, and sees no change; without `locale` the
   panel stays English. `ChatToggleButton` takes `locale` too, by the same rule.
+- `onHeldSendSettled(text, outcome)` tells the host what became of a message
+  held until the turn ended: `'sent'`, `'failed'`, `'dropped'`, `'returned'`
+  (given back to the composer by Stop) or `'cancelled'`.
 
 ### Changed
 
@@ -94,10 +97,12 @@ This file starts at 3.10.0; earlier releases are on the
   screen.
 - An agent icon shows only from an `https:` URL or a `data:image/` one.
 - A conversation whose restore fails because the backend is unreachable or
-  answers 5xx keeps its id, rather than being dropped for a new chat; a 4xx
-  still resets it. One remembered while the agent list fails or is empty is
-  not restored, and the panel no longer waits for it (no endless skeleton,
-  `onReady` fires).
+  answers 502, 503 or 504 keeps its id, rather than being dropped for a new
+  chat, and is read back once the backend answers (retried with backoff, and
+  at once when the browser is back online or the page is shown again); any
+  other error still resets it. One remembered while the agent list fails or
+  is empty is not restored, and the panel no longer waits for it (no endless
+  skeleton, `onReady` fires).
 
 ### Fixed
 

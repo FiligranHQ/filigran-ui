@@ -5,6 +5,7 @@ import type {
   ChatSendDecision,
   ChatSendDraft,
   ChatSendOutcome,
+  ChatHeldOutcome,
   BackendType,
   ChatContextUsage,
   ChatConversationRef,
@@ -192,6 +193,8 @@ interface UseChatOptions {
   agentMentionsEnabled?: boolean;
   /** Sees every send first (see `onBeforeSend` on the panel). */
   onBeforeSend?: (draft: ChatSendDraft) => ChatSendDecision;
+  /** Told what became of a held message (see `onHeldSendSettled` on the panel). */
+  onHeldSendSettled?: (text: string, outcome: ChatHeldOutcome) => void;
 }
 
 /** What a host-driven or held send carries, in place of the composer's content. */
@@ -296,6 +299,8 @@ interface UseChatReturn {
   /** A message held until the running turn ends (`holdSends`), if any. */
   heldMessage: HeldMessage | null;
   cancelHeldMessage: () => void;
+  /** Read the conversation back from the server again. */
+  reloadHistory: () => void;
   /** The agents picked from the `@` menu whose `@key` the draft still holds. */
   agentMentions: AgentMention[];
   addAgentMention: (mention: AgentMention) => void;
@@ -454,6 +459,7 @@ export function useChat({
   holdSends = false,
   agentMentionsEnabled = false,
   onBeforeSend,
+  onHeldSendSettled,
 }: UseChatOptions): UseChatReturn {
   const isLegacy = backendType === 'legacy';
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -531,8 +537,9 @@ export function useChat({
     handoverTimerRef.current = null;
     handoverTurnIdRef.current = null;
   };
-  // A stopped relayed turn whose frames name no turn: skipped until it ends.
-  const skipUnnamedTurnRef = useRef(false);
+  // A stopped relayed turn whose frames name no turn: skipped until it ends
+  // ('skipping'), then its stored end too, should one follow ('ended').
+  const skipUnnamedTurnRef = useRef<'off' | 'skipping' | 'ended'>('off');
   const getRequestExtrasRef = useRef(getRequestExtras);
   getRequestExtrasRef.current = getRequestExtras;
   const onStreamEventRef = useRef(onStreamEvent);
@@ -541,6 +548,8 @@ export function useChat({
   onConversationTitleRef.current = onConversationTitle;
   const onBeforeSendRef = useRef(onBeforeSend);
   onBeforeSendRef.current = onBeforeSend;
+  const onHeldSendSettledRef = useRef(onHeldSendSettled);
+  onHeldSendSettledRef.current = onHeldSendSettled;
   // Ref mirror of conversationId — always current across async boundaries
   const conversationIdRef = useRef(conversationId);
   // Ref mirror of isLoading, so the recovery probe can tell at apply time
@@ -1121,6 +1130,8 @@ export function useChat({
    */
   const createTurnRenderer = (firstAssistantId: string, relayed: boolean) => {
     let currentAssistantId = firstAssistantId;
+    // Every bubble the turn opened: a steered turn answers in several.
+    const segmentIds = [firstAssistantId];
     let accumulated = '';
     let doneReceived = false;
     // An error or a stop the stream reported: what it wrote must not be put back over it.
@@ -1156,6 +1167,7 @@ export function useChat({
       doneReceived = false;
       accumulated = '';
       currentAssistantId = crypto.randomUUID();
+      segmentIds.push(currentAssistantId);
       const segmentId = currentAssistantId;
       setMessages((prev) => [...prev, { id: segmentId, role: 'assistant', content: '', timestamp: new Date() }]);
       setAgentStatus({ status: 'thinking' });
@@ -1319,6 +1331,7 @@ export function useChat({
       currentAssistantId: () => currentAssistantId,
       accumulated: () => accumulated,
       doneReceived: () => doneReceived,
+      segmentIds: () => segmentIds,
       ended: () => ended,
     };
   };
@@ -1458,8 +1471,9 @@ export function useChat({
     const handOver = (): boolean => {
       if (!hasEvents || !conversationIdRef.current || !ownTurnIdRef.current || turn.ended()) return false;
       handedOver = true;
-      const segId = turn.currentAssistantId();
-      setMessages((prev) => prev.filter((m) => m.id !== segId));
+      // The replay brings the whole turn back, every segment of it.
+      const segments = new Set(turn.segmentIds());
+      setMessages((prev) => prev.filter((m) => !segments.has(m.id)));
       handoverTurnIdRef.current = ownTurnIdRef.current;
       ownTurnIdRef.current = null;
       setClientId(crypto.randomUUID());
@@ -1669,11 +1683,19 @@ export function useChat({
     const turnId = typeof evt.turn_id === 'string' && evt.turn_id ? evt.turn_id : null;
     if (ownTurnActiveRef.current || (turnId && turnId === ownTurnIdRef.current)) return;
     if (turnId && turnId === stoppedTurnIdRef.current) return;
-    if (!turnId && skipUnnamedTurnRef.current && !relayedTurn) {
-      if (parsed.action === 'cancelled' || parsed.action === 'error' || (parsed.action === 'done' && !parsed.intermediate)) {
-        skipUnnamedTurnRef.current = false;
+    const skip = skipUnnamedTurnRef.current;
+    // A fresh acknowledgement is a new turn: the stopped one ended unseen.
+    if (skip !== 'off' && evt.type === 'thinking' && evt.resumed !== true) skipUnnamedTurnRef.current = 'off';
+    else if (!turnId && skip !== 'off' && !relayedTurn) {
+      const finalDone = parsed.action === 'done' && !parsed.intermediate;
+      if (skip === 'skipping') {
+        if (finalDone) skipUnnamedTurnRef.current = 'off';
+        else if (parsed.action === 'cancelled' || parsed.action === 'error') skipUnnamedTurnRef.current = 'ended';
+        return;
       }
-      return;
+      // The stopped turn's stored end, after the provisional one, is skipped too.
+      skipUnnamedTurnRef.current = 'off';
+      if (finalDone) return;
     }
     let current = relayedTurn;
     if (current && turnId && current.turnId && current.turnId !== turnId) {
@@ -1690,7 +1712,7 @@ export function useChat({
       streamDeltasRef.current = current.renderer.deltas;
       liveRendererRef.current = current.renderer;
       clearHandover();
-      skipUnnamedTurnRef.current = false;
+      skipUnnamedTurnRef.current = 'off';
       stopRequestedRef.current = false;
       isLoadingRef.current = true;
       setIsLoading(true);
@@ -1722,10 +1744,11 @@ export function useChat({
     relayedTurnRef.current?.renderer.deltas.close();
     relayedTurnRef.current = null;
     ownTurnActiveRef.current = false;
+    if (heldMessageRef.current) onHeldSendSettledRef.current?.(heldMessageRef.current.text, 'cancelled');
     setHeldMessage(null);
     clearCancelRequest();
     clearHandover();
-    skipUnnamedTurnRef.current = false;
+    skipUnnamedTurnRef.current = 'off';
     isLoadingRef.current = false;
     setMessages([]);
     setInputValue('');
@@ -1794,7 +1817,7 @@ export function useChat({
     const relayedTurn = relayedTurnRef.current;
     const stoppedTurnId = relayedTurn?.turnId ?? handoverTurnIdRef.current;
     if (stoppedTurnId) stoppedTurnIdRef.current = stoppedTurnId;
-    else if (relayedTurn) skipUnnamedTurnRef.current = true;
+    else if (relayedTurn) skipUnnamedTurnRef.current = 'skipping';
     clearHandover();
     // The text that arrived before the stop stays on screen, including what the
     // next frame would have applied; nothing after it does.
@@ -1967,13 +1990,17 @@ export function useChat({
       // Stopped: the user takes back what they typed rather than see it go; a
       // host's send is not theirs to take back.
       stopRequestedRef.current = false;
+      onHeldSendSettledRef.current?.(heldMessage.text, 'returned');
       if (heldMessage.draft) setInputValue((prev) => (prev ? `${heldMessage.draft}\n${prev}` : heldMessage.draft));
       setAttachedFiles((prev) => [...heldMessage.files, ...prev]);
       setConversationRefs((prev) => [...heldMessage.refs, ...prev]);
       setAgentMentions((prev) => [...heldMessage.mentions, ...prev]);
       return;
     }
-    void handleSendMessageRef.current({ ...heldMessage, decided: true });
+    void handleSendMessageRef.current({ ...heldMessage, decided: true }).then(
+      (outcome) => onHeldSendSettledRef.current?.(heldMessage.text, outcome === 'sent' ? 'sent' : outcome === 'failed' ? 'failed' : 'dropped'),
+      () => onHeldSendSettledRef.current?.(heldMessage.text, 'failed'),
+    );
   }, [isLoading, heldMessage]);
   const handleSendMessageRef = useRef(handleSendMessage);
   handleSendMessageRef.current = handleSendMessage;
@@ -2176,7 +2203,11 @@ export function useChat({
     handleSendMessage,
     skipWait: skipWaitUrl ? skipWait : null,
     heldMessage,
-    cancelHeldMessage: () => setHeldMessage(null),
+    cancelHeldMessage: () => {
+      if (heldMessageRef.current) onHeldSendSettledRef.current?.(heldMessageRef.current.text, 'cancelled');
+      setHeldMessage(null);
+    },
+    reloadHistory,
     agentMentions,
     addAgentMention,
     handleNewChat,
