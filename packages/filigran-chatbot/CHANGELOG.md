@@ -72,6 +72,8 @@ This file starts at 3.10.0; earlier releases are on the
   place before the send that follows it).
 - `onBeforeSend` sees every send first, from the composer or the handle: it
   can take a send over, or reword it and add fields to its body.
+- `reloadAgents()` on the handle reads the agent list again, keeping the agent
+  picked unless it is gone.
 
 ### Changed
 

@@ -670,6 +670,8 @@ export interface ChatPanelHandle {
   setDraft: (text: string) => void;
   focusComposer: () => void;
   stop: () => void;
+  /** Read the agent list again, keeping the agent picked unless it is gone. */
+  reloadAgents: () => void;
   /** Scroll to a message on screen (by its server id) and highlight it; false when it is not there. */
   scrollToMessage: (messageId: string) => boolean;
 }

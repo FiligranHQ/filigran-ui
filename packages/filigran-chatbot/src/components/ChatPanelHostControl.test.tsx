@@ -196,3 +196,20 @@ test('a stopped answer says so, even when nothing was written yet', async () => 
   assert.ok(container.querySelector('button[aria-label="Send"]'), 'the send button has a name');
   assert.ok(container.querySelector('button[aria-label="Attach files"]'), 'the attach button has a name');
 });
+
+test('reloading the agents picks up new ones and keeps the agent picked', async () => {
+  let list = [...AGENTS];
+  const requests = fakeBackend([(req) => (req.url === '/api/chat/agents' ? json(list) : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ initialAgent: 'hunter' }, ref);
+  list = [{ id: 'a0', name: 'Fresh Agent', slug: 'fresh', icon: null, description: null }, ...AGENTS];
+  await act(async () => {
+    ref.current!.reloadAgents();
+    await settle();
+  });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/agents').length, 2);
+  assert.ok(text().includes('Hunter'), 'still the agent picked, not the first of the new list');
+  const picker = [...container.querySelectorAll('button')].find((b) => b.textContent?.includes('Hunter'))!;
+  await act(async () => picker.click());
+  assert.ok(document.body.textContent?.includes('Fresh Agent'));
+});

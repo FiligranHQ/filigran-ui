@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ApiEndpoints, BackendType, XtmAgent } from '../types';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 
@@ -32,6 +32,8 @@ interface UseAgentsReturn {
   agentMenuOpen: boolean;
   setAgentMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleSwitchAgent: (agent: XtmAgent, onSwitch?: () => void) => void;
+  /** Read the agent list again: agents created or changed since. */
+  reloadAgents: () => void;
 }
 
 /**
@@ -72,6 +74,9 @@ export function useAgents({
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [agentsError, setAgentsError] = useState(false);
   const [agentsSettled, setAgentsSettled] = useState(agentsDisabled);
+  // Bumped to read the list again (`reloadAgents` on the panel handle).
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const reloadAgents = useCallback(() => setReloadNonce((n) => n + 1), []);
   const [selectedAgent, setSelectedAgent] = useState<XtmAgent | null>(null);
   const [agentMenuOpen, setAgentMenuOpen] = useState(false);
 
@@ -95,13 +100,18 @@ export function useAgents({
       .then((data: unknown) => {
         const list = parseAgents(data);
         setAgents(list);
-        if (list.length > 0 && !selectedAgent) {
+        if (list.length === 0) return;
+        const pickStarting = () => {
           const savedSlug = readStorage('local', agentStorageKey);
-          const match = findAgent(list, initialAgent) ?? (savedSlug ? list.find((a) => a.slug === savedSlug) : undefined);
-          setSelectedAgent(match || list[0]);
-        }
+          return findAgent(list, initialAgent) ?? (savedSlug ? list.find((a) => a.slug === savedSlug) : undefined) ?? list[0];
+        };
+        // A reload keeps the agent picked, as the list now describes it,
+        // unless it is gone from the list.
+        setSelectedAgent((prev) => (prev ? (list.find((a) => a.id === prev.id) ?? pickStarting()) : pickStarting()));
       })
       .catch(() => {
+        // A failed reload keeps the list it had.
+        if (reloadNonce > 0) return;
         setAgents([]);
         setAgentsError(true);
       })
@@ -109,7 +119,7 @@ export function useAgents({
         setAgentsLoading(false);
         setAgentsSettled(true);
       });
-  }, [apiBaseUrl, apiEndpoints, backendType, requestHeaders, agentsDisabled]);
+  }, [apiBaseUrl, apiEndpoints, backendType, requestHeaders, agentsDisabled, reloadNonce]);
 
   const handleSwitchAgent = (agent: XtmAgent, onSwitch?: () => void) => {
     if (agent.id === selectedAgent?.id) {
@@ -133,5 +143,6 @@ export function useAgents({
     agentMenuOpen,
     setAgentMenuOpen,
     handleSwitchAgent,
+    reloadAgents,
   };
 }

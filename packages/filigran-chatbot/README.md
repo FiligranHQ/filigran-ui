@@ -150,6 +150,7 @@ chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigatio
 | `selectConversation(id)` | Opens a conversation |
 | `setDraft(text)` / `focusComposer()` | Fills / focuses the composer |
 | `stop()` | Same as the Stop button |
+| `reloadAgents()` | Reads the agent list again, keeping the agent picked unless it is gone |
 | `scrollToMessage(id)` | Scrolls to a message by its server id and highlights it; `false` when it is not on screen |
 
 #### Host extensions

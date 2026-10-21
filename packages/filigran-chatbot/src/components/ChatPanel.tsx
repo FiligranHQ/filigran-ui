@@ -146,15 +146,16 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
 
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
-  const { agents, agentsLoading, agentsError, agentsSettled, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent } = useAgents({
-    apiBaseUrl,
-    apiEndpoints,
-    backendType,
-    requestHeaders,
-    storageKeyPrefix,
-    initialAgent,
-    onAgentChange: onAgentChangeProp ? onAgentChange : undefined,
-  });
+  const { agents, agentsLoading, agentsError, agentsSettled, selectedAgent, agentMenuOpen, setAgentMenuOpen, handleSwitchAgent, reloadAgents } =
+    useAgents({
+      apiBaseUrl,
+      apiEndpoints,
+      backendType,
+      requestHeaders,
+      storageKeyPrefix,
+      initialAgent,
+      onAgentChange: onAgentChangeProp ? onAgentChange : undefined,
+    });
 
   // The conversation whose history is on screen: its event stream is followed
   // only from then on, so a relayed turn lands after the restored transcript.
@@ -880,6 +881,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       setDraft: (text) => setInputValue(text),
       focusComposer: () => rootRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus(),
       stop: () => handleStopGenerating(),
+      reloadAgents,
       scrollToMessage: (messageId) => {
         const target = [...(rootRef.current?.querySelectorAll<HTMLElement>('[data-message-id]') ?? [])].find(
           (el) => el.dataset.messageId === messageId,
@@ -891,7 +893,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         return true;
       },
     }),
-    [handleSwitchAgent, setInputValue, handleStopGenerating],
+    [handleSwitchAgent, setInputValue, handleStopGenerating, reloadAgents],
   );
 
   const containerClasses = (() => {
