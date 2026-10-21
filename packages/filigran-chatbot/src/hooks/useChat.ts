@@ -24,6 +24,7 @@ import { hostTakesPageActions, performPageAction, waitForDomSettle, type PageAct
 import { takePageSnapshot } from '../utils/pageSnapshot';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { readSseEvents } from '../utils/sse';
+import { randomId } from '../utils/randomId';
 import { mentionedAgentIds, pruneAgentMentions, withAgentMention, type AgentMention } from '../utils/agentMentions';
 
 // Unsent composer text is kept per conversation so closing the panel (hosts
@@ -135,6 +136,17 @@ function mergeHeld(prev: HeldMessage | null, next: HeldMessage): HeldMessage {
     mentions: [...prev.mentions, ...next.mentions.filter((m) => !mentionIds.has(m.agentId))],
     extras: prev.extras || next.extras ? { ...prev.extras, ...next.extras } : undefined,
   };
+}
+
+/** A host callback's answer; one that throws is reported and answers nothing, never breaking the turn. */
+function askHost<A extends unknown[], R>(callback: ((...args: A) => R) | undefined, ...args: A): R | undefined {
+  if (!callback) return undefined;
+  try {
+    return callback(...args);
+  } catch (err) {
+    console.error('A chat panel host callback threw', err);
+    return undefined;
+  }
 }
 
 /** The host's extra body fields, read at send time; a throwing getter sends none. */
@@ -528,7 +540,7 @@ export function useChat({
   heldMessageRef.current = heldMessage;
   // This panel's identity on the conversation's event stream: the backend
   // never relays to it the turns it started itself.
-  const [clientId, setClientId] = useState(() => crypto.randomUUID());
+  const [clientId, setClientId] = useState(() => randomId());
   // The panel's own turn whose stream dropped, now awaited from the event stream.
   const handoverTimerRef = useRef<number | null>(null);
   const handoverTurnIdRef = useRef<string | null>(null);
@@ -736,12 +748,12 @@ export function useChat({
   const onConversationIdChangeRef = useRef(onConversationIdChange);
   onConversationIdChangeRef.current = onConversationIdChange;
   const updateConversationId = useCallback(
-    (id: string | null) => {
+    (id: string | null, { notify = true }: { notify?: boolean } = {}) => {
       const changed = conversationIdRef.current !== id;
       conversationIdRef.current = id;
       setConversationId(id);
       if (!isControlled) writeStorage('local', conversationStorageKey, id);
-      if (changed) onConversationIdChangeRef.current?.(id);
+      if (changed && notify) onConversationIdChangeRef.current?.(id);
     },
     [isControlled, conversationStorageKey],
   );
@@ -1374,7 +1386,7 @@ export function useChat({
     // The host's say before anything leaves: it may take the send over, or reword it.
     const decision = override?.decided
       ? undefined
-      : onBeforeSendRef.current?.({ text: rawText, source: fromComposer ? 'composer' : 'host', turnRunning: isLoadingRef.current });
+      : askHost(onBeforeSendRef.current, { text: rawText, source: fromComposer ? 'composer' : 'host', turnRunning: isLoadingRef.current });
     if (decision === false) return 'dropped';
     const hookExtras = decision && typeof decision === 'object' ? decision.extras : undefined;
     if (decision && typeof decision === 'object' && typeof decision.text === 'string') rawText = decision.text;
@@ -1476,7 +1488,7 @@ export function useChat({
       setMessages((prev) => prev.filter((m) => !segments.has(m.id)));
       handoverTurnIdRef.current = ownTurnIdRef.current;
       ownTurnIdRef.current = null;
-      setClientId(crypto.randomUUID());
+      setClientId(randomId());
       if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
       handoverTimerRef.current = window.setTimeout(() => {
         handoverTimerRef.current = null;
@@ -1563,7 +1575,7 @@ export function useChat({
       const parseEvent = getParser(backendType);
       await readSseEvents(res.body, (evt) => {
         try {
-          onStreamEventRef.current?.(evt, { relayed: false });
+          askHost(onStreamEventRef.current, evt, { relayed: false });
           if (!ownTurnIdRef.current && typeof evt.turn_id === 'string' && evt.turn_id) ownTurnIdRef.current = evt.turn_id;
           const parsed = parseEvent(evt, turn.ctx);
           if (parsed.action === 'folded') {
@@ -1674,7 +1686,7 @@ export function useChat({
 
   /** One frame of the conversation's event stream. */
   const handleEventFrame = (evt: Record<string, unknown>) => {
-    onStreamEventRef.current?.(evt, { relayed: true });
+    askHost(onStreamEventRef.current, evt, { relayed: true });
     const relayedTurn = relayedTurnRef.current;
     const parsed = parseRestEvent(evt, relayedTurn?.renderer.ctx ?? { hasUsedTools: false, activeNodeId: '' });
     if (applyConversationFrame(parsed)) return;
@@ -1723,7 +1735,10 @@ export function useChat({
   const handleEventFrameRef = useRef(handleEventFrame);
   handleEventFrameRef.current = handleEventFrame;
 
-  const handleNewChat = (workspaceId?: string) => {
+  const handleNewChat = (workspaceId?: string) => resetChat(workspaceId, true);
+
+  /** The new-chat reset; *notify*: the host hears of the empty conversation (not on a switch, which names the next one). */
+  const resetChat = (workspaceId: string | undefined, notify: boolean) => {
     // A string only: the header and the sidebar pass this as a click handler,
     // and the click event must never reach the session request.
     const workspace = typeof workspaceId === 'string' && workspaceId ? workspaceId : null;
@@ -1774,7 +1789,7 @@ export function useChat({
       setLegacyChatId(null);
       writeStorage('local', legacyChatIdStorageKey, null);
     } else {
-      updateConversationId(null);
+      updateConversationId(null, { notify });
     }
   };
 
@@ -1789,8 +1804,9 @@ export function useChat({
     // Reuse the full new-chat reset (abort in-flight request + uploads,
     // clear transcript/composer/status), then adopt the selected id and
     // re-arm the history-restore effect so the host panel fetches the
-    // conversation's messages via the sessions endpoint.
-    handleNewChat();
+    // conversation's messages via the sessions endpoint. The host hears of
+    // the conversation switched to alone, never of an empty one between.
+    resetChat(undefined, false);
     if (!isLegacy) {
       updateConversationId(id);
       // `handleNewChat` blanked the composer; bring back this conversation's

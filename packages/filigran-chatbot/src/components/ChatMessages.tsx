@@ -60,12 +60,16 @@ const RENDER_WINDOW_STEP = 50;
 
 /**
  * A host's marker card that throws takes only itself down: the answer around
- * it, and the rest of the thread, stay on screen.
+ * it, and the rest of the thread, stay on screen. A new *resetKey* (the
+ * marker's arguments completed by the stream) gives the card another try.
  */
-class MarkerBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+class MarkerBoundary extends Component<{ fallback: ReactNode; children: ReactNode; resetKey: string }, { failed: boolean; resetKey: string }> {
+  state = { failed: false, resetKey: this.props.resetKey };
   static getDerivedStateFromError() {
     return { failed: true };
+  }
+  static getDerivedStateFromProps(props: { resetKey: string }, state: { failed: boolean; resetKey: string }) {
+    return props.resetKey === state.resetKey ? null : { failed: false, resetKey: props.resetKey };
   }
   componentDidCatch(error: unknown, info: ErrorInfo) {
     console.error('A chat marker card failed to render', error, info.componentStack);
@@ -570,6 +574,7 @@ const MessageRow = memo(
       return (
         <div key={key} className={renderer.fullWidth ? 'w-full' : 'w-full max-w-[90%]'}>
           <MarkerBoundary
+            resetKey={`${args}\u0000${isStreaming}`}
             fallback={<p className="pl-1 text-[0.75rem] italic text-gray-400 dark:text-white/40">{t('This item could not be loaded.')}</p>}
           >
             <HostMarker draw={() => renderer.render(args, { message: msg, streaming: isStreaming })} />

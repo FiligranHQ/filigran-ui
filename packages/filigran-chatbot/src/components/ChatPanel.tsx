@@ -100,7 +100,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     onStreamEvent: onStreamEventProp,
     markerRenderers: markerRenderersProp,
     transformMessageText,
-    onArtifactOpen,
+    onArtifactOpen: onArtifactOpenProp,
     headerActions,
     banner,
     composerHeader,
@@ -146,6 +146,8 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   const onBeforeSend = useLatestCallback(onBeforeSendProp);
   const onHeldSendSettled = useLatestCallback(onHeldSendSettledProp);
   const onStreamEvent = useLatestCallback(onStreamEventProp);
+  // A click handler, not content: held stable so a host's inline one spares every row.
+  const onArtifactOpen = useLatestCallback(onArtifactOpenProp);
   const rootRef = useRef<HTMLDivElement>(null);
   // The panel's own catalog in `locale`, under whatever the host translates itself.
   const t = useMemo(() => createTranslate(hostT, locale), [hostT, locale]);
@@ -481,7 +483,23 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     if (aboveTurn) {
       setMessages((prev) => {
         const shown = new Set(prev.map((m) => m.serverId).filter(Boolean));
-        return [...restored.filter((m) => !m.serverId || !shown.has(m.serverId)), ...prev];
+        // A message sent while the history was read back may be in it already,
+        // stored: the one on screen, which has no server id yet, is that one.
+        const unsaved = new Map<string, number>();
+        for (const m of prev) {
+          if (m.serverId) continue;
+          const key = `${m.role}\u0000${m.content}`;
+          unsaved.set(key, (unsaved.get(key) ?? 0) + 1);
+        }
+        const earlier = restored.filter((m) => {
+          if (m.serverId && shown.has(m.serverId)) return false;
+          const key = `${m.role}\u0000${m.content}`;
+          const pending = unsaved.get(key) ?? 0;
+          if (pending === 0) return true;
+          unsaved.set(key, pending - 1);
+          return false;
+        });
+        return [...earlier, ...prev];
       });
       return;
     }

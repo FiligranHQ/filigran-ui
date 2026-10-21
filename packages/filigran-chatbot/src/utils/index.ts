@@ -427,6 +427,8 @@ interface MarkerGrammar {
 }
 
 const grammars = new Map<string, MarkerGrammar>();
+/** Grammars kept, one per set of host kinds. */
+const MAX_GRAMMARS = 32;
 
 /**
  * The marker grammar for the built-in names plus *hostKinds*. A host name
@@ -453,6 +455,9 @@ function markerGrammar(hostKinds: readonly string[]): MarkerGrammar {
     heads,
     longestHead: Math.max(...heads.map((head) => head.length)),
   };
+  // A host whose kinds keep changing would grow the cache without bound: the
+  // oldest grammar goes first.
+  if (grammars.size >= MAX_GRAMMARS) grammars.delete(grammars.keys().next().value as string);
   grammars.set(key, grammar);
   return grammar;
 }
@@ -490,7 +495,8 @@ function withoutMarkerHead(text: string, grammar: MarkerGrammar): string {
 export function stripAnswerMarkers(content: string, hostKinds: readonly string[] = []): string {
   if (!content) return content;
   const grammar = markerGrammar(hostKinds);
-  const stripped = content.replace(new RegExp(grammar.complete.source, 'gi'), '').replace(grammar.partial, '');
+  // `replace` with a global pattern starts from the beginning, whatever `lastIndex` holds.
+  const stripped = content.replace(grammar.complete, '').replace(grammar.partial, '');
   if (stripped === content) return content;
   return stripped
     .replace(/[ \t]+\n/g, '\n')
@@ -519,10 +525,9 @@ export function splitAnswerMarkers(content: string, streaming = false, hostKinds
   if (!content) return [];
   const grammar = markerGrammar(hostKinds);
   const parts: AnswerPart[] = [];
-  const re = new RegExp(grammar.complete.source, 'gi');
   let lastIndex = 0;
-  let match: RegExpExecArray | null = re.exec(content);
-  while (match !== null) {
+  // `matchAll` walks a copy of the cached pattern: no state of its own to reset.
+  for (const match of content.matchAll(grammar.complete)) {
     if (match.index > lastIndex) {
       parts.push({ type: 'text', value: content.slice(lastIndex, match.index) });
     }
@@ -538,8 +543,7 @@ export function splitAnswerMarkers(content: string, streaming = false, hostKinds
     } else {
       parts.push({ type: 'marker', kind: match[4].toUpperCase(), args: match[5] });
     }
-    lastIndex = re.lastIndex;
-    match = re.exec(content);
+    lastIndex = match.index + match[0].length;
   }
   const rest = content.slice(lastIndex).replace(grammar.partial, '');
   const tail = streaming ? withoutMarkerHead(rest, grammar) : rest;

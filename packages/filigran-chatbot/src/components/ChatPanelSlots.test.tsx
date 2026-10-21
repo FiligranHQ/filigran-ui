@@ -41,9 +41,9 @@ const baseProps: Props = {
   user: { firstName: 'Ada' },
 };
 
-async function render(props: Partial<Props>) {
+async function render(props: Partial<Props>, ref?: React.Ref<Handle>) {
   await act(async () => {
-    root.render(<ChatPanel {...baseProps} {...props} />);
+    root.render(<ChatPanel {...baseProps} {...props} ref={ref} />);
   });
   await act(async () => settle());
 }
@@ -179,4 +179,46 @@ test("the status line says what the host's label says", async () => {
     stream.close();
     await settle();
   });
+});
+
+test('a card that threw while its answer streamed is tried again once the answer is done', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  const original = console.error;
+  console.error = () => undefined;
+  try {
+    await render(
+      {
+        markerRenderers: {
+          WORK_ITEM: {
+            renderWhileStreaming: true,
+            render: (args, { streaming }) => {
+              if (streaming) throw new Error('not ready while streaming');
+              return <span>Work item {args}</span>;
+            },
+          },
+        },
+      },
+      ref,
+    );
+    await act(async () => {
+      void ref.current!.send('go');
+      await settle();
+    });
+    await act(async () => {
+      stream.send({ type: 'stream', content: 'See [[WORK_ITEM:w1]]' });
+      await settle(10);
+    });
+    assert.ok(text().includes('This item could not be loaded.'));
+    await act(async () => {
+      stream.send({ type: 'done', content: 'See [[WORK_ITEM:w1]]', conversation_id: 'c1' });
+      stream.close();
+      await settle(10);
+    });
+  } finally {
+    console.error = original;
+  }
+  assert.ok(text().includes('Work item w1'));
+  assert.ok(!text().includes('This item could not be loaded.'));
 });

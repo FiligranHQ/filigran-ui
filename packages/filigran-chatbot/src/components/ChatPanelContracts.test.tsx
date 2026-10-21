@@ -806,3 +806,135 @@ test('a history read back during a turn goes above it once the turn ends, and on
   assert.equal(requests.filter((r) => r.url.includes('/events')).length, 1);
   await finish(events);
 });
+
+test('a host callback that throws breaks neither the send nor the turn', async () => {
+  const stream = sseStream();
+  const requests = fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  const original = console.error;
+  console.error = () => undefined;
+  try {
+    await render(
+      {
+        onBeforeSend: () => {
+          throw new Error('host bug');
+        },
+        onStreamEvent: () => {
+          throw new Error('host bug');
+        },
+      },
+      ref,
+    );
+    await act(async () => {
+      void ref.current!.send('hello');
+      await settle();
+      stream.send({ type: 'stream', content: 'Still answered' });
+      stream.send({ type: 'done', content: 'Still answered', conversation_id: 'c1' });
+      stream.close();
+      await settle(10);
+    });
+  } finally {
+    console.error = original;
+  }
+  assert.equal(messages(requests).length, 1, 'the send went out');
+  assert.ok(text().includes('Still answered'));
+  assert.equal(container.querySelector('button[aria-label="Stop generating"]'), null, 'and the turn ended');
+});
+
+test('switching conversations tells the host the one switched to, never an empty one between', async () => {
+  fakeBackend([
+    agentsRoute,
+    (req) =>
+      req.url === '/api/chat/sessions' && req.method === 'POST'
+        ? json({ conversation_id: (req.body as { conversation_id: string }).conversation_id, messages: [] })
+        : undefined,
+  ]);
+  const ref = createRef<Handle>();
+  const changes: (string | null)[] = [];
+  await render({ onConversationChange: (id) => changes.push(id) }, ref);
+  await act(async () => {
+    ref.current!.selectConversation('c1');
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.selectConversation('c2');
+    await settle(10);
+  });
+  assert.deepEqual(changes, ['c1', 'c2']);
+  await act(async () => {
+    ref.current!.newConversation();
+    await settle(10);
+  });
+  assert.deepEqual(changes, ['c1', 'c2', null], 'a new chat still says so');
+});
+
+test('a history read back with the message sent meanwhile shows that message once', async () => {
+  let release!: () => void;
+  const restored = new Promise<void>((resolve) => (release = resolve));
+  const stream = sseStream();
+  fakeBackend([
+    agentsRoute,
+    async (req) => {
+      if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+      await restored;
+      return json({
+        conversation_id: 'c1',
+        messages: [
+          { id: 'm1', role: 'user', content: 'an old question' },
+          { id: 'm2', role: 'assistant', content: 'an old answer' },
+          { id: 'm3', role: 'user', content: 'a new question' },
+        ],
+      });
+    },
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    ref.current!.setDraft('a new question');
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!.click();
+    await settle(10);
+  });
+  await act(async () => {
+    release();
+    await settle(10);
+  });
+  await finish(stream);
+  const shown = [...container.querySelectorAll('[data-testid="filigran-chat-user-message"]')].map((e) => e.textContent);
+  assert.deepEqual(shown, ['an old question', 'a new question']);
+});
+
+test('a file that failed to upload offers neither a steer nor a hold while the turn runs', async () => {
+  const stream = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url === '/api/chat/upload' ? json({ detail: 'too large' }, 500) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', steerAttachments: true, holdSendsDuringTurn: true }, ref);
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle();
+    stream.send({ type: 'stream', content: 'Working' });
+    await settle(10);
+  });
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+  await act(async () => {
+    const file = new File(['x'], 'report.pdf', { type: 'application/pdf' });
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.setDraft('with this file');
+    await settle();
+  });
+  assert.equal(container.querySelector('button[aria-label="Send now"]'), null);
+  assert.equal(container.querySelector('button[aria-label="Send when the answer ends"]'), null);
+  await finish(stream);
+});
