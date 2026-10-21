@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { ChatArtifact, ChatArtifactKind, ChatAttachment, ChatPanelHandle, ChatPanelProps, Translate } from '../types';
-import { artifactFileExtension, filenameFromContentDisposition, hexAlpha, identity, markerKinds } from '../utils';
+import { artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
+import { createTranslate } from '../i18n';
 import { feedbackBaseUrl } from '../utils/feedback';
 import { conversationReferencesUrl } from '../utils/conversationRefs';
 import { pendingWorkspaceStillFileable, returnRefreshDue } from '../utils/workspaces';
@@ -50,7 +51,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     apiEndpoints: apiEndpointsProp,
     agentDashboardUrl,
     user,
-    t = identity,
+    t: hostT,
     accentColor = '#7b5cff',
     logoIcon,
     promptSuggestions: promptSuggestionsProp,
@@ -133,6 +134,8 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   const onBeforeSend = useLatestCallback(onBeforeSendProp);
   const onStreamEvent = useLatestCallback(onStreamEventProp);
   const rootRef = useRef<HTMLDivElement>(null);
+  // The panel's own catalog in `locale`, under whatever the host translates itself.
+  const t = useMemo(() => createTranslate(hostT, locale), [hostT, locale]);
   const waitingMessages = useShallowStable(waitingMessagesProp);
   // The host's marker cards by upper-cased name, the form the parser reads.
   const markerRenderers = useMemo(

@@ -75,7 +75,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `agentDashboardUrl` | `string`                                  | —            | XTM One URL for the "Browse agents" / "Create agent" links and the waiting panel's "Play Space Invaders in XTM One" link (`{url}/chat?arcade=play`, http(s) only) |
 | `miniGameEnabled`   | `boolean`                                 | `true`       | Show the waiting panel during longer waits: rotating messages and the invitation to play XTM One's arcade (the package ships no game of its own) |
 | `onPlayWaitingGame` | `() => void`                              | —            | Open the arcade in place instead of linking to XTM One, for a host that runs it itself (the XTM One floating assistant) |
-| `t`                 | `(key: string) => string`                 | identity     | Translation function for i18n                                    |
+| `t`                 | `(key: string) => string`                 | —            | The host's translations, over the panel's own catalog — see [Internationalization](#internationalization) |
 | `accentColor`       | `string`                                  | `'#7b5cff'`  | Primary accent color (hex)                                       |
 | `logoIcon`          | `React.ReactNode`                         | default icon | Custom logo/icon for the assistant                               |
 | `promptSuggestions` | `string[]`                                | default list | Prompt suggestions shown on welcome screen                       |
@@ -85,7 +85,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onResizeStart`     | `() => void`                              | —            | Called when resize drag starts                                   |
 | `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
 | `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Receives each rating of an answer (`null` clears it); `id` is the message's persisted id when the backend reported one (`done.message_id`, a restored entry's `id`), else the panel's own. On its own it enables 👍/👎 and the panel stores nothing; with `apiEndpoints.feedback` set it is called once the backend has stored the rating. With neither, no thumbs. |
-| `locale`            | `string`                                  | browser's    | BCP 47 language tag the message times are written in and answers are read aloud in (the platform's language, e.g. `'fr-FR'`) |
+| `locale`            | `string`                                  | browser's    | BCP 47 language tag of the platform's language (e.g. `'fr-FR'`): the language the panel speaks, its message times are written in and answers are read aloud in |
 | `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
 | `contextUsageEnabled` | `boolean`                               | `true`       | Show how full the model's context window is for the current conversation (ring + percentage in the composer toolbar). Data-driven, so it stays absent until the backend reports occupancy — see [Context usage](#context-usage). |
 | `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
@@ -225,7 +225,8 @@ import { ChatToggleButton } from '@filigran/chatbot';
 | `isOpen`      | `boolean`                 | **required** | Whether the chat panel is open                                             |
 | `onToggle`    | `() => void`              | **required** | Called when button is clicked                                              |
 | `label`       | `string`                  | built-in     | Button text, already translated by the host; omit for `t('Ask Assistant')` |
-| `t`           | `(key: string) => string` | identity     | Translation function, used for the default label                           |
+| `t`           | `(key: string) => string` | —            | The host's translations, over the panel's own catalog                      |
+| `locale`      | `string`                  | browser's    | The default label's language                                               |
 | `accentColor` | `string`                  | `'#7b5cff'`  | Button background color                                                    |
 | `icon`        | `React.ReactNode`         | default icon | Custom icon                                                                |
 
@@ -913,25 +914,30 @@ import { MyLogo } from './icons';
 
 ### Internationalization
 
+The panel speaks English, French, Spanish and Japanese on its own, the
+languages of XTM One: it ships a catalog for each and picks one from `locale`
+(`fr-FR` reads French; English, or a language it lacks, is its own keys). A
+host in another language translates through `t`, as before. A host with nothing to add only passes `locale`:
+
+```tsx
+<ChatPanel locale={user.language} /* ... */ />
+```
+
+`t` is an optional override, asked first for every key — key in, translated
+string out, so any i18n library works. Where it returns something other than
+the key, its wording wins; where it returns the key (a host catalog that does
+not have it), the panel's own catalog answers:
+
 ```tsx
 import { useTranslation } from 'react-i18next';
 
 function App() {
-  const { t } = useTranslation();
-
-  return (
-    <ChatPanel
-      t={t}
-      // ...
-    />
-  );
+  const { t, i18n } = useTranslation();
+  return <ChatPanel t={t} locale={i18n.language} /* ... */ />;
 }
 ```
 
-`t` is only ever asked for a lookup — key in, translated string out — so any
-i18n library works and the package never carries a dictionary of its own.
-Untranslated hosts can omit it: the default is the identity function, so every
-key is its own English text.
+`ChatToggleButton` takes the same `t` and `locale` for its default label.
 
 #### Values inside sentences
 
@@ -946,7 +952,7 @@ value, and a translator sees the sentence rather than a fragment of one:
 | `'{percent}% full'` | 84% full |
 | `'How can {agent} help you, {name}?'` | How can **Threat Analyst** help you, John? |
 
-Two consequences worth knowing when writing the locale files:
+Two consequences worth knowing when writing a translation:
 
 - **Plurals are separate keys** — `'1 tool call'` and `'{count} tool calls'`,
   `'Delegating one task…'` and `'Delegating {count} tasks…'`. A lookup cannot
@@ -962,254 +968,12 @@ Two consequences worth knowing when writing the locale files:
 `promptSuggestions` (and any suggestions the backend serves) also go through
 `t`, so a host may pass either keys or final text.
 
-#### Translation keys used
+#### Translation keys
 
-Every key the package can ask for, grouped by where it appears:
-
-**Toggle button**
-
-- `'Ask Assistant'`
-
-**Header, agent menu and history**
-
-- `'Agent switching is not available here'`
-- `'Browse agents'`
-- `'Close'`
-- `'Conversation history'`
-- `'Could not reach the assistant service. Check the connection and try again.'`
-- `'Create agent'`
-- `'Delete conversation'`
-- `'Floating'`
-- `'Full screen'`
-- `'New chat'`
-- `'New conversation'`
-- `'No agent matches'`
-- `'No conversations yet'`
-- `'Search agents...'`
-- `'Sidebar'`
-- `'Switch to'`
-- `'Switch to another agent'`
-- `'Switch view'`
-- `'Transferred from {agent}'`
-- `'Untitled conversation'`
-
-**Conversation sidebar**
-
-- `'Clear all conversations'`
-- `'Conversation title'`
-- `'Delete all conversations'`
-- `'Delete all conversations?'`
-- `'Hide conversations'`
-- `'No conversation matches'`
-- `'Rename conversation'`
-- `'Search conversations...'`
-- `'Show conversations'`
-
-**Welcome screen**
-
-- `'Assistant'`
-- `'Help me create a new simulation scenario'`
-- `'How can I help you, {name}?'`
-- `'How can {agent} help you, {name}?'`
-- `'How do I configure detection rules?'`
-- `'Suggestions'`
-- `'Summarize my recent findings'`
-- `'What are the latest attack patterns?'`
-
-**Composer**
-
-- `'A message references at most {count} conversations'`
-- `'Ask a question...'`
-- `'Attach files'`
-- `'Attached files'`
-- `'Attachments wait for the current response'`
-- `'Cancel'`
-- `'Dictate a message'`
-- `'Drop files to attach them'`
-- `'Enter to send now · Esc to stop'`
-- `'Enter to send when the answer ends · Esc to stop'`
-- `'Files uploading...'`
-- `'Insert prompt template'`
-- `'Listening...'`
-- `'Mention an agent'`
-- `'No conversation matches'`
-- `'No prompt matches'`
-- `'Reference a conversation'`
-- `'Referenced conversations wait for the current response'`
-- `'Search prompts...'`
-- `'Send'`
-- `'Send now'`
-- `'Send when the answer ends'`
-- `'Sends when the answer ends:'`
-- `'Shared with you'`
-- `'Stop dictation'`
-- `'Stop generating'`
-- `'Untitled conversation'`
-- `'Uses AI. Verify results.'`
-
-**Messages, markdown and files**
-
-- `'Bad response'`
-- `'Conversation transcript'`
-- `'Copied'`
-- `'Copied!'`
-- `'Copy code'`
-- `'Copy message'`
-- `'Copy response'`
-- `'Could not retract feedback.'`
-- `'Could not submit feedback.'`
-- `'Download'`
-- `'Expand image'`
-- `'Feedback already submitted'`
-- `'Good response'`
-- `'Image could not be loaded'`
-- `'Image preview'`
-- `'Load earlier messages'`
-- `'Loading image…'`
-- `'Open conversation'`
-- `'Read aloud'`
-- `'Reasoning details'`
-- `'Reasoning details — turn limit reached'`
-- `'Save'`
-- `'Skip'`
-- `'Stop reading'`
-- `'Tell us what went wrong (optional)'`
-- `'What could be improved?'`
-
-**Decks, reports and videos**
-
-- `'Download {format}'`
-- `'Not rendered yet'`
-- `'Open'`
-- `'Open in XTM One'`
-- `'PowerPoint'`
-- `'PowerPoint (editable)'`
-- `'Presentation'`
-- `'Rendering {progress}%'`
-- `'Report'`
-- `'The render did not finish'`
-- `'This item could not be loaded.'`
-- `'Video'`
-- `'Waiting to render'`
-- `'{count} scenes'`
-- `'{count} sections'`
-- `'{count} slides'`
-
-**Agent status**
-
-- `'Analyzing results…'`
-- `'Collecting results from one task…'`
-- `'Collecting results from {count} tasks…'`
-- `'Composing answer…'`
-- `'Consulting {agent}…'`
-- `'Continue now'`
-- `'Delegating one task…'`
-- `'Delegating {count} tasks…'`
-- `'Incorporating your message…'`
-- `'Stopped'`
-- `'Stopping…'`
-- `'Thinking...'`
-- `'Transferring to {agent}…'`
-- `'Using tools…'`
-- `'Waiting before continuing…'`
-- `'Waiting for one background task…'`
-- `'Waiting for your approval…'`
-- `'Waiting for {count} background tasks…'`
-- `'the agent'`
-- `'{tool} (+{count} more)…'`
-
-**Waiting panel**
-
-- `'Almost there'`
-- `'Analyzing the details'`
-- `'Connecting the dots'`
-- `'Consulting the sources'`
-- `'Crunching the data'`
-- `'Play Space Invaders'`
-- `'Play Space Invaders in XTM One'`
-- `'Polishing the answer'`
-- `'Putting it together'`
-- `'Reticulating splines'`
-- `'Thinking it through'`
-- `'Wrapping things up'`
-
-**Reasoning details**
-
-- `'(no output)'`
-- `'1 tool call'`
-- `'1 transfer'`
-- `'Input'`
-- `'Model reasoning'`
-- `'Output'`
-- `"The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far."`
-- `'Transfer chain'`
-- `'Turn limit reached.'`
-- `'{count} iterations'`
-- `'{count} tool calls'`
-- `'{count} transfers'`
-
-**Tool approval**
-
-- `'Also applies to your scheduled runs, until you revoke it'`
-- `'Always allowed'`
-- `'Approved'`
-- `'Back'`
-- `'Confirm'`
-- `'Decline this call'`
-- `'Declined'`
-- `'No'`
-- `'Sending…'`
-- `'The agent needs your approval to run a tool:'`
-- `'The agent needs your approval to run these tools:'`
-- `'Why not? The agent sees this and can adapt (optional)'`
-- `'Yes'`
-- `'Yes, always'`
-- `'e.g. wrong environment — use staging instead'`
-- `'unknown tool'`
-- `'{decided}/{total} decided'`
-- `'“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.'`
-
-**Context gauge**
-
-- `'Context full — older turns are being dropped'`
-- `'Context nearly full — older turns are being summarized'`
-- `'Context used'`
-- `'Conversation'`
-- `'MCP & dynamic tools'`
-- `'Summarized conversation'`
-- `'System prompt'`
-- `'Tool definitions'`
-- `'Tool results'`
-- `'{counts} tokens'`
-- `'{percent}% full'`
-- `'{summary} — click for details'`
-
-**Quota**
-
-- `'Quota'`
-- `'Quota reached'`
-- `'Usage'`
-- `'Usage · {period}'`
-- `'this month'`
-- `'this year'`
-- `'today'`
-- `'{quota} (shared across all users)'`
-
-**Notices, errors and timestamps**
-
-- `'Could not send your decision. Please try again.'`
-- `'No response.'`
-- `'Response ready'`
-- `'Sorry, an error occurred. Please try again.'`
-- `'This decision could not be sent. Reload the chat and try again.'`
-- `'This turn is no longer waiting for a decision.'`
-- `'Unable to connect. Please check the configuration.'`
-- `'Your answer is ready'`
-- `'just now'`
-- `'{agent} has finished'`
-- `'{count}d ago'`
-- `'{count}h ago'`
-- `'{count}m ago'`
+The catalogs are `src/i18n/<language>.ts`, one entry per key: the list of
+everything a host may override. `yarn test` fails when a key the source uses
+is missing from a catalog, or a translation drops one of its placeholders, so
+a new string ships translated with the feature that adds it.
 
 ## Styling
 

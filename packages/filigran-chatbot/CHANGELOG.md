@@ -77,6 +77,11 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Changed
 
+- The panel ships its own translations (es, fr, ja, beside English) and
+  speaks `locale`'s language without the host translating anything. `t` is
+  now an override: the host's wording wins where it translates a key, the
+  panel's catalog answers where it returns the key. A host translating every
+  key, as before, sees no change. `ChatToggleButton` takes `locale` too.
 - A stopped answer says `Stopped`, rather than vanishing when nothing was
   written yet.
 - The Send and attach buttons have accessible names.
