@@ -447,6 +447,7 @@ interface MessageRowProps {
 }
 
 const NO_KINDS: readonly string[] = [];
+const BUILT_IN_ARTIFACT_KINDS: ReadonlySet<string> = new Set(['PRESENTATION', 'REPORT', 'VIDEO']);
 
 /**
  * One message in the thread.
@@ -605,6 +606,9 @@ const MessageRow = memo(
             );
           }
         } else if (part.type === 'marker') {
+          // A built-in kind the host draws itself is drawn once, by the host.
+          if (part.kind === 'FILE') used.add(part.args);
+          else if (BUILT_IN_ARTIFACT_KINDS.has(part.kind)) usedArtifacts.add(artifactKey(part.kind.toLowerCase(), part.args.split('#/')[0]));
           const card = renderHostMarker(part.kind, part.args, `m-${part.kind}-${i}`);
           if (card) blocks.push(card);
         } else if (part.type === 'artifact') {
@@ -627,22 +631,30 @@ const MessageRow = memo(
         const key = artifactKey(artifact.kind, artifact.id);
         if (!usedArtifacts.has(key)) {
           usedArtifacts.add(key);
-          blocks.push(renderArtifactCard(artifact, `orphan-a-${key}`));
+          const kind = artifact.kind.toUpperCase();
+          if (markerRenderers?.[kind]) {
+            const card = renderHostMarker(kind, artifact.slideRef ? `${artifact.id}#/${artifact.slideRef}` : artifact.id, `orphan-a-${key}`);
+            if (card) blocks.push(card);
+          } else {
+            blocks.push(renderArtifactCard(artifact, `orphan-a-${key}`));
+          }
         }
       });
 
-      if (onDownloadFile) {
-        (msg.attachments ?? []).forEach((att) => {
-          if (!used.has(att.fileId)) {
-            blocks.push(renderAttachmentCard(att, `orphan-${att.fileId}`));
-          }
-        });
-      }
+      (msg.attachments ?? []).forEach((att) => {
+        if (used.has(att.fileId)) return;
+        if (markerRenderers?.FILE) {
+          const card = renderHostMarker('FILE', att.fileId, `orphan-${att.fileId}`);
+          if (card) blocks.push(card);
+        } else if (onDownloadFile) {
+          blocks.push(renderAttachmentCard(att, `orphan-${att.fileId}`));
+        }
+      });
 
       // An assistant reply that is *only* a file marker leaves no prose; show a
       // subtle ellipsis (not an empty padded bubble) when nothing else rendered
       // and we're not still streaming.
-      if (blocks.length === 0 && !isStreaming) {
+      if (blocks.length === 0 && !isStreaming && !msg.stopped) {
         blocks.push(
           <span key="empty" className="pl-1 text-[0.8125rem] text-gray-400 dark:text-white/40 italic">
             ...
@@ -766,6 +778,7 @@ const MessageRow = memo(
         {isAssistant ? (
           <div data-testid="filigran-chat-assistant-message" className="flex flex-col gap-1.5 w-full items-start">
             {buildAssistantBlocks()}
+            {msg.stopped && !isStreaming && <p className="pl-1 text-[0.75rem] italic text-gray-400 dark:text-white/40">{t('Stopped')}</p>}
             {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-xs ml-1 animate-pulse" />}
           </div>
         ) : (

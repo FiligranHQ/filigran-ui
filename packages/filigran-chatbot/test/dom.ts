@@ -85,7 +85,7 @@ export function sseStream() {
   };
 }
 
-type Route = (req: RecordedRequest) => Response | Promise<Response> | undefined;
+type Route = (req: RecordedRequest) => Response | Promise<Response | undefined> | undefined;
 
 /** Replace `fetch` with *routes*, tried in order; unmatched requests answer 404. */
 export function fakeBackend(routes: Route[]) {

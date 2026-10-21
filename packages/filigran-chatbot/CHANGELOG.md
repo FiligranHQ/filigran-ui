@@ -66,6 +66,28 @@ This file starts at 3.10.0; earlier releases are on the
   `filigran-chat-assistant-message`, `filigran-chat-composer`,
   `filigran-chat-approval`, `filigran-chat-disclaimer`.
 
+- `onReady` tells the host when the panel has chosen its agent and read back
+  the conversation on screen; calls through the handle made before then wait
+  for it, and all of them run in order (a new conversation's agent is in
+  place before the send that follows it).
+- `onBeforeSend` sees every send first, from the composer or the handle: it
+  can take a send over, or reword it and add fields to its body.
+
+### Changed
+
+- A stopped answer says `Stopped`, rather than vanishing when nothing was
+  written yet.
+- The Send and attach buttons have accessible names.
+
+### Fixed
+
+- A host card for `FILE`, `PRESENTATION`, `REPORT` or `VIDEO` no longer
+  appears beside the built-in one; items with no marker go to the host card
+  too.
+- A steer, a decision, Stop and "Continue now" carry `X-Chat-Client-Id`, so
+  the backend does not echo a tab's own steering message back to it; an echo
+  that comes anyway is recognised.
+
 ### Host opt-in
 
 - `apiEndpoints.cancel` (no default): Stop asks the backend to end the turn and

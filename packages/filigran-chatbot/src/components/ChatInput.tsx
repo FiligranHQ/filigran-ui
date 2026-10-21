@@ -277,6 +277,7 @@ export const ChatInput = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
+              aria-label={t('Attach files')}
               className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10 mr-0.5 transition-colors"
             >
               <AttachFileIcon size={18} />
@@ -356,6 +357,7 @@ export const ChatInput = ({
           <button
             type="button"
             onClick={isLoading ? onStop : send}
+            aria-label={isLoading ? t('Stop generating') : t('Send')}
             disabled={!isLoading && !canSend}
             className={`p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 ${
               isLoading

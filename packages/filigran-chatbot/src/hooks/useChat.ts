@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   AgentStatusState,
   ApiEndpoints,
+  ChatSendDecision,
+  ChatSendDraft,
   BackendType,
   ChatContextUsage,
   ChatConversationRef,
@@ -157,6 +159,8 @@ interface UseChatOptions {
   holdSends?: boolean;
   /** `@` can mention agents: the message then carries `mentioned_agent_ids`. */
   agentMentionsEnabled?: boolean;
+  /** Sees every send first (see `onBeforeSend` on the panel). */
+  onBeforeSend?: (draft: ChatSendDraft) => ChatSendDecision;
 }
 
 /** What a host-driven or held send carries, in place of the composer's content. */
@@ -166,6 +170,8 @@ export interface SendOverride {
   files?: ChatFile[];
   refs?: ChatConversationRef[];
   mentions?: AgentMention[];
+  /** Already seen by `onBeforeSend` (a held message going out). */
+  decided?: boolean;
 }
 
 /** A message waiting for the running turn to end. */
@@ -174,6 +180,7 @@ export interface HeldMessage {
   files: ChatFile[];
   refs: ChatConversationRef[];
   mentions: AgentMention[];
+  extras?: Record<string, unknown>;
 }
 
 export interface TransferredAgent {
@@ -409,6 +416,7 @@ export function useChat({
   steerAttachments = false,
   holdSends = false,
   agentMentionsEnabled = false,
+  onBeforeSend,
 }: UseChatOptions): UseChatReturn {
   const isLegacy = backendType === 'legacy';
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -477,6 +485,8 @@ export function useChat({
   onStreamEventRef.current = onStreamEvent;
   const onConversationTitleRef = useRef(onConversationTitle);
   onConversationTitleRef.current = onConversationTitle;
+  const onBeforeSendRef = useRef(onBeforeSend);
+  onBeforeSendRef.current = onBeforeSend;
   // Ref mirror of conversationId — always current across async boundaries
   const conversationIdRef = useRef(conversationId);
   // Ref mirror of isLoading, so the recovery probe can tell at apply time
@@ -861,7 +871,7 @@ export function useChat({
     try {
       const res = await fetch(steerUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}), ...clientIdHeader() },
         body: JSON.stringify({ conversation_id: convId, content, agent_slug: agentSlug, ...(fileIds.length > 0 ? { file_ids: fileIds } : {}) }),
       });
       if (res.ok) return 'ok';
@@ -914,7 +924,7 @@ export function useChat({
     try {
       const res = await fetch(approveUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}), ...clientIdHeader() },
         body: JSON.stringify({
           conversation_id: convId,
           decisions: decisions.map((d) => ({
@@ -1232,7 +1242,7 @@ export function useChat({
         case 'cancelled': {
           deltas.flush();
           const segId = currentAssistantId;
-          setMessages((prev) => prev.filter((m) => !(m.id === segId && m.role === 'assistant' && !m.content)));
+          setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, stopped: true } : m)));
           return 'end';
         }
         default:
@@ -1255,9 +1265,14 @@ export function useChat({
     switch (parsed.action) {
       case 'user_message': {
         const relayedMessage = parsed.message;
-        setMessages((prev) =>
-          relayedMessage.serverId && prev.some((m) => m.serverId === relayedMessage.serverId) ? prev : [...prev, relayedMessage],
-        );
+        setMessages((prev) => {
+          if (relayedMessage.serverId && prev.some((m) => m.serverId === relayedMessage.serverId)) return prev;
+          // This tab's own message, echoed back: it takes the persisted id rather than a second bubble.
+          // Looked for among the latest messages only: an older one with the same words is another message.
+          const own = prev.findLastIndex((m) => m.role === 'user' && !m.serverId && m.content === relayedMessage.content);
+          if (own >= 0 && prev.length - own <= 3) return prev.map((m, i) => (i === own ? { ...m, serverId: relayedMessage.serverId } : m));
+          return [...prev, relayedMessage];
+        });
         return true;
       }
       case 'conversation_title':
@@ -1275,17 +1290,24 @@ export function useChat({
   const handleSendMessage = async (override?: SendOverride) => {
     // A host-driven or held send leaves the composer, its attachments and picks alone.
     const fromComposer = !override;
-    const rawText = override ? override.text : inputValue;
-    const files = fromComposer ? attachedFiles : (override.files ?? []);
+    let rawText = override ? override.text : inputValue;
+    // The host's say before anything leaves: it may take the send over, or reword it.
+    const decision = override?.decided
+      ? undefined
+      : onBeforeSendRef.current?.({ text: rawText, source: fromComposer ? 'composer' : 'host', turnRunning: isLoadingRef.current });
+    if (decision === false) return;
+    const hookExtras = decision && typeof decision === 'object' ? decision.extras : undefined;
+    if (decision && typeof decision === 'object' && typeof decision.text === 'string') rawText = decision.text;
+    const files = fromComposer ? attachedFiles : (override?.files ?? []);
     const steerText = rawText.trim();
     // The picks the text still holds, when the host still offers the feature.
     const sentRefs = !fromComposer
-      ? (override.refs ?? [])
+      ? (override?.refs ?? [])
       : conversationReferencesUrl(apiBaseUrl, apiEndpoints, backendType)
         ? referencedConversations(conversationRefs, inputValue)
         : [];
     // The agents the text still mentions, in mention order.
-    const sentMentions = !fromComposer ? (override.mentions ?? []) : agentMentionsEnabled ? agentMentions : [];
+    const sentMentions = !fromComposer ? (override?.mentions ?? []) : agentMentionsEnabled ? agentMentions : [];
     const mentionedIds = mentionedAgentIds(sentMentions, rawText);
     if (isLoadingRef.current) {
       if (!steerText && files.length === 0) return;
@@ -1308,13 +1330,14 @@ export function useChat({
         (files.length === 0 || (steerAttachments && uploaded));
       if (canSteerThis) {
         clearComposer();
-        if ((await steerMessage(steerText, files)) === 'ended') setHeldMessage({ text: steerText, files, refs: [], mentions: [] });
+        if ((await steerMessage(steerText, files)) === 'ended')
+          setHeldMessage({ text: steerText, files, refs: [], mentions: [], extras: hookExtras });
         return;
       }
       // Otherwise it waits for the turn to end, where the host allows it.
       if (holdSends && uploaded && !heldMessageRef.current) {
         clearComposer();
-        setHeldMessage({ text: steerText, files, refs: sentRefs, mentions: sentMentions });
+        setHeldMessage({ text: steerText, files, refs: sentRefs, mentions: sentMentions, extras: hookExtras });
       }
       return;
     }
@@ -1394,6 +1417,7 @@ export function useChat({
         extras: {
           ...readRequestExtras(getRequestExtrasRef.current),
           ...(override?.extras ?? {}),
+          ...(hookExtras ?? {}),
           ...(mentionedIds.length > 0 ? { mentioned_agent_ids: mentionedIds } : {}),
         },
       });
@@ -1505,7 +1529,7 @@ export function useChat({
     relayedTurn.renderer.deltas.close();
     if (streamDeltasRef.current === relayedTurn.renderer.deltas) streamDeltasRef.current = null;
     const segId = relayedTurn.renderer.currentAssistantId();
-    setMessages((prev) => prev.filter((m) => !(m.id === segId && !m.content)));
+    setMessages((prev) => prev.filter((m) => !(m.id === segId && !m.content && !m.stopped)));
     clearCancelRequest();
     isLoadingRef.current = false;
     setIsLoading(false);
@@ -1654,7 +1678,11 @@ export function useChat({
     approvalConversationIdRef.current = null;
     approvalDetachedRef.current = false;
     pageRefsRef.current = new Map();
-    setMessages((prev) => prev.filter((m) => !(m.role === 'assistant' && !m.content)));
+    // The answer being written says it was stopped, whatever it got to.
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      return last?.role === 'assistant' && !last.serverId ? [...prev.slice(0, -1), { ...last, stopped: true }] : prev;
+    });
   };
 
   /**
@@ -1676,7 +1704,7 @@ export function useChat({
     cancelTimerRef.current = window.setTimeout(stopLocally, CANCEL_GRACE_MS);
     fetch(cancelUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
+      headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
       body: JSON.stringify({ conversation_id: convId }),
     })
       .then((res) => {
@@ -1693,7 +1721,7 @@ export function useChat({
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
+        headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
         body: JSON.stringify({ conversation_id: convId }),
       });
       if (res.ok) setAgentStatus((prev) => (prev?.status === 'wait_start' ? { status: 'thinking', thinkingContent: prev.thinkingContent } : prev));
@@ -1775,7 +1803,7 @@ export function useChat({
   useEffect(() => {
     if (isLoading || !heldMessage) return;
     setHeldMessage(null);
-    void handleSendMessageRef.current(heldMessage);
+    void handleSendMessageRef.current({ ...heldMessage, decided: true });
   }, [isLoading, heldMessage]);
   const handleSendMessageRef = useRef(handleSendMessage);
   handleSendMessageRef.current = handleSendMessage;

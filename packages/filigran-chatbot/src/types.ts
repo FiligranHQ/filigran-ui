@@ -605,6 +605,18 @@ export interface ChatPanelProps {
   /** Font of the panel's text; the package's own otherwise. */
   fontFamily?: string;
   /**
+   * Called once, when the panel has chosen its agent and read back the
+   * conversation on screen. Calls made through the handle before then wait
+   * for it, and run in order.
+   */
+  onReady?: () => void;
+  /**
+   * Sees every send first, from the composer or the handle: `false` takes it
+   * over (nothing is sent, the composer keeps its text), an object rewords it
+   * or adds fields to its body.
+   */
+  onBeforeSend?: (draft: ChatSendDraft) => ChatSendDecision;
+  /**
    * Uploaded files may steer the running turn: the steer route takes
    * `file_ids`. Without it, a message with files waits for the turn to end.
    */
@@ -662,6 +674,18 @@ export interface ChatPanelHandle {
   scrollToMessage: (messageId: string) => boolean;
 }
 
+/** A send about to leave, as `onBeforeSend` sees it. */
+export interface ChatSendDraft {
+  text: string;
+  /** Typed in the composer, or sent through the handle. */
+  source: 'composer' | 'host';
+  /** A turn is running: the send would steer it. */
+  turnRunning: boolean;
+}
+
+/** What `onBeforeSend` decides: `false` takes the send over, an object adjusts it. */
+export type ChatSendDecision = false | { text?: string; extras?: Record<string, unknown> } | void;
+
 /** Per-send options of {@link ChatPanelHandle.send}. */
 export interface ChatSendOptions {
   /** Merged into that one message's request body (see `getRequestExtras`). */
@@ -718,6 +742,8 @@ export interface ChatMessage {
    * {@link ApiEndpoints.conversationReferences}), shown as chips.
    */
   conversationRefs?: ChatConversationRef[];
+  /** The turn was stopped while writing this answer. */
+  stopped?: boolean;
   /** Agent-generated downloadable files attached to an assistant message. */
   attachments?: ChatAttachment[];
   /** The decks, reports and videos an assistant message made, in marker order. */

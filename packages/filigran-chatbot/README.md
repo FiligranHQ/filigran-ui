@@ -111,6 +111,8 @@ import { ChatPanel } from '@filigran/chatbot';
 | `fontFamily`        | `string`                                  | —            | Font of the panel's text |
 | `agentMentions`     | `boolean`                                 | `false`      | `@` also mentions agents of the agent list; the message carries their ids as `mentioned_agent_ids` |
 | `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
+| `onReady`           | `() => void`                              | —            | Called once the panel has chosen its agent and read back the conversation; handle calls made earlier wait for it |
+| `onBeforeSend`      | `(draft) => false \| { text?, extras? } \| void` | — | Sees every send first (`draft.source`: `'composer'` or `'host'`): `false` takes it over, an object rewords it or adds body fields |
 | `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer |
 
 Plain-data props (`requestHeaders`, `apiEndpoints`, `pageContext`, `promptSuggestions`) are compared by content and callback props are called
@@ -1017,6 +1019,7 @@ Every key the package can ask for, grouped by where it appears:
 
 - `'A message references at most {count} conversations'`
 - `'Ask a question...'`
+- `'Attach files'`
 - `'Attached files'`
 - `'Attachments wait for the current response'`
 - `'Cancel'`
@@ -1033,6 +1036,7 @@ Every key the package can ask for, grouped by where it appears:
 - `'Reference a conversation'`
 - `'Referenced conversations wait for the current response'`
 - `'Search prompts...'`
+- `'Send'`
 - `'Send now'`
 - `'Send when the answer ends'`
 - `'Sends when the answer ends:'`
@@ -1101,6 +1105,7 @@ Every key the package can ask for, grouped by where it appears:
 - `'Delegating one task…'`
 - `'Delegating {count} tasks…'`
 - `'Incorporating your message…'`
+- `'Stopped'`
 - `'Stopping…'`
 - `'Thinking...'`
 - `'Transferring to {agent}…'`

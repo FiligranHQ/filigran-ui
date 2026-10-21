@@ -6,6 +6,8 @@ export type {
   ChatPanelMode,
   ChatPanelHandle,
   ChatSendOptions,
+  ChatSendDraft,
+  ChatSendDecision,
   ChatStreamEventInfo,
   ChatMarkerContext,
   ChatMarkerRenderer,

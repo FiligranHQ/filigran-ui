@@ -103,6 +103,8 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     waitingMessages: waitingMessagesProp,
     renderWaitingPanel,
     fontFamily,
+    onReady: onReadyProp,
+    onBeforeSend: onBeforeSendProp,
     steerAttachments = false,
     holdSendsDuringTurn = false,
     agentMentions: agentMentionsEnabled = false,
@@ -128,6 +130,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   const onConversationChange = useLatestCallback(onConversationChangeProp);
   const onAgentChange = useLatestCallback(onAgentChangeProp);
   const getRequestExtras = useLatestCallback(getRequestExtrasProp);
+  const onBeforeSend = useLatestCallback(onBeforeSendProp);
   const onStreamEvent = useLatestCallback(onStreamEventProp);
   const rootRef = useRef<HTMLDivElement>(null);
   const waitingMessages = useShallowStable(waitingMessagesProp);
@@ -219,6 +222,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     steerAttachments,
     holdSends: holdSendsDuringTurn,
     agentMentionsEnabled,
+    onBeforeSend: onBeforeSendProp ? onBeforeSend : undefined,
   });
 
   // A host that owns the conversation (a `?c=` URL) moves the panel with it.
@@ -396,9 +400,12 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       return 0;
     }
     try {
-      const res = await fetch(`${messagesPageBase}/${encodeURIComponent(convId)}/messages?before=${encodeURIComponent(oldest)}&limit=50&supports_artifacts=true`, {
-        headers: { ...(requestHeaders ?? {}) },
-      });
+      const res = await fetch(
+        `${messagesPageBase}/${encodeURIComponent(convId)}/messages?before=${encodeURIComponent(oldest)}&limit=50&supports_artifacts=true`,
+        {
+          headers: { ...(requestHeaders ?? {}) },
+        },
+      );
       if (!res.ok || conversationIdRef.current !== convId) return 0;
       const data = await res.json();
       if (conversationIdRef.current !== convId) return 0;
@@ -818,6 +825,39 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   // that built the handle.
   const handleSendMessageRef = useRef(handleSendMessage);
   handleSendMessageRef.current = handleSendMessage;
+  const handleNewChatRef = useRef(handleNewChat);
+  handleNewChatRef.current = handleNewChat;
+  const handleSwitchConversationRef = useRef(handleSwitchConversation);
+  handleSwitchConversationRef.current = handleSwitchConversation;
+  const agentsRef = useRef(agents);
+  agentsRef.current = agents;
+  const selectedAgentRef = useRef(selectedAgent);
+  selectedAgentRef.current = selectedAgent;
+
+  // Ready once the agent is chosen and the conversation on screen is read back:
+  // what the host does through the handle before then waits for it.
+  const ready = agentsSettled && !restoringHistory;
+  const onReady = useLatestCallback(onReadyProp);
+  const readyAnnouncedRef = useRef(false);
+  useEffect(() => {
+    if (!ready || readyAnnouncedRef.current) return;
+    readyAnnouncedRef.current = true;
+    onReady?.();
+  }, [ready, onReady]);
+  // Handle calls run one per render, in order: a new conversation's agent is
+  // in place before the send that follows it.
+  const queueRef = useRef<(() => void)[]>([]);
+  const [queueTick, setQueueTick] = useState(0);
+  const enqueue = (call: () => void) => {
+    queueRef.current.push(call);
+    setQueueTick((n) => n + 1);
+  };
+  useEffect(() => {
+    if (!ready || queueRef.current.length === 0) return;
+    const call = queueRef.current.shift()!;
+    call();
+    if (queueRef.current.length > 0) setQueueTick((n) => n + 1);
+  }, [ready, queueTick]);
 
   const onSwitchAgent = (agent: typeof selectedAgent) => {
     if (!agent) return;
@@ -829,13 +869,14 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   useImperativeHandle(
     ref,
     () => ({
-      send: (text, options) => void handleSendMessageRef.current({ text, extras: options?.extras }),
-      newConversation: (options) => {
-        const agent = findAgent(agents, options?.agent);
-        if (agent && agent.id !== selectedAgent?.id) handleSwitchAgent(agent);
-        handleNewChat(options?.workspaceId);
-      },
-      selectConversation: (id) => handleSwitchConversation(id),
+      send: (text, options) => enqueue(() => void handleSendMessageRef.current({ text, extras: options?.extras })),
+      newConversation: (options) =>
+        enqueue(() => {
+          const agent = findAgent(agentsRef.current, options?.agent);
+          if (agent && agent.id !== selectedAgentRef.current?.id) handleSwitchAgent(agent);
+          handleNewChatRef.current(options?.workspaceId);
+        }),
+      selectConversation: (id) => enqueue(() => handleSwitchConversationRef.current(id)),
       setDraft: (text) => setInputValue(text),
       focusComposer: () => rootRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus(),
       stop: () => handleStopGenerating(),
@@ -850,7 +891,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         return true;
       },
     }),
-    [agents, selectedAgent, handleSwitchAgent, handleNewChat, handleSwitchConversation, setInputValue, handleStopGenerating],
+    [handleSwitchAgent, setInputValue, handleStopGenerating],
   );
 
   const containerClasses = (() => {
