@@ -246,6 +246,16 @@ function parsePageAction(raw: unknown): PageAction {
   return { type: 'unsupported', requested: typeof a.type === 'string' ? a.type.slice(0, 64) : 'unknown' };
 }
 
+const optionalString = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined);
+
+/** `answered_by` is a name, or an agent object carrying one. */
+function answeredByName(raw: unknown): string | undefined {
+  if (typeof raw === 'string') return optionalString(raw);
+  if (!raw || typeof raw !== 'object') return undefined;
+  const a = raw as Record<string, unknown>;
+  return optionalString(a.agent_name) ?? optionalString(a.name);
+}
+
 /**
  * Parse an XTM One (REST) SSE event into a normalized action.
  */
@@ -254,6 +264,29 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
 
   if (type === 'error') {
     return { action: 'error', content: (evt.content as string) || '' };
+  }
+
+  if (type === 'cancelled') return { action: 'cancelled' };
+  if (type === 'approval_resolved') return { action: 'approval_resolved' };
+  if (type === 'folded_into_active_turn') return { action: 'folded', turnId: optionalString(evt.turn_id) };
+  if (type === 'conversation_title') {
+    const title = optionalString(evt.title);
+    return title ? { action: 'conversation_title', conversationId: optionalString(evt.conversation_id), title } : { action: 'noop' };
+  }
+  if (type === 'user_message') {
+    const [message] = parseRestoredMessages([evt.message]);
+    if (!message || message.role !== 'user') return { action: 'noop' };
+    return { action: 'user_message', message: { ...message, id: message.serverId ? `relayed-${message.serverId}` : crypto.randomUUID() } };
+  }
+  // The native vocabulary acknowledges a turn with a top-level `thinking`
+  // frame, which carries how long a resumed turn has run.
+  if (type === 'thinking') {
+    return {
+      action: 'status',
+      status: 'thinking',
+      resumed: evt.resumed === true || undefined,
+      elapsedS: typeof evt.elapsed_s === 'number' ? evt.elapsed_s : undefined,
+    };
   }
 
   if (type === 'status') {
@@ -281,6 +314,14 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
         actionId: evt.action_id,
         pageAction,
         conversationId: typeof evt.conversation_id === 'string' ? evt.conversation_id : undefined,
+      };
+    }
+    if (st === 'wait_start') {
+      return {
+        action: 'status',
+        status: 'wait_start',
+        waitSeconds: typeof evt.seconds === 'number' && evt.seconds > 0 ? evt.seconds : undefined,
+        waitReason: optionalString(evt.reason),
       };
     }
     if (st === 'tool_heartbeat') {
@@ -340,6 +381,8 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       isTruncated: evt.is_truncated === true || undefined,
       contextUsage: parseContextUsage(evt),
       messageId: typeof evt.message_id === 'string' && evt.message_id ? evt.message_id : undefined,
+      intermediate: evt.intermediate === true || undefined,
+      answeredBy: answeredByName(evt.answered_by),
     };
   }
 

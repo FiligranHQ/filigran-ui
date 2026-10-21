@@ -113,7 +113,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
   };
 
   return (
-    <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.04] p-3 flex flex-col gap-2">
+    <div data-testid="filigran-chat-approval" className="rounded-lg border border-amber-500/25 bg-amber-500/[0.04] p-3 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex items-start gap-2">
           <WrenchIcon size={13} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />

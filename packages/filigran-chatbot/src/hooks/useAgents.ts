@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
 import type { ApiEndpoints, BackendType, XtmAgent } from '../types';
-
-const STORAGE_AGENT_KEY = 'filigranChatAgentSlug';
+import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 
 interface UseAgentsOptions {
   apiBaseUrl: string;
   apiEndpoints?: ApiEndpoints;
   backendType?: BackendType;
   requestHeaders?: Record<string, string>;
+  /** Namespace of the browser-storage keys (see `storageKeyPrefix` on the panel). */
+  storageKeyPrefix?: string;
+  /** Agent selected once the list loads, by id or slug; wins over the remembered one. */
+  initialAgent?: string;
+  /** Called when the user (or the host, through the panel handle) picks another agent. */
+  onAgentChange?: (agent: XtmAgent) => void;
 }
 
 interface UseAgentsReturn {
@@ -20,6 +25,8 @@ interface UseAgentsReturn {
    * "there is nothing to load", which an empty array alone cannot.
    */
   agentsError: boolean;
+  /** True once the list is known (loaded, failed, or not fetched at all). */
+  agentsSettled: boolean;
   selectedAgent: XtmAgent | null;
   setSelectedAgent: React.Dispatch<React.SetStateAction<XtmAgent | null>>;
   agentMenuOpen: boolean;
@@ -44,16 +51,34 @@ function parseAgents(data: unknown): XtmAgent[] {
   return rawList.filter((raw): raw is XtmAgent => !!raw && typeof raw === 'object' && typeof (raw as XtmAgent).id === 'string');
 }
 
-export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requestHeaders }: UseAgentsOptions): UseAgentsReturn {
+/** The agent named by *key*, matched on id first, then slug. */
+export function findAgent(agents: XtmAgent[], key: string | null | undefined): XtmAgent | undefined {
+  if (!key) return undefined;
+  return agents.find((a) => a.id === key) ?? agents.find((a) => a.slug === key);
+}
+
+export function useAgents({
+  apiBaseUrl,
+  apiEndpoints,
+  backendType = 'rest',
+  requestHeaders,
+  storageKeyPrefix,
+  initialAgent,
+  onAgentChange,
+}: UseAgentsOptions): UseAgentsReturn {
+  const agentsDisabled = apiEndpoints?.agents === null || !!apiEndpoints?.singleEndpoint || backendType === 'legacy';
+  const agentStorageKey = storageKey(storageKeyPrefix, STORAGE_KEYS.agentSlug);
   const [agents, setAgents] = useState<XtmAgent[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [agentsError, setAgentsError] = useState(false);
+  const [agentsSettled, setAgentsSettled] = useState(agentsDisabled);
   const [selectedAgent, setSelectedAgent] = useState<XtmAgent | null>(null);
   const [agentMenuOpen, setAgentMenuOpen] = useState(false);
 
   useEffect(() => {
     // Skip agents fetch if disabled, using single endpoint mode, or legacy backend
-    if (apiEndpoints?.agents === null || apiEndpoints?.singleEndpoint || backendType === 'legacy') {
+    if (agentsDisabled) {
+      setAgentsSettled(true);
       return;
     }
     const agentsUrl = `${apiBaseUrl}${apiEndpoints?.agents ?? '/chat/agents'}`;
@@ -71,8 +96,8 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
         const list = parseAgents(data);
         setAgents(list);
         if (list.length > 0 && !selectedAgent) {
-          const savedSlug = localStorage.getItem(STORAGE_AGENT_KEY);
-          const match = savedSlug ? list.find((a) => a.slug === savedSlug) : null;
+          const savedSlug = readStorage('local', agentStorageKey);
+          const match = findAgent(list, initialAgent) ?? (savedSlug ? list.find((a) => a.slug === savedSlug) : undefined);
           setSelectedAgent(match || list[0]);
         }
       })
@@ -80,8 +105,11 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
         setAgents([]);
         setAgentsError(true);
       })
-      .finally(() => setAgentsLoading(false));
-  }, [apiBaseUrl, apiEndpoints, backendType, requestHeaders]);
+      .finally(() => {
+        setAgentsLoading(false);
+        setAgentsSettled(true);
+      });
+  }, [apiBaseUrl, apiEndpoints, backendType, requestHeaders, agentsDisabled]);
 
   const handleSwitchAgent = (agent: XtmAgent, onSwitch?: () => void) => {
     if (agent.id === selectedAgent?.id) {
@@ -89,8 +117,9 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
       return;
     }
     setSelectedAgent(agent);
-    if (agent.slug) localStorage.setItem(STORAGE_AGENT_KEY, agent.slug);
+    if (agent.slug) writeStorage('local', agentStorageKey, agent.slug);
     setAgentMenuOpen(false);
+    onAgentChange?.(agent);
     onSwitch?.();
   };
 
@@ -98,6 +127,7 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
     agents,
     agentsLoading,
     agentsError,
+    agentsSettled,
     selectedAgent,
     setSelectedAgent,
     agentMenuOpen,

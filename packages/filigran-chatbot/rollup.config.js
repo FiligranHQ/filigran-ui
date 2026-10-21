@@ -25,7 +25,7 @@ const typescriptOptions = {
   declaration: false,
   declarationMap: false,
   allowImportingTsExtensions: false,
-  exclude: ['**/*.test.ts'],
+  exclude: ['**/*.test.ts', '**/*.test.tsx', 'test/**'],
 };
 
 const indexConfig = {

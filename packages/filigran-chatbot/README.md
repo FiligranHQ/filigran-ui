@@ -89,10 +89,98 @@ import { ChatPanel } from '@filigran/chatbot';
 | `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
 | `contextUsageEnabled` | `boolean`                               | `true`       | Show how full the model's context window is for the current conversation (ring + percentage in the composer toolbar). Data-driven, so it stays absent until the backend reports occupancy — see [Context usage](#context-usage). |
 | `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
+| `storageKeyPrefix`  | `string`                                  | —            | Namespaces every key the panel keeps in browser storage (`<prefix>:filigranChatConversationId`, …), for a host mounting more than one panel |
+| `conversationId`    | `string \| null`                          | —            | The conversation on screen when the host owns it (a `?c=` URL); `null` is a new chat. Left `undefined`, the panel remembers its own, and a host-owned one is never written to storage |
+| `onConversationChange` | `(id: string \| null) => void`         | —            | Called whenever the conversation on screen changes, whoever changed it (a first answer, New chat, the history) |
+| `initialAgent`      | `string`                                  | —            | Agent selected once the list loads, by id or slug, over the remembered one |
+| `onAgentChange`     | `(agent: XtmAgent) => void`               | —            | Called when another agent is picked |
+| `readOnly`          | `boolean`                                 | `false`      | Hides the composer: a conversation the user may read but not write to |
+| `readOnlyNotice`    | `React.ReactNode`                         | —            | Shown in place of the composer while `readOnly` |
+| `getRequestExtras`  | `() => Record<string, unknown>`           | —            | Fields merged into every message body, read at send time (the host's own per-message options). They never override the panel's fields |
+| `onStreamEvent`     | `(event, { relayed }) => void`            | —            | Every frame received, on the message stream or the [event stream](#turns-that-outlive-their-stream) (`relayed: true`), including those the panel does not render |
+| `markerRenderers`   | `Record<string, ChatMarkerRenderer>`      | —            | The host's cards for answer markers, by name — see [Host extensions](#host-extensions) |
+| `transformMessageText` | `(text, message) => string`            | —            | Rewrites a message's text before it is shown, copied or read aloud |
+| `onArtifactOpen`    | `(artifact: ChatArtifact) => void`        | —            | Opens a deck, report or video in the host, in place of the `Open in XTM One` link |
+| `headerActions` / `banner` / `composerHeader` / `transcriptFooter` / `welcome` | `React.ReactNode` | — | The host's content in the header, above the thread, above the composer, after the last message, or in place of the welcome screen |
+| `renderMessageExtras` / `messageFooterActions` | `(message) => React.ReactNode` | — | The host's content under a message, and controls in a finished answer's footer |
+| `sidebarRowActions` | `(conversation) => React.ReactNode`       | —            | The host's controls on a row of the conversation list |
+| `sidebarHeaderActions` / `sidebarSections` | `React.ReactNode`  | —            | The host's controls beside New conversation, and sections under the list |
+| `statusLabel`       | `(status: AgentStatusState) => string \| undefined` | — | The status line's text for a status, over the built-in one |
+| `waitingMessages`   | `string[]`                                | built-in     | The waiting panel's rotating messages, already translated |
+| `renderWaitingPanel` | `() => React.ReactNode`                  | —            | Replaces the waiting panel's content (its messages and the invitation to play) |
+| `fontFamily`        | `string`                                  | —            | Font of the panel's text |
+| `agentMentions`     | `boolean`                                 | `false`      | `@` also mentions agents of the agent list; the message carries their ids as `mentioned_agent_ids` |
+| `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
+| `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer |
 
 Plain-data props (`requestHeaders`, `apiEndpoints`, `pageContext`, `promptSuggestions`) are compared by content and callback props are called
 through a stable wrapper, so building them inline is fine. `t` and `logoIcon` are used as given: keep them stable (`useCallback` / `useMemo`),
 or every render of the host re-renders every message in the thread.
+
+#### Inline mode and the handle
+
+`mode="inline"` fills the host's container: the conversation list sits beside
+the thread as in fullscreen, and there is no view switcher or close button.
+With a `ref`, the host drives it:
+
+```tsx
+const chat = useRef<ChatPanelHandle>(null);
+
+<div style={{ height: '100%' }}>
+  <ChatPanel
+    ref={chat}
+    mode="inline"
+    conversationId={searchParams.get('c')}
+    onConversationChange={(id) => setSearchParams(id ? { c: id } : {})}
+    storageKeyPrefix="chat-page"
+    // ...
+  />
+</div>;
+
+chat.current?.newConversation({ agent: 'threat-hunter' });
+chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigation' } });
+```
+
+| Method | What it does |
+| --- | --- |
+| `send(text, { extras })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body |
+| `newConversation({ workspaceId, agent })` | Starts a new chat, in a workspace and with an agent (id or slug) if given |
+| `selectConversation(id)` | Opens a conversation |
+| `setDraft(text)` / `focusComposer()` | Fills / focuses the composer |
+| `stop()` | Same as the Stop button |
+| `scrollToMessage(id)` | Scrolls to a message by its server id and highlights it; `false` when it is not on screen |
+
+#### Host extensions
+
+A host adds what is its own without the package learning about it. An answer
+marker `[[KIND:args]]` renders the host's card where it stands, once the answer
+is done (`renderWhileStreaming` to show it earlier); a renderer named `FILE`,
+`PRESENTATION`, `REPORT` or `VIDEO` replaces the built-in card, and a marker no
+renderer names stays text:
+
+```tsx
+const markers = useMemo(
+  () => ({
+    WORK_ITEM: { render: (id) => <WorkItemCard id={id} /> },
+    INVESTIGATION: { render: (id) => <InvestigationBlock id={id} />, fullWidth: true },
+  }),
+  [],
+);
+
+<ChatPanel
+  markerRenderers={markers}
+  transformMessageText={maskSecrets}
+  banner={<ChannelContinuityBanner />}
+  composerHeader={<DesktopMachineBar />}
+  renderMessageExtras={(m) => <RunnerActivity message={m} />}
+  // ...
+/>;
+```
+
+A card that throws shows `This item could not be loaded.` and leaves the rest
+of the answer on screen. Like `t`, the function props are used as given: keep
+them stable, and a new one re-renders every message, which is also how to
+refresh what they render.
 
 #### Resizable Sidebar Example
 
@@ -677,6 +765,34 @@ abandonment, never the person deciding.
 
 REST backend only: `legacy` and `ag-ui` never meet this gate.
 
+### Turns that outlive their stream
+
+A backend whose turns keep running when their stream drops (XTM One's own web
+chat) opts into three more routes, none with a default:
+
+| `apiEndpoints` key | Request | What it does |
+| --- | --- | --- |
+| `cancel` | `POST {cancel}` with `{ conversation_id }` | Stop asks the backend to end the turn; the panel keeps reading until the stream's `cancelled` frame (or lets go after 10 s) |
+| `skipWait` | `POST {skipWait}` with `{ conversation_id }` | `Continue now` on `status: wait_start` (`{ seconds, reason }`) |
+| `events` | `GET {events}/{conversation_id}/events?client_id=<id>` → SSE | Turns this panel did not start (another tab, a reload mid-turn), `user_message`, `conversation_title`, `approval_resolved` |
+| `messagesPage` | `GET {messagesPage}/{conversation_id}/messages?before=<message id>&limit=50&supports_artifacts=true` → `{ messages, has_more }` | "Load earlier messages" past the restored ones, offered when the restore answers `has_more: true` |
+| `clearAll` | `DELETE {clearAll}` | "Clear all conversations" in the conversation list |
+| `tts` | `POST {tts}` with `{ text, format: 'mp3' }` → audio | Read aloud in the backend's voice; the browser's when it fails |
+
+The event stream is opened once the conversation's history is on screen and
+reconnected with backoff while the page is visible; a `401`, `403`, `404` or
+`405` stops it. Every message `POST` then carries the same id in
+`X-Chat-Client-Id`, which the backend uses to never relay a panel's own turn
+back to it; frames naming the `turn_id` of the panel's own turn are dropped
+too. A relayed turn uses the frames of `POST /chat/messages`, plus:
+
+- `{"type": "thinking", "resumed": true, "elapsed_s": 42}` — a turn re-attached
+  mid-way: what it wrote so far follows, whole.
+- `{"type": "done", "intermediate": true, …}` — a segment closed, the turn goes on.
+- `{"type": "cancelled"}` — the turn was stopped.
+- `{"type": "folded_into_active_turn", "turn_id": "…"}` (message stream) — the
+  message joined a turn already running, whose frames follow.
+
 ### Decks, reports and videos
 
 An answer that made a deck, a report or a video carries a marker where it shows
@@ -755,8 +871,8 @@ persisted id — the `done` event's `message_id`, or the restored entry's
 REST backend only, and not in `singleEndpoint` mode (there is no per-path
 routing to name a feedback route with).
 
-**Read aloud** uses the browser's own speech synthesis — no endpoint, hidden
-where unsupported, and absent on an answer with nothing to say (code only). It
+**Read aloud** uses the browser's own speech synthesis — or the backend's
+voice when the host names `apiEndpoints.tts` — hidden where neither exists, and absent on an answer with nothing to say (code only). It
 reads the answer's text without its markdown or file markers, in the `locale`
 prop's language, one answer at a time; switching conversation, sending a
 message or leaving the panel stops it.
@@ -876,7 +992,10 @@ Every key the package can ask for, grouped by where it appears:
 
 **Conversation sidebar**
 
+- `'Clear all conversations'`
 - `'Conversation title'`
+- `'Delete all conversations'`
+- `'Delete all conversations?'`
 - `'Hide conversations'`
 - `'No conversation matches'`
 - `'Rename conversation'`
@@ -898,18 +1017,25 @@ Every key the package can ask for, grouped by where it appears:
 
 - `'A message references at most {count} conversations'`
 - `'Ask a question...'`
+- `'Attached files'`
 - `'Attachments wait for the current response'`
+- `'Cancel'`
 - `'Dictate a message'`
+- `'Drop files to attach them'`
 - `'Enter to send now · Esc to stop'`
+- `'Enter to send when the answer ends · Esc to stop'`
 - `'Files uploading...'`
 - `'Insert prompt template'`
 - `'Listening...'`
+- `'Mention an agent'`
 - `'No conversation matches'`
 - `'No prompt matches'`
 - `'Reference a conversation'`
 - `'Referenced conversations wait for the current response'`
 - `'Search prompts...'`
 - `'Send now'`
+- `'Send when the answer ends'`
+- `'Sends when the answer ends:'`
 - `'Shared with you'`
 - `'Stop dictation'`
 - `'Stop generating'`
@@ -949,6 +1075,7 @@ Every key the package can ask for, grouped by where it appears:
 
 - `'Download {format}'`
 - `'Not rendered yet'`
+- `'Open'`
 - `'Open in XTM One'`
 - `'PowerPoint'`
 - `'PowerPoint (editable)'`
@@ -956,6 +1083,7 @@ Every key the package can ask for, grouped by where it appears:
 - `'Rendering {progress}%'`
 - `'Report'`
 - `'The render did not finish'`
+- `'This item could not be loaded.'`
 - `'Video'`
 - `'Waiting to render'`
 - `'{count} scenes'`
@@ -969,12 +1097,15 @@ Every key the package can ask for, grouped by where it appears:
 - `'Collecting results from {count} tasks…'`
 - `'Composing answer…'`
 - `'Consulting {agent}…'`
+- `'Continue now'`
 - `'Delegating one task…'`
 - `'Delegating {count} tasks…'`
 - `'Incorporating your message…'`
+- `'Stopping…'`
 - `'Thinking...'`
 - `'Transferring to {agent}…'`
 - `'Using tools…'`
+- `'Waiting before continuing…'`
 - `'Waiting for one background task…'`
 - `'Waiting for your approval…'`
 - `'Waiting for {count} background tasks…'`

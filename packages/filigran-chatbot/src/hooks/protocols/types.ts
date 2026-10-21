@@ -1,4 +1,12 @@
-import type { ChatArtifact, ChatAttachment, ChatContextUsage, ToolApprovalProposal, ToolCallTraceEntry, TransferChainEntry } from '../../types';
+import type {
+  ChatArtifact,
+  ChatAttachment,
+  ChatContextUsage,
+  ChatMessage,
+  ToolApprovalProposal,
+  ToolCallTraceEntry,
+  TransferChainEntry,
+} from '../../types';
 import type { PageAction } from '../../utils/pageActions';
 
 /**
@@ -19,6 +27,11 @@ export type ParsedAction =
        * status label independently.
        */
       contextUsage?: ChatContextUsage;
+      /** A turn re-attached mid-way (`thinking.resumed`): `elapsedS` is how long it has run. */
+      resumed?: boolean;
+      /** `wait_start`: how long the agent pauses, and why. */
+      waitSeconds?: number;
+      waitReason?: string;
     }
   | { action: 'stream'; content: string }
   | {
@@ -45,6 +58,10 @@ export type ParsedAction =
       contextUsage?: ChatContextUsage;
       /** Persisted id of the answer (`message_id`), what its feedback is stored against. */
       messageId?: string;
+      /** A segment closed mid-turn: the turn goes on after it. */
+      intermediate?: boolean;
+      /** The agent that wrote this segment, when it is not the conversation's own. */
+      answeredBy?: string;
     }
   | {
       /**
@@ -73,6 +90,15 @@ export type ParsedAction =
       conversationId?: string;
     }
   | { action: 'error'; content: string }
+  /** The turn was stopped (`cancelled`): terminal. */
+  | { action: 'cancelled' }
+  /** Nothing is waiting on a decision any more: another device answered it. */
+  | { action: 'approval_resolved' }
+  /** A user message sent from another device or tab. */
+  | { action: 'user_message'; message: ChatMessage }
+  | { action: 'conversation_title'; conversationId?: string; title: string }
+  /** The message sent joined a turn already running, whose frames follow. */
+  | { action: 'folded'; turnId?: string }
   | { action: 'set_chat_id'; chatId: string }
   | { action: 'noop' };
 

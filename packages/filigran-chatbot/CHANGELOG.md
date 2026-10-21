@@ -8,6 +8,85 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## Unreleased
+
+### Added
+
+- `mode="inline"`: the panel fills the host's container instead of floating
+  over the page, laid out like fullscreen (conversation list beside the
+  thread), with no view switcher and no close button. For a host that gives
+  the chat a page of its own.
+- A host can own the conversation on screen (`conversationId`,
+  `onConversationChange`), pick the agent selected first (`initialAgent`,
+  `onAgentChange`) and drive the panel through its `ref` (`send`,
+  `newConversation`, `selectConversation`, `setDraft`, `focusComposer`,
+  `stop`).
+- `storageKeyPrefix` namespaces every key the panel keeps in browser storage,
+  for a host that mounts more than one panel.
+- `readOnly` hides the composer, with `readOnlyNotice` in its place.
+- `getRequestExtras` adds the host's own fields to each message body (never
+  overriding the panel's), and `onStreamEvent` hands the host every frame
+  received, including those the panel does not render.
+- The panel renders the frames of a backend whose turns outlive their stream:
+  a turn re-attached mid-way (`thinking.resumed`), an announced wait
+  (`status: wait_start`, with a countdown), `cancelled`, an intermediate
+  `done` and the agent that `answered_by` a segment.
+- History is restored with no agent list (`apiEndpoints.agents: null`).
+- A host can render its own cards for the `[[KIND:args]]` markers of an
+  answer (`markerRenderers`), by marker name, and take over the built-in
+  `FILE`, `PRESENTATION`, `REPORT` and `VIDEO` ones. A card that throws shows
+  `This item could not be loaded.` and leaves the rest of the answer alone. A
+  marker no renderer names stays text, as before.
+- `transformMessageText` rewrites a message's text before it is shown, copied
+  or read aloud (masking secrets, converting a channel's syntax).
+- `onArtifactOpen` opens a deck, report or video in the host, in place of the
+  link to XTM One.
+- Slots for the host's own content: `headerActions`, `banner`,
+  `composerHeader`, `transcriptFooter`, `welcome`, `renderMessageExtras`,
+  `messageFooterActions`, `sidebarRowActions`, `sidebarHeaderActions` and
+  `sidebarSections`.
+- `statusLabel`, `waitingMessages` and `renderWaitingPanel` adapt the status
+  line and the waiting panel; `fontFamily` sets the panel's font.
+- An agent's `icon` shows in the picker when it is an image URL or an emoji,
+  and agents carrying a `group` are listed under its heading.
+- `@` in the composer can mention agents (`agentMentions`): the agents of
+  the agent list are offered above the conversations, and the message carries
+  the ids of those it still mentions as `mentioned_agent_ids`, in mention
+  order. A message that mentions an agent never steers the running turn.
+- `steerAttachments` lets uploaded files steer the running turn (the steer
+  route then takes `file_ids`), and `holdSendsDuringTurn` holds a message that
+  cannot steer (files, references, mentions, a turn that has just ended) and
+  sends it as the next turn, with a way to cancel it meanwhile.
+- Files dragged over the thread attach on drop.
+- A conversation being read back shows a skeleton rather than the welcome
+  screen.
+- `scrollToMessage` on the panel's handle jumps to a message and highlights it.
+- Stable `data-testid`s for host tests: `filigran-chat-panel`,
+  `filigran-chat-transcript`, `filigran-chat-user-message`,
+  `filigran-chat-assistant-message`, `filigran-chat-composer`,
+  `filigran-chat-approval`, `filigran-chat-disclaimer`.
+
+### Host opt-in
+
+- `apiEndpoints.cancel` (no default): Stop asks the backend to end the turn and
+  waits for the stream's `cancelled` frame, instead of dropping the stream.
+- `apiEndpoints.skipWait` (no default): `Continue now` on an agent's wait.
+- `apiEndpoints.events` (no default): the panel follows the conversation's
+  event stream, and renders turns started in another tab or before a reload,
+  user messages sent elsewhere, new titles and approvals answered elsewhere.
+  The message `POST` then carries `X-Chat-Client-Id`, so a panel's own turns
+  are never relayed back to it.
+- With `cancel`, `skipWait` or `events` named, a new chat's conversation is
+  created before its first message, so Stop, "Continue now" and steering
+  reach the backend from the first turn.
+- `apiEndpoints.messagesPage` (no default): "Load earlier messages" fetches
+  older messages from the backend a page at a time, when the restore says
+  there are some (`has_more`).
+- `apiEndpoints.clearAll` (no default): the conversation list offers "Clear
+  all conversations".
+- `apiEndpoints.tts` (no default): read aloud uses the backend's voice, and
+  the browser's when the route fails.
+
 ## 3.14.0 — 2026-10-19
 
 ### Added

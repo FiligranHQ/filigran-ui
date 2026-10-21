@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
-import type { ChatConversationRef, ChatConversationReferenceCandidate } from '../types';
+import type { ChatConversationRef, ChatConversationReferenceCandidate, XtmAgent } from '../types';
+import { agentCandidates, type AgentMention } from '../utils/agentMentions';
 import {
   insertConversationReference,
   refAsCandidate,
@@ -26,7 +27,12 @@ interface UseConversationReferenceMenuOptions {
   refs: ChatConversationRef[];
   /** Called with a pick before the text changes, so pruning sees it inserted. */
   onPick: (ref: ChatConversationRef) => void;
+  /** The agents `@` can mention, above the conversations; omitted when mentions are off. */
+  agentMentions?: { agents: XtmAgent[]; onPick: (mention: AgentMention) => void };
 }
+
+/** A row of the `@` menu. */
+export type ReferenceMenuItem = { type: 'agent'; mention: AgentMention } | { type: 'conversation'; candidate: ChatConversationReferenceCandidate };
 
 const sameTrigger = (a: ReferenceTrigger | null, b: ReferenceTrigger | null) =>
   a === b || (!!a && !!b && a.anchor === b.anchor && a.query === b.query);
@@ -50,8 +56,9 @@ export function useConversationReferenceMenu({
   textareaRef,
   refs,
   onPick,
+  agentMentions,
 }: UseConversationReferenceMenuOptions) {
-  const enabled = url !== null;
+  const enabled = url !== null || !!agentMentions;
   const [trigger, setTrigger] = useState<ReferenceTrigger | null>(null);
   // Escape closes the menu for the `@` it was open on; a new `@` opens it again.
   const [dismissedAnchor, setDismissedAnchor] = useState<number | null>(null);
@@ -119,13 +126,23 @@ export function useConversationReferenceMenu({
     exclude: conversationId,
     known,
   });
-  const items = view.kind === 'results' ? view.items : [];
+  const dismissed = trigger !== null && trigger.anchor === dismissedAnchor;
+  const agentRows = useMemo(
+    () => (agentMentions && trigger && !dismissed ? agentCandidates(agentMentions.agents, trigger.query) : []),
+    [agentMentions, trigger, dismissed],
+  );
+  const items: ReferenceMenuItem[] = [
+    ...agentRows.map((mention) => ({ type: 'agent' as const, mention })),
+    ...(url !== null && view.kind === 'results' ? view.items.map((candidate) => ({ type: 'conversation' as const, candidate })) : []),
+  ];
   const active = Math.min(activeIndex, Math.max(items.length - 1, 0));
 
-  const pick = (candidate: ChatConversationReferenceCandidate) => {
+  const pick = (item: ReferenceMenuItem) => {
     if (!trigger) return;
-    const inserted = insertConversationReference(text, trigger, candidate.key);
-    onPick({ conversationId: candidate.id, title: candidate.title, key: candidate.key, isOwn: candidate.isOwn });
+    const key = item.type === 'agent' ? item.mention.key : item.candidate.key;
+    const inserted = insertConversationReference(text, trigger, key);
+    if (item.type === 'agent') agentMentions?.onPick(item.mention);
+    else onPick({ conversationId: item.candidate.id, title: item.candidate.title, key, isOwn: item.candidate.isOwn });
     pendingCaretRef.current = inserted.caret;
     onTextChange(inserted.text);
     setTrigger(null);
@@ -133,7 +150,7 @@ export function useConversationReferenceMenu({
 
   /** The menu's keys; true when the key was the menu's to handle. */
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): boolean => {
-    if (view.kind === 'closed' || !trigger || e.nativeEvent.isComposing) return false;
+    if ((view.kind === 'closed' && items.length === 0) || !trigger || e.nativeEvent.isComposing) return false;
     if (e.key === 'Escape') {
       e.preventDefault();
       setDismissedAnchor(trigger.anchor);
@@ -158,10 +175,12 @@ export function useConversationReferenceMenu({
   const textareaAria = enabled
     ? {
         'aria-autocomplete': 'list' as const,
-        'aria-controls': view.kind === 'results' ? listboxId : undefined,
-        'aria-activedescendant': view.kind === 'results' ? optionId(active) : undefined,
+        'aria-controls': items.length > 0 ? listboxId : undefined,
+        'aria-activedescendant': items.length > 0 ? optionId(active) : undefined,
       }
     : {};
 
-  return { view, activeIndex: active, setActiveIndex, listboxId, optionId, sync, close, pick, onKeyDown, textareaAria };
+  // Without conversation references, an agent-only menu: no conversation states to say.
+  const shownView: ReferenceMenuView = url === null ? { kind: 'closed' } : view;
+  return { view: shownView, items, activeIndex: active, setActiveIndex, listboxId, optionId, sync, close, pick, onKeyDown, textareaAria };
 }

@@ -26,6 +26,8 @@ interface UseConversationsReturn {
    * reason (an empty string when it gave none).
    */
   moveConversation: (id: string, workspaceId: string | null) => Promise<string | null>;
+  /** Delete every conversation (`apiEndpoints.clearAll`); `null` when the host offers no route. */
+  clearConversations: (() => Promise<boolean>) | null;
 }
 
 /**
@@ -117,6 +119,19 @@ export function useConversations({
     [historyEnabled, sessionsUrl, requestHeaders],
   );
 
+  const clearAllUrl = historyEnabled && apiEndpoints?.clearAll ? `${apiBaseUrl}${apiEndpoints.clearAll}` : null;
+  const clearConversations = useCallback(async (): Promise<boolean> => {
+    if (!clearAllUrl) return false;
+    try {
+      const res = await fetch(clearAllUrl, { method: 'DELETE', headers: { ...(requestHeaders ?? {}) } });
+      if (!res.ok) return false;
+      setConversations([]);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [clearAllUrl, requestHeaders]);
+
   const renameConversation = useCallback(
     async (id: string, title: string): Promise<boolean> => {
       const trimmed = title.trim();
@@ -176,5 +191,14 @@ export function useConversations({
     [historyEnabled, sessionsUrl, requestHeaders, conversations],
   );
 
-  return { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation, moveConversation };
+  return {
+    historyEnabled,
+    conversations,
+    conversationsLoading,
+    refreshConversations,
+    deleteConversation,
+    renameConversation,
+    moveConversation,
+    clearConversations: clearAllUrl ? clearConversations : null,
+  };
 }

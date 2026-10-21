@@ -28,7 +28,7 @@
     "lint-fix": "eslint --fix \"src/**/*.ts*\"",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
-    "test": "node --test \"src/**/*.test.ts\" \"postcss/**/*.test.js\"",
+    "test": "node --import ./test/register.mjs --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\" \"postcss/**/*.test.js\"",
     "prepack": "yarn build"
   },
   "dependencies": {
@@ -54,6 +54,7 @@
     "@types/node": "22.19.15",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "esbuild": "0.27.4",
     "eslint": "10.1.0",
     "eslint-config-prettier": "10.1.8",
     "happy-dom": "20.14.6",

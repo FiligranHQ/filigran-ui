@@ -3,6 +3,13 @@ import './assets/index.css';
 export { ChatPanel, ChatToggleButton } from './components';
 export type {
   ChatMode,
+  ChatPanelMode,
+  ChatPanelHandle,
+  ChatSendOptions,
+  ChatStreamEventInfo,
+  ChatMarkerContext,
+  ChatMarkerRenderer,
+  AgentStatusState,
   BackendType,
   ChatPanelProps,
   ChatToggleButtonProps,

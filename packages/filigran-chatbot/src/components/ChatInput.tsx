@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
-import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatMode, ChatPromptTemplate, ChatQuotaStatus } from '../types';
+import { useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
+import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
 import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
 import { useConversationReferenceMenu } from '../hooks/useConversationReferenceMenu';
 import { useDictation } from '../hooks/useDictation';
@@ -11,6 +12,15 @@ import { QuotaIndicator } from './QuotaIndicator';
 import { Tooltip } from './Tooltip';
 
 interface ChatInputProps {
+  /** The host's content above the composer (`composerHeader`). */
+  header?: React.ReactNode;
+  /** Uploaded files may steer the running turn. */
+  steerAttachments?: boolean;
+  /** A message that cannot steer is held until the turn ends. */
+  canHold?: boolean;
+  /** The message held, shown with a way to take it back. */
+  heldMessage?: { text: string } | null;
+  onCancelHeld?: () => void;
   inputValue: string;
   onInputChange: (value: string) => void;
   onSend: () => void;
@@ -28,7 +38,7 @@ interface ChatInputProps {
   onFileRemove?: (index: number) => void;
   onPaste?: (e: React.ClipboardEvent) => void;
   t: (key: string) => string;
-  mode?: ChatMode;
+  mode?: ChatPanelMode;
   separatorColor?: string;
   /** Saved prompt templates; omitted entirely when the host serves none. */
   prompts?: ChatPromptTemplate[] | null;
@@ -52,12 +62,19 @@ interface ChatInputProps {
     refs: ChatConversationRef[];
     onPick: (ref: ChatConversationRef) => void;
   };
+  /** The agents `@` mentions, and the mentions the composer holds; absent while mentions are off. */
+  agentMentions?: { agents: XtmAgent[]; mentions: AgentMention[]; onPick: (mention: AgentMention) => void };
 }
 
 const MAX_TEXTAREA_HEIGHT = 120;
 const NO_REFS: ChatConversationRef[] = [];
 
 export const ChatInput = ({
+  header,
+  steerAttachments = false,
+  canHold = false,
+  heldMessage,
+  onCancelHeld,
   inputValue,
   onInputChange,
   onSend,
@@ -76,10 +93,17 @@ export const ChatInput = ({
   contextUsage,
   composerToolbar,
   conversationReferences,
+  agentMentions,
 }: ChatInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const mentionAgents = agentMentions?.agents;
+  const onPickMention = agentMentions?.onPick;
+  const agentMentionOptions = useMemo(
+    () => (mentionAgents && onPickMention ? { agents: mentionAgents, onPick: onPickMention } : undefined),
+    [mentionAgents, onPickMention],
+  );
   const referenceMenu = useConversationReferenceMenu({
     url: conversationReferences?.url ?? null,
     requestHeaders: conversationReferences?.requestHeaders,
@@ -89,6 +113,7 @@ export const ChatInput = ({
     textareaRef,
     refs: conversationReferences?.refs ?? NO_REFS,
     onPick: (ref) => conversationReferences?.onPick(ref),
+    agentMentions: agentMentionOptions,
   });
 
   // A dictated phrase lands at the end of the draft while the focus is on the
@@ -135,18 +160,24 @@ export const ChatInput = ({
   const hasAttachments = isFileManagementEnabled && attachedFiles.length > 0;
   // A steer reaches the running loop as text alone, so the agent would never
   // read a conversation it references: such a message waits, like a file.
-  const hasReferences = Boolean(conversationReferences) && referencedConversations(conversationReferences?.refs ?? NO_REFS, inputValue).length > 0;
+  // A mention routes the message to another agent: it waits for the turn too.
+  const hasReferences =
+    (Boolean(conversationReferences) && referencedConversations(conversationReferences?.refs ?? NO_REFS, inputValue).length > 0) ||
+    (Boolean(agentMentions) && mentionedAgentIds(agentMentions?.mentions ?? [], inputValue).length > 0);
   // Show the accent Send button NEXT to Stop while generating: text-only
   // sends can steer the running agent. With attachments selected the send
   // must wait for the current response, so only Stop is shown.
-  const showSteerSend = isLoading && canSteer && Boolean(inputValue.trim()) && !hasAttachments && !hasReferences;
+  const showSteerSend =
+    isLoading && canSteer && !hasReferences && !hasFilesUploading && (hasAttachments ? steerAttachments : Boolean(inputValue.trim()));
+  // What cannot steer waits for the turn to end, one message at a time.
+  const showHoldSend = isLoading && canHold && !showSteerSend && !heldMessage && Boolean(canSend);
 
   // Every way of sending goes through here, and only when the matching button
   // would be enabled: Enter must not send while files upload, nor end a
   // dictation that nothing was sent from. Dictation is cancelled, not stopped:
   // a phrase still being recognised would land in the composer just emptied.
   const send = () => {
-    if (!(isLoading ? showSteerSend : canSend)) return;
+    if (!(isLoading ? showSteerSend || showHoldSend : canSend)) return;
     dictation.cancel();
     onSend();
   };
@@ -164,8 +195,9 @@ export const ChatInput = ({
     }
   };
 
-  const footerText =
-    isLoading && canSteer && !hasAttachments && !hasReferences
+  const footerText = showHoldSend
+    ? t('Enter to send when the answer ends · Esc to stop')
+    : isLoading && canSteer && (!hasAttachments || steerAttachments) && !hasReferences
       ? t('Enter to send now · Esc to stop')
       : isLoading && hasAttachments
         ? t('Attachments wait for the current response')
@@ -177,7 +209,20 @@ export const ChatInput = ({
     <div
       className={`px-4 py-3 border-t border-gray-200 dark:border-white/10 ${mode === 'floating' ? 'rounded-b-xl' : ''}`}
       style={separatorColor ? { borderTopColor: separatorColor, borderTopWidth: 1 } : undefined}
+      data-testid="filigran-chat-composer"
     >
+      {header && <div className="mb-2">{header}</div>}
+      {heldMessage && (
+        <div className="mb-2 flex items-center gap-2 rounded-lg border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
+          <span className="shrink-0 text-gray-500 dark:text-white/50">{t('Sends when the answer ends:')}</span>
+          <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-white/80">{heldMessage.text || t('Attached files')}</span>
+          {onCancelHeld && (
+            <button type="button" onClick={onCancelHeld} className="shrink-0 text-gray-400 dark:text-white/40 hover:text-red-500">
+              {t('Cancel')}
+            </button>
+          )}
+        </div>
+      )}
       {isFileManagementEnabled && attachedFiles.length > 0 && (
         <div className="flex gap-1.5 flex-wrap mb-2">
           {attachedFiles.map((f, i) => (
@@ -257,6 +302,7 @@ export const ChatInput = ({
         />
         <ConversationReferenceMenu
           view={referenceMenu.view}
+          items={referenceMenu.items}
           activeIndex={referenceMenu.activeIndex}
           listboxId={referenceMenu.listboxId}
           optionId={referenceMenu.optionId}
@@ -279,6 +325,18 @@ export const ChatInput = ({
             >
               {dictation.listening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
               {dictation.listening && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500 motion-safe:animate-pulse" />}
+            </button>
+          </Tooltip>
+        )}
+        {showHoldSend && (
+          <Tooltip title={t('Send when the answer ends')}>
+            <button
+              type="button"
+              onClick={send}
+              aria-label={t('Send when the answer ends')}
+              className="p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
+            >
+              <SendIcon size={18} />
             </button>
           </Tooltip>
         )}
@@ -337,7 +395,9 @@ export const ChatInput = ({
           <span className="truncate">{dictation.interim}</span>
         </p>
       ) : (
-        <p className="text-center text-[0.65rem] text-gray-400 dark:text-white/30 mt-1.5 opacity-70">{footerText}</p>
+        <p data-testid="filigran-chat-disclaimer" className="text-center text-[0.65rem] text-gray-400 dark:text-white/30 mt-1.5 opacity-70">
+          {footerText}
+        </p>
       )}
     </div>
   );

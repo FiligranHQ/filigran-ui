@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ChatMode } from '../types';
+import type { ChatPanelMode } from '../types';
+import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 
 const SIDEBAR_WIDTH = 400;
-const SIDEBAR_WIDTH_STORAGE_KEY = 'filigranChatSidebarWidth';
 const MAX_SIDEBAR_RATIO = 0.4;
 
 interface UseSidebarResizeOptions {
-  mode: ChatMode;
+  mode: ChatPanelMode;
   resizable: boolean;
   onWidthChange?: (width: number) => void;
   onResizeStart?: () => void;
   onResizeEnd?: () => void;
+  storageKeyPrefix?: string;
 }
 
 interface UseSidebarResizeReturn {
@@ -20,10 +21,17 @@ interface UseSidebarResizeReturn {
   isResizing: boolean;
 }
 
-export function useSidebarResize({ mode, resizable, onWidthChange, onResizeStart, onResizeEnd }: UseSidebarResizeOptions): UseSidebarResizeReturn {
+export function useSidebarResize({
+  mode,
+  resizable,
+  onWidthChange,
+  onResizeStart,
+  onResizeEnd,
+  storageKeyPrefix,
+}: UseSidebarResizeOptions): UseSidebarResizeReturn {
+  const widthStorageKey = storageKey(storageKeyPrefix, STORAGE_KEYS.sidebarWidth);
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
-    if (typeof window === 'undefined') return SIDEBAR_WIDTH;
-    const stored = localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+    const stored = readStorage('local', widthStorageKey);
     if (stored) {
       const parsed = parseInt(stored, 10);
       if (!Number.isNaN(parsed) && parsed >= SIDEBAR_WIDTH) return parsed;
@@ -68,7 +76,7 @@ export function useSidebarResize({ mode, resizable, onWidthChange, onResizeStart
       setIsResizing(false);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidthRef.current));
+      writeStorage('local', widthStorageKey, String(sidebarWidthRef.current));
       onResizeEndRef.current?.();
     };
 
@@ -91,7 +99,7 @@ export function useSidebarResize({ mode, resizable, onWidthChange, onResizeStart
       document.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('resize', handleWindowResize);
     };
-  }, [mode, resizable]);
+  }, [mode, resizable, widthStorageKey]);
 
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();

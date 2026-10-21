@@ -18,55 +18,32 @@ import { createSessionGate } from '../utils/sessionGate';
 import { conversationReferencesUrl, pruneConversationRefs, referencedConversations, withConversationRef } from '../utils/conversationRefs';
 import { hostTakesPageActions, performPageAction, waitForDomSettle, type PageAction } from '../utils/pageActions';
 import { takePageSnapshot } from '../utils/pageSnapshot';
+import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
+import { readSseEvents } from '../utils/sse';
+import { mentionedAgentIds, pruneAgentMentions, withAgentMention, type AgentMention } from '../utils/agentMentions';
 
-const STORAGE_KEY = 'filigranChatConversationId';
-const LEGACY_CHAT_ID_KEY = 'filigranChatLegacyChatId';
+// Unsent composer text is kept per conversation so closing the panel (hosts
+// unmount `<ChatPanel/>` when it is closed) or switching conversation doesn't
+// discard a half-written question. `sessionStorage`, not `localStorage`: a
+// draft is scoped to the tab and dies with it.
 
-/**
- * Unsent composer text is kept per conversation so closing the panel (hosts
- * unmount `<ChatPanel/>` when it is closed) or switching conversation doesn't
- * discard a half-written question. `sessionStorage`, not `localStorage`: a
- * draft is scoped to the tab and dies with it.
- */
-const DRAFT_KEY_PREFIX = 'filigranChatDraft:';
 /** Debounce on draft writes so a fast typist doesn't hit storage per keystroke. */
 const DRAFT_PERSIST_DELAY_MS = 300;
 
-const draftKey = (conversationId: string | null): string => `${DRAFT_KEY_PREFIX}${conversationId ?? 'new'}`;
-
-function loadDraft(conversationId: string | null): string {
-  if (typeof window === 'undefined') return '';
-  try {
-    return sessionStorage.getItem(draftKey(conversationId)) ?? '';
-  } catch {
-    // Storage can throw in restricted/private browsing contexts — a chat
-    // without draft recovery is far better than a chat that fails to mount.
-    return '';
-  }
-}
-
-function persistDraft(conversationId: string | null, value: string): void {
-  if (typeof window === 'undefined') return;
-  try {
-    if (value) sessionStorage.setItem(draftKey(conversationId), value);
-    else sessionStorage.removeItem(draftKey(conversationId));
-  } catch {
-    /* ignore — see loadDraft */
-  }
-}
+const draftKey = (prefix: string | undefined, conversationId: string | null): string =>
+  storageKey(prefix, `${STORAGE_KEYS.draft}${conversationId ?? 'new'}`);
 
 /**
  * The `@` picks of a draft, kept beside its text: only a pick makes `@key`
  * reference a conversation, so a draft restored without them would go out with
  * its `@key`s as plain text.
  */
-const DRAFT_REFS_KEY_PREFIX = 'filigranChatDraftRefs:';
-const draftRefsKey = (conversationId: string | null): string => `${DRAFT_REFS_KEY_PREFIX}${conversationId ?? 'new'}`;
+const draftRefsKey = (prefix: string | undefined, conversationId: string | null): string =>
+  storageKey(prefix, `${STORAGE_KEYS.draftRefs}${conversationId ?? 'new'}`);
 
-function loadDraftRefs(conversationId: string | null): ChatConversationRef[] {
-  if (typeof window === 'undefined') return [];
+function loadDraftRefs(prefix: string | undefined, conversationId: string | null): ChatConversationRef[] {
   try {
-    const parsed: unknown = JSON.parse(sessionStorage.getItem(draftRefsKey(conversationId)) ?? '[]');
+    const parsed: unknown = JSON.parse(readStorage('session', draftRefsKey(prefix, conversationId)) ?? '[]');
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
       (r): r is ChatConversationRef =>
@@ -77,20 +54,15 @@ function loadDraftRefs(conversationId: string | null): ChatConversationRef[] {
   }
 }
 
-function persistDraftRefs(conversationId: string | null, refs: ChatConversationRef[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    if (refs.length > 0) sessionStorage.setItem(draftRefsKey(conversationId), JSON.stringify(refs));
-    else sessionStorage.removeItem(draftRefsKey(conversationId));
-  } catch {
-    /* ignore — see loadDraft */
-  }
+function persistDraft(prefix: string | undefined, conversationId: string | null, value: string, refs: ChatConversationRef[]): void {
+  writeStorage('session', draftKey(prefix, conversationId), value);
+  writeStorage('session', draftRefsKey(prefix, conversationId), refs.length > 0 ? JSON.stringify(refs) : null);
 }
 
 /** A conversation's draft: its text and the `@` picks it still holds. */
-function loadDraftState(conversationId: string | null): { text: string; refs: ChatConversationRef[] } {
-  const text = loadDraft(conversationId);
-  return { text, refs: pruneConversationRefs(loadDraftRefs(conversationId), text) };
+function loadDraftState(prefix: string | undefined, conversationId: string | null): { text: string; refs: ChatConversationRef[] } {
+  const text = readStorage('session', draftKey(prefix, conversationId)) ?? '';
+  return { text, refs: pruneConversationRefs(loadDraftRefs(prefix, conversationId), text) };
 }
 
 /**
@@ -121,6 +93,25 @@ const RESUME_WATCH_MS = 900000;
  */
 const APPROVAL_PRESENCE_INTERVAL_MS = 600000;
 
+/** How long Stop waits for the backend to end a cancelled turn before letting go of it. */
+const CANCEL_GRACE_MS = 10000;
+/** Reconnection backoff of the conversation's event stream. */
+const EVENTS_RETRY_BASE_MS = 1000;
+const EVENTS_RETRY_MAX_MS = 30000;
+
+/** The actions that belong to a turn, as opposed to the conversation. */
+const TURN_ACTIONS: ReadonlySet<ParsedAction['action']> = new Set(['status', 'stream', 'done', 'approval_required', 'error', 'cancelled']);
+
+/** The host's extra body fields, read at send time; a throwing getter sends none. */
+function readRequestExtras(getter: (() => Record<string, unknown> | undefined) | undefined): Record<string, unknown> {
+  try {
+    const extras = getter?.();
+    return extras && typeof extras === 'object' ? extras : {};
+  } catch {
+    return {};
+  }
+}
+
 /** Maximum number of files that can be attached to a single message. */
 const DEFAULT_MAX_FILE_COUNT = 10;
 /** Maximum total size of all attached files (50 MB). */
@@ -139,6 +130,50 @@ interface UseChatOptions {
   t: (key: string) => string;
   maxFileCount?: number;
   maxTotalSize?: number;
+  /** Namespace of the browser-storage keys (see `storageKeyPrefix` on the panel). */
+  storageKeyPrefix?: string;
+  /**
+   * The conversation the host holds, when it controls it: `undefined` leaves the
+   * panel on its own persisted one. A controlled id is never written to storage.
+   */
+  controlledConversationId?: string | null;
+  /** Called whenever the active conversation changes, whoever changed it. */
+  onConversationIdChange?: (id: string | null) => void;
+  /** Extra fields merged into each REST message body (see `getRequestExtras` on the panel). */
+  getRequestExtras?: () => Record<string, unknown> | undefined;
+  /** Every frame of the message stream and the event stream, as received. */
+  onStreamEvent?: (event: Record<string, unknown>, info: { relayed: boolean }) => void;
+  /** A conversation was retitled (`conversation_title`). */
+  onConversationTitle?: (conversationId: string | null, title: string) => void;
+  /**
+   * Whether the conversation's event stream may be followed: the panel holds
+   * it back until the conversation's history is on screen, which a relayed
+   * turn is appended to.
+   */
+  eventsEnabled?: boolean;
+  /** A steer may carry the composer's uploaded files (`file_ids`). */
+  steerAttachments?: boolean;
+  /** A message that cannot steer the running turn is held, and sent when it ends. */
+  holdSends?: boolean;
+  /** `@` can mention agents: the message then carries `mentioned_agent_ids`. */
+  agentMentionsEnabled?: boolean;
+}
+
+/** What a host-driven or held send carries, in place of the composer's content. */
+export interface SendOverride {
+  text: string;
+  extras?: Record<string, unknown>;
+  files?: ChatFile[];
+  refs?: ChatConversationRef[];
+  mentions?: AgentMention[];
+}
+
+/** A message waiting for the running turn to end. */
+export interface HeldMessage {
+  text: string;
+  files: ChatFile[];
+  refs: ChatConversationRef[];
+  mentions: AgentMention[];
 }
 
 export interface TransferredAgent {
@@ -214,7 +249,16 @@ interface UseChatReturn {
   conversationIdRef: React.MutableRefObject<string | null>;
   handleFileAdd: (fileList: FileList | null) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
-  handleSendMessage: () => Promise<void>;
+  /** Send the composer's content, or *override*'s without touching the composer. */
+  handleSendMessage: (override?: SendOverride) => Promise<void>;
+  /** A message held until the running turn ends (`holdSends`), if any. */
+  heldMessage: HeldMessage | null;
+  cancelHeldMessage: () => void;
+  /** The agents picked from the `@` menu whose `@key` the draft still holds. */
+  agentMentions: AgentMention[];
+  addAgentMention: (mention: AgentMention) => void;
+  /** End an agent's wait early ("Continue now"); `null` when the host offers no route. */
+  skipWait: (() => Promise<void>) | null;
   /**
    * Start a fresh conversation; with *workspaceId* (a string), the session is
    * created inside that workspace (`workspace_id` on the session `POST`).
@@ -268,7 +312,7 @@ function getParser(backendType: BackendType): (evt: Record<string, unknown>, ctx
   }
 }
 
-function buildRequestBody(
+export function buildRequestBody(
   backendType: BackendType,
   content: string,
   opts: {
@@ -282,6 +326,8 @@ function buildRequestBody(
     referencedConversationIds?: string[];
     /** Same promise, for `act_on_page` frames (#5559): answered on the approve path. */
     supportsPageActions?: boolean;
+    /** The host's own fields; never overriding the panel's. */
+    extras?: Record<string, unknown>;
   },
 ): Record<string, unknown> {
   switch (backendType) {
@@ -298,7 +344,7 @@ function buildRequestBody(
         forwardedProps: opts.agentSlug ? { agentSlug: opts.agentSlug } : {},
       };
     default: {
-      const body: Record<string, unknown> = { content, conversation_id: opts.conversationId, agent_slug: opts.agentSlug };
+      const body: Record<string, unknown> = { ...opts.extras, content, conversation_id: opts.conversationId, agent_slug: opts.agentSlug };
       // Tell the backend this turn may pause on a gated tool call and that we
       // will answer. Sent only when the host named an approve path, because
       // the flag is a promise: a backend that pauses waits indefinitely, so a
@@ -353,21 +399,34 @@ export function useChat({
   t,
   maxFileCount = DEFAULT_MAX_FILE_COUNT,
   maxTotalSize = DEFAULT_MAX_TOTAL_SIZE,
+  storageKeyPrefix,
+  controlledConversationId,
+  onConversationIdChange,
+  getRequestExtras,
+  onStreamEvent,
+  onConversationTitle,
+  eventsEnabled = false,
+  steerAttachments = false,
+  holdSends = false,
+  agentMentionsEnabled = false,
 }: UseChatOptions): UseChatReturn {
   const isLegacy = backendType === 'legacy';
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [agentStatus, setAgentStatus] = useState<AgentStatusState | null>(null);
-  const [conversationId, setConversationId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(STORAGE_KEY);
-  });
+  const isControlled = controlledConversationId !== undefined;
+  const conversationStorageKey = storageKey(storageKeyPrefix, STORAGE_KEYS.conversationId);
+  const legacyChatIdStorageKey = storageKey(storageKeyPrefix, STORAGE_KEYS.legacyChatId);
+  const [conversationId, setConversationId] = useState<string | null>(() =>
+    isControlled ? (controlledConversationId ?? null) : readStorage('local', conversationStorageKey),
+  );
   // Seeded from the persisted draft of whichever conversation we mount into,
   // so re-opening the panel restores what the user had typed - and the
   // conversations it references.
-  const [initialDraft] = useState(() => loadDraftState(typeof window === 'undefined' ? null : localStorage.getItem(STORAGE_KEY)));
+  const [initialDraft] = useState(() => loadDraftState(storageKeyPrefix, conversationId));
   const [inputValue, setInputValue] = useState(initialDraft.text);
   const [conversationRefs, setConversationRefs] = useState<ChatConversationRef[]>(initialDraft.refs);
+  const [agentMentions, setAgentMentions] = useState<AgentMention[]>([]);
   const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
   const [transferredAgent, setTransferredAgent] = useState<TransferredAgent | null>(null);
   // How full the model's context window is for this conversation. Conversation
@@ -386,10 +445,7 @@ export function useChat({
   const [historyReloadNonce, setHistoryReloadNonce] = useState(0);
   // Drives the resume watch's next poll: each tick re-arms the effect.
   const [resumeTick, setResumeTick] = useState(0);
-  const [legacyChatId, setLegacyChatId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(LEGACY_CHAT_ID_KEY);
-  });
+  const [legacyChatId, setLegacyChatId] = useState<string | null>(() => readStorage('local', legacyChatIdStorageKey));
 
   const historyLoadedRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -400,7 +456,27 @@ export function useChat({
   // The running stream's pending deltas, so stopping it can apply them and a
   // new chat can drop them.
   const streamDeltasRef = useRef<StreamDeltas | null>(null);
-  const hasUsedToolsRef = useRef(false);
+  // The turn this panel streams itself, so the event stream never renders it
+  // again, and the one of another origin it relays, if any.
+  const ownTurnActiveRef = useRef(false);
+  const ownTurnIdRef = useRef<string | null>(null);
+  const relayedTurnRef = useRef<{ turnId: string | null; renderer: ReturnType<typeof createTurnRenderer> } | null>(null);
+  // A Stop sent to the backend, and the backstop that lets go of the turn if
+  // it never reports the end.
+  const cancelTimerRef = useRef<number | null>(null);
+  // A message waiting for the running turn to end (`holdSends`).
+  const [heldMessage, setHeldMessage] = useState<HeldMessage | null>(null);
+  const heldMessageRef = useRef(heldMessage);
+  heldMessageRef.current = heldMessage;
+  // This panel's identity on the conversation's event stream: the backend
+  // never relays to it the turns it started itself.
+  const [clientId] = useState(() => crypto.randomUUID());
+  const getRequestExtrasRef = useRef(getRequestExtras);
+  getRequestExtrasRef.current = getRequestExtras;
+  const onStreamEventRef = useRef(onStreamEvent);
+  onStreamEventRef.current = onStreamEvent;
+  const onConversationTitleRef = useRef(onConversationTitle);
+  onConversationTitleRef.current = onConversationTitle;
   // Ref mirror of conversationId — always current across async boundaries
   const conversationIdRef = useRef(conversationId);
   // Ref mirror of isLoading, so the recovery probe can tell at apply time
@@ -460,7 +536,11 @@ export function useChat({
   // A pick counts while its `@key` is in the text: editing it out drops it.
   useEffect(() => {
     setConversationRefs((prev) => pruneConversationRefs(prev, inputValue));
+    setAgentMentions((prev) => pruneAgentMentions(prev, inputValue));
   }, [inputValue]);
+  const addAgentMention = useCallback((mention: AgentMention) => {
+    setAgentMentions((prev) => withAgentMention(prev, mention));
+  }, []);
 
   const addConversationRef = useCallback((ref: ChatConversationRef) => {
     setConversationRefs((prev) => withConversationRef(prev, ref));
@@ -553,6 +633,20 @@ export function useChat({
     return `${apiBaseUrl}${apiEndpoints?.upload ?? '/chat/upload'}`;
   };
 
+  /** A REST-only route the host opted into (no default), resolved against the base. */
+  const optInUrl = (path: string | null | undefined): string | null => {
+    if (isLegacy || backendType === 'ag-ui' || apiEndpoints?.singleEndpoint || !path) return null;
+    return `${apiBaseUrl}${path}`;
+  };
+  const getCancelUrl = () => optInUrl(apiEndpoints?.cancel);
+  const getSkipWaitUrl = () => optInUrl(apiEndpoints?.skipWait);
+  const getEventsUrl = (convId: string): string | null => {
+    const base = optInUrl(apiEndpoints?.events);
+    return base ? `${base}/${encodeURIComponent(convId)}/events?client_id=${encodeURIComponent(clientId)}` : null;
+  };
+  /** Names this panel to a backend that relays turns, so its own are not relayed back. */
+  const clientIdHeader = (): Record<string, string> => (getEventsUrl('_') ? { 'X-Chat-Client-Id': clientId } : {});
+
   // Determine sessions endpoint URL
   const getSessionsUrl = (): string | null => {
     if (isLegacy || apiEndpoints?.singleEndpoint || apiEndpoints?.sessions === null) {
@@ -565,15 +659,18 @@ export function useChat({
    * Update conversationId in React state, the ref mirror, and localStorage.
    * Stable identity (useCallback) so it can be used as an effect dependency.
    */
-  const updateConversationId = useCallback((id: string | null) => {
-    conversationIdRef.current = id;
-    setConversationId(id);
-    if (id) {
-      localStorage.setItem(STORAGE_KEY, id);
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, []);
+  const onConversationIdChangeRef = useRef(onConversationIdChange);
+  onConversationIdChangeRef.current = onConversationIdChange;
+  const updateConversationId = useCallback(
+    (id: string | null) => {
+      const changed = conversationIdRef.current !== id;
+      conversationIdRef.current = id;
+      setConversationId(id);
+      if (!isControlled) writeStorage('local', conversationStorageKey, id);
+      if (changed) onConversationIdChangeRef.current?.(id);
+    },
+    [isControlled, conversationStorageKey],
+  );
 
   /**
    * Ensure a conversation exists. Concurrent callers of the same chat (e.g.
@@ -746,30 +843,37 @@ export function useChat({
    * its own line if the user already typed something new — so the message is
    * never silently lost and never resets the in-flight run state.
    */
-  const steerMessage = async (content: string) => {
+  const steerMessage = async (content: string, files: ChatFile[] = []): Promise<'ok' | 'ended' | 'failed'> => {
     const steerUrl = getSteerUrl();
     const convId = conversationIdRef.current;
-    if (!steerUrl || !convId) return;
+    if (!steerUrl || !convId) return 'failed';
 
     const optimistic: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
       content,
       timestamp: new Date(),
+      files: files.length > 0 ? files : undefined,
     };
     setMessages((prev) => [...prev, optimistic]);
+    const fileIds = files.filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
 
     try {
       const res = await fetch(steerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
-        body: JSON.stringify({ conversation_id: convId, content, agent_slug: agentSlug }),
+        body: JSON.stringify({ conversation_id: convId, content, agent_slug: agentSlug, ...(fileIds.length > 0 ? { file_ids: fileIds } : {}) }),
       });
-      if (!res.ok) throw new Error(`Steer failed: ${res.status}`);
+      if (res.ok) return 'ok';
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      // Nothing running any more: the turn ended while this was on its way.
+      if (res.status === 409 && holdSends) return 'ended';
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
-      setInputValue((prev) => (prev ? `${content}\n${prev}` : content));
     }
+    setInputValue((prev) => (prev ? `${content}\n${prev}` : content));
+    if (files.length > 0) setAttachedFiles((prev) => [...files, ...prev]);
+    return 'failed';
   };
 
   /**
@@ -825,7 +929,7 @@ export function useChat({
       });
       if (res.ok) {
         setPendingApprovals(null);
-        if (approvalDetachedRef.current) {
+        if (approvalDetachedRef.current && !relayedTurnRef.current) {
           // Answered after a reload: the turn resumes, but the stream it would
           // have reported on died with the old page. The backend persists the
           // answer and suppresses the live `done`, so re-reading the
@@ -941,57 +1045,17 @@ export function useChat({
     }
   };
 
-  const handleSendMessage = async () => {
-    const steerText = inputValue.trim();
-    // The picks the text still holds, when the host still offers the feature.
-    const sentRefs = conversationReferencesUrl(apiBaseUrl, apiEndpoints, backendType) ? referencedConversations(conversationRefs, inputValue) : [];
-    if (isLoading) {
-      // Mid-run steering — text-only sends while a response is streaming.
-      // Attachments keep the legacy wait behavior (the upload + message pair
-      // cannot be injected into a running loop), and so do references: a steer
-      // reaches the loop as text alone, and the agent would never read them.
-      if (steerText && attachedFiles.length === 0 && sentRefs.length === 0 && getSteerUrl() && conversationIdRef.current) {
-        setInputValue('');
-        await steerMessage(steerText);
-      }
-      return;
-    }
-    if (!inputValue.trim() && attachedFiles.length === 0) return;
-    const content = inputValue.trim();
-
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content,
-      timestamp: new Date(),
-      files: attachedFiles.length > 0 ? [...attachedFiles] : undefined,
-      conversationRefs: sentRefs.length > 0 ? sentRefs : undefined,
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setInputValue('');
-    setConversationRefs([]);
-    // Clear attachment chips after sending so the input returns to a clean state.
-    setAttachedFiles([]);
-    setIsLoading(true);
-    setAgentStatus({ status: 'thinking' });
-    hasUsedToolsRef.current = false;
-    // The chat this turn belongs to: a new chat (or a switch) moves the gate
-    // on, and the turn's end must then leave the replacing chat's state alone.
-    const turnGeneration = sessionGate.generation;
-
-    const assistantId = crypto.randomUUID();
-    setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
-
-    // The assistant message currently being streamed into. A steered turn can
-    // produce multiple response segments on one SSE stream: the backend
-    // completes the current segment (intermediate `done`), then runs a
-    // follow-up pass for the steering message (fresh `thinking` + `stream`
-    // events). Each segment gets its own assistant bubble. Declared outside
-    // the try so the catch below writes the error into the LIVE segment, not
-    // an already-completed one.
-    let currentAssistantId = assistantId;
+  /**
+   * Render one turn's frames into the transcript: the turn this panel started,
+   * read off its message stream, or one of another origin (a second tab, a
+   * reload) relayed by the conversation's event stream. A segment closed by an
+   * intermediate `done` is followed by a fresh assistant bubble.
+   */
+  const createTurnRenderer = (firstAssistantId: string, relayed: boolean) => {
+    let currentAssistantId = firstAssistantId;
     let accumulated = '';
     let doneReceived = false;
+    const ctx: ProtocolContext = { hasUsedTools: false, activeNodeId: '' };
 
     const deltas = createStreamDeltas((textChanged, thinking) => {
       if (textChanged) {
@@ -1011,7 +1075,283 @@ export function useChat({
         }));
       }
     });
-    streamDeltasRef.current = deltas;
+
+    // Events after a `done` open a new segment: a steered turn answers the
+    // steering message in a follow-up pass on the same stream, and each
+    // segment carries its own reasoning.
+    const ensureSegment = () => {
+      if (!doneReceived) return;
+      // Nothing of the closed segment may land in the new one.
+      deltas.flush();
+      doneReceived = false;
+      accumulated = '';
+      currentAssistantId = crypto.randomUUID();
+      const segmentId = currentAssistantId;
+      setMessages((prev) => [...prev, { id: segmentId, role: 'assistant', content: '', timestamp: new Date() }]);
+      setAgentStatus({ status: 'thinking' });
+    };
+
+    const applyStatus = (parsed: Extract<ParsedAction, { action: 'status' }>) => {
+      ensureSegment();
+      const segId = currentAssistantId;
+      // Orthogonal to the status label below: a progress frame can carry a
+      // fresh context reading whatever phase it announces.
+      if (parsed.contextUsage) setContextUsage(parsed.contextUsage);
+      if (parsed.status === 'thinking_text') {
+        deltas.thinking(parsed.thinkingContent ?? '');
+        return;
+      }
+      // Every other status lands after the text and reasoning that arrived
+      // before it.
+      deltas.flush();
+      const elapsedStartMs = typeof parsed.elapsedS === 'number' ? Date.now() - parsed.elapsedS * 1000 : undefined;
+      if (parsed.resumed) {
+        // A re-attached turn is replayed from its start: what it had written
+        // so far arrives again, whole.
+        accumulated = '';
+        setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: '' } : m)));
+        setAgentStatus({ status: 'thinking', elapsedS: parsed.elapsedS, elapsedStartMs });
+      } else if (parsed.status === 'stream_retract') {
+        // Rare: text that streamed as a provisional answer turned out to
+        // precede tool calls — discard the answer bubble (the text re-arrives
+        // as thinking_text right after, so it lands in the reasoning window).
+        accumulated = '';
+        setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: '' } : m)));
+        setAgentStatus((prev) => ({ status: 'analyzing', thinkingContent: prev?.thinkingContent }));
+      } else if (parsed.status === 'tool_heartbeat') {
+        // Liveness signal during a long tool execution: update the elapsed
+        // counter but KEEP the current status label/tools, re-anchoring the
+        // local 1s ticker in ChatThinking on the server clock.
+        setAgentStatus((prev) =>
+          prev
+            ? { ...prev, elapsedS: parsed.elapsedS, elapsedStartMs }
+            : { status: 'tool_start', tools: parsed.tools, elapsedS: parsed.elapsedS, elapsedStartMs },
+        );
+      } else if (parsed.status === 'wait_start') {
+        setAgentStatus((prev) => ({
+          status: 'wait_start',
+          thinkingContent: prev?.thinkingContent,
+          waitSeconds: parsed.waitSeconds,
+          waitReason: parsed.waitReason,
+          waitStartMs: Date.now(),
+        }));
+      } else {
+        setAgentStatus((prev) => ({ status: parsed.status, tools: parsed.tools, thinkingContent: prev?.thinkingContent }));
+      }
+    };
+
+    const applyDone = (parsed: Extract<ParsedAction, { action: 'done' }>) => {
+      deltas.flush();
+      doneReceived = true;
+      // A completed segment cannot still be waiting on a decision, so any
+      // prompt left standing (a submission that failed against a turn somebody
+      // else already answered) is stale.
+      setPendingApprovals(null);
+      setApprovalError(null);
+      if (parsed.conversationId && !relayed) updateConversationId(parsed.conversationId);
+      // Closing reading wins: a turn whose last iteration compacted ends lower
+      // than it peaked mid-run.
+      if (parsed.contextUsage) setContextUsage(parsed.contextUsage);
+      if (parsed.transferAgentId && parsed.transferAgentName) {
+        setTransferredAgent({ id: parsed.transferAgentId, name: parsed.transferAgentName });
+      }
+      const segId = currentAssistantId;
+      const finalContent = parsed.content || accumulated;
+      // The backend stores a segment when its `done` is sent, and a restore
+      // shows that time: stamping the send time instead would change the
+      // footer on the next reload.
+      const completedAt = new Date();
+      setMessages((prev) => {
+        // A relayed answer the transcript already holds (restored meanwhile)
+        // is not shown twice.
+        if (parsed.messageId && prev.some((m) => m.id !== segId && m.serverId === parsed.messageId)) {
+          return prev.filter((m) => m.id !== segId);
+        }
+        return prev.map((m) =>
+          m.id === segId
+            ? {
+                ...m,
+                content: finalContent,
+                timestamp: completedAt,
+                toolNames: parsed.toolNames,
+                toolCallCount: parsed.toolCallCount,
+                iterations: parsed.iterations,
+                attachments: parsed.attachments,
+                artifacts: parsed.artifacts,
+                reasoning: parsed.reasoning,
+                toolCallTrace: parsed.toolCallTrace,
+                transferChain: parsed.transferChain,
+                isTruncated: parsed.isTruncated,
+                agentName: parsed.answeredBy ?? m.agentName,
+                serverId: parsed.messageId ?? m.serverId,
+              }
+            : m,
+        );
+      });
+    };
+
+    /** Apply one frame; `'end'` when it closes the turn. */
+    const apply = (parsed: ParsedAction): 'continue' | 'end' => {
+      switch (parsed.action) {
+        case 'status':
+          applyStatus(parsed);
+          return 'continue';
+        case 'stream':
+          ensureSegment();
+          accumulated += parsed.content;
+          deltas.text();
+          return 'continue';
+        case 'done':
+          applyDone(parsed);
+          // The stream of a turn this panel started ends by itself; a relayed
+          // turn ends on its last segment.
+          return relayed && !parsed.intermediate ? 'end' : 'continue';
+        case 'approval_required':
+          // The turn stops here and the stream goes silent until a decision is
+          // POSTed back. Not an end state: the rest of the turn arrives on this
+          // same stream afterwards, so the reasoning that led to the proposed
+          // call stays on screen for the reviewer to judge it by.
+          deltas.flush();
+          approvalConversationIdRef.current = parsed.conversationId ?? conversationIdRef.current;
+          approvalDetachedRef.current = false;
+          setApprovalError(null);
+          setPendingApprovals(parsed.proposals);
+          setAgentStatus((prev) => (prev ? { ...prev, status: 'awaiting_approval' } : { status: 'awaiting_approval' }));
+          return 'continue';
+        case 'error': {
+          ensureSegment();
+          deltas.flush();
+          const segId = currentAssistantId;
+          // The backend reported a failure of its own, so the generic apology
+          // rather than "check the configuration": the connection plainly worked.
+          setMessages((prev) =>
+            prev.map((m) => (m.id === segId ? { ...m, content: parsed.content || t('Sorry, an error occurred. Please try again.') } : m)),
+          );
+          return 'end';
+        }
+        case 'cancelled': {
+          deltas.flush();
+          const segId = currentAssistantId;
+          setMessages((prev) => prev.filter((m) => !(m.id === segId && m.role === 'assistant' && !m.content)));
+          return 'end';
+        }
+        default:
+          return 'continue';
+      }
+    };
+
+    return {
+      ctx,
+      deltas,
+      apply,
+      currentAssistantId: () => currentAssistantId,
+      accumulated: () => accumulated,
+      doneReceived: () => doneReceived,
+    };
+  };
+
+  /** Frames about the conversation rather than a turn; true when handled. */
+  const applyConversationFrame = (parsed: ParsedAction): boolean => {
+    switch (parsed.action) {
+      case 'user_message': {
+        const relayedMessage = parsed.message;
+        setMessages((prev) =>
+          relayedMessage.serverId && prev.some((m) => m.serverId === relayedMessage.serverId) ? prev : [...prev, relayedMessage],
+        );
+        return true;
+      }
+      case 'conversation_title':
+        onConversationTitleRef.current?.(parsed.conversationId ?? conversationIdRef.current, parsed.title);
+        return true;
+      case 'approval_resolved':
+        setPendingApprovals(null);
+        setApprovalError(null);
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  const handleSendMessage = async (override?: SendOverride) => {
+    // A host-driven or held send leaves the composer, its attachments and picks alone.
+    const fromComposer = !override;
+    const rawText = override ? override.text : inputValue;
+    const files = fromComposer ? attachedFiles : (override.files ?? []);
+    const steerText = rawText.trim();
+    // The picks the text still holds, when the host still offers the feature.
+    const sentRefs = !fromComposer
+      ? (override.refs ?? [])
+      : conversationReferencesUrl(apiBaseUrl, apiEndpoints, backendType)
+        ? referencedConversations(conversationRefs, inputValue)
+        : [];
+    // The agents the text still mentions, in mention order.
+    const sentMentions = !fromComposer ? (override.mentions ?? []) : agentMentionsEnabled ? agentMentions : [];
+    const mentionedIds = mentionedAgentIds(sentMentions, rawText);
+    if (isLoadingRef.current) {
+      if (!steerText && files.length === 0) return;
+      const clearComposer = () => {
+        if (!fromComposer) return;
+        setInputValue('');
+        setConversationRefs([]);
+        setAgentMentions([]);
+        setAttachedFiles([]);
+      };
+      // Mid-run steering. References never steer: a steer reaches the loop as
+      // text alone, and the agent would never read them. Attachments steer
+      // only where the host says the steer route takes them, once uploaded.
+      const uploaded = files.every((f) => f.uploadStatus === 'done');
+      const canSteerThis =
+        !!getSteerUrl() &&
+        !!conversationIdRef.current &&
+        sentRefs.length === 0 &&
+        mentionedIds.length === 0 &&
+        (files.length === 0 || (steerAttachments && uploaded));
+      if (canSteerThis) {
+        clearComposer();
+        if ((await steerMessage(steerText, files)) === 'ended') setHeldMessage({ text: steerText, files, refs: [], mentions: [] });
+        return;
+      }
+      // Otherwise it waits for the turn to end, where the host allows it.
+      if (holdSends && uploaded && !heldMessageRef.current) {
+        clearComposer();
+        setHeldMessage({ text: steerText, files, refs: sentRefs, mentions: sentMentions });
+      }
+      return;
+    }
+    if (!steerText && files.length === 0) return;
+    const content = steerText;
+
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content,
+      timestamp: new Date(),
+      files: files.length > 0 ? [...files] : undefined,
+      conversationRefs: sentRefs.length > 0 ? sentRefs : undefined,
+    };
+    const assistantId = crypto.randomUUID();
+    setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
+    if (fromComposer) {
+      setInputValue('');
+      setConversationRefs([]);
+      setAgentMentions([]);
+      // Clear attachment chips after sending so the input returns to a clean state.
+      setAttachedFiles([]);
+    }
+    isLoadingRef.current = true;
+    setIsLoading(true);
+    setAgentStatus({ status: 'thinking' });
+    // The chat this turn belongs to: a new chat (or a switch) moves the gate
+    // on, and the turn's end must then leave the replacing chat's state alone.
+    const turnGeneration = sessionGate.generation;
+
+    const turn = createTurnRenderer(assistantId, false);
+    streamDeltasRef.current = turn.deltas;
+    ownTurnActiveRef.current = true;
+    ownTurnIdRef.current = null;
+    // Set when the turn joined is already on screen from the event stream,
+    // which then carries it to its end.
+    let handedOver = false;
 
     const controller = new AbortController();
     pageActionControllerRef.current?.abort();
@@ -1027,8 +1367,10 @@ export function useChat({
       // there: the message endpoint would create it in no workspace. Should
       // that fail (the workspace was archived or is no longer shared), the
       // message still goes, in a conversation of no workspace, rather than
-      // being lost.
-      if (!conversationIdRef.current && pendingWorkspaceRef.current) {
+      // being lost. So is one whose turns outlive their stream: Stop,
+      // "Continue now" and steering name the conversation from the first turn.
+      const turnsOutliveStream = !!(getCancelUrl() || getSkipWaitUrl() || getEventsUrl('_'));
+      if (!conversationIdRef.current && (pendingWorkspaceRef.current || turnsOutliveStream)) {
         const generation = sessionGate.generation;
         const created = await ensureConversation(agentSlug);
         // A new chat replaced this one meanwhile: the send went with it, and
@@ -1040,7 +1382,6 @@ export function useChat({
         }
       }
 
-      // Step 1: Send the message (with file_ids if files were uploaded)
       // Use conversationIdRef to get the latest value (may have been set by eager upload)
       const requestBody = buildRequestBody(backendType, content, {
         legacyChatId,
@@ -1050,6 +1391,11 @@ export function useChat({
         supportsToolApproval: getApproveUrl() !== null,
         referencedConversationIds: sentRefs.map((r) => r.conversationId),
         supportsPageActions: hostTakesPageActions(getApproveUrl(), onRelativeLinkClickRef.current),
+        extras: {
+          ...readRequestExtras(getRequestExtrasRef.current),
+          ...(override?.extras ?? {}),
+          ...(mentionedIds.length > 0 ? { mentioned_agent_ids: mentionedIds } : {}),
+        },
       });
       if (fileIds.length > 0) {
         (requestBody as Record<string, unknown>).file_ids = fileIds;
@@ -1059,7 +1405,7 @@ export function useChat({
 
       const res = await fetch(getMessagesUrl(), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
+        headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}), ...clientIdHeader() },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
@@ -1072,223 +1418,57 @@ export function useChat({
       }
 
       const parseEvent = getParser(backendType);
-      const ctx: ProtocolContext = { hasUsedTools: false, activeNodeId: '' };
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      /**
-       * Open a new response segment when events keep flowing after a `done`.
-       * Appends a fresh empty assistant message (after any steered user
-       * bubble) and resets the per-segment accumulators. The fresh `thinking`
-       * status also clears the reasoning window — each segment carries its
-       * own reasoning, mirroring the web chat behavior.
-       */
-      const ensureSegment = () => {
-        if (!doneReceived) return;
-        // Nothing of the closed segment may land in the new one.
-        deltas.flush();
-        doneReceived = false;
-        accumulated = '';
-        currentAssistantId = crypto.randomUUID();
-        const segmentId = currentAssistantId;
-        setMessages((prev) => [...prev, { id: segmentId, role: 'assistant', content: '', timestamp: new Date() }]);
-        setAgentStatus({ status: 'thinking' });
-      };
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (const rawLine of lines) {
-          const line = rawLine.replace(/\r$/, '');
-          if (!line.startsWith('data:')) continue;
-          const jsonStr = line.startsWith('data: ') ? line.slice(6) : line.slice(5);
-          try {
-            const evt = JSON.parse(jsonStr) as Record<string, unknown>;
-            const parsed: ParsedAction = parseEvent(evt, ctx);
-
-            // Sync ref → context for cross-event tracking
-            ctx.hasUsedTools = ctx.hasUsedTools || hasUsedToolsRef.current;
-
-            switch (parsed.action) {
-              case 'status': {
-                ensureSegment();
-                const segId = currentAssistantId;
-                // Orthogonal to the status label below: a progress frame can
-                // carry a fresh context reading whatever phase it announces.
-                if (parsed.contextUsage) setContextUsage(parsed.contextUsage);
-                if (parsed.status === 'tool_start') hasUsedToolsRef.current = true;
-                if (parsed.status === 'thinking_text') {
-                  deltas.thinking(parsed.thinkingContent ?? '');
-                  break;
-                }
-                // Every other status lands after the text and reasoning that
-                // arrived before it.
-                deltas.flush();
-                if (parsed.status === 'stream_retract') {
-                  // Rare: text that streamed as a provisional answer turned
-                  // out to precede tool calls — discard the answer bubble
-                  // (the text re-arrives as thinking_text right after, so it
-                  // lands in the reasoning window instead).
-                  accumulated = '';
-                  setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: '' } : m)));
-                  setAgentStatus((prev) => ({
-                    status: 'analyzing',
-                    thinkingContent: prev?.thinkingContent,
-                  }));
-                } else if (parsed.status === 'tool_heartbeat') {
-                  // Liveness signal during a long tool execution: update the
-                  // elapsed counter but KEEP the current status label/tools —
-                  // replacing the status would flip e.g. "Waiting for
-                  // background task…" back to "Thinking…" mid-execution.
-                  // Re-anchor the elapsed origin on every beat so the local
-                  // 1s ticker in ChatThinking stays true to the server clock.
-                  const elapsedStartMs = typeof parsed.elapsedS === 'number' ? Date.now() - parsed.elapsedS * 1000 : undefined;
-                  setAgentStatus((prev) =>
-                    prev
-                      ? { ...prev, elapsedS: parsed.elapsedS, elapsedStartMs }
-                      : { status: 'tool_start', tools: parsed.tools, elapsedS: parsed.elapsedS, elapsedStartMs },
-                  );
-                } else {
-                  setAgentStatus((prev) => ({
-                    status: parsed.status,
-                    tools: parsed.tools,
-                    thinkingContent: prev?.thinkingContent,
-                  }));
-                }
-                break;
-              }
-
-              case 'stream': {
-                ensureSegment();
-                accumulated += parsed.content;
-                deltas.text();
-                break;
-              }
-
-              case 'done': {
-                deltas.flush();
-                doneReceived = true;
-                // A completed segment cannot still be waiting on a decision, so
-                // any prompt left standing (a submission that failed against a
-                // turn somebody else already answered) is stale.
-                setPendingApprovals(null);
-                setApprovalError(null);
-                if (parsed.conversationId) {
-                  updateConversationId(parsed.conversationId);
-                }
-                // Closing reading wins: a turn whose last iteration compacted
-                // ends lower than it peaked mid-run.
-                if (parsed.contextUsage) setContextUsage(parsed.contextUsage);
-                if (parsed.transferAgentId && parsed.transferAgentName) {
-                  setTransferredAgent({ id: parsed.transferAgentId, name: parsed.transferAgentName });
-                }
-                const segId = currentAssistantId;
-                const finalContent = parsed.content || accumulated;
-                // The backend stores a segment when its `done` is sent, and a
-                // restore shows that time: stamping the send time instead would
-                // change the footer on the next reload.
-                const completedAt = new Date();
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === segId
-                      ? {
-                          ...m,
-                          content: finalContent,
-                          timestamp: completedAt,
-                          toolNames: parsed.toolNames,
-                          toolCallCount: parsed.toolCallCount,
-                          iterations: parsed.iterations,
-                          attachments: parsed.attachments,
-                          artifacts: parsed.artifacts,
-                          reasoning: parsed.reasoning,
-                          toolCallTrace: parsed.toolCallTrace,
-                          transferChain: parsed.transferChain,
-                          isTruncated: parsed.isTruncated,
-                          serverId: parsed.messageId ?? m.serverId,
-                        }
-                      : m,
-                  ),
-                );
-                break;
-              }
-
-              case 'page_action_required': {
-                deltas.flush();
-                // Not awaited: the stream stays silent until the answer lands,
-                // and the reader must keep draining its keep-alives meanwhile.
-                void answerPageAction(parsed.actionId, parsed.pageAction, parsed.conversationId);
-                break;
-              }
-
-              case 'approval_required': {
-                // The turn stops here and the stream goes silent until a
-                // decision is POSTed back. Not an end state: no segment is
-                // opened or closed, `isLoading` stays true, and the rest of
-                // the turn arrives on this same reader afterwards.
-                deltas.flush();
-                approvalConversationIdRef.current = parsed.conversationId ?? conversationIdRef.current;
-                setApprovalError(null);
-                setPendingApprovals(parsed.proposals);
-                // Keep whatever reasoning the turn had already streamed: the
-                // pause interrupts the turn, it does not start a new one, and
-                // the prose leading up to the proposed call is exactly the
-                // context the reviewer is about to judge it on.
-                setAgentStatus((prev) => (prev ? { ...prev, status: 'awaiting_approval' } : { status: 'awaiting_approval' }));
-                break;
-              }
-
-              case 'error': {
-                ensureSegment();
-                deltas.flush();
-                const segId = currentAssistantId;
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    // The backend reported a failure of its own, so the generic
-                    // apology rather than "check the configuration": the
-                    // connection plainly worked.
-                    m.id === segId ? { ...m, content: parsed.content || t('Sorry, an error occurred. Please try again.') } : m,
-                  ),
-                );
-                return;
-              }
-
-              case 'set_chat_id':
-                setLegacyChatId(parsed.chatId);
-                localStorage.setItem(LEGACY_CHAT_ID_KEY, parsed.chatId);
-                break;
-
-              case 'noop':
-                break;
+      await readSseEvents(res.body, (evt) => {
+        try {
+          onStreamEventRef.current?.(evt, { relayed: false });
+          if (!ownTurnIdRef.current && typeof evt.turn_id === 'string' && evt.turn_id) ownTurnIdRef.current = evt.turn_id;
+          const parsed = parseEvent(evt, turn.ctx);
+          if (parsed.action === 'folded') {
+            if (parsed.turnId && relayedTurnRef.current?.turnId === parsed.turnId) {
+              handedOver = true;
+              const segId = turn.currentAssistantId();
+              setMessages((prev) => prev.filter((m) => m.id !== segId));
+              return false;
             }
-
-            // Keep ref in sync with context
-            hasUsedToolsRef.current = ctx.hasUsedTools;
-          } catch {
-            /* skip malformed SSE */
+            if (parsed.turnId) ownTurnIdRef.current = parsed.turnId;
+            return true;
           }
+          if (applyConversationFrame(parsed)) return true;
+          if (parsed.action === 'set_chat_id') {
+            setLegacyChatId(parsed.chatId);
+            writeStorage('local', legacyChatIdStorageKey, parsed.chatId);
+            return true;
+          }
+          if (parsed.action === 'page_action_required') {
+            turn.deltas.flush();
+            // Not awaited: the stream stays silent until the answer lands,
+            // and the reader must keep draining its keep-alives meanwhile.
+            void answerPageAction(parsed.actionId, parsed.pageAction, parsed.conversationId);
+            return true;
+          }
+          return turn.apply(parsed) !== 'end';
+        } catch {
+          // A frame that could not be applied is skipped, not fatal.
+          return true;
         }
-      }
-      deltas.flush();
-      if (accumulated && !doneReceived) {
-        const segId = currentAssistantId;
-        const text = accumulated;
+      });
+      turn.deltas.flush();
+      if (!handedOver && turn.accumulated() && !turn.doneReceived()) {
+        const segId = turn.currentAssistantId();
+        const text = turn.accumulated();
         setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: text || t('No response.') } : m)));
       }
     } catch (err) {
       // A frame still pending would land after the error below, or in the
       // chat that replaced an aborted stream.
-      deltas.close();
+      turn.deltas.close();
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      const segId = currentAssistantId;
+      const segId = turn.currentAssistantId();
       setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: t('Sorry, an error occurred. Please try again.') } : m)));
     } finally {
-      deltas.close();
-      if (streamDeltasRef.current === deltas) streamDeltasRef.current = null;
+      turn.deltas.close();
+      if (streamDeltasRef.current === turn.deltas) streamDeltasRef.current = null;
+      ownTurnActiveRef.current = false;
       // The turn is over, so its page actions are too - but only this turn's:
       // a replacement already owns the refs by then.
       if (pageActionControllerRef.current === pageActions) pageActions.abort();
@@ -1296,10 +1476,12 @@ export function useChat({
       // An abandoned turn's chat is gone: `handleNewChat` reset the shared
       // state already, and resetting it again here would cut the Stop button,
       // the status and the approvals of a turn the new chat started since.
-      if (sessionGate.generation === turnGeneration) {
+      // A turn handed over to the event stream is still running.
+      if (sessionGate.generation === turnGeneration && !handedOver) {
+        clearCancelRequest();
+        isLoadingRef.current = false;
         setIsLoading(false);
         setAgentStatus(null);
-        hasUsedToolsRef.current = false;
         // The stream is gone, so nothing can carry a decision any more —
         // whether the turn finished, errored, or was stopped. Leaving the prompt
         // up would offer an answer to a question nobody is listening for.
@@ -1313,6 +1495,59 @@ export function useChat({
       }
     }
   };
+
+  /** End the relayed turn on screen, if any, as its own stream would. */
+  const endRelayedTurn = () => {
+    const relayedTurn = relayedTurnRef.current;
+    if (!relayedTurn) return;
+    relayedTurnRef.current = null;
+    relayedTurn.renderer.deltas.flush();
+    relayedTurn.renderer.deltas.close();
+    if (streamDeltasRef.current === relayedTurn.renderer.deltas) streamDeltasRef.current = null;
+    const segId = relayedTurn.renderer.currentAssistantId();
+    setMessages((prev) => prev.filter((m) => !(m.id === segId && !m.content)));
+    clearCancelRequest();
+    isLoadingRef.current = false;
+    setIsLoading(false);
+    setAgentStatus(null);
+    setPendingApprovals(null);
+    setApprovalError(null);
+    approvalConversationIdRef.current = null;
+    approvalDetachedRef.current = false;
+    probedConversationRef.current = conversationIdRef.current;
+  };
+
+  /** One frame of the conversation's event stream. */
+  const handleEventFrame = (evt: Record<string, unknown>) => {
+    onStreamEventRef.current?.(evt, { relayed: true });
+    const relayedTurn = relayedTurnRef.current;
+    const parsed = parseRestEvent(evt, relayedTurn?.renderer.ctx ?? { hasUsedTools: false, activeNodeId: '' });
+    if (applyConversationFrame(parsed)) return;
+    if (!TURN_ACTIONS.has(parsed.action)) return;
+    // The turn this panel streams itself is never rendered twice.
+    const turnId = typeof evt.turn_id === 'string' && evt.turn_id ? evt.turn_id : null;
+    if (ownTurnActiveRef.current || (turnId && turnId === ownTurnIdRef.current)) return;
+    let current = relayedTurn;
+    if (current && turnId && current.turnId && current.turnId !== turnId) {
+      endRelayedTurn();
+      current = null;
+    }
+    if (!current) {
+      // The end of a turn never seen begins nothing.
+      if (parsed.action === 'cancelled' || parsed.action === 'error') return;
+      const bubbleId = crypto.randomUUID();
+      setMessages((prev) => [...prev, { id: bubbleId, role: 'assistant', content: '', timestamp: new Date() }]);
+      current = { turnId, renderer: createTurnRenderer(bubbleId, true) };
+      relayedTurnRef.current = current;
+      streamDeltasRef.current = current.renderer.deltas;
+      isLoadingRef.current = true;
+      setIsLoading(true);
+      setAgentStatus({ status: 'thinking' });
+    }
+    if (current.renderer.apply(parsed) === 'end') endRelayedTurn();
+  };
+  const handleEventFrameRef = useRef(handleEventFrame);
+  handleEventFrameRef.current = handleEventFrame;
 
   const handleNewChat = (workspaceId?: string) => {
     // A string only: the header and the sidebar pass this as a click handler,
@@ -1332,9 +1567,16 @@ export function useChat({
     uploadAbortRef.current = new AbortController();
     // A session still being created was the abandoned chat's.
     sessionGate.abandon();
+    relayedTurnRef.current?.renderer.deltas.close();
+    relayedTurnRef.current = null;
+    ownTurnActiveRef.current = false;
+    setHeldMessage(null);
+    clearCancelRequest();
+    isLoadingRef.current = false;
     setMessages([]);
     setInputValue('');
     setConversationRefs([]);
+    setAgentMentions([]);
     setAttachedFiles([]);
     setIsLoading(false);
     setAgentStatus(null);
@@ -1350,11 +1592,10 @@ export function useChat({
     approvalDetachedRef.current = false;
     // Re-arm the probe: the conversation being switched to may well be paused.
     probedConversationRef.current = null;
-    hasUsedToolsRef.current = false;
     historyLoadedRef.current = false;
     if (isLegacy) {
       setLegacyChatId(null);
-      localStorage.removeItem(LEGACY_CHAT_ID_KEY);
+      writeStorage('local', legacyChatIdStorageKey, null);
     } else {
       updateConversationId(null);
     }
@@ -1377,13 +1618,20 @@ export function useChat({
       updateConversationId(id);
       // `handleNewChat` blanked the composer; bring back this conversation's
       // own unsent draft, if any, with its references.
-      const draft = loadDraftState(id);
+      const draft = loadDraftState(storageKeyPrefix, id);
       setInputValue(draft.text);
       setConversationRefs(draft.refs);
     }
   };
 
-  const handleStopGenerating = () => {
+  const clearCancelRequest = () => {
+    if (cancelTimerRef.current !== null) window.clearTimeout(cancelTimerRef.current);
+    cancelTimerRef.current = null;
+  };
+
+  /** Let go of the turn on screen without the backend's word that it ended. */
+  const stopLocally = () => {
+    clearCancelRequest();
     // The text that arrived before the stop stays on screen, including what the
     // next frame would have applied; nothing after it does.
     streamDeltasRef.current?.flush();
@@ -1393,9 +1641,10 @@ export function useChat({
     abortControllerRef.current = null;
     pageActionControllerRef.current?.abort();
     pageActionControllerRef.current = null;
+    relayedTurnRef.current = null;
+    isLoadingRef.current = false;
     setIsLoading(false);
     setAgentStatus(null);
-    hasUsedToolsRef.current = false;
     // Stopping IS the way out of a pause the reviewer does not want to answer:
     // the backend waits indefinitely by design, so abandoning the stream is
     // the client's only other move.
@@ -1408,16 +1657,138 @@ export function useChat({
     setMessages((prev) => prev.filter((m) => !(m.role === 'assistant' && !m.content)));
   };
 
+  /**
+   * Stop the turn. A backend whose turns outlive their stream (`cancel` route)
+   * is asked to stop it and ends the stream with `cancelled`; without that
+   * route, or should it not answer, the panel lets go of the stream itself.
+   */
+  const handleStopGenerating = () => {
+    const cancelUrl = getCancelUrl();
+    const convId = conversationIdRef.current;
+    if (!cancelUrl || !convId || !isLoadingRef.current) {
+      stopLocally();
+      return;
+    }
+    if (cancelTimerRef.current !== null) return;
+    setPendingApprovals(null);
+    setApprovalError(null);
+    setAgentStatus((prev) => ({ ...prev, status: 'cancelling' }));
+    cancelTimerRef.current = window.setTimeout(stopLocally, CANCEL_GRACE_MS);
+    fetch(cancelUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
+      body: JSON.stringify({ conversation_id: convId }),
+    })
+      .then((res) => {
+        if (!res.ok) stopLocally();
+      })
+      .catch(stopLocally);
+  };
+
+  const skipWaitUrl = getSkipWaitUrl();
+  const skipWait = async () => {
+    const url = getSkipWaitUrl();
+    const convId = conversationIdRef.current;
+    if (!url || !convId) return;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
+        body: JSON.stringify({ conversation_id: convId }),
+      });
+      if (res.ok) setAgentStatus((prev) => (prev?.status === 'wait_start' ? { status: 'thinking', thinkingContent: prev.thinkingContent } : prev));
+    } catch {
+      // The wait ends on its own; the button stays for another try.
+    }
+  };
+
+  /**
+   * Follow the conversation's event stream (`events` route): turns started
+   * elsewhere (another tab, a reload mid-turn, a second device), user
+   * messages sent there, new titles and approvals answered there. Reconnects
+   * with backoff while the page is visible; a route refused outright stops it.
+   */
+  const eventsUrl = conversationId && eventsEnabled ? getEventsUrl(conversationId) : null;
+  useEffect(() => {
+    if (!eventsUrl) return;
+    let stopped = false;
+    let connected = false;
+    let retry = 0;
+    let timer: number | null = null;
+    let controller: AbortController | null = null;
+
+    const connect = async () => {
+      timer = null;
+      if (stopped || connected || document.visibilityState === 'hidden') return;
+      connected = true;
+      controller = new AbortController();
+      let refused = false;
+      try {
+        const res = await fetch(eventsUrl, {
+          headers: { ...(requestHeadersRef.current ?? {}), 'X-Chat-Client-Id': clientId },
+          signal: controller.signal,
+        });
+        if ([401, 403, 404, 405].includes(res.status)) {
+          refused = true;
+          return;
+        }
+        if (!res.ok || !res.body) return;
+        await readSseEvents(res.body, (evt) => {
+          retry = 0;
+          try {
+            handleEventFrameRef.current(evt);
+          } catch {
+            // A frame that could not be applied is skipped, not fatal.
+          }
+        });
+      } catch {
+        // Dropped or aborted: reconnected below unless the effect is gone.
+      } finally {
+        connected = false;
+        if (!stopped && !refused) {
+          const delay = Math.min(EVENTS_RETRY_MAX_MS, EVENTS_RETRY_BASE_MS * 2 ** retry);
+          retry += 1;
+          timer = window.setTimeout(() => void connect(), delay * (0.5 + Math.random() / 2));
+        }
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || connected) return;
+      if (timer !== null) window.clearTimeout(timer);
+      retry = 0;
+      void connect();
+    };
+    void connect();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      stopped = true;
+      if (timer !== null) window.clearTimeout(timer);
+      controller?.abort();
+      document.removeEventListener('visibilitychange', onVisible);
+      // A relayed turn of the conversation left is not this one's.
+      relayedTurnRef.current?.renderer.deltas.close();
+      relayedTurnRef.current = null;
+    };
+  }, [eventsUrl, clientId]);
+
+  // The turn is over: what was held goes out as the next one.
+  useEffect(() => {
+    if (isLoading || !heldMessage) return;
+    setHeldMessage(null);
+    void handleSendMessageRef.current(heldMessage);
+  }, [isLoading, heldMessage]);
+  const handleSendMessageRef = useRef(handleSendMessage);
+  handleSendMessageRef.current = handleSendMessage;
+
   // Persist the composer draft against the conversation it belongs to. Writing
   // an empty value removes the entry, so sending (which blanks the composer)
   // also clears the draft — no explicit cleanup needed at the send sites.
   useEffect(() => {
     const id = window.setTimeout(() => {
-      persistDraft(conversationId, inputValue);
-      persistDraftRefs(conversationId, conversationRefs);
+      persistDraft(storageKeyPrefix, conversationId, inputValue, conversationRefs);
     }, DRAFT_PERSIST_DELAY_MS);
     return () => window.clearTimeout(id);
-  }, [inputValue, conversationId, conversationRefs]);
+  }, [inputValue, conversationId, conversationRefs, storageKeyPrefix]);
 
   // A panel closed mid-stream has no state left for the stream's frames to
   // update. Its page actions stop, so a hover fallback cannot click the host
@@ -1439,8 +1810,7 @@ export function useChat({
   useEffect(
     () => () => {
       const { conversationId: id, inputValue: value, conversationRefs: refs } = draftFlushRef.current;
-      persistDraft(id, value);
-      persistDraftRefs(id, refs);
+      persistDraft(storageKeyPrefix, id, value, refs);
     },
     [],
   );
@@ -1605,6 +1975,11 @@ export function useChat({
     handleFileAdd,
     handlePaste,
     handleSendMessage,
+    skipWait: skipWaitUrl ? skipWait : null,
+    heldMessage,
+    cancelHeldMessage: () => setHeldMessage(null),
+    agentMentions,
+    addAgentMention,
     handleNewChat,
     pendingWorkspaceId,
     clearPendingWorkspace,
