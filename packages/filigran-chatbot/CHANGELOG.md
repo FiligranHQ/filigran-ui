@@ -103,7 +103,8 @@ This file starts at 3.10.0; earlier releases are on the
 - A conversation whose restore fails because the backend is unreachable or
   answers 502, 503 or 504 keeps its id, rather than being dropped for a new
   chat, and is read back once the backend answers (retried with backoff, and
-  at once when the browser is back online or the page is shown again); any
+  at once when the browser is back online or the page is shown again, never
+  over a turn in progress); any
   other error still resets it. One remembered while the agent list fails or
   is empty is not restored, and the panel no longer waits for it (no endless
   skeleton, `onReady` fires).
