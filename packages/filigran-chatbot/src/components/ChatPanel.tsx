@@ -732,8 +732,12 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       return;
     }
     // The agent goes with the restore, so it waits for one - unless the host
-    // serves no agent list at all.
-    if (!selectedAgent && !agentsDisabled) return;
+    // serves no agent list at all. A list that failed or holds none restores
+    // nothing, yet the panel is not left waiting: the id is kept for a later try.
+    if (!selectedAgent && !agentsDisabled) {
+      if (agentsSettled && historySettledId !== conversationId) setHistorySettledId(conversationId);
+      return;
+    }
     historyLoadedRef.current = true;
     restoringIdRef.current = conversationId;
     setHistorySettledId(null);
@@ -770,8 +774,9 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
           // Stale or invalid stored id (e.g. the platform was reset but the
           // browser kept an old id) — silently reset so a fresh conversation
           // is created on the next message instead of surfacing an error and
-          // forcing the user to click "New conversation".
-          updateConversationId(null);
+          // forcing the user to click "New conversation". A backend that is
+          // down (5xx) says nothing of the id, which is kept.
+          if (res.status < 500) updateConversationId(null);
           return null;
         }
         return res.json();
@@ -808,10 +813,8 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
           }
         }
       })
-      .catch(() => {
-        if (isStale()) return;
-        updateConversationId(null);
-      })
+      // Unreachable: nothing is known of the conversation, whose id is kept.
+      .catch(() => undefined)
       .finally(() => {
         if (restoringIdRef.current === requestedConversationId) restoringIdRef.current = null;
         if (!isStale()) setHistorySettledId(requestedConversationId);
@@ -862,18 +865,25 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   }, [ready, onReady]);
   // Handle calls run one per render, in order: a new conversation's agent is
   // in place before the send that follows it.
-  const queueRef = useRef<(() => void)[]>([]);
+  // A call the panel never gets to (it unmounts first) is let go of with `drop`.
+  const queueRef = useRef<{ run: () => void; drop?: () => void }[]>([]);
   const [queueTick, setQueueTick] = useState(0);
-  const enqueue = (call: () => void) => {
-    queueRef.current.push(call);
+  const enqueue = (run: () => void, drop?: () => void) => {
+    queueRef.current.push({ run, drop });
     setQueueTick((n) => n + 1);
   };
   useEffect(() => {
     if (!ready || queueRef.current.length === 0) return;
     const call = queueRef.current.shift()!;
-    call();
+    call.run();
     if (queueRef.current.length > 0) setQueueTick((n) => n + 1);
   }, [ready, queueTick]);
+  useEffect(
+    () => () => {
+      for (const call of queueRef.current.splice(0)) call.drop?.();
+    },
+    [],
+  );
 
   // The handle stays the same object for the panel's life: its calls read the latest state.
   const handleSwitchAgentRef = useRef(handleSwitchAgent);
@@ -897,12 +907,19 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         readOnlyRef.current
           ? Promise.resolve('dropped' as const)
           : new Promise<ChatSendOutcome>((resolve) =>
-              enqueue(() => {
-                // A new turn resolves as it starts, not when its answer ends.
-                handleSendMessageRef
-                  .current({ text, extras: options?.extras, onSent: () => resolve('sent') })
-                  .then(resolve, () => resolve('dropped'));
-              }),
+              enqueue(
+                () => {
+                  if (readOnlyRef.current) {
+                    resolve('dropped');
+                    return;
+                  }
+                  // A new turn resolves once the backend takes it, not when its answer ends.
+                  handleSendMessageRef
+                    .current({ text, extras: options?.extras, onSent: () => resolve('sent') })
+                    .then(resolve, () => resolve('failed'));
+                },
+                () => resolve('dropped'),
+              ),
             ),
       newConversation: (options) =>
         enqueue(() => {

@@ -124,11 +124,14 @@ const PANEL_FIELDS: ReadonlySet<string> = new Set([
 /** *next* added to the message already held: one message, sent when the turn ends. */
 function mergeHeld(prev: HeldMessage | null, next: HeldMessage): HeldMessage {
   if (!prev) return next;
+  const refIds = new Set(prev.refs.map((r) => r.conversationId));
+  const mentionIds = new Set(prev.mentions.map((m) => m.agentId));
   return {
     text: [prev.text, next.text].filter(Boolean).join('\n\n'),
+    draft: [prev.draft, next.draft].filter(Boolean).join('\n\n'),
     files: [...prev.files, ...next.files],
-    refs: [...prev.refs, ...next.refs],
-    mentions: [...prev.mentions, ...next.mentions],
+    refs: [...prev.refs, ...next.refs.filter((r) => !refIds.has(r.conversationId))],
+    mentions: [...prev.mentions, ...next.mentions.filter((m) => !mentionIds.has(m.agentId))],
     extras: prev.extras || next.extras ? { ...prev.extras, ...next.extras } : undefined,
   };
 }
@@ -207,6 +210,8 @@ export interface SendOverride {
 /** A message waiting for the running turn to end. */
 export interface HeldMessage {
   text: string;
+  /** What the user typed for it, as typed: what Stop gives back. Empty for a host's send. */
+  draft: string;
   files: ChatFile[];
   refs: ChatConversationRef[];
   mentions: AgentMention[];
@@ -520,6 +525,14 @@ export function useChat({
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
   // The panel's own turn whose stream dropped, now awaited from the event stream.
   const handoverTimerRef = useRef<number | null>(null);
+  const handoverTurnIdRef = useRef<string | null>(null);
+  const clearHandover = () => {
+    if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
+    handoverTimerRef.current = null;
+    handoverTurnIdRef.current = null;
+  };
+  // A stopped relayed turn whose frames name no turn: skipped until it ends.
+  const skipUnnamedTurnRef = useRef(false);
   const getRequestExtrasRef = useRef(getRequestExtras);
   getRequestExtrasRef.current = getRequestExtras;
   const onStreamEventRef = useRef(onStreamEvent);
@@ -1342,6 +1355,7 @@ export function useChat({
     // A host-driven or held send leaves the composer, its attachments and picks alone.
     const fromComposer = !override;
     let rawText = override ? override.text : inputValue;
+    const draft = fromComposer ? inputValue : '';
     const files = fromComposer ? attachedFiles : (override?.files ?? []);
     if (!rawText.trim() && files.length === 0) return 'dropped';
     // The host's say before anything leaves: it may take the send over, or reword it.
@@ -1384,7 +1398,7 @@ export function useChat({
         clearComposer();
         const steered = await steerMessage(steerText, files, fromComposer);
         if (steered === 'ended') {
-          setHeldMessage((prev) => mergeHeld(prev, { text: steerText, files, refs: [], mentions: [], extras: hookExtras }));
+          setHeldMessage((prev) => mergeHeld(prev, { text: steerText, draft, files, refs: [], mentions: [], extras: hookExtras }));
           return 'held';
         }
         return steered === 'ok' ? 'steered' : 'dropped';
@@ -1392,7 +1406,7 @@ export function useChat({
       // Otherwise it waits for the turn to end, where the host allows it.
       if (holdSends && uploaded) {
         clearComposer();
-        setHeldMessage((prev) => mergeHeld(prev, { text: steerText, files, refs: sentRefs, mentions: sentMentions, extras: hookExtras }));
+        setHeldMessage((prev) => mergeHeld(prev, { text: steerText, draft, files, refs: sentRefs, mentions: sentMentions, extras: hookExtras }));
         return 'held';
       }
       return 'dropped';
@@ -1410,7 +1424,6 @@ export function useChat({
     };
     const assistantId = crypto.randomUUID();
     setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
-    override?.onSent?.();
     if (fromComposer) {
       setInputValue('');
       setConversationRefs([]);
@@ -1434,6 +1447,35 @@ export function useChat({
     // Set when the turn joined is already on screen from the event stream,
     // which then carries it to its end.
     let handedOver = false;
+    // The backend took the message: its stream answered.
+    let accepted = false;
+    // The stream said the turn is over: a last `done`, an error or a stop.
+    let sawTurnEnd = false;
+    /**
+     * The stream is gone but the turn runs on, on the backend: the event stream,
+     * under a new name for this panel, replays it. False when it cannot.
+     */
+    const handOver = (): boolean => {
+      if (!hasEvents || !conversationIdRef.current || !ownTurnIdRef.current || turn.ended()) return false;
+      handedOver = true;
+      const segId = turn.currentAssistantId();
+      setMessages((prev) => prev.filter((m) => m.id !== segId));
+      handoverTurnIdRef.current = ownTurnIdRef.current;
+      ownTurnIdRef.current = null;
+      setClientId(crypto.randomUUID());
+      if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
+      handoverTimerRef.current = window.setTimeout(() => {
+        handoverTimerRef.current = null;
+        if (relayedTurnRef.current || handoverTurnIdRef.current === null) return;
+        // Nothing came: the turn is over, and its answer is in the history.
+        handoverTurnIdRef.current = null;
+        isLoadingRef.current = false;
+        setIsLoading(false);
+        setAgentStatus(null);
+        reloadHistory();
+      }, HANDOVER_GRACE_MS);
+      return true;
+    };
 
     const controller = new AbortController();
     pageActionControllerRef.current?.abort();
@@ -1457,7 +1499,7 @@ export function useChat({
         const created = await ensureConversation(agentSlug);
         // A new chat replaced this one meanwhile: the send went with it, and
         // the workspace now pending is the new chat's, not this send's.
-        if (sessionGate.generation !== generation) return 'sent';
+        if (sessionGate.generation !== generation) return 'dropped';
         if (!created) {
           pendingWorkspaceRef.current = null;
           setPendingWorkspaceId(null);
@@ -1499,8 +1541,10 @@ export function useChat({
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, content: t('Unable to connect. Please check the configuration.') } : m)),
         );
-        return 'sent';
+        return 'failed';
       }
+      accepted = true;
+      override?.onSent?.();
 
       const parseEvent = getParser(backendType);
       await readSseEvents(res.body, (evt) => {
@@ -1531,6 +1575,7 @@ export function useChat({
             void answerPageAction(parsed.actionId, parsed.pageAction, parsed.conversationId);
             return true;
           }
+          if (parsed.action === 'error' || parsed.action === 'cancelled' || (parsed.action === 'done' && !parsed.intermediate)) sawTurnEnd = true;
           return turn.apply(parsed) !== 'end';
         } catch {
           // A frame that could not be applied is skipped, not fatal.
@@ -1538,6 +1583,9 @@ export function useChat({
         }
       });
       turn.deltas.flush();
+      // Ended without saying the turn is over (a proxy's idle timeout, a
+      // server restart): the turn may well run on.
+      if (!handedOver && !sawTurnEnd && handOver()) return 'sent';
       if (!handedOver && !turn.ended() && turn.accumulated() && !turn.doneReceived()) {
         const segId = turn.currentAssistantId();
         const text = turn.accumulated();
@@ -1547,26 +1595,10 @@ export function useChat({
       // A frame still pending would land after the error below, or in the
       // chat that replaced an aborted stream.
       turn.deltas.close();
-      if (err instanceof DOMException && err.name === 'AbortError') return 'sent';
+      if (err instanceof DOMException && err.name === 'AbortError') return accepted ? 'sent' : 'dropped';
       const segId = turn.currentAssistantId();
-      // The stream dropped mid-turn, but the backend runs the turn on: the event
-      // stream, under a new name for this panel, is replayed into it.
-      if (hasEvents && conversationIdRef.current && ownTurnIdRef.current && !turn.ended()) {
-        handedOver = true;
-        setMessages((prev) => prev.filter((m) => m.id !== segId));
-        ownTurnIdRef.current = null;
-        setClientId(crypto.randomUUID());
-        handoverTimerRef.current = window.setTimeout(() => {
-          handoverTimerRef.current = null;
-          if (relayedTurnRef.current) return;
-          // Nothing came: the turn is over, and its answer is in the history.
-          isLoadingRef.current = false;
-          setIsLoading(false);
-          setAgentStatus(null);
-          reloadHistory();
-        }, HANDOVER_GRACE_MS);
-        return 'sent';
-      }
+      // The stream dropped mid-turn, but the backend runs the turn on.
+      if (handOver()) return 'sent';
       setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: t('Sorry, an error occurred. Please try again.') } : m)));
     } finally {
       turn.deltas.close();
@@ -1598,7 +1630,7 @@ export function useChat({
         probedConversationRef.current = conversationIdRef.current;
       }
     }
-    return 'sent';
+    return accepted ? 'sent' : 'failed';
   };
 
   /** End the relayed turn on screen, if any, as its own stream would. */
@@ -1637,6 +1669,12 @@ export function useChat({
     const turnId = typeof evt.turn_id === 'string' && evt.turn_id ? evt.turn_id : null;
     if (ownTurnActiveRef.current || (turnId && turnId === ownTurnIdRef.current)) return;
     if (turnId && turnId === stoppedTurnIdRef.current) return;
+    if (!turnId && skipUnnamedTurnRef.current && !relayedTurn) {
+      if (parsed.action === 'cancelled' || parsed.action === 'error' || (parsed.action === 'done' && !parsed.intermediate)) {
+        skipUnnamedTurnRef.current = false;
+      }
+      return;
+    }
     let current = relayedTurn;
     if (current && turnId && current.turnId && current.turnId !== turnId) {
       endRelayedTurn();
@@ -1651,8 +1689,9 @@ export function useChat({
       relayedTurnRef.current = current;
       streamDeltasRef.current = current.renderer.deltas;
       liveRendererRef.current = current.renderer;
-      if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
-      handoverTimerRef.current = null;
+      clearHandover();
+      skipUnnamedTurnRef.current = false;
+      stopRequestedRef.current = false;
       isLoadingRef.current = true;
       setIsLoading(true);
       setAgentStatus({ status: 'thinking' });
@@ -1685,8 +1724,8 @@ export function useChat({
     ownTurnActiveRef.current = false;
     setHeldMessage(null);
     clearCancelRequest();
-    if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
-    handoverTimerRef.current = null;
+    clearHandover();
+    skipUnnamedTurnRef.current = false;
     isLoadingRef.current = false;
     setMessages([]);
     setInputValue('');
@@ -1752,7 +1791,11 @@ export function useChat({
     clearCancelRequest();
     const live = liveRendererRef.current;
     liveRendererRef.current = null;
-    if (relayedTurnRef.current?.turnId) stoppedTurnIdRef.current = relayedTurnRef.current.turnId;
+    const relayedTurn = relayedTurnRef.current;
+    const stoppedTurnId = relayedTurn?.turnId ?? handoverTurnIdRef.current;
+    if (stoppedTurnId) stoppedTurnIdRef.current = stoppedTurnId;
+    else if (relayedTurn) skipUnnamedTurnRef.current = true;
+    clearHandover();
     // The text that arrived before the stop stays on screen, including what the
     // next frame would have applied; nothing after it does.
     streamDeltasRef.current?.flush();
@@ -1796,7 +1839,17 @@ export function useChat({
     stopRequestedRef.current = true;
     const cancelUrl = getCancelUrl();
     const convId = conversationIdRef.current;
-    if (!cancelUrl || !convId) {
+    // A turn awaited from the event stream has no stream of its own to end with
+    // `cancelled`: the backend is told, and the panel lets go at once.
+    const awaitingHandover = handoverTurnIdRef.current !== null && !relayedTurnRef.current;
+    if (!cancelUrl || !convId || awaitingHandover) {
+      if (cancelUrl && convId) {
+        void fetch(cancelUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
+          body: JSON.stringify({ conversation_id: convId }),
+        }).catch(() => undefined);
+      }
       stopLocally();
       return;
     }
@@ -1903,12 +1956,18 @@ export function useChat({
 
   // The turn is over: what was held goes out as the next one.
   useEffect(() => {
-    if (isLoading || !heldMessage) return;
+    if (isLoading) return;
+    if (!heldMessage) {
+      // A Stop with nothing held is over with its turn: it says nothing of a later one.
+      stopRequestedRef.current = false;
+      return;
+    }
     setHeldMessage(null);
     if (stopRequestedRef.current) {
-      // Stopped: the user takes the queued message back rather than see it go.
+      // Stopped: the user takes back what they typed rather than see it go; a
+      // host's send is not theirs to take back.
       stopRequestedRef.current = false;
-      setInputValue((prev) => (prev ? `${heldMessage.text}\n${prev}` : heldMessage.text));
+      if (heldMessage.draft) setInputValue((prev) => (prev ? `${heldMessage.draft}\n${prev}` : heldMessage.draft));
       setAttachedFiles((prev) => [...heldMessage.files, ...prev]);
       setConversationRefs((prev) => [...heldMessage.refs, ...prev]);
       setAgentMentions((prev) => [...heldMessage.mentions, ...prev]);
@@ -1937,6 +1996,7 @@ export function useChat({
     () => () => {
       streamDeltasRef.current?.close();
       pageActionControllerRef.current?.abort();
+      if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
     },
     [],
   );

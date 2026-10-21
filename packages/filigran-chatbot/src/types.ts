@@ -690,8 +690,11 @@ export interface ChatSendDraft {
   turnRunning: boolean;
 }
 
-/** What became of a send: it opened a turn, joined the running one, waits for it to end, or went nowhere. */
-export type ChatSendOutcome = 'sent' | 'steered' | 'held' | 'dropped';
+/**
+ * What became of a send: the backend took it as a new turn, it joined the
+ * running one, it waits for that turn to end, it went nowhere, or the backend refused it.
+ */
+export type ChatSendOutcome = 'sent' | 'steered' | 'held' | 'dropped' | 'failed';
 
 /** What `onBeforeSend` decides: `false` takes the send over, an object adjusts it. */
 export type ChatSendDecision = false | { text?: string; extras?: Record<string, unknown> } | void;

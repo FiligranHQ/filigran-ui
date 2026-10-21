@@ -145,7 +145,7 @@ chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigatio
 
 | Method | What it does |
 | --- | --- |
-| `send(text, { extras })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body. Resolves to `'sent'`, `'steered'` (joined the running turn), `'held'` (sent when the turn ends) or `'dropped'` (empty, taken over by `onBeforeSend`, or `readOnly`) |
+| `send(text, { extras })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body. Resolves to `'sent'` (once the backend takes it), `'steered'` (joined the running turn), `'held'` (sent when the turn ends), `'dropped'` (empty, taken over by `onBeforeSend`, `readOnly`, or the panel unmounted first) or `'failed'` (the backend refused it) |
 | `newConversation({ workspaceId, agent })` | Starts a new chat, in a workspace and with an agent (id or slug) if given |
 | `selectConversation(id)` | Opens a conversation |
 | `setDraft(text)` / `focusComposer()` | Fills / focuses the composer |
@@ -790,7 +790,8 @@ reconnected with backoff while the page is visible; a `401`, `403`, `404` or
 "Continue now" carries the same id in `X-Chat-Client-Id`, which the backend
 uses to never relay a panel's own turn back to it; frames naming the `turn_id`
 of the panel's own turn are dropped too. When the panel's own stream drops
-mid-turn, it takes a new id and picks the turn up from the event stream (or
+mid-turn, or ends without the turn's last frame (`done`, `error` or
+`cancelled`), it takes a new id and picks the turn up from the event stream (or
 reads the history back when nothing comes within 15 s). A relayed turn uses the frames of `POST /chat/messages`, plus:
 
 - `{"type": "thinking", "resumed": true, "elapsed_s": 42}` — a turn re-attached
@@ -1169,7 +1170,7 @@ To build:
 yarn build
 ```
 
-To run the unit tests (Node's built-in test runner, with an esbuild loader for TypeScript and JSX; Node 22.15 or later):
+To run the unit tests (Node's built-in test runner, with an esbuild loader for JSX and Node's own type stripping for TypeScript; Node 22.18 / 23.6 or later):
 
 ```bash
 yarn test

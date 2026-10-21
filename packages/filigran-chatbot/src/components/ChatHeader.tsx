@@ -363,6 +363,7 @@ export const ChatHeader = ({
             <button
               ref={modeAnchorRef}
               type="button"
+              aria-label={t('Switch view')}
               onClick={onModeMenuToggle}
               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
             >
@@ -398,6 +399,7 @@ export const ChatHeader = ({
           <Tooltip title={t('Close')}>
             <button
               type="button"
+              aria-label={t('Close')}
               onClick={onClose}
               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
             >

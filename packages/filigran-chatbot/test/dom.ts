@@ -87,6 +87,36 @@ export function sseStream() {
   };
 }
 
+/** *res* with a body that errors once *signal* aborts, as a real `fetch` does. */
+function abortable(res: Response, signal: AbortSignal | null | undefined): Response {
+  if (!signal || !res.body) return res;
+  if (signal.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+  const reader = res.body.getReader();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      signal.addEventListener('abort', () => {
+        try {
+          controller.error(new DOMException('The operation was aborted.', 'AbortError'));
+        } catch {
+          // Already closed.
+        }
+        void reader.cancel().catch(() => undefined);
+      });
+    },
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) controller.close();
+        else controller.enqueue(value);
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+    cancel: (reason) => reader.cancel(reason),
+  });
+  return new Response(body, { status: res.status, headers: res.headers });
+}
+
 type Route = (req: RecordedRequest) => Response | Promise<Response | undefined> | undefined;
 
 /** Replace `fetch` with *routes*, tried in order; unmatched requests answer 404. */
@@ -110,7 +140,7 @@ export function fakeBackend(routes: Route[]) {
     requests.push(req);
     for (const route of routes) {
       const res = await route(req);
-      if (res) return res;
+      if (res) return abortable(res, init?.signal);
     }
     return new Response('not found', { status: 404 });
   }) as typeof fetch;

@@ -21,8 +21,9 @@ This file starts at 3.10.0; earlier releases are on the
   `onAgentChange`) and drive the panel through its `ref` (`send`,
   `newConversation`, `selectConversation`, `setDraft`, `focusComposer`,
   `stop`). The handle is the same object for the panel's life, and `send`
-  resolves to what became of the message (`'sent'`, `'steered'`, `'held'` or
-  `'dropped'`).
+  resolves to what became of the message: `'sent'` once the backend takes
+  it, `'steered'`, `'held'`, `'dropped'` (empty, taken over, read-only, or
+  the panel unmounted first) or `'failed'` (the backend refused it).
 - `onClose` and `onModeChange` are optional: the header shows the close
   button and the view switcher only when they are given.
 - `storageKeyPrefix` namespaces every key the panel keeps in browser storage,
@@ -86,15 +87,21 @@ This file starts at 3.10.0; earlier releases are on the
   panel's catalog answers where it returns the key. A host translating every
   key, as before, sees no change. `ChatToggleButton` takes `locale` too.
   A host that passes `t` but no `locale` keeps the panel in English where its
-  `t` returns the key, rather than the browser's language.
+  `t` returns the key; a host passing neither now gets the browser's
+  language where the panel has it, rather than English.
 - A stopped answer says `Stopped`, rather than vanishing when nothing was
   written yet.
-- The Send and attach buttons have accessible names.
+- The Send, attach, close and view-switcher buttons have accessible names.
 - Files dragged over the thread attach on drop (wherever uploads are on), and
   the drop does not reach the host's own drop zones.
 - A conversation being read back shows a skeleton rather than the welcome
   screen.
 - An agent icon shows only from an `https:` URL or a `data:image/` one.
+- A conversation whose restore fails because the backend is unreachable or
+  answers 5xx keeps its id, rather than being dropped for a new chat; a 4xx
+  still resets it. One remembered while the agent list fails or is empty is
+  not restored, and the panel no longer waits for it (no endless skeleton,
+  `onReady` fires).
 
 ### Fixed
 
@@ -118,9 +125,11 @@ This file starts at 3.10.0; earlier releases are on the
 - `apiEndpoints.events` (no default): the panel follows the conversation's
   event stream, and renders turns started in another tab or before a reload,
   user messages sent elsewhere, new titles and approvals answered elsewhere.
-  Every request then carries `X-Chat-Client-Id`, so a panel's own turns are
-  never relayed back to it, and a panel whose own stream drops mid-turn picks
-  the turn up from the event stream under a new id.
+  Messages, steers, decisions, Stop, "Continue now" and the event stream
+  itself then carry `X-Chat-Client-Id`, so a panel's own turns are never
+  relayed back to it. A panel whose own stream drops mid-turn, or ends
+  without the turn's last frame, picks the turn up from the event stream
+  under a new id; Stop meanwhile sticks.
 - With `cancel`, `skipWait` or `events` named, a new chat's conversation is
   created before its first message, so Stop, "Continue now" and steering
   reach the backend from the first turn.

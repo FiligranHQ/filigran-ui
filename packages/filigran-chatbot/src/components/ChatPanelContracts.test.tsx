@@ -57,44 +57,55 @@ const finish = (...streams: { close: () => void }[]) =>
   });
 
 test('a plain host streams, fails and stops as it always did, naming no client', async () => {
-  const first = sseStream();
-  const second = sseStream();
+  const streams = [sseStream(), sseStream(), sseStream()];
   let turns = 0;
-  const requests = fakeBackend([
-    agentsRoute,
-    (req) => {
-      if (req.url !== '/api/chat/messages') return undefined;
-      turns += 1;
-      return turns === 1 ? first.response() : second.response();
-    },
-  ]);
+  const requests = fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? streams[turns++].response() : undefined)]);
   const ref = createRef<Handle>();
   await render({ mode: 'sidebar', onClose: () => undefined, onModeChange: () => undefined }, ref);
+  assert.ok(container.querySelector('button[aria-label="Close"]'), 'its close button');
+  assert.ok(container.querySelector('button[aria-label="Switch view"]'), 'its view switcher');
   await act(async () => {
     void ref.current!.send('hello');
     await settle();
-    first.send({ type: 'status', status: 'tool_start', tools: ['search'] });
-    first.send({ type: 'stream', content: 'Hi there' });
-    first.send({ type: 'done', content: 'Hi there', conversation_id: 'c1' });
-    first.close();
+    streams[0].send({ type: 'status', status: 'tool_start', tools: ['search'] });
+    streams[0].send({ type: 'stream', content: 'Hi there' });
+    streams[0].send({ type: 'done', content: 'Hi there', conversation_id: 'c1' });
+    streams[0].close();
     await settle(10);
   });
   assert.ok(text().includes('Hi there'));
+  // A failure after some text: the backend's words stay, not the text before them.
   await act(async () => {
     void ref.current!.send('again');
     await settle();
-    second.send({ type: 'error', content: 'The model is unavailable.' });
-    second.close();
+    streams[1].send({ type: 'stream', content: 'Half an answer' });
+    await settle(10);
+    streams[1].send({ type: 'error', content: 'The model is unavailable.' });
+    streams[1].close();
     await settle(10);
   });
   assert.ok(text().includes('The model is unavailable.'));
-  assert.equal(messages(requests).length, 2);
+  // Stop lets go of the stream, with no route of its own to call.
+  await act(async () => {
+    void ref.current!.send('a third');
+    await settle();
+    streams[2].send({ type: 'stream', content: 'Partly written' });
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.stop();
+    await settle(10);
+  });
+  assert.ok(text().includes('Partly written'));
+  assert.ok(text().includes('Stopped'));
+  assert.ok(!container.querySelector('button[aria-label="Stop generating"]'));
+  assert.equal(messages(requests).length, 3);
+  assert.equal(requests.filter((r) => r.url.includes('/cancel') || r.url.includes('/events')).length, 0);
   assert.ok(
     messages(requests).every((r) => !('x-chat-client-id' in r.headers)),
     'no client id without an event stream',
   );
-  assert.equal(requests.filter((r) => r.url.includes('/events')).length, 0);
-  assert.ok(container.querySelector('button[aria-label]'), 'its header controls are there');
+  await finish(...streams);
 });
 
 test("the host's extras never stand in for the panel's own fields", async () => {
@@ -152,10 +163,12 @@ test('a read-only panel sends nothing, from the handle or the suggestions', asyn
 
 test('without onClose and onModeChange, a sidebar has no close button and no view switcher', async () => {
   fakeBackend([agentsRoute]);
-  await render({ mode: 'sidebar' });
-  assert.ok(!container.querySelector('button[aria-label="Close"]'));
-  assert.ok(![...container.querySelectorAll('button')].some((b) => b.getAttribute('aria-label') === 'Switch view'));
-  assert.ok(!text().includes('Switch to'));
+  await render({ mode: 'sidebar', onClose: () => undefined });
+  assert.ok(container.querySelector('button[aria-label="Close"]'), 'the close button comes with onClose');
+  assert.equal(container.querySelector('button[aria-label="Switch view"]'), null);
+  await render({ mode: 'sidebar', onModeChange: () => undefined });
+  assert.equal(container.querySelector('button[aria-label="Close"]'), null);
+  assert.ok(container.querySelector('button[aria-label="Switch view"]'), 'the view switcher comes with onModeChange');
 });
 
 test('a host that translates names no locale and stays in English', async () => {
@@ -169,31 +182,46 @@ test('a host that translates names no locale and stays in English', async () => 
   }
 });
 
-test('Stop gives a held message back to the composer instead of sending it', async () => {
+/** Put *value* in the composer and press its button for a send during the turn. */
+async function typeAndHold(ref: React.RefObject<Handle | null>, value: string) {
+  await act(async () => {
+    ref.current!.setDraft(value);
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send when the answer ends"]')?.click();
+    await settle(10);
+  });
+}
+
+test('Stop gives back what the user typed for a held message, and nothing a host sent', async () => {
   const stream = sseStream();
-  const requests = fakeBackend([
-    agentsRoute,
-    restoreRoute(),
-    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
-    (req) => (req.url === '/api/chat/messages/steer' ? json({ detail: 'no active run' }, 409) : undefined),
-  ]);
+  const requests = fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
   const ref = createRef<Handle>();
-  await render({ conversationId: 'c1', holdSendsDuringTurn: true }, ref);
-  let outcomes!: Promise<unknown[]>;
+  await render({ conversationId: 'c1', holdSendsDuringTurn: true, apiEndpoints: { steer: null } }, ref);
+  let hostOutcome!: Promise<unknown>;
   await act(async () => {
     void ref.current!.send('first');
     await settle();
-    outcomes = Promise.all([ref.current!.send('one more'), ref.current!.send('and another')]);
+    stream.send({ type: 'stream', content: 'Working' });
+    await settle();
+  });
+  // No steer route: what is sent during the turn waits for it to end.
+  // One message waits at a time from the composer; the host's send joins it.
+  await typeAndHold(ref, 'one more');
+  assert.ok(text().includes('Sends when the answer ends:'));
+  await act(async () => {
+    hostOutcome = ref.current!.send('from the host');
     await settle(10);
   });
-  assert.deepEqual(await outcomes, ['held', 'held']);
+  assert.equal(await hostOutcome, 'held');
   await act(async () => {
     ref.current!.stop();
     await settle(10);
   });
   assert.equal(messages(requests).length, 1, 'the held message is not sent');
-  const composer = container.querySelector('textarea')!;
-  assert.equal(composer.value, 'one more\n\nand another', 'held messages come back together');
+  assert.equal(container.querySelector('textarea')!.value, 'one more', "the typed message comes back, the host's does not");
+  await finish(stream);
 });
 
 test('the event stream waits for the conversation’s own history, and a relayed turn stopped stays stopped', async () => {
@@ -303,4 +331,171 @@ test('Continue now ends an announced wait', async () => {
   assert.deepEqual(skip?.body, { conversation_id: 'c1' });
   assert.ok(![...container.querySelectorAll('button')].some((b) => b.textContent === 'Continue now'));
   await finish(stream);
+});
+
+test('a remembered conversation with no agent to restore it in leaves the panel ready, its id kept', async () => {
+  for (const agents of [() => json({ detail: 'down' }, 500), () => json([])]) {
+    localStorage.setItem('filigranChatConversationId', 'c1');
+    const requests = fakeBackend([
+      (req) => (req.url === '/api/chat/agents' ? agents() : undefined),
+      (req) => (req.url === '/api/chat/messages' ? sseStream().response() : undefined),
+    ]);
+    const ref = createRef<Handle>();
+    let ready = 0;
+    await render({ onReady: () => (ready += 1) }, ref);
+    assert.equal(ready, 1, 'the host is told the panel is ready');
+    assert.equal(container.querySelector('[data-testid="filigran-chat-loading"]'), null);
+    assert.equal(requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST').length, 0, 'nothing restored without its agent');
+    assert.equal(localStorage.getItem('filigranChatConversationId'), 'c1');
+    let outcome!: Promise<unknown>;
+    await act(async () => {
+      outcome = ref.current!.send('hello');
+      await settle(10);
+    });
+    assert.equal(await outcome, 'sent', 'the handle does not hang');
+    await act(async () => root.unmount());
+    root = createRoot(container);
+  }
+});
+
+test('a backend that is down keeps the conversation; one that refuses the id resets it', async () => {
+  for (const [answer, expected] of [
+    [() => json({ detail: 'bad gateway' }, 502), []],
+    [
+      () => {
+        throw new TypeError('network error');
+      },
+      [],
+    ],
+    [() => json({ detail: 'not found' }, 404), [null]],
+  ] as const) {
+    fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? answer() : undefined)]);
+    const changes: (string | null)[] = [];
+    await render({ conversationId: 'c1', onConversationChange: (id) => changes.push(id) });
+    assert.deepEqual(changes, expected);
+    await act(async () => root.unmount());
+    root = createRoot(container);
+  }
+});
+
+test('Stop while a dropped turn is awaited sticks: its replay is not shown', async () => {
+  const stream = sseStream();
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => {
+      if (!req.url.startsWith('/api/chat/conversations/c1/events')) return undefined;
+      const events = sseStream();
+      subscriptions.push(events);
+      return events.response();
+    },
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
+  await act(async () => {
+    void ref.current!.send('long task');
+    await settle();
+    stream.send({ type: 'turn_started', turn_id: 't1' });
+    stream.send({ type: 'stream', turn_id: 't1', content: 'Working' });
+    await settle(10);
+  });
+  await act(async () => {
+    stream.fail();
+    await settle(10);
+  });
+  assert.ok(container.querySelector('button[aria-label="Stop generating"]'), 'the turn is still running');
+  await act(async () => {
+    ref.current!.stop();
+    await settle(10);
+  });
+  await act(async () => {
+    const live = subscriptions[subscriptions.length - 1];
+    live.send({ type: 'thinking', turn_id: 't1', resumed: true });
+    live.send({ type: 'stream', turn_id: 't1', content: 'Working, and replayed' });
+    await settle(10);
+  });
+  assert.ok(!text().includes('Working, and replayed'));
+  assert.equal(container.querySelector('button[aria-label="Stop generating"]'), null);
+  await finish(...subscriptions);
+});
+
+test('a stream that ends without saying the turn is over hands the turn to the event stream', async () => {
+  const stream = sseStream();
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => {
+      if (!req.url.startsWith('/api/chat/conversations/c1/events')) return undefined;
+      const events = sseStream();
+      subscriptions.push(events);
+      return events.response();
+    },
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
+  await act(async () => {
+    void ref.current!.send('long task');
+    await settle();
+    stream.send({ type: 'turn_started', turn_id: 't1' });
+    stream.send({ type: 'stream', turn_id: 't1', content: 'Half' });
+    await settle(10);
+    stream.close();
+    await settle(10);
+  });
+  assert.ok(container.querySelector('button[aria-label="Stop generating"]'), 'not taken for the finished answer');
+  assert.equal(requests.filter((r) => r.url.includes('/events')).length, 2, 'followed under a new client id');
+  await act(async () => {
+    const live = subscriptions[subscriptions.length - 1];
+    live.send({ type: 'thinking', turn_id: 't1', resumed: true });
+    live.send({ type: 'done', turn_id: 't1', content: 'Half, then whole', message_id: 'm2' });
+    await settle(10);
+  });
+  assert.ok(text().includes('Half, then whole'));
+  await finish(...subscriptions);
+});
+
+test('a Stop with nothing held does not take back a message held during a later turn', async () => {
+  const stream = sseStream();
+  const events = sseStream();
+  let turns = 0;
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    (req) => {
+      if (req.url !== '/api/chat/messages') return undefined;
+      turns += 1;
+      return turns === 1 ? stream.response() : sseStream().response();
+    },
+    (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', holdSendsDuringTurn: true, apiEndpoints: { events: '/chat/conversations', steer: null } }, ref);
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle();
+  });
+  await act(async () => {
+    ref.current!.stop();
+    await settle(10);
+  });
+  // Another tab's turn; a message held meanwhile goes when it ends.
+  await act(async () => {
+    events.send({ type: 'thinking', turn_id: 't2' });
+    events.send({ type: 'stream', turn_id: 't2', content: 'elsewhere' });
+    await settle(10);
+  });
+  await typeAndHold(ref, 'after that');
+  await act(async () => {
+    events.send({ type: 'done', turn_id: 't2', content: 'elsewhere', message_id: 'm5' });
+    await settle(10);
+  });
+  assert.deepEqual(
+    messages(requests).map((r) => (r.body as { content: string }).content),
+    ['first', 'after that'],
+  );
+  await finish(stream, events);
 });

@@ -981,12 +981,20 @@ export const ChatMessages = ({
   // Older messages fetched from the backend land above the thread: they widen
   // the window and leave the reader where they were, unlike a switch. Both
   // happen before paint, so the thread never shows a jump.
-  const prependedRef = useRef<{ length: number; visible: number; count: number; scrollHeight: number; scrollTop: number } | null>(null);
+  const prependedRef = useRef<{
+    firstId: string | undefined;
+    visible: number;
+    count: number;
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   useLayoutEffect(() => {
     const prepended = prependedRef.current;
-    if (prepended && messages.length > prepended.length) {
-      prepended.count = messages.length - prepended.length;
+    // Counted from where the old first message landed: one appended meanwhile is no older one.
+    const landed = prepended ? messages.findIndex((m) => m.id === prepended.firstId) : -1;
+    if (prepended && landed > 0) {
+      prepended.count = landed;
       setRenderWindow(prepended.visible + prepended.count);
       return;
     }
@@ -1008,7 +1016,7 @@ export const ChatMessages = ({
     const el = scrollRef.current;
     setLoadingEarlier(true);
     prependedRef.current = {
-      length: messages.length,
+      firstId: messages[0]?.id,
       visible: Math.min(messages.length, renderWindow),
       count: 0,
       scrollHeight: el?.scrollHeight ?? 0,
