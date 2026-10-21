@@ -28,6 +28,13 @@ const FLOATING_HEIGHT = 560;
 const SIDEBAR_GAP = 6;
 /** How long a message jumped to stays highlighted. */
 const HIGHLIGHT_MS = 2000;
+/** What the restore route answers, as far as the panel reads it. */
+interface RestoredHistory {
+  conversation_id?: unknown;
+  agent_name?: unknown;
+  has_more?: unknown;
+  messages?: unknown[];
+}
 // A backend down, or out of its gateway's reach: it says nothing of the conversation asked for.
 const BACKEND_DOWN_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
 const RESTORE_RETRY_BASE_MS = 5000;
@@ -183,7 +190,12 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   // The conversation whose history this panel actually holds: only its event
   // stream is followed, so a relayed turn never lands in an empty transcript.
   const [eventsReadyId, setEventsReadyId] = useState<string | null>(null);
-  const eventsGateForRef = useRef<string | null>(null);
+  // The conversation the gate above was last checked for, kept in state so a
+  // render React throws away takes its reset with it.
+  const [eventsGateFor, setEventsGateFor] = useState<string | null | undefined>(undefined);
+  // A read-back that came while a turn was on screen: put above that turn as
+  // soon as it ends.
+  const [restorePostponed, setRestorePostponed] = useState<{ conversationId: string; data: RestoredHistory } | null>(null);
   // A conversation the backend could not be reached for: read back once it can.
   const [restoreOwedId, setRestoreOwedId] = useState<string | null>(null);
   const restoreAttemptsRef = useRef(0);
@@ -256,8 +268,8 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   // A conversation left and come back to waits for its history again before
   // its event stream is followed. Reset while rendering, so the hook never
   // opens the stream on the earlier visit's word.
-  if (eventsGateForRef.current !== conversationId) {
-    eventsGateForRef.current = conversationId;
+  if (eventsGateFor !== conversationId) {
+    setEventsGateFor(conversationId);
     if (eventsReadyId !== null) setEventsReadyId(null);
   }
 
@@ -457,6 +469,36 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     }
   }, [messagesPageBase, conversationIdRef, requestHeaders, setMessages]);
 
+  /**
+   * Put a conversation's history read back on screen. *aboveTurn*: a turn ran
+   * meanwhile, which stays below the history fetched before it.
+   */
+  const applyRestoredHistory = (convId: string, data: RestoredHistory, aboveTurn: boolean) => {
+    setEventsReadyId(convId);
+    setServerHasEarlier(!!messagesPageBase && data.has_more === true);
+    if (!data.messages?.length) return;
+    const restored = parseRestoredMessages(data.messages);
+    if (aboveTurn) {
+      setMessages((prev) => {
+        const shown = new Set(prev.map((m) => m.serverId).filter(Boolean));
+        return [...restored.filter((m) => !m.serverId || !shown.has(m.serverId)), ...prev];
+      });
+      return;
+    }
+    setMessages(restored);
+    // The context gauge is conversation state, not per-message: the NEWEST
+    // entry that carries a reading is the current occupancy. Scanned from
+    // the end so a turn that predates the field (or a user message) falls
+    // through to the last one that has it, rather than blanking the gauge.
+    for (let i = data.messages.length - 1; i >= 0; i -= 1) {
+      const usage = parseContextUsage(data.messages[i] as Record<string, unknown>);
+      if (usage) {
+        setContextUsage(usage);
+        break;
+      }
+    }
+  };
+
   // An owed read-back is tried again with backoff, and at once when the
   // browser is back online or the page is shown again - never over a turn
   // on screen, which the history read back would replace.
@@ -465,6 +507,11 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   useEffect(() => {
     restoreAttemptsRef.current = 0;
   }, [conversationId]);
+  useEffect(() => {
+    if (!restorePostponed || isLoading) return;
+    setRestorePostponed(null);
+    if (restorePostponed.conversationId === conversationId) applyRestoredHistory(restorePostponed.conversationId, restorePostponed.data, true);
+  }, [restorePostponed, isLoading, conversationId]);
   useEffect(() => {
     if (!restoreOwedId || restoreOwedId !== conversationId || isLoading) return;
     const retry = () => {
@@ -781,7 +828,10 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     if (historyLoadedRef.current) {
       // Created by this panel, or already restored: nothing to wait for.
       if (restoringIdRef.current !== conversationId && historySettledId !== conversationId) setHistorySettledId(conversationId);
-      if (restoringIdRef.current !== conversationId && eventsReadyId !== conversationId) setEventsReadyId(conversationId);
+      // A history held back behind a turn opens the gate when it is put on screen.
+      if (restoringIdRef.current !== conversationId && eventsReadyId !== conversationId && restorePostponed?.conversationId !== conversationId) {
+        setEventsReadyId(conversationId);
+      }
       return;
     }
     // The agent goes with the restore, so it waits for one - unless the host
@@ -836,7 +886,6 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         }
         restoreAttemptsRef.current = 0;
         setRestoreOwedId(null);
-        setEventsReadyId(requestedConversationId);
         return res.json();
       })
       .then((data) => {
@@ -855,26 +904,14 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         // routing), where a missing key means an older backend that cannot
         // tell us. Both land on the selected-agent fallback, but only the
         // first is a deliberate answer.
-        // A turn started meanwhile is on screen: the history waits for it to end.
+        setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
+        // A turn started meanwhile is on screen: the history waits for it to
+        // end, and so does the event stream, which follows that history.
         if (isLoadingNowRef.current) {
-          setRestoreOwedId(requestedConversationId);
+          setRestorePostponed({ conversationId: requestedConversationId, data });
           return;
         }
-        setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
-        setServerHasEarlier(!!messagesPageBase && data.has_more === true);
-        if (!data.messages?.length) return;
-        setMessages(parseRestoredMessages(data.messages));
-        // The context gauge is conversation state, not per-message: the NEWEST
-        // entry that carries a reading is the current occupancy. Scanned from
-        // the end so a turn that predates the field (or a user message) falls
-        // through to the last one that has it, rather than blanking the gauge.
-        for (let i = data.messages.length - 1; i >= 0; i -= 1) {
-          const usage = parseContextUsage(data.messages[i] as Record<string, unknown>);
-          if (usage) {
-            setContextUsage(usage);
-            break;
-          }
-        }
+        applyRestoredHistory(requestedConversationId, data, false);
       })
       // Unreachable: nothing is known of the conversation, whose id is kept.
       .catch(() => {
@@ -893,6 +930,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     apiBaseUrl,
     apiEndpoints,
     backendType,
+    restorePostponed,
     // Re-runs the restore when the hook asks for one — the only way a turn
     // resumed without a stream can ever show its answer.
     historyReloadNonce,

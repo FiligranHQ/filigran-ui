@@ -752,3 +752,57 @@ test('a conversation left and come back to waits for its history before its even
   assert.equal(subscriptions.length, 2);
   await finish(...subscriptions);
 });
+
+test('a history read back during a turn goes above it once the turn ends, and only then is the event stream followed', async () => {
+  let release!: () => void;
+  const restored = new Promise<void>((resolve) => (release = resolve));
+  const stream = sseStream();
+  const events = sseStream();
+  const requests = fakeBackend([
+    agentsRoute,
+    async (req) => {
+      if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+      await restored;
+      return json({
+        conversation_id: 'c1',
+        agent_name: 'Restored Agent',
+        messages: [
+          { id: 'm1', role: 'user', content: 'an old question' },
+          { id: 'm2', role: 'assistant', content: 'an old answer' },
+        ],
+      });
+    },
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
+  // Typed and sent while the history is still being read back.
+  await act(async () => {
+    ref.current!.setDraft('a new question');
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!.click();
+    await settle(10);
+  });
+  await act(async () => {
+    stream.send({ type: 'stream', content: 'A live answer' });
+    release();
+    await settle(10);
+  });
+  assert.ok(text().includes('Restored Agent'), "the restored agent's name shows at once");
+  assert.ok(!text().includes('an old answer'), 'the history waits for the turn');
+  assert.equal(requests.filter((r) => r.url.includes('/events')).length, 0, 'and so does the event stream');
+  await act(async () => {
+    stream.send({ type: 'done', content: 'A live answer', conversation_id: 'c1' });
+    stream.close();
+    await settle(10);
+  });
+  const shown = text();
+  assert.ok(shown.indexOf('an old answer') >= 0 && shown.indexOf('an old answer') < shown.indexOf('a new question'), 'above the turn');
+  assert.ok(shown.includes('A live answer'), 'the turn stays');
+  assert.equal(requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST').length, 1, 'no second read-back');
+  assert.equal(requests.filter((r) => r.url.includes('/events')).length, 1);
+  await finish(events);
+});
