@@ -183,6 +183,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   // The conversation whose history this panel actually holds: only its event
   // stream is followed, so a relayed turn never lands in an empty transcript.
   const [eventsReadyId, setEventsReadyId] = useState<string | null>(null);
+  const eventsGateForRef = useRef<string | null>(null);
   // A conversation the backend could not be reached for: read back once it can.
   const [restoreOwedId, setRestoreOwedId] = useState<string | null>(null);
   const restoreAttemptsRef = useRef(0);
@@ -252,6 +253,13 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     onBeforeSend: onBeforeSendProp ? onBeforeSend : undefined,
     onHeldSendSettled: onHeldSendSettledProp ? onHeldSendSettled : undefined,
   });
+  // A conversation left and come back to waits for its history again before
+  // its event stream is followed. Reset while rendering, so the hook never
+  // opens the stream on the earlier visit's word.
+  if (eventsGateForRef.current !== conversationId) {
+    eventsGateForRef.current = conversationId;
+    if (eventsReadyId !== null) setEventsReadyId(null);
+  }
 
   // A host that owns the conversation (a `?c=` URL) moves the panel with it.
   useEffect(() => {
@@ -450,10 +458,17 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   }, [messagesPageBase, conversationIdRef, requestHeaders, setMessages]);
 
   // An owed read-back is tried again with backoff, and at once when the
-  // browser is back online or the page is shown again.
+  // browser is back online or the page is shown again - never over a turn
+  // on screen, which the history read back would replace.
+  const isLoadingNowRef = useRef(isLoading);
+  isLoadingNowRef.current = isLoading;
   useEffect(() => {
-    if (!restoreOwedId || restoreOwedId !== conversationId) return;
+    restoreAttemptsRef.current = 0;
+  }, [conversationId]);
+  useEffect(() => {
+    if (!restoreOwedId || restoreOwedId !== conversationId || isLoading) return;
     const retry = () => {
+      if (isLoadingNowRef.current) return;
       setRestoreOwedId(null);
       restoreAttemptsRef.current += 1;
       reloadHistory();
@@ -470,7 +485,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       window.removeEventListener('online', retry);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [restoreOwedId, conversationId, reloadHistory]);
+  }, [restoreOwedId, conversationId, isLoading, reloadHistory]);
 
   // A conversation being read back shows its shape, not the welcome screen.
   const restoreEnabled = backendType === 'rest' && !apiEndpoints?.singleEndpoint && apiEndpoints?.sessions !== null;
@@ -820,6 +835,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
           return null;
         }
         restoreAttemptsRef.current = 0;
+        setRestoreOwedId(null);
         setEventsReadyId(requestedConversationId);
         return res.json();
       })
@@ -839,6 +855,11 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         // routing), where a missing key means an older backend that cannot
         // tell us. Both land on the selected-agent fallback, but only the
         // first is a deliberate answer.
+        // A turn started meanwhile is on screen: the history waits for it to end.
+        if (isLoadingNowRef.current) {
+          setRestoreOwedId(requestedConversationId);
+          return;
+        }
         setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
         setServerHasEarlier(!!messagesPageBase && data.has_more === true);
         if (!data.messages?.length) return;

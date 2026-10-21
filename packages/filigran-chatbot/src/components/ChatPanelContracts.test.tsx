@@ -640,6 +640,7 @@ test('the host is told what became of each held send', async () => {
     streams[0].close();
     await settle(10);
   });
+  assert.deepEqual(settled, ['next:sent'], 'told as the backend takes it, its answer still to come');
   // Given back by Stop.
   await act(async () => {
     void ref.current!.send('then this');
@@ -650,5 +651,104 @@ test('the host is told what became of each held send', async () => {
     await settle(10);
   });
   assert.deepEqual(settled, ['next:sent', 'then this:returned']);
+  // Still held when the panel goes: cancelled.
+  await act(async () => {
+    void ref.current!.send('a third');
+    await settle(10);
+    void ref.current!.send('left behind');
+    await settle(10);
+  });
+  await act(async () => root.unmount());
+  root = createRoot(container);
+  assert.deepEqual(settled, ['next:sent', 'then this:returned', 'left behind:cancelled']);
   await finish(...streams);
+});
+
+test('an owed read-back never lands over a turn on screen, and comes once the turn is over', async () => {
+  let restores = 0;
+  const stream = sseStream();
+  const requests = fakeBackend([
+    agentsRoute,
+    (req) => {
+      if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+      restores += 1;
+      if (restores === 1) return json({ detail: 'restarting' }, 503);
+      return json({ conversation_id: 'c1', messages: [{ id: 'm1', role: 'assistant', content: 'From the history' }] });
+    },
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('a new question');
+    await settle(10);
+  });
+  await act(async () => {
+    stream.send({ type: 'stream', content: 'A live answer' });
+    window.dispatchEvent(new Event('online'));
+    await settle(10);
+  });
+  assert.equal(restores, 1, 'not while the turn runs');
+  assert.ok(text().includes('a new question') && text().includes('A live answer'));
+  await act(async () => {
+    stream.send({ type: 'done', content: 'A live answer', conversation_id: 'c1' });
+    stream.close();
+    await settle(10);
+  });
+  await act(async () => {
+    window.dispatchEvent(new Event('online'));
+    await settle(10);
+  });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST').length, 2, 'read back once idle');
+  await act(async () => {
+    window.dispatchEvent(new Event('online'));
+    await settle(10);
+  });
+  assert.equal(restores, 2, 'and not again once read back');
+});
+
+test('a conversation left and come back to waits for its history before its event stream', async () => {
+  let release: (() => void) | null = null;
+  let restores = 0;
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  const requests = fakeBackend([
+    agentsRoute,
+    async (req) => {
+      if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+      restores += 1;
+      if (restores === 2) await new Promise<void>((resolve) => (release = resolve));
+      return json({ conversation_id: 'c1', messages: [{ id: 'm1', role: 'user', content: 'asked earlier' }] });
+    },
+    (req) => {
+      if (!req.url.startsWith('/api/chat/conversations/c1/events')) return undefined;
+      const events = sseStream();
+      subscriptions.push(events);
+      return events.response();
+    },
+  ]);
+  const ref = createRef<Handle>();
+  await render({ apiEndpoints: { events: '/chat/conversations' } }, ref);
+  await act(async () => {
+    ref.current!.selectConversation('c1');
+    await settle(10);
+  });
+  assert.equal(subscriptions.length, 1);
+  await act(async () => {
+    ref.current!.newConversation();
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.selectConversation('c1');
+    await settle(10);
+  });
+  const order = requests
+    .filter((r) => r.url.includes('/events') || (r.url === '/api/chat/sessions' && r.method === 'POST'))
+    .map((r) => (r.url.includes('/events') ? 'events' : 'restore'));
+  assert.deepEqual(order, ['restore', 'events', 'restore'], 'no event stream before the second read-back');
+  await act(async () => {
+    release?.();
+    await settle(10);
+  });
+  assert.equal(subscriptions.length, 2);
+  await finish(...subscriptions);
 });

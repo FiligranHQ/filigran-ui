@@ -1685,7 +1685,7 @@ export function useChat({
     if (turnId && turnId === stoppedTurnIdRef.current) return;
     const skip = skipUnnamedTurnRef.current;
     // A fresh acknowledgement is a new turn: the stopped one ended unseen.
-    if (skip !== 'off' && evt.type === 'thinking' && evt.resumed !== true) skipUnnamedTurnRef.current = 'off';
+    if (skip !== 'off' && evt.type === 'thinking' && evt.resumed !== true && evt.intermediate !== true) skipUnnamedTurnRef.current = 'off';
     else if (!turnId && skip !== 'off' && !relayedTurn) {
       const finalDone = parsed.action === 'done' && !parsed.intermediate;
       if (skip === 'skipping') {
@@ -1997,9 +1997,20 @@ export function useChat({
       setAgentMentions((prev) => [...heldMessage.mentions, ...prev]);
       return;
     }
-    void handleSendMessageRef.current({ ...heldMessage, decided: true }).then(
-      (outcome) => onHeldSendSettledRef.current?.(heldMessage.text, outcome === 'sent' ? 'sent' : outcome === 'failed' ? 'failed' : 'dropped'),
-      () => onHeldSendSettledRef.current?.(heldMessage.text, 'failed'),
+    // Told once: as the backend takes it, or as it fails or goes nowhere. Held
+    // again behind a turn started meanwhile, it is told when that one ends.
+    let told = false;
+    const tell = (outcome: ChatHeldOutcome) => {
+      if (told) return;
+      told = true;
+      onHeldSendSettledRef.current?.(heldMessage.text, outcome);
+    };
+    void handleSendMessageRef.current({ ...heldMessage, decided: true, onSent: () => tell('sent') }).then(
+      (outcome) => {
+        if (outcome === 'held') return;
+        tell(outcome === 'sent' || outcome === 'steered' ? 'sent' : outcome === 'failed' ? 'failed' : 'dropped');
+      },
+      () => tell('failed'),
     );
   }, [isLoading, heldMessage]);
   const handleSendMessageRef = useRef(handleSendMessage);
@@ -2024,6 +2035,8 @@ export function useChat({
       streamDeltasRef.current?.close();
       pageActionControllerRef.current?.abort();
       if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
+      // A message still held goes nowhere with the panel.
+      if (heldMessageRef.current) onHeldSendSettledRef.current?.(heldMessageRef.current.text, 'cancelled');
     },
     [],
   );

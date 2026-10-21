@@ -396,7 +396,8 @@ export interface ChatPanelProps {
   user: { firstName: string };
   /**
    * The host's translations, over the panel's own catalog: a key it returns
-   * unchanged falls back to the catalog in `locale`.
+   * unchanged falls back to the catalog in `locale`, or to English when no
+   * `locale` is passed.
    */
   t?: Translate;
   accentColor?: string;

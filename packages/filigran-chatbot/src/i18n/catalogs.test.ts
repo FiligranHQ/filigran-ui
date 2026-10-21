@@ -57,3 +57,15 @@ test("the host's translation wins; a key it returns unchanged falls back to the 
   assert.equal(createTranslate(undefined, 'en')('Stopped'), 'Stopped');
   assert.equal(createTranslate(undefined, 'fr')('A key no catalog has'), 'A key no catalog has');
 });
+
+test("without t or locale, the panel speaks the browser's language; with t and no locale, English", () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.defineProperty(globalThis, 'navigator', { value: { language: 'ja-JP' }, configurable: true });
+  try {
+    assert.equal(createTranslate(undefined, undefined)('Stopped'), catalogFor('ja')!.Stopped);
+    assert.equal(createTranslate((key) => key, undefined)('Stopped'), 'Stopped');
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'navigator', original);
+    else delete (globalThis as { navigator?: unknown }).navigator;
+  }
+});
