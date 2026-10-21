@@ -32,8 +32,9 @@ This file starts at 3.10.0; earlier releases are on the
   the panel then sends nothing, from the handle or the welcome screen's
   suggestions.
 - `getRequestExtras` adds the host's own fields to each message body (the
-  panel's own fields, set by it or not, are never taken from there), and `onStreamEvent` hands the host every frame
-  received, including those the panel does not render.
+  panel's own fields, set by it or not, are never taken from there), and
+  `onStreamEvent` hands the host every frame received, including those the
+  panel does not render.
 - The panel renders the frames of a backend whose turns outlive their stream:
   a turn re-attached mid-way (`thinking.resumed`), an announced wait
   (`status: wait_start`, with a countdown), `cancelled`, an intermediate
@@ -41,9 +42,10 @@ This file starts at 3.10.0; earlier releases are on the
 - History is restored with no agent list (`apiEndpoints.agents: null`).
 - A host can render its own cards for the `[[KIND:args]]` markers of an
   answer (`markerRenderers`), by marker name, and take over the built-in
-  `FILE`, `PRESENTATION`, `REPORT` and `VIDEO` ones. A card that throws shows
-  `This item could not be loaded.` and leaves the rest of the answer alone. A
-  marker no renderer names stays text, as before.
+  `FILE`, `PRESENTATION`, `REPORT` and `VIDEO` ones, including the items an
+  answer carries with no marker. A card that throws, or a renderer that does,
+  shows `This item could not be loaded.` and leaves the rest of the answer
+  alone. A marker no renderer names stays text, as before.
 - `transformMessageText` rewrites a message's text before it is shown, copied
   or read aloud (masking secrets, converting a channel's syntax).
 - `onArtifactOpen` opens a deck, report or video in the host, in place of the
@@ -63,13 +65,14 @@ This file starts at 3.10.0; earlier releases are on the
 - `steerAttachments` lets uploaded files steer the running turn (the steer
   route then takes `file_ids`), and `holdSendsDuringTurn` holds a message that
   cannot steer (files, references, mentions, a turn that has just ended) and
-  sends it as the next turn, with a way to cancel it meanwhile.
+  sends it as the next turn, with a way to cancel it meanwhile. Messages held
+  one after another go together, and Stop gives back to the composer what
+  the user typed for them.
 - `scrollToMessage` on the panel's handle jumps to a message and highlights it.
 - Stable `data-testid`s for host tests: `filigran-chat-panel`,
   `filigran-chat-transcript`, `filigran-chat-user-message`,
   `filigran-chat-assistant-message`, `filigran-chat-composer`,
   `filigran-chat-approval`, `filigran-chat-disclaimer`.
-
 - `onReady` tells the host when the panel has chosen its agent and read back
   the conversation on screen; calls through the handle made before then wait
   for it, and all of them run in order (a new conversation's agent is in
@@ -77,10 +80,15 @@ This file starts at 3.10.0; earlier releases are on the
 - `onBeforeSend` sees every send first, from the composer or the handle: it
   can take a send over, or reword it and add fields to its body.
 - `reloadAgents()` on the handle reads the agent list again, keeping the agent
-  picked unless it is gone.
+  picked unless it is gone (none is picked once the list is empty). A failed
+  reload keeps the list it had, and only the latest reload lands.
 - `onHeldSendSettled(text, outcome)` tells the host what became of a message
   held until the turn ended: `'sent'`, `'failed'`, `'dropped'`, `'returned'`
   (given back to the composer by Stop) or `'cancelled'`.
+- New exported types: `ChatPanelHandle`, `ChatPanelMode`, `ChatSendOptions`,
+  `ChatSendOutcome`, `ChatSendDraft`, `ChatSendDecision`, `ChatHeldOutcome`,
+  `ChatMarkerRenderer`, `ChatMarkerContext`, `ChatStreamEventInfo` and
+  `AgentStatusState`.
 
 ### Changed
 
@@ -104,24 +112,13 @@ This file starts at 3.10.0; earlier releases are on the
   answers 502, 503 or 504 keeps its id, rather than being dropped for a new
   chat, and is read back once the backend answers (retried with backoff, and
   at once when the browser is back online or the page is shown again, never
-  over a turn in progress); any
-  other error still resets it. One remembered while the agent list fails or
-  is empty is not restored, and the panel no longer waits for it (no endless
-  skeleton, `onReady` fires).
+  over a turn in progress); any other error still resets it.
 
 ### Fixed
 
-- A host card for `FILE`, `PRESENTATION`, `REPORT` or `VIDEO` no longer
-  appears beside the built-in one; items with no marker go to the host card
-  too.
-- With `apiEndpoints.events` named, a steer, a decision, Stop and "Continue
-  now" carry `X-Chat-Client-Id` too, so the backend does not echo a tab's own
-  steering message back to it; an echo that comes anyway is recognised.
-- Stop ends a held message's wait and gives it back to the composer; a
-  stopped relayed turn no longer comes back from the event stream; messages
-  held one after another are sent together.
-- "Load earlier messages" keeps the reader where they were, with no jump.
-- A failed agent-list reload keeps its error, and only the latest reload lands.
+- A conversation read back after the user has already sent a message no
+  longer replaces that turn: its history goes above the turn once the turn
+  ends, and its agent's name shows at once.
 
 ### Host opt-in
 
@@ -135,17 +132,20 @@ This file starts at 3.10.0; earlier releases are on the
   itself then carry `X-Chat-Client-Id`, so a panel's own turns are never
   relayed back to it. A panel whose own stream drops mid-turn, or ends
   without the turn's last frame, picks the turn up from the event stream
-  under a new id; Stop meanwhile sticks.
+  under a new id; Stop meanwhile sticks. The stream is followed only once the
+  conversation's history is on screen, and a turn stopped here, named or
+  not, stays stopped.
 - With `cancel`, `skipWait` or `events` named, a new chat's conversation is
   created before its first message, so Stop, "Continue now" and steering
   reach the backend from the first turn.
 - `apiEndpoints.messagesPage` (no default): "Load earlier messages" fetches
   older messages from the backend a page at a time, when the restore says
-  there are some (`has_more`).
+  there are some (`has_more`), and keeps the reader where they were.
 - `apiEndpoints.clearAll` (no default): the conversation list offers "Clear
   all conversations".
-- `apiEndpoints.tts` (no default): read aloud uses the backend's voice, and
-  the browser's when the route fails.
+- `apiEndpoints.tts` (no default): read aloud uses the backend's voice, a
+  long answer in several bounded requests played in turn, and the browser's
+  voice for what is left when the route fails.
 
 ## 3.14.0 — 2026-10-19
 
