@@ -652,9 +652,10 @@ export interface ChatPanelProps {
    * `done` (an intermediate one goes on), an `error`, `cancelled` or
    * `session_expired` frame, a Stop, a new conversation - and when the panel
    * unmounts during a turn. Called on changes only, never with the value it
-   * last gave.
+   * last gave. With `false` comes how the turn ended (`info.ended`): answered,
+   * stopped or failed (see `ChatTurnOutcome`).
    */
-  onTurnRunningChange?: (running: boolean) => void;
+  onTurnRunningChange?: (running: boolean, info?: ChatTurnEnd) => void;
   /**
    * Uploaded files may steer the running turn: the steer route takes
    * `file_ids`. Without it, a message with files waits for the turn to end.
@@ -762,6 +763,24 @@ export type ChatSendOutcome = 'sent' | 'steered' | 'held' | 'dropped' | 'failed'
 
 /** What became of a held message once its turn ended (see `onHeldSendSettled`). */
 export type ChatHeldOutcome = 'sent' | 'failed' | 'dropped' | 'returned' | 'cancelled';
+
+/**
+ * How a turn ended (see `onTurnRunningChange`):
+ * - `'answered'`: its last `done` came (not an intermediate one), and nothing
+ *   after it said otherwise;
+ * - `'stopped'`: it ended short of its answer - a `cancelled` frame (even
+ *   after the last `done`), a `session_expired` frame, Stop, a new
+ *   conversation, the panel unmounting, or a stream that closed before its
+ *   last `done` with no event stream to carry the turn to its end;
+ * - `'failed'`: an `error` frame, or a send the backend refused or could not
+ *   be reached for, before the turn streamed anything.
+ */
+export type ChatTurnOutcome = 'answered' | 'stopped' | 'failed';
+
+/** What `onTurnRunningChange(false, info)` says of the turn that ended. */
+export interface ChatTurnEnd {
+  ended: ChatTurnOutcome;
+}
 
 /**
  * What `onBeforeSend` decides: `false` takes the send over, an object adjusts it.

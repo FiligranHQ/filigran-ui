@@ -114,7 +114,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
 | `onReady`           | `() => void`                              | —            | Called once, when the panel has chosen its agent and read back the conversation on screen; handle calls made earlier wait for it and then run in order |
 | `onHeldSendSettled` | `(text, outcome) => void`                 | —            | What became of a message held until the turn ended (`send` resolved `'held'`): `'sent'`, `'failed'`, `'dropped'`, `'returned'` (given back by Stop) or `'cancelled'` |
-| `onTurnRunningChange` | `(running: boolean) => void`            | —            | A turn started or stopped running on screen, own or relayed: the state of the Stop button and of `draft.turnRunning` — see [Host extensions](#host-extensions) |
+| `onTurnRunningChange` | `(running: boolean, info?: ChatTurnEnd) => void` | —     | A turn started or stopped running on screen, own or relayed: the state of the Stop button and of `draft.turnRunning`; with `false` comes how it ended, `info.ended`: `'answered'`, `'stopped'` or `'failed'` — see [Host extensions](#host-extensions) |
 | `onBeforeSend`      | `(draft) => false \| { text?, displayText?, extras? } \| void` | — | Sees every non-empty send first, synchronously (`draft.source`: `'composer'`, `'host'` or `'voice'`; `draft.turnRunning`: it would steer): `false` takes it over (the composer keeps its draft), an object rewords it (`text`, what the backend receives), shows the user's bubble other words (`displayText`) or adds body fields. The panel's own fields cannot be set this way |
 | `hideConversationList` | `boolean`                              | `false`      | Hides the conversation list of fullscreen and inline modes, for a rail or a task pane (usable from 320 px wide); the header's history menu stands in for it — see [Host extensions](#host-extensions) |
 | `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer |
@@ -237,10 +237,26 @@ relays; `false` once that turn ends: its stream closes after the last `done`
 (an intermediate `done` goes on), an `error`, `cancelled` or `session_expired`
 frame comes, Stop lets go of it, a new conversation replaces it, or the panel
 unmounts in the middle of it. A turn handed over to the event stream stays
-running meanwhile. It is called on changes only:
+running meanwhile. It is called on changes only.
+
+With `false` comes how the turn ended, `info.ended` (`ChatTurnOutcome`), so a
+host running a sequence of turns goes on only while they are answered:
+
+- `'answered'`: its last `done` came, with nothing after it saying otherwise;
+- `'stopped'`: a `cancelled` frame (even after the last `done`), a
+  `session_expired` frame, Stop, a new conversation, the panel unmounting, or a
+  stream that closed before its last `done` with no event stream to carry the
+  turn to its end (a turn the event stream does carry ends as its replay does);
+- `'failed'`: an `error` frame, or a send the backend refused or could not be
+  reached for.
 
 ```tsx
-<ChatPanel onTurnRunningChange={setAgentWorking} />
+<ChatPanel
+  onTurnRunningChange={(running, info) => {
+    setAgentWorking(running);
+    if (!running && info?.ended !== 'answered') cancelSequence();
+  }}
+/>
 ```
 
 Each answer says which agent wrote it, for a host's own rendering

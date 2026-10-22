@@ -239,6 +239,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     inputValue,
     setInputValue,
     isLoading,
+    turnEnd,
     agentStatus,
     attachedFiles,
     conversationId,
@@ -418,18 +419,20 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   }, [showConversationSidebar, refreshConversations, refreshWorkspaces]);
 
   // The host hears when a turn starts or stops running on screen, once per
-  // change, and that it stopped when the panel goes away in the middle of one.
+  // change, with how it ended, and that it stopped when the panel goes away in
+  // the middle of one.
   const reportedRunningRef = useRef(false);
   useEffect(() => {
     if (reportedRunningRef.current === isLoading) return;
     reportedRunningRef.current = isLoading;
-    askHost(onTurnRunningChange, isLoading);
-  }, [isLoading, onTurnRunningChange]);
+    if (isLoading) askHost(onTurnRunningChange, true);
+    else askHost(onTurnRunningChange, false, { ended: turnEnd ?? 'stopped' });
+  }, [isLoading, turnEnd, onTurnRunningChange]);
   useEffect(
     () => () => {
       if (!reportedRunningRef.current) return;
       reportedRunningRef.current = false;
-      askHost(onTurnRunningChange, false);
+      askHost(onTurnRunningChange, false, { ended: 'stopped' });
     },
     [onTurnRunningChange],
   );

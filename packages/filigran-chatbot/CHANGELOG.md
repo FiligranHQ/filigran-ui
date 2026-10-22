@@ -116,8 +116,13 @@ This file starts at 3.10.0; earlier releases are on the
   line and `draft.turnRunning`. `false` comes once the turn's stream closes
   after its last `done` (not an intermediate one), on `error`, `cancelled` or
   `session_expired`, on Stop, a new conversation, or the panel unmounting
-  mid-turn; it is called on changes only. A host no longer re-derives it from
-  `onStreamEvent`.
+  mid-turn; it is called on changes only. With `false` comes how the turn
+  ended, `onTurnRunningChange(false, { ended })` (`ChatTurnEnd`,
+  `ChatTurnOutcome`): `'answered'` (its last `done`), `'stopped'` (`cancelled`,
+  even after the last `done`, `session_expired`, Stop, a new conversation, the
+  panel unmounting, or a stream closed before its last `done` that nothing
+  carried on) or `'failed'` (an `error` frame, or a send refused or
+  unreachable). A host no longer re-derives either from `onStreamEvent`.
 - `send(text, { displayText })` on the handle: the backend receives *text*
   and the user's bubble shows `displayText`, as with `onBeforeSend`'s
   `displayText` (which wins when it gives one).

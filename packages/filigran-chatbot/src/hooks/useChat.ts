@@ -6,6 +6,7 @@ import type {
   ChatSendDraft,
   ChatSendOutcome,
   ChatHeldOutcome,
+  ChatTurnOutcome,
   BackendType,
   ChatContextUsage,
   ChatConversationRef,
@@ -297,6 +298,11 @@ interface UseChatReturn {
   inputValue: string;
   setInputValue: (value: string) => void;
   isLoading: boolean;
+  /**
+   * How the last turn on screen ended, set as `isLoading` turns false (`null`
+   * before any turn ended): what `onTurnRunningChange(false, info)` reports.
+   */
+  turnEnd: ChatTurnOutcome | null;
   agentStatus: AgentStatusState | null;
   attachedFiles: ChatFile[];
   conversationId: string | null;
@@ -535,6 +541,7 @@ export function useChat({
   const isLegacy = backendType === 'legacy';
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [turnEnd, setTurnEnd] = useState<ChatTurnOutcome | null>(null);
   const [agentStatus, setAgentStatus] = useState<AgentStatusState | null>(null);
   const isControlled = controlledConversationId !== undefined;
   const conversationStorageKey = storageKey(storageKeyPrefix, STORAGE_KEYS.conversationId);
@@ -630,6 +637,16 @@ export function useChat({
   // whether a live turn has started owning the prompt since it was issued.
   const isLoadingRef = useRef(isLoading);
   isLoadingRef.current = isLoading;
+  /**
+   * The turn on screen is over, *ended* so: the one place a turn stops
+   * running, which says how it ended along with it (a panel already idle
+   * keeps the end it last told).
+   */
+  const stopRunning = (ended: ChatTurnOutcome) => {
+    if (isLoadingRef.current) setTurnEnd(ended);
+    isLoadingRef.current = false;
+    setIsLoading(false);
+  };
   // Ref mirror of pageContext so the value sent reflects the page the user is
   // on at send time, regardless of when the send handler closure was created.
   const pageContextRef = useRef(pageContext);
@@ -1219,6 +1236,8 @@ export function useChat({
     const segmentIds = [firstAssistantId];
     let accumulated = '';
     let doneReceived = false;
+    // The turn's last `done` came, with nothing written after it.
+    let answered = false;
     // An error, a stop or the session's end the stream reported: what it wrote must not be put back over it.
     let ended: 'error' | 'cancelled' | 'session' | null = null;
     const ctx: ProtocolContext = { hasUsedTools: false, activeNodeId: '' };
@@ -1250,6 +1269,7 @@ export function useChat({
       // Nothing of the closed segment may land in the new one.
       deltas.flush();
       doneReceived = false;
+      answered = false;
       accumulated = '';
       currentAssistantId = crypto.randomUUID();
       segmentIds.push(currentAssistantId);
@@ -1310,6 +1330,7 @@ export function useChat({
     const applyDone = (parsed: Extract<ParsedAction, { action: 'done' }>) => {
       deltas.flush();
       doneReceived = true;
+      if (!parsed.intermediate) answered = true;
       // A completed segment cannot still be waiting on a decision, so any
       // prompt left standing (a submission that failed against a turn somebody
       // else already answered) is stale.
@@ -1428,6 +1449,8 @@ export function useChat({
       doneReceived: () => doneReceived,
       segmentIds: () => segmentIds,
       ended: () => ended,
+      /** How the turn ended, by its frames: an `error` failed it, a stop or the session's end (even after the last `done`) or no last `done` stopped it. */
+      outcome: (): ChatTurnOutcome => (ended === 'error' ? 'failed' : ended === null && answered ? 'answered' : 'stopped'),
     };
   };
 
@@ -1596,6 +1619,8 @@ export function useChat({
     let handedOver = false;
     // The backend took the message: its stream answered.
     let accepted = false;
+    // The send never reached a stream: refused, or the backend unreachable.
+    let failed = false;
     // The stream said the turn is over: a last `done`, an error or a stop.
     let sawTurnEnd = false;
     /**
@@ -1615,10 +1640,10 @@ export function useChat({
       handoverTimerRef.current = window.setTimeout(() => {
         handoverTimerRef.current = null;
         if (relayedTurnRef.current || handoverTurnIdRef.current === null) return;
-        // Nothing came: the turn is over, and its answer is in the history.
+        // Nothing came: the turn is over, and its answer is in the history,
+        // if it got one; nothing on screen says it did.
         handoverTurnIdRef.current = null;
-        isLoadingRef.current = false;
-        setIsLoading(false);
+        stopRunning('stopped');
         setAgentStatus(null);
         reloadHistory();
       }, HANDOVER_GRACE_MS);
@@ -1689,6 +1714,7 @@ export function useChat({
         // A refusal before the stream (a rate limit, a refused option, an
         // unknown conversation) says why in its `detail`: that is what shows.
         const detail = res.ok ? null : await readRefusalDetail(res);
+        failed = true;
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, content: detail ?? t('Unable to connect. Please check the configuration.') } : m)),
         );
@@ -1757,6 +1783,7 @@ export function useChat({
       const segId = turn.currentAssistantId();
       // The stream dropped mid-turn, but the backend runs the turn on.
       if (handOver()) return 'sent';
+      if (!accepted) failed = true;
       setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: t('Sorry, an error occurred. Please try again.') } : m)));
     } finally {
       turn.deltas.close();
@@ -1773,8 +1800,7 @@ export function useChat({
       // A turn handed over to the event stream is still running.
       if (sessionGate.generation === turnGeneration && !handedOver) {
         clearCancelRequest();
-        isLoadingRef.current = false;
-        setIsLoading(false);
+        stopRunning(failed ? 'failed' : turn.outcome());
         setAgentStatus(null);
         // The stream is gone, so nothing can carry a decision any more —
         // whether the turn finished, errored, or was stopped. Leaving the prompt
@@ -1803,8 +1829,7 @@ export function useChat({
     const segId = relayedTurn.renderer.currentAssistantId();
     setMessages((prev) => prev.filter((m) => !(m.id === segId && !m.content && !m.stopped)));
     clearCancelRequest();
-    isLoadingRef.current = false;
-    setIsLoading(false);
+    stopRunning(relayedTurn.renderer.outcome());
     setAgentStatus(null);
     setPendingApprovals(null);
     setApprovalError(null);
@@ -1839,8 +1864,7 @@ export function useChat({
       endRelayedTurn();
       if (handoverTurnIdRef.current !== null && !ownTurnActiveRef.current) {
         clearHandover();
-        isLoadingRef.current = false;
-        setIsLoading(false);
+        stopRunning('stopped');
         setAgentStatus(null);
       }
       return;
@@ -1919,13 +1943,12 @@ export function useChat({
     clearCancelRequest();
     clearHandover();
     skipUnnamedTurnRef.current = 'off';
-    isLoadingRef.current = false;
+    stopRunning('stopped');
     setMessages([]);
     setInputValue('');
     setConversationRefs([]);
     setAgentMentions([]);
     setAttachedFiles([]);
-    setIsLoading(false);
     setAgentStatus(null);
     setTransferredAgent(null);
     // A fresh (or newly selected) conversation starts with no known occupancy;
@@ -2000,8 +2023,7 @@ export function useChat({
     pageActionControllerRef.current?.abort();
     pageActionControllerRef.current = null;
     relayedTurnRef.current = null;
-    isLoadingRef.current = false;
-    setIsLoading(false);
+    stopRunning('stopped');
     setAgentStatus(null);
     // Stopping IS the way out of a pause the reviewer does not want to answer:
     // the backend waits indefinitely by design, so abandoning the stream is
@@ -2429,6 +2451,7 @@ export function useChat({
     inputValue,
     setInputValue,
     isLoading,
+    turnEnd,
     agentStatus,
     attachedFiles,
     conversationId,

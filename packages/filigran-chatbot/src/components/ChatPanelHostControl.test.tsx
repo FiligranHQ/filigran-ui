@@ -411,3 +411,178 @@ test('a turn whose stream ends, with no event stream to pick it up, is over for 
   await finish(stream);
   assert.deepEqual(seen, [true, false]);
 });
+
+type TurnEnd = import('../types.ts').ChatTurnEnd;
+
+/** What the host heard: `true` as a turn starts, how it ended as it stops. */
+function turnLog() {
+  const heard: string[] = [];
+  const onTurnRunningChange = (running: boolean, info?: TurnEnd) => heard.push(running ? 'running' : (info?.ended ?? 'no outcome'));
+  return { heard, onTurnRunningChange };
+}
+
+test('the host hears how each turn of its own ended: answered, stopped or failed', async () => {
+  const turns = Array.from({ length: 7 }, () => sseStream());
+  const refusal: { release?: () => void } = {};
+  let next = 0;
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    (req) => {
+      if (req.url !== '/api/chat/messages') return undefined;
+      const index = next++;
+      if (index === turns.length) return new Promise<Response>((resolve) => (refusal.release = () => resolve(json({ detail: 'Slow down' }, 429))));
+      return turns[index].response();
+    },
+  ]);
+  const ref = createRef<Handle>();
+  const { heard, onTurnRunningChange } = turnLog();
+  await render({ conversationId: 'c1', onTurnRunningChange }, ref);
+
+  const cases: [string, Record<string, unknown>[], string][] = [
+    [
+      'its last done',
+      [
+        { type: 'done', content: 'Part', intermediate: true },
+        { type: 'done', content: 'Whole' },
+      ],
+      'answered',
+    ],
+    ['an error', [{ type: 'error', content: 'Boom' }], 'failed'],
+    ['a cancelled frame', [{ type: 'cancelled' }], 'stopped'],
+    ['a cancelled frame after the last done', [{ type: 'done', content: 'Whole' }, { type: 'cancelled' }], 'stopped'],
+    ['the session ending', [{ type: 'session_expired', reason: 'idle' }], 'stopped'],
+    ['a stream closed before its last done', [{ type: 'done', content: 'Part', intermediate: true }], 'stopped'],
+    [
+      'a follow-up pass cut short after the last done',
+      [
+        { type: 'done', content: 'Whole' },
+        { type: 'stream', content: 'And' },
+      ],
+      'stopped',
+    ],
+  ];
+  for (const [i, [what, frames, ended]] of cases.entries()) {
+    await act(async () => {
+      void ref.current!.send(`turn ${i}`);
+      await settle();
+    });
+    await act(async () => {
+      turns[i].send({ type: 'stream', content: 'Some' });
+      for (const frame of frames) turns[i].send(frame);
+      turns[i].close();
+      await settle(10);
+    });
+    assert.deepEqual(heard.slice(-2), ['running', ended], `${what}: ${ended}`);
+  }
+
+  // A send the backend refuses fails its turn.
+  await act(async () => {
+    void ref.current!.send('refused');
+    await settle();
+  });
+  assert.equal(heard[heard.length - 1], 'running');
+  await act(async () => {
+    refusal.release!();
+    await settle(10);
+  });
+  assert.deepEqual(heard.slice(-2), ['running', 'failed']);
+  assert.equal(heard.length, 2 * (cases.length + 1));
+});
+
+test('the host hears how a relayed turn ended, and a turn handed over to the event stream ends once', async () => {
+  const stream = sseStream();
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => {
+      if (!req.url.startsWith('/api/chat/conversations/c1/events')) return undefined;
+      const events = sseStream();
+      subscriptions.push(events);
+      return events.response();
+    },
+  ]);
+  const ref = createRef<Handle>();
+  const { heard, onTurnRunningChange } = turnLog();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange }, ref);
+  const live = () => subscriptions[subscriptions.length - 1];
+
+  for (const [turnId, end, ended] of [
+    ['t1', { type: 'done', content: 'Relayed, whole' }, 'answered'],
+    ['t2', { type: 'error', content: 'Boom' }, 'failed'],
+    ['t3', { type: 'cancelled' }, 'stopped'],
+    ['t4', { type: 'session_expired', reason: 'lifetime' }, 'stopped'],
+  ] as const) {
+    await act(async () => {
+      live().send({ type: 'thinking', turn_id: turnId });
+      live().send({ type: 'stream', turn_id: turnId, content: 'Relayed' });
+      live().send({ type: 'done', turn_id: turnId, content: 'Relayed', intermediate: true });
+      await settle(10);
+    });
+    await act(async () => {
+      live().send({ ...end, turn_id: turnId });
+      await settle(10);
+    });
+    assert.deepEqual(heard.slice(-2), ['running', ended], `relayed ${end.type}: ${ended}`);
+  }
+
+  // The panel's own stream drops; the event stream replays the turn to its last done.
+  await act(async () => {
+    void ref.current!.send('long task');
+    await settle();
+    stream.send({ type: 'turn_started', turn_id: 't5' });
+    stream.send({ type: 'stream', turn_id: 't5', content: 'Working' });
+    await settle(10);
+  });
+  await act(async () => {
+    stream.fail();
+    await settle(10);
+  });
+  assert.equal(heard[heard.length - 1], 'running', 'a handed-over turn runs on');
+  await act(async () => {
+    live().send({ type: 'thinking', turn_id: 't5', resumed: true });
+    live().send({ type: 'done', turn_id: 't5', content: 'Working, and done' });
+    await settle(10);
+  });
+  assert.deepEqual(heard.slice(-2), ['running', 'answered']);
+  assert.equal(heard.length, 10);
+  await finish(...subscriptions);
+});
+
+test('Stop, a new conversation and unmounting stop the turn, as the host hears it', async () => {
+  const turns = [sseStream(), sseStream(), sseStream()];
+  let next = 0;
+  fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? turns[next++].response() : undefined)]);
+  const ref = createRef<Handle>();
+  const { heard, onTurnRunningChange } = turnLog();
+  await render({ onTurnRunningChange }, ref);
+  const start = async (turn: ReturnType<typeof sseStream>) => {
+    await act(async () => {
+      void ref.current!.send('go');
+      await settle();
+      turn.send({ type: 'stream', content: 'Half' });
+      await settle(10);
+    });
+  };
+
+  await start(turns[0]);
+  await act(async () => {
+    ref.current!.stop();
+    await settle(10);
+  });
+  assert.deepEqual(heard, ['running', 'stopped'], 'Stop');
+
+  await start(turns[1]);
+  await act(async () => {
+    ref.current!.newConversation();
+    await settle(10);
+  });
+  assert.deepEqual(heard.slice(2), ['running', 'stopped'], 'a new conversation');
+
+  await start(turns[2]);
+  await act(async () => root.render(<div />));
+  assert.deepEqual(heard.slice(4), ['running', 'stopped'], 'unmounted mid-turn');
+  await finish(...turns);
+});

@@ -10,6 +10,8 @@ export type {
   ChatSendDecision,
   ChatSendOutcome,
   ChatHeldOutcome,
+  ChatTurnEnd,
+  ChatTurnOutcome,
   ChatStreamEventInfo,
   ChatMarkerContext,
   ChatMarkerRenderer,
