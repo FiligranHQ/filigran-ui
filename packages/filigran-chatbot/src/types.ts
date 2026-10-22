@@ -726,6 +726,12 @@ export interface ChatPanelHandle {
   selectConversation: (conversationId: string) => void;
   /** Replace the composer's text. */
   setDraft: (text: string) => void;
+  /**
+   * The composer's text as it stands (what the user typed, or `setDraft` set):
+   * e.g. for `onBeforeSend` taking over a held message (`draft.held`), to tell
+   * whether the composer still holds what was typed for it.
+   */
+  getDraft: () => string;
   focusComposer: () => void;
   /** Same as the Stop button; also cancels the question a voice call awaits, and stops it speaking. */
   stop: () => void;
@@ -751,8 +757,17 @@ export interface ChatSendDraft {
   text: string;
   /** Typed in the composer, sent through the handle, or spoken in a voice call. */
   source: 'composer' | 'host' | 'voice';
-  /** A turn is running: the send would steer it. */
+  /** A turn is running. */
   turnRunning: boolean;
+  /**
+   * A message held while a turn ran, asked about again as it leaves, the turn
+   * over (`turnRunning: false`). `false` then gives what the user typed for it
+   * (its text, files, references and mentions) back to the composer, after
+   * what they typed since, and `onHeldSendSettled` says `'returned'`; a held
+   * message the user did not type (a host's or a voice call's) is settled
+   * `'dropped'`.
+   */
+  held?: boolean;
 }
 
 /**

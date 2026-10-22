@@ -200,7 +200,7 @@ test('the own stream is read past a provisional end for the stored end’s id, t
   await finish(stream);
 });
 
-test('a relayed turn is over when the reopened event stream does not replay it, and goes on when it does; a clean close retries at once', async () => {
+test('a relayed turn is over when the reopened event stream does not replay it, and goes on when it does; only a stream that delivered retries at once', async () => {
   const timers = manualTimers([1000, 2000, 4000, 5000]);
   try {
     const subscriptions: ReturnType<typeof sseStream>[] = [];
@@ -227,13 +227,15 @@ test('a relayed turn is over when the reopened event stream does not replay it, 
     assert.equal(stopShown(), false);
     assert.equal(restores(), restoresBefore + 1, 'and its end is read back');
 
-    // A stream that opened and closed with no frame on it is retried from the shortest delay.
+    // A stream that opened and closed at once, with no frame on it, backs off.
     await finish(subscriptions[1]);
-    assert.deepEqual(timers.pending(), [1000]);
-    await timers.run(1000);
+    assert.deepEqual(timers.pending(), [2000]);
+    await timers.run(2000);
     assert.equal(subscriptions.length, 3);
 
-    // A turn still running is replayed whole, and runs on throughout.
+    // A turn still running is replayed, and runs on throughout: the segment an
+    // intermediate `done` closed stays, the one being written is replayed
+    // (XTM One's snapshot holds it alone).
     await act(async () => {
       subscriptions[2].send({ type: 'thinking', turn_id: 't2' });
       subscriptions[2].send({ type: 'stream', turn_id: 't2', content: 'Part one' });
@@ -242,17 +244,18 @@ test('a relayed turn is over when the reopened event stream does not replay it, 
       await settle(10);
     });
     await finish(subscriptions[2]);
+    assert.deepEqual(timers.pending(), [1000], 'a stream that delivered retries from the shortest delay');
     await timers.run(1000);
     await act(async () => {
       subscriptions[3].send({ type: 'thinking', turn_id: 't2', resumed: true });
-      subscriptions[3].send({ type: 'stream', turn_id: 't2', content: 'Part one' });
-      subscriptions[3].send({ type: 'done', turn_id: 't2', content: 'Part one', intermediate: true });
       subscriptions[3].send({ type: 'stream', turn_id: 't2', content: 'Part two, and more' });
       await settle(10);
     });
     assert.deepEqual(timers.pending(), [], 'the replay called the wait off');
     assert.deepEqual(heard.slice(2), ['running']);
-    assert.equal(text().split('Part one').length - 1, 1, 'the first segment shows once');
+    assert.equal(text().split('Part one').length - 1, 1, 'the closed segment stays, once');
+    assert.equal(text().split('Part two').length - 1, 1, 'the segment being written shows once');
+    assert.equal(answers().length, 3, 't1, then t2’s two segments');
     await act(async () => {
       subscriptions[3].send({ type: 'done', turn_id: 't2', content: 'Part two, and more, done' });
       await settle(10);
@@ -268,7 +271,7 @@ test('Stop lets go at once when no turn runs anywhere, and keeps a turn whose St
   const streams = [sseStream(), sseStream()];
   let next = 0;
   let cancelAnswer = () => json({ status: 'cancelled', turn: 'none' }, 202);
-  fakeBackend([
+  const requests = fakeBackend([
     agentsRoute,
     restoreRoute,
     (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
@@ -285,13 +288,16 @@ test('Stop lets go at once when no turn runs anywhere, and keeps a turn whose St
       await settle(10);
     });
 
+  const restores = () => requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST').length;
   await start(streams[0]);
+  const restoresBefore = restores();
   await act(async () => {
     ref.current!.stop();
     await settle(10);
   });
   assert.deepEqual(heard, ['running', 'stopped'], 'nothing will say cancelled: stopped now');
   assert.ok(!text().includes('Stopping…'));
+  assert.equal(restores(), restoresBefore + 1, 'what the turn stored, had it just ended, is read back');
 
   cancelAnswer = () => json({ detail: 'The running response cannot be reached right now. Try again shortly.' }, 503);
   await start(streams[1]);
@@ -470,5 +476,374 @@ test('a page served over plain http, without crypto.randomUUID, still sends', as
   } finally {
     delete (crypto as unknown as Record<string, unknown>).randomUUID;
   }
+  await finish(stream);
+});
+
+test('a Stop pressed before the own turn starts is asked again once it does, and stops it', async () => {
+  const stream = sseStream();
+  const cancelAnswers = [() => json({ status: 'cancelled', turn: 'none' }, 202), () => json({ status: 'cancelled', turn: 'local' }, 202)];
+  let startTurn!: () => void;
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute,
+    // XTM One answers a send only once its turn holds the conversation.
+    (req) => (req.url === '/api/chat/messages' ? new Promise<Response>((resolve) => (startTurn = () => resolve(stream.response()))) : undefined),
+    (req) => (req.url === '/api/chat/messages/cancel' ? cancelAnswers.shift()!() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  const { heard, onTurnRunningChange } = turnLog();
+  await render({ conversationId: 'c1', apiEndpoints: { cancel: '/chat/messages/cancel' }, onTurnRunningChange }, ref);
+  const cancels = () => sent(requests, '/api/chat/messages/cancel').length;
+  await act(async () => {
+    void ref.current!.send('go');
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.stop();
+    await settle(10);
+  });
+  assert.equal(cancels(), 1);
+  assert.deepEqual(heard, ['running'], 'a `none` said before the turn started is no word on it');
+  assert.ok(text().includes('Stopping…'));
+
+  await act(async () => {
+    startTurn();
+    await settle();
+    stream.send({ type: 'turn_started', turn_id: 't1' });
+    await settle(10);
+  });
+  assert.equal(cancels(), 2, 'asked again as the turn starts');
+  await act(async () => {
+    stream.send({ type: 'cancelled', turn_id: 't1' });
+    stream.send({ type: 'cancelled', turn_id: 't1', message_id: 'm1' });
+    stream.close();
+    await settle(10);
+  });
+  assert.deepEqual(heard, ['running', 'stopped']);
+  assert.equal(cancels(), 2);
+});
+
+test('sends wait while the own turn winds down after a provisional end, until its stored end or a while', async () => {
+  const timers = manualTimers([5000]);
+  try {
+    const streams = [sseStream(), sseStream(), sseStream(), sseStream()];
+    let next = 0;
+    const requests = fakeBackend([
+      agentsRoute,
+      restoreRoute,
+      (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
+      (req) => (req.url === '/api/chat/messages/cancel' ? json({ status: 'cancelled', turn: 'local' }, 202) : undefined),
+    ]);
+    const ref = createRef<Handle>();
+    const settled: string[] = [];
+    const { heard, onTurnRunningChange } = turnLog();
+    await render(
+      {
+        conversationId: 'c1',
+        apiEndpoints: { cancel: '/chat/messages/cancel' },
+        onTurnRunningChange,
+        onHeldSendSettled: (held, outcome) => settled.push(`${held}:${outcome}`),
+      },
+      ref,
+    );
+    const contents = () => sent(requests, '/api/chat/messages').map((r) => (r.body as { content: string }).content);
+    await act(async () => {
+      void ref.current!.send('first');
+      await settle();
+      streams[0].send({ type: 'turn_started', turn_id: 't1' });
+      streams[0].send({ type: 'error', turn_id: 't1', content: 'boom' });
+      await settle(10);
+    });
+    assert.deepEqual(heard, ['running', 'failed'], 'over on screen');
+    let outcome!: Promise<unknown>;
+    await act(async () => {
+      outcome = ref.current!.send('next');
+      await settle(10);
+    });
+    assert.equal(await outcome, 'held', 'held, with no `holdSendsDuringTurn`: the backend still holds the conversation');
+    assert.ok(text().includes('Sends when the answer ends:'));
+    await act(async () => {
+      streams[0].send({ type: 'done', turn_id: 't1', content: 'boom', message_id: 'm1' });
+      await settle(20);
+    });
+    assert.deepEqual(contents(), ['first', 'next'], 'sent once the stored end came');
+    assert.deepEqual(settled, ['next:sent']);
+
+    // A stored end that never comes: sent after a while all the same.
+    await act(async () => {
+      streams[1].send({ type: 'turn_started', turn_id: 't2' });
+      streams[1].send({ type: 'cancelled', turn_id: 't2' });
+      await settle(10);
+    });
+    await act(async () => {
+      void ref.current!.send('later');
+      await settle(10);
+    });
+    assert.deepEqual(contents(), ['first', 'next']);
+    await timers.run(5000);
+    assert.deepEqual(contents(), ['first', 'next', 'later']);
+    await finish(...streams);
+  } finally {
+    timers.restore();
+  }
+});
+
+test('a held message the send hook takes over as it leaves goes back to the composer', async () => {
+  const stream = sseStream();
+  const requests = fakeBackend([agentsRoute, restoreRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  const settled: string[] = [];
+  const drafts: string[] = [];
+  await render(
+    {
+      conversationId: 'c1',
+      holdSendsDuringTurn: true,
+      apiEndpoints: { steer: null },
+      onHeldSendSettled: (held, outcome) => settled.push(`${held}:${outcome}`),
+      onBeforeSend: (draft) => {
+        drafts.push(`${draft.text}:${draft.turnRunning ? 'running' : 'idle'}${draft.held ? ':held' : ''}`);
+        return draft.held ? false : undefined;
+      },
+    },
+    ref,
+  );
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle();
+    stream.send({ type: 'stream', content: 'Working' });
+    await settle();
+  });
+  await act(async () => {
+    ref.current!.setDraft('held text');
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send when the answer ends"]')!.click();
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.setDraft('typed since');
+    await settle();
+  });
+  await act(async () => {
+    stream.send({ type: 'done', content: 'ok' });
+    stream.close();
+    await settle(20);
+  });
+  assert.deepEqual(drafts.slice(-2), ['held text:running', 'held text:idle:held']);
+  assert.equal(sent(requests, '/api/chat/messages').length, 1, 'not sent');
+  assert.equal(container.querySelector('textarea')!.value, 'typed since\n\nheld text', 'given back after what was typed since');
+  assert.deepEqual(settled, ['held text:returned']);
+});
+
+test('a relayed turn’s stored end gives its answer everything a live done would, also while the own turn runs', async () => {
+  const timers = manualTimers([5000]);
+  try {
+    const subscriptions: ReturnType<typeof sseStream>[] = [];
+    const own = sseStream();
+    const requests = fakeBackend([
+      agentsRoute,
+      restoreRoute,
+      eventsRoute(subscriptions),
+      (req) => (req.url === '/api/chat/messages' ? own.response() : undefined),
+    ]);
+    const ref = createRef<Handle>();
+    await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
+    const live = subscriptions[0];
+    await act(async () => {
+      live.send({ type: 'thinking', turn_id: 't1', relayed: true });
+      live.send({ type: 'stream', turn_id: 't1', content: 'Partial', relayed: true });
+      live.send({ type: 'error', turn_id: 't1', content: 'boom', relayed: true });
+      await settle(10);
+    });
+    // Sent while that turn winds down: held, then sent after a while.
+    await act(async () => {
+      void ref.current!.send('mine');
+      await settle(10);
+    });
+    assert.equal(sent(requests, '/api/chat/messages').length, 0);
+    await timers.run(5000);
+    assert.equal(sent(requests, '/api/chat/messages').length, 1);
+    await act(async () => {
+      own.send({ type: 'turn_started', turn_id: 't2' });
+      own.send({ type: 'stream', turn_id: 't2', content: 'Own answer' });
+      await settle(10);
+    });
+    await act(async () => {
+      live.send({
+        type: 'done',
+        turn_id: 't1',
+        content: 'boom, stored',
+        message_id: 'm1',
+        reasoning: 'Thought it through',
+        attachments: [{ file_id: 'f1', filename: 'findings.csv', type: 'csv', size: 12, content_type: 'text/csv', file_tag: 'download_file' }],
+        relayed: true,
+      });
+      await settle(10);
+    });
+    const answer = container.querySelector('[data-message-id="m1"]');
+    assert.ok(answer, 'the stored id, while the own turn runs');
+    assert.ok(answer!.textContent!.includes('boom, stored'));
+    assert.ok(answer!.textContent!.includes('findings.csv'), 'and its attachments');
+    assert.ok(text().includes('Own answer'));
+    await finish(own, ...subscriptions);
+  } finally {
+    timers.restore();
+  }
+});
+
+test('a relayed turn naming none takes its stored end after a provisional one', async () => {
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  fakeBackend([agentsRoute, restoreRoute, eventsRoute(subscriptions)]);
+  const { heard, onTurnRunningChange } = turnLog();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange });
+  const live = subscriptions[0];
+  await act(async () => {
+    live.send({ type: 'thinking' });
+    live.send({ type: 'stream', content: 'Halfway' });
+    await settle(10);
+  });
+  await act(async () => {
+    live.send({ type: 'cancelled' });
+    await settle(10);
+  });
+  await act(async () => {
+    live.send({ type: 'stream', content: 'Halfway, then more' });
+    live.send({ type: 'cancelled', message_id: 'm4' });
+    await settle(10);
+  });
+  assert.deepEqual(heard, ['running', 'stopped'], 'no second turn');
+  assert.equal(answers().length, 1);
+  assert.ok(container.querySelector('[data-message-id="m4"]'));
+  assert.ok(!text().includes('then more'));
+  await act(async () => {
+    live.send({ type: 'thinking' });
+    await settle(10);
+  });
+  await act(async () => {
+    live.send({ type: 'done', content: 'Next turn' });
+    await settle(10);
+  });
+  assert.deepEqual(heard, ['running', 'stopped', 'running', 'answered']);
+  await finish(...subscriptions);
+});
+
+test('a steer refused because the turn just ended goes back to the composer, saying nothing, without held sends', async () => {
+  const stream = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute,
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ detail: 'No response is currently being generated' }, 409) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle();
+    stream.send({ type: 'stream', content: 'Working' });
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.setDraft('steer me');
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send now"]')!.click();
+    await settle(10);
+  });
+  assert.equal(notice(), null);
+  assert.equal(container.querySelector('textarea')!.value, 'steer me');
+  await finish(stream);
+});
+
+test('a refused Stop keeps what the turn reported since the click', async () => {
+  const stream = sseStream();
+  let refuse!: () => void;
+  fakeBackend([
+    agentsRoute,
+    restoreRoute,
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) =>
+      req.url === '/api/chat/messages/cancel'
+        ? new Promise<Response>((resolve) => (refuse = () => resolve(json({ detail: 'Not now' }, 503))))
+        : undefined,
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { cancel: '/chat/messages/cancel' } }, ref);
+  await act(async () => {
+    void ref.current!.send('go');
+    await settle();
+    stream.send({ type: 'status', status: 'thinking_text', content: 'First thoughts. ' });
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.stop();
+    await settle(10);
+  });
+  await act(async () => {
+    stream.send({ type: 'status', status: 'thinking_text', content: 'Second thoughts.' });
+    await settle(10);
+  });
+  await act(async () => {
+    refuse();
+    await settle(10);
+  });
+  assert.equal(notice(), 'Not now');
+  assert.ok(!text().includes('Stopping…'));
+  assert.ok(text().includes('Second thoughts.'), 'the reasoning that came since stays');
+  await finish(stream);
+});
+
+test('an event stream that lived a while retries from the shortest delay, even with no frame on it', async () => {
+  const timers = manualTimers([1000, 2000]);
+  const realNow = Date.now;
+  let offset = 0;
+  Date.now = () => realNow() + offset;
+  try {
+    const subscriptions: ReturnType<typeof sseStream>[] = [];
+    fakeBackend([agentsRoute, restoreRoute, eventsRoute(subscriptions)]);
+    await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } });
+    await finish(subscriptions[0]);
+    assert.deepEqual(timers.pending(), [1000]);
+    await timers.run(1000);
+    offset = 6000;
+    await finish(subscriptions[1]);
+    assert.deepEqual(timers.pending(), [1000]);
+    await timers.run(1000);
+    await finish(subscriptions[2]);
+    assert.deepEqual(timers.pending(), [2000], 'one that closed at once backs off');
+    await timers.run(2000);
+    await finish(...subscriptions);
+  } finally {
+    Date.now = realNow;
+    timers.restore();
+  }
+});
+
+test('a new conversation lets go of the own stream still read for a stored end', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, restoreRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const base = globalThis.fetch;
+  let signal: AbortSignal | null | undefined;
+  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input) === '/api/chat/messages') signal = init?.signal;
+    return base(input, init);
+  }) as typeof fetch;
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { cancel: '/chat/messages/cancel' } }, ref);
+  await act(async () => {
+    void ref.current!.send('go');
+    await settle();
+    stream.send({ type: 'turn_started', turn_id: 't1' });
+    stream.send({ type: 'error', turn_id: 't1', content: 'boom' });
+    await settle(10);
+  });
+  assert.equal(signal?.aborted, false, 'read on for its stored end');
+  await act(async () => {
+    ref.current!.newConversation();
+    await settle(10);
+  });
+  assert.equal(signal?.aborted, true);
   await finish(stream);
 });

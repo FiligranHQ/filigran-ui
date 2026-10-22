@@ -574,7 +574,7 @@ test('a stopped relayed turn that names no turn stays stopped, its stored end to
   await finish(events);
 });
 
-test('a steered turn whose stream drops is replayed once, not on top of its earlier segments', async () => {
+test('a steered turn whose stream drops keeps its closed segments; the replay brings back the one being written', async () => {
   const stream = sseStream();
   const subscriptions: ReturnType<typeof sseStream>[] = [];
   fakeBackend([
@@ -603,15 +603,17 @@ test('a steered turn whose stream drops is replayed once, not on top of its earl
     stream.fail();
     await settle(10);
   });
+  // XTM One's snapshot: the ack, then the segment being written only (its
+  // journal starts the answer over at an intermediate `done`).
   await act(async () => {
     const live = subscriptions[subscriptions.length - 1];
-    live.send({ type: 'thinking', turn_id: 't1', resumed: true });
-    live.send({ type: 'stream', turn_id: 't1', content: 'Part one' });
-    live.send({ type: 'done', turn_id: 't1', content: 'Part one', intermediate: true });
-    live.send({ type: 'stream', turn_id: 't1', content: 'Part two, done' });
+    live.send({ type: 'thinking', turn_id: 't1', resumed: true, relayed: true });
+    live.send({ type: 'stream', turn_id: 't1', content: 'Part two, and more', relayed: true });
     await settle(10);
   });
-  assert.equal(text().split('Part one').length - 1, 1, 'the first segment shows once');
+  assert.equal(text().split('Part one').length - 1, 1, 'the closed segment stays, once');
+  assert.equal(text().split('Part two').length - 1, 1, 'the segment being written shows once, replayed');
+  assert.ok(text().includes('Part two, and more'));
   await finish(...subscriptions);
 });
 

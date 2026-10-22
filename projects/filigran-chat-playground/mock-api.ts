@@ -303,7 +303,10 @@ export function mockChatApi(): Plugin {
     cancelled: boolean;
     /** Ends the wait in progress early. */
     skip: () => void;
-    /** What a panel attaching mid-turn is replayed. */
+    /**
+     * What a panel attaching mid-turn is replayed: the segment being written,
+     * as XTM One's journal keeps it (an intermediate `done` starts it over).
+     */
     journal: { status?: Record<string, unknown>; thinking: string; text: string };
     /** The message streams following it; `null` ends them. */
     followers: Set<(frame: Record<string, unknown> | null) => void>;
@@ -343,7 +346,17 @@ export function mockChatApi(): Plugin {
         const frame: Record<string, unknown> = { ...raw, turn_id: turn.id };
         if (frame.type === 'stream') turn.journal.text += String(frame.content ?? '');
         else if (frame.type === 'status' && frame.status === 'thinking_text') turn.journal.thinking += String(frame.content ?? '');
-        else if (frame.type === 'status') turn.journal.status = frame;
+        else if (frame.type === 'status') {
+          turn.journal.status = frame;
+          // As XTM One's journal: a new iteration or a retracted answer
+          // starts the answer over, a transfer the reasoning.
+          if (frame.status === 'thinking' || frame.status === 'stream_retract') turn.journal.text = '';
+          else if (frame.status === 'transfer_start') turn.journal.thinking = '';
+        } else if (frame.type === 'done' && frame.intermediate === true) {
+          // A closed segment is stored: a replay brings back the next one only.
+          turn.journal.text = '';
+          turn.journal.thinking = '';
+        }
         for (const follow of turn.followers) follow(frame);
         broadcast(conv.id, { ...frame, relayed: true }, origin);
       }

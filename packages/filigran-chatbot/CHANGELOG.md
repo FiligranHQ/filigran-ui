@@ -38,7 +38,12 @@ This file starts at 3.10.0; earlier releases are on the
 - The panel renders the frames of a backend whose turns outlive their stream:
   a turn re-attached mid-way (`thinking.resumed`), an announced wait
   (`status: wait_start`, with a countdown), `cancelled`, an intermediate
-  `done` and the agent that `answered_by` a segment.
+  `done` and the agent that `answered_by` a segment. A provisional end (an
+  `error` or `cancelled` with neither `message_id` nor `reason`) ends the turn
+  on screen at once, and the stored end of the same turn that follows it gives
+  the answer its persisted id, and a `done` its text and all a live `done`
+  carries, opening no second answer (the panel's own stream is read on for
+  it).
 - History is restored with no agent list (`apiEndpoints.agents: null`).
 - A host can render its own cards for the `[[KIND:args]]` markers of an
   answer (`markerRenderers`), by marker name, and take over the built-in
@@ -70,11 +75,14 @@ This file starts at 3.10.0; earlier releases are on the
   order. A message that mentions an agent never steers the running turn.
 - `steerAttachments` lets uploaded files steer the running turn (the steer
   route then takes `file_ids`), and `holdSendsDuringTurn` holds a message that
-  cannot steer (files, references, mentions, a turn that has just ended) and
-  sends it as the next turn, with a way to cancel it meanwhile. Messages held
-  one after another go together, and Stop gives back to the composer what
-  the user typed for them.
+  cannot steer (files, references, mentions, body fields of its own, a turn
+  that has just ended) and sends it as the next turn, with a way to cancel it
+  meanwhile. Messages held one after another go together, keeping their body
+  fields, and Stop gives back to the composer what the user typed for them.
 - `scrollToMessage` on the panel's handle jumps to a message and highlights it.
+- `getDraft()` on the panel's handle reads the composer's text as it stands
+  (typed, or set by `setDraft`), e.g. for a host taking over a held message
+  (`draft.held`) to tell whether the composer still holds what was typed.
 - A voice call over the panel, started with `startVoiceCall()` on the handle
   (`voiceCallSupported()` tells a host whether to offer it): the browser's
   speech recognition listens, a phrase is sent after one second of silence
@@ -99,7 +107,10 @@ This file starts at 3.10.0; earlier releases are on the
   can take a send over, or reword it and add fields to its body. It can also
   return `displayText`: the backend receives `text`, and the user's bubble
   (live, steered or held) shows `displayText`, for a host that wraps what the
-  user typed in context of its own.
+  user typed in context of its own. A message held while a turn ran is asked
+  about again as it leaves (`turnRunning: false`, `held: true`); taken over
+  then, what the user typed for it goes back to the composer, after what they
+  typed since, and it is settled `'returned'`.
 - `hideConversationList` hides the conversation list of inline and fullscreen
   modes, for a rail or a task pane: the header, thread and composer hold from
   320 px wide, and the header's history menu stands in for the list (open,
@@ -109,7 +120,8 @@ This file starts at 3.10.0; earlier releases are on the
   reload keeps the list it had, and only the latest reload lands.
 - `onHeldSendSettled(text, outcome)` tells the host what became of a message
   held until the turn ended: `'sent'`, `'failed'`, `'dropped'`, `'returned'`
-  (given back to the composer by Stop) or `'cancelled'`.
+  (given back to the composer by Stop, or by `onBeforeSend` taking it over as
+  it leaves) or `'cancelled'`.
 - `ChatSendDraft.source` can be `'voice'`, for a question spoken in a voice call.
 - `onTurnRunningChange(running)` tells the host when a turn starts or stops
   running on screen, own or relayed: the state of the Stop button, the status
@@ -186,58 +198,54 @@ This file starts at 3.10.0; earlier releases are on the
   (`objective-c`, not `objective`).
 - A long agent name in the header is cut short rather than pushing the
   header's controls off a narrow panel.
+- A steer the backend refuses shows the refusal's `detail` above the composer,
+  the text going back to the composer as before; a `409` (the turn has just
+  ended, an ordinary race) shows nothing.
 
 ### Fixed
 
 - A conversation read back after the user has already sent a message no
   longer replaces that turn: its history goes above the turn once the turn
   ends, and its agent's name shows at once.
-- A turn ended by a provisional `error` or `cancelled` (no `message_id`, no
-  `reason`) no longer opens a second answer, duplicating its text, when the
-  stored end of the same turn follows on the event stream: that end gives the
-  answer its persisted id and starts nothing. The panel's own stream is read
-  on past a provisional end for the same reason, the turn over at once.
-- A relayed turn that ended while the event stream was reconnecting no longer
-  stays running: unless the reopened stream replays it within 5 s, it ends and
-  the conversation is read back. A replayed turn is shown once, every segment.
-- The event stream's reconnection delay starts over once a stream opened, so
-  a backend that ends its streams on schedule is not retried ever more slowly.
-- Stop: an answer of `{ "turn": "none" }` lets go of the turn at once instead
-  of after 10 s, and a refused Stop (e.g. `503`) keeps the turn running and
-  says why above the composer instead of pretending it stopped.
-- A steer the backend refuses resolves `'failed'` (was `'dropped'`) and shows
-  the refusal's `detail` above the composer; a `409` with
-  `holdSendsDuringTurn` is still held and sent as the next turn, also when the
-  turn has already ended on screen by then.
-- A message held during a turn keeps its body fields (`send`'s `extras` and
-  `onBeforeSend`'s); one carrying such fields is held instead of steering,
-  which would drop them; and `onBeforeSend` is asked again, with
-  `turnRunning: false`, before a held message goes out as a new turn.
 - Sending no longer throws on a page served over plain http, where
   `crypto.randomUUID` does not exist.
-- Page-action answers carry `X-Chat-Client-Id` like every other request of a
-  turn.
 
 ### Host opt-in
 
 - `apiEndpoints.cancel` (no default): Stop asks the backend to end the turn and
-  waits for the stream's `cancelled` frame, instead of dropping the stream.
+  waits for the stream's `cancelled` frame, instead of dropping the stream. An
+  answer of `{ "turn": "none" }` lets go of the turn at once and reads the
+  conversation back, unless it came before the panel's own send started its
+  turn: the Stop then stays pending and is sent again as the turn starts. A
+  refused Stop (e.g. `503`) keeps the turn running and says why above the
+  composer; the status line keeps what the turn reported since the click.
 - `apiEndpoints.skipWait` (no default): `Continue now` on an agent's wait.
 - `apiEndpoints.events` (no default): the panel follows the conversation's
   event stream, and renders turns started in another tab or before a reload,
   user messages sent elsewhere, new titles and approvals answered elsewhere.
   Refused with 401 or 403, the stream is tried once more each time
   `requestHeaders` change, so a refreshed token picks it up.
-  Messages, steers, decisions, Stop, "Continue now" and the event stream
-  itself then carry `X-Chat-Client-Id`, so a panel's own turns are never
-  relayed back to it. A panel whose own stream drops mid-turn, or ends
-  without the turn's last frame, picks the turn up from the event stream
-  under a new id; Stop meanwhile sticks. The stream is followed only once the
-  conversation's history is on screen, and a turn stopped here, named or
-  not, stays stopped. Once the page has been hidden for 60 s the stream is
-  closed, and the relayed turn it fed taken off screen; shown again, the
-  stream reopens (its snapshot replays a turn still running) and the
-  conversation is read back for what ended meanwhile.
+  Messages, steers, decisions, page-action answers, Stop, "Continue now" and
+  the event stream itself then carry `X-Chat-Client-Id`, so a panel's own
+  turns are never relayed back to it. A panel whose own stream drops
+  mid-turn, or ends without the turn's last frame, picks the turn up from the
+  event stream under a new id, keeping the segments it closed; Stop meanwhile
+  sticks. The stream is followed only once the conversation's history is on
+  screen, and a turn stopped here, named or not, stays stopped. A dropped or
+  ended stream is reopened with backoff, from the shortest delay again once
+  it delivered a frame or lived 5 s; a relayed turn on screen then runs on
+  only if the reopened stream replays it within 5 s (the segment being
+  written; those an intermediate `done` closed stay), and otherwise ends and
+  the conversation is read back. Once the page has been hidden for 60 s the
+  stream is closed, and the relayed turn it fed taken off screen; shown
+  again, the stream reopens (its snapshot replays a turn still running) and
+  the conversation is read back for what ended meanwhile. The stored end of a
+  relayed turn ended provisionally lands on its answer also while the panel's
+  own turn runs, and one naming no turn too.
+- With `cancel`, `skipWait` or `events` named, a send made while a turn ended
+  provisionally still winds down is held, as during a turn, until its stored
+  end, the stream's close or 5 s: the backend still holds the conversation,
+  and the message would join the ending turn unanswered.
 - With `cancel`, `skipWait` or `events` named, a new chat's conversation is
   created before its first message, so Stop, "Continue now" and steering
   reach the backend from the first turn.

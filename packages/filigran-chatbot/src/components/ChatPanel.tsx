@@ -1093,6 +1093,9 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   handleStopGeneratingRef.current = handleStopGenerating;
   const readOnlyRef = useRef(readOnly);
   readOnlyRef.current = readOnly;
+  // The composer's text for `getDraft`: as last rendered, or as `setDraft` just set it.
+  const draftRef = useRef(inputValue);
+  draftRef.current = inputValue;
 
   // The voice call: questions go out through the panel's own send, and the
   // answer is read off its streams. A question addresses the conversation's
@@ -1167,7 +1170,11 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
           handleNewChatRef.current(options?.workspaceId);
         }),
       selectConversation: (id) => enqueue(() => handleSwitchConversationRef.current(id)),
-      setDraft: (text) => setInputValue(text),
+      setDraft: (text) => {
+        draftRef.current = text;
+        setInputValue(text);
+      },
+      getDraft: () => draftRef.current,
       focusComposer: () => rootRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus(),
       stop: () => {
         // A question a voice call awaits goes with its turn.

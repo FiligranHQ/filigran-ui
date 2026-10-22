@@ -355,6 +355,8 @@ test('the host hears when a turn runs on screen, own or relayed, and when it end
       turn.send(frame);
       await settle(10);
     });
+    // The stream closes after it: no stored end is awaited any more.
+    await finish(turn);
     assert.deepEqual(seen.slice(-2), [true, false], `${frame.type} ends it`);
     assert.equal(stopShown(), false, `no Stop button after ${frame.type}`);
   }
@@ -585,4 +587,54 @@ test('Stop, a new conversation and unmounting stop the turn, as the host hears i
   await act(async () => root.render(<div />));
   assert.deepEqual(heard.slice(4), ['running', 'stopped'], 'unmounted mid-turn');
   await finish(...turns);
+});
+
+test('getDraft reads the composer as it stands, as set or as the panel left it, also from the send hook on a held message', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, restoreRoute([]), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  const seenOnHeld: string[] = [];
+  await render(
+    {
+      conversationId: 'c1',
+      holdSendsDuringTurn: true,
+      apiEndpoints: { steer: null },
+      onBeforeSend: (draft) => {
+        if (!draft.held) return undefined;
+        seenOnHeld.push(ref.current!.getDraft());
+        return false;
+      },
+    },
+    ref,
+  );
+  assert.equal(ref.current!.getDraft(), '');
+  await act(async () => {
+    ref.current!.setDraft('set by the host');
+    assert.equal(ref.current!.getDraft(), 'set by the host', 'at once');
+    await settle();
+  });
+  assert.equal(container.querySelector('textarea')!.value, 'set by the host');
+
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle();
+    stream.send({ type: 'stream', content: 'Working' });
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send when the answer ends"]')!.click();
+    await settle(10);
+  });
+  assert.equal(ref.current!.getDraft(), '', 'held: the composer is empty');
+  await act(async () => {
+    ref.current!.setDraft('typed since');
+    await settle();
+  });
+  await act(async () => {
+    stream.send({ type: 'done', content: 'ok' });
+    stream.close();
+    await settle(20);
+  });
+  assert.deepEqual(seenOnHeld, ['typed since'], 'what the composer held as the hook took the message over');
+  assert.equal(ref.current!.getDraft(), 'typed since\n\nset by the host', 'and the held text the panel gave back after it');
 });
