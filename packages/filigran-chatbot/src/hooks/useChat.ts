@@ -114,6 +114,14 @@ const EVENTS_RETRY_MAX_MS = 30000;
  * and the conversation is read back.
  */
 const EVENTS_HIDDEN_CLOSE_MS = 60000;
+/**
+ * How long a relayed turn on screen waits, once its event stream reopened, for
+ * the stream's snapshot to replay it: nothing by then, and it ended while the
+ * stream was away (a reopened stream never brings back a turn already over).
+ */
+const EVENTS_RESUME_GRACE_MS = 5000;
+/** How many turns ended by a provisional end are remembered, awaiting their stored end. */
+const PROVISIONAL_ENDS_KEPT = 20;
 
 /** The actions that belong to a turn, as opposed to the conversation. */
 const TURN_ACTIONS: ReadonlySet<ParsedAction['action']> = new Set(['status', 'stream', 'done', 'approval_required', 'error', 'cancelled']);
@@ -144,6 +152,19 @@ function mergeHeld(prev: HeldMessage | null, next: HeldMessage): HeldMessage {
     refs: [...prev.refs, ...next.refs.filter((r) => !refIds.has(r.conversationId))],
     mentions: [...prev.mentions, ...next.mentions.filter((m) => !mentionIds.has(m.agentId))],
     extras: prev.extras || next.extras ? { ...prev.extras, ...next.extras } : undefined,
+    // Asked again as one message, when the hook decided both.
+    asked:
+      prev.asked && next.asked
+        ? {
+            text: [prev.asked.text, next.asked.text].filter(Boolean).join('\n\n'),
+            source: prev.asked.source,
+            extras: prev.asked.extras || next.asked.extras ? { ...prev.asked.extras, ...next.asked.extras } : undefined,
+            displayText:
+              prev.asked.displayText !== undefined || next.asked.displayText !== undefined
+                ? [prev.asked.displayText ?? prev.asked.text, next.asked.displayText ?? next.asked.text].filter(Boolean).join('\n\n')
+                : undefined,
+          }
+        : undefined,
     displayText:
       prev.displayText !== undefined || next.displayText !== undefined
         ? [prev.displayText ?? prev.text, next.displayText ?? next.text].filter(Boolean).join('\n\n')
@@ -260,6 +281,8 @@ export interface SendOverride {
   mentions?: AgentMention[];
   /** Already seen by `onBeforeSend` (a held message going out). */
   decided?: boolean;
+  /** What the user typed for it, as typed (a held message going out): what Stop gives back should it be held again. */
+  draft?: string;
   /**
    * What the user's bubble shows in place of `text` (see `ChatSendDecision`):
    * a held message's, or the handle's own, which `onBeforeSend`'s wins over.
@@ -269,8 +292,8 @@ export interface SendOverride {
   onSent?: () => void;
   /** Called once the message steered the running turn, with the turn the backend named (`null`: none). */
   onSteered?: (turnId: string | null) => void;
-  /** Who sends it, as `onBeforeSend` is told: the host (default) or a voice call. */
-  source?: 'host' | 'voice';
+  /** Who sends it, as `onBeforeSend` is told: the host (default), a voice call, or the composer (a held message going out). */
+  source?: ChatSendDraft['source'];
 }
 
 /** A message waiting for the running turn to end. */
@@ -286,6 +309,11 @@ export interface HeldMessage {
   displayText?: string;
   /** Told as the message goes out (see `SendOverride.onSent`). */
   onSent?: () => void;
+  /**
+   * The send as `onBeforeSend` first saw it, while a turn ran: asked again,
+   * with `turnRunning: false`, before it leaves as a new turn.
+   */
+  asked?: { text: string; source: ChatSendDraft['source']; extras?: Record<string, unknown>; displayText?: string };
 }
 
 export interface TransferredAgent {
@@ -375,6 +403,8 @@ interface UseChatReturn {
   handleSendMessage: (override?: SendOverride) => Promise<ChatSendOutcome>;
   /** A message held until the running turn ends (`holdSends`), if any. */
   heldMessage: HeldMessage | null;
+  /** What the backend said when it refused a steer or a Stop, shown by the composer; `null` when nothing. */
+  notice: string | null;
   cancelHeldMessage: () => void;
   /** Read the conversation back from the server again. */
   reloadHistory: () => void;
@@ -459,9 +489,9 @@ export function buildRequestBody(
       return { question: content, chatId: opts.legacyChatId ?? undefined, streaming: true };
     case 'ag-ui':
       return {
-        threadId: opts.conversationId ?? crypto.randomUUID(),
-        runId: crypto.randomUUID(),
-        messages: [{ id: crypto.randomUUID(), role: 'user', content }],
+        threadId: opts.conversationId ?? randomId(),
+        runId: randomId(),
+        messages: [{ id: randomId(), role: 'user', content }],
         tools: [],
         context: [],
         state: {},
@@ -604,6 +634,14 @@ export function useChat({
   const [heldMessage, setHeldMessage] = useState<HeldMessage | null>(null);
   const heldMessageRef = useRef(heldMessage);
   heldMessageRef.current = heldMessage;
+  // A refused steer's or Stop's reason, until the next send or the turn's end.
+  const [notice, setNotice] = useState<string | null>(null);
+  // Relayed turns ended by a provisional end, by turn id, with the answer each
+  // left on screen: their stored end only gives that answer its id.
+  const provisionalEndsRef = useRef(new Map<string, string>());
+  // A relayed turn on screen whose event stream reopened: it waits for the
+  // stream's snapshot to replay it, and is over when none does.
+  const resumeWaitRef = useRef<{ turn: { turnId: string | null }; timer: number } | null>(null);
   // The text each user bubble showing other words was sent with, by bubble id.
   const sentTextRef = useRef(new Map<string, string>());
   const sentTextOf = useCallback((message: ChatMessage) => sentTextRef.current.get(message.id) ?? message.content, []);
@@ -646,6 +684,7 @@ export function useChat({
     if (isLoadingRef.current) setTurnEnd(ended);
     isLoadingRef.current = false;
     setIsLoading(false);
+    setNotice(null);
   };
   // Ref mirror of pageContext so the value sent reflects the page the user is
   // on at send time, regardless of when the send handler closure was created.
@@ -931,7 +970,7 @@ export function useChat({
     // Pre-generate stable IDs and entries so side effects use the same IDs
     const candidates: { file: File; tempId: string }[] = incoming.map((file) => ({
       file,
-      tempId: crypto.randomUUID(),
+      tempId: randomId(),
     }));
 
     // Update state (pure — no side effects)
@@ -1013,13 +1052,13 @@ export function useChat({
     files: ChatFile[] = [],
     restoreToComposer = true,
     shown = content,
-  ): Promise<{ result: 'ok'; turnId: string | null } | { result: 'ended' | 'failed' }> => {
+  ): Promise<{ result: 'ok'; turnId: string | null } | { result: 'ended' } | { result: 'failed'; detail?: string | null }> => {
     const steerUrl = getSteerUrl();
     const convId = conversationIdRef.current;
     if (!steerUrl || !convId) return { result: 'failed' };
 
     const optimistic: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: randomId(),
       role: 'user',
       content: shown,
       timestamp: new Date(),
@@ -1028,6 +1067,8 @@ export function useChat({
     if (shown !== content) sentTextRef.current.set(optimistic.id, content);
     setMessages((prev) => [...prev, optimistic]);
     const fileIds = files.filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
+    // Why the backend refused it, when it says.
+    let detail: string | null = null;
 
     try {
       const res = await fetch(steerUrl, {
@@ -1044,6 +1085,7 @@ export function useChat({
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       // Nothing running any more: the turn ended while this was on its way.
       if (res.status === 409 && holdSends) return { result: 'ended' };
+      detail = await readRefusalDetail(res);
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
     }
@@ -1052,7 +1094,7 @@ export function useChat({
       setInputValue((prev) => (prev ? `${shown}\n${prev}` : shown));
       if (files.length > 0) setAttachedFiles((prev) => [...files, ...prev]);
     }
-    return { result: 'failed' };
+    return { result: 'failed', detail };
   };
 
   /**
@@ -1160,7 +1202,7 @@ export function useChat({
       try {
         await fetch(approveUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
+          headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
           body: JSON.stringify({
             conversation_id: convId,
             page_action: { action_id: actionId, ok: false, error, url: '', title: '', snapshot: '' },
@@ -1200,7 +1242,7 @@ export function useChat({
       }
       await fetch(approveUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}) },
+        headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
         signal,
         body: JSON.stringify({
           conversation_id: convId,
@@ -1271,7 +1313,7 @@ export function useChat({
       doneReceived = false;
       answered = false;
       accumulated = '';
-      currentAssistantId = crypto.randomUUID();
+      currentAssistantId = randomId();
       segmentIds.push(currentAssistantId);
       const segmentId = currentAssistantId;
       setMessages((prev) => [...prev, { id: segmentId, role: 'assistant', content: '', timestamp: new Date() }]);
@@ -1454,6 +1496,25 @@ export function useChat({
     };
   };
 
+  /**
+   * The stored end of a turn a provisional end already ended (a `done` or
+   * `cancelled` carrying `message_id`): it gives the answer that turn left,
+   * *bubbleId*, its persisted id - and a `done` its stored text - and starts
+   * nothing. False when *parsed* is not that end.
+   */
+  const applyStoredEnd = (bubbleId: string, parsed: ParsedAction): boolean => {
+    const end = (parsed.action === 'done' && !parsed.intermediate) || parsed.action === 'cancelled' || parsed.action === 'error' ? parsed : null;
+    const messageId = end?.messageId;
+    if (!end || !messageId) return false;
+    const content = end.action === 'done' && end.content ? end.content : undefined;
+    setMessages((prev) => {
+      // Read back meanwhile: the answer is on screen already.
+      if (prev.some((m) => m.id !== bubbleId && m.serverId === messageId)) return prev.filter((m) => m.id !== bubbleId);
+      return prev.map((m) => (m.id === bubbleId ? { ...m, serverId: messageId, ...(content ? { content } : {}) } : m));
+    });
+    return true;
+  };
+
   /** Frames about the conversation rather than a turn; true when handled. */
   const applyConversationFrame = (parsed: ParsedAction): boolean => {
     switch (parsed.action) {
@@ -1486,23 +1547,27 @@ export function useChat({
     // A host-driven or held send leaves the composer, its attachments and picks alone.
     const fromComposer = !override;
     let rawText = override ? override.text : inputValue;
-    const draft = fromComposer ? inputValue : '';
+    const draft = fromComposer ? inputValue : (override?.draft ?? '');
     const files = fromComposer ? attachedFiles : (override?.files ?? []);
     if (!rawText.trim() && files.length === 0) return 'dropped';
+    const source = fromComposer ? 'composer' : (override?.source ?? 'host');
+    // The send as the host's hook sees it, kept on a message then held: asked
+    // again before it leaves as a new turn.
+    const asked =
+      !override?.decided && onBeforeSendRef.current
+        ? { text: rawText, source, extras: override?.extras, displayText: override?.displayText }
+        : undefined;
     // The host's say before anything leaves: it may take the send over, or reword it.
     const decided = applySendDecision(
       rawText,
-      override?.decided
-        ? undefined
-        : askHost(onBeforeSendRef.current, {
-            text: rawText,
-            source: fromComposer ? 'composer' : (override?.source ?? 'host'),
-            turnRunning: isLoadingRef.current,
-          }),
+      override?.decided ? undefined : askHost(onBeforeSendRef.current, { text: rawText, source, turnRunning: isLoadingRef.current }),
       override?.displayText,
     );
     if (!decided) return 'dropped';
+    setNotice(null);
     const hookExtras = decided.extras;
+    // The fields this message adds to the body: the handle's, then the hook's.
+    const sendExtras = override?.extras || hookExtras ? { ...override?.extras, ...hookExtras } : undefined;
     rawText = decided.text;
     const steerText = decided.text;
     // What the user's bubble shows: the host's words for it, else the text sent.
@@ -1527,15 +1592,17 @@ export function useChat({
         setAgentMentions([]);
         setAttachedFiles([]);
       };
-      // Mid-run steering. References never steer: a steer reaches the loop as
-      // text alone, and the agent would never read them. Attachments steer
-      // only where the host says the steer route takes them, once uploaded.
+      // Mid-run steering. References, mentions and the host's own fields never
+      // steer: a steer reaches the loop as text alone, and the agent would
+      // never read them. Attachments steer only where the host says the steer
+      // route takes them, once uploaded.
       const uploaded = files.every((f) => f.uploadStatus === 'done');
       const canSteerThis =
         !!getSteerUrl() &&
         !!conversationIdRef.current &&
         sentRefs.length === 0 &&
         mentionedIds.length === 0 &&
+        Object.keys(sendExtras ?? {}).length === 0 &&
         (files.length === 0 || (steerAttachments && uploaded));
       if (canSteerThis) {
         clearComposer();
@@ -1548,9 +1615,10 @@ export function useChat({
               files,
               refs: [],
               mentions: [],
-              extras: hookExtras,
+              extras: sendExtras,
               displayText: heldDisplay,
               onSent: override?.onSent,
+              asked,
             }),
           );
           return 'held';
@@ -1559,7 +1627,8 @@ export function useChat({
           override?.onSteered?.(steered.turnId);
           return 'steered';
         }
-        return 'dropped';
+        if (steered.detail) setNotice(steered.detail);
+        return 'failed';
       }
       // Otherwise it waits for the turn to end, where the host allows it.
       if (holdSends && uploaded) {
@@ -1571,9 +1640,10 @@ export function useChat({
             files,
             refs: sentRefs,
             mentions: sentMentions,
-            extras: hookExtras,
+            extras: sendExtras,
             displayText: heldDisplay,
             onSent: override?.onSent,
+            asked,
           }),
         );
         return 'held';
@@ -1584,7 +1654,7 @@ export function useChat({
     const content = steerText;
 
     const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: randomId(),
       role: 'user',
       content: shownText,
       timestamp: new Date(),
@@ -1592,7 +1662,7 @@ export function useChat({
       conversationRefs: sentRefs.length > 0 ? sentRefs : undefined,
     };
     if (shownText !== content) sentTextRef.current.set(userMsg.id, content);
-    const assistantId = crypto.randomUUID();
+    const assistantId = randomId();
     setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
     if (fromComposer) {
       setInputValue('');
@@ -1623,6 +1693,11 @@ export function useChat({
     let failed = false;
     // The stream said the turn is over: a last `done`, an error or a stop.
     let sawTurnEnd = false;
+    // The turn ended provisionally (see `cancelled`): it is over on screen,
+    // and the stream is read on only for its stored end.
+    let awaitingStoredEnd = false;
+    // The turn's state was let go of (see `release`).
+    let released = false;
     /**
      * The stream is gone but the turn runs on, on the backend: the event stream,
      * under a new name for this panel, replays it. False when it cannot.
@@ -1653,6 +1728,38 @@ export function useChat({
     const controller = new AbortController();
     pageActionControllerRef.current?.abort();
     const pageActions = new AbortController();
+    /** Let go of the turn's state: once, when it ends - which may be before its stream does. */
+    const release = () => {
+      if (released) return;
+      released = true;
+      turn.deltas.close();
+      if (streamDeltasRef.current === turn.deltas) streamDeltasRef.current = null;
+      if (liveRendererRef.current === turn) liveRendererRef.current = null;
+      ownTurnActiveRef.current = false;
+      // The turn is over, so its page actions are too - but only this turn's:
+      // a replacement already owns the refs by then.
+      if (pageActionControllerRef.current === pageActions) pageActions.abort();
+      if (abortControllerRef.current === controller) abortControllerRef.current = null;
+      // An abandoned turn's chat is gone: `handleNewChat` reset the shared
+      // state already, and resetting it again here would cut the Stop button,
+      // the status and the approvals of a turn the new chat started since.
+      // A turn handed over to the event stream is still running.
+      if (sessionGate.generation === turnGeneration && !handedOver) {
+        clearCancelRequest();
+        stopRunning(failed ? 'failed' : turn.outcome());
+        setAgentStatus(null);
+        // The stream is gone, so nothing can carry a decision any more —
+        // whether the turn finished, errored, or was stopped. Leaving the prompt
+        // up would offer an answer to a question nobody is listening for.
+        setPendingApprovals(null);
+        setApprovalError(null);
+        approvalConversationIdRef.current = null;
+        approvalDetachedRef.current = false;
+        // We watched this turn end, so there is nothing for the recovery probe to
+        // find — including on a fresh conversation, whose id only just arrived.
+        probedConversationRef.current = conversationIdRef.current;
+      }
+    };
     try {
       abortControllerRef.current = controller;
       pageActionControllerRef.current = pageActions;
@@ -1688,11 +1795,7 @@ export function useChat({
         supportsToolApproval: getApproveUrl() !== null,
         referencedConversationIds: sentRefs.map((r) => r.conversationId),
         supportsPageActions: hostTakesPageActions(getApproveUrl(), onRelativeLinkClickRef.current),
-        extras: {
-          ...readRequestExtras(getRequestExtrasRef.current),
-          ...(override?.extras ?? {}),
-          ...(hookExtras ?? {}),
-        },
+        extras: { ...readRequestExtras(getRequestExtrasRef.current), ...(sendExtras ?? {}) },
       });
       if (fileIds.length > 0) {
         (requestBody as Record<string, unknown>).file_ids = fileIds;
@@ -1727,6 +1830,13 @@ export function useChat({
       await readSseEvents(res.body, (evt) => {
         try {
           askHost(onStreamEventRef.current, evt, { relayed: false });
+          if (awaitingStoredEnd) {
+            // A new chat took the panel over: nothing of this turn is on screen.
+            if (sessionGate.generation !== turnGeneration) return false;
+            const parsed = parseEvent(evt, turn.ctx);
+            if (applyConversationFrame(parsed)) return true;
+            return !applyStoredEnd(turn.currentAssistantId(), parsed);
+          }
           if (!ownTurnIdRef.current && typeof evt.turn_id === 'string' && evt.turn_id) ownTurnIdRef.current = evt.turn_id;
           const parsed = parseEvent(evt, turn.ctx);
           if (parsed.action === 'folded') {
@@ -1760,7 +1870,16 @@ export function useChat({
           ) {
             sawTurnEnd = true;
           }
-          return turn.apply(parsed) !== 'end';
+          if (turn.apply(parsed) !== 'end') return true;
+          if ((parsed.action === 'error' || parsed.action === 'cancelled') && parsed.provisional) {
+            // Over for the user and the host now; its stored end, still to
+            // come on this stream, carries the answer's id.
+            turn.deltas.flush();
+            awaitingStoredEnd = true;
+            release();
+            return true;
+          }
+          return false;
         } catch {
           // A frame that could not be applied is skipped, not fatal.
           return true;
@@ -1779,6 +1898,8 @@ export function useChat({
       // A frame still pending would land after the error below, or in the
       // chat that replaced an aborted stream.
       turn.deltas.close();
+      // Only the stored end was still awaited: the turn itself is over.
+      if (released) return 'sent';
       if (err instanceof DOMException && err.name === 'AbortError') return accepted ? 'sent' : 'dropped';
       const segId = turn.currentAssistantId();
       // The stream dropped mid-turn, but the backend runs the turn on.
@@ -1786,33 +1907,7 @@ export function useChat({
       if (!accepted) failed = true;
       setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: t('Sorry, an error occurred. Please try again.') } : m)));
     } finally {
-      turn.deltas.close();
-      if (streamDeltasRef.current === turn.deltas) streamDeltasRef.current = null;
-      if (liveRendererRef.current === turn) liveRendererRef.current = null;
-      ownTurnActiveRef.current = false;
-      // The turn is over, so its page actions are too - but only this turn's:
-      // a replacement already owns the refs by then.
-      if (pageActionControllerRef.current === pageActions) pageActions.abort();
-      if (abortControllerRef.current === controller) abortControllerRef.current = null;
-      // An abandoned turn's chat is gone: `handleNewChat` reset the shared
-      // state already, and resetting it again here would cut the Stop button,
-      // the status and the approvals of a turn the new chat started since.
-      // A turn handed over to the event stream is still running.
-      if (sessionGate.generation === turnGeneration && !handedOver) {
-        clearCancelRequest();
-        stopRunning(failed ? 'failed' : turn.outcome());
-        setAgentStatus(null);
-        // The stream is gone, so nothing can carry a decision any more —
-        // whether the turn finished, errored, or was stopped. Leaving the prompt
-        // up would offer an answer to a question nobody is listening for.
-        setPendingApprovals(null);
-        setApprovalError(null);
-        approvalConversationIdRef.current = null;
-        approvalDetachedRef.current = false;
-        // We watched this turn end, so there is nothing for the recovery probe to
-        // find — including on a fresh conversation, whose id only just arrived.
-        probedConversationRef.current = conversationIdRef.current;
-      }
+      release();
     }
     return accepted ? 'sent' : 'failed';
   };
@@ -1852,10 +1947,36 @@ export function useChat({
   const withdrawRelayedTurnRef = useRef(withdrawRelayedTurn);
   withdrawRelayedTurnRef.current = withdrawRelayedTurn;
 
+  const clearResumeWait = () => {
+    if (resumeWaitRef.current) window.clearTimeout(resumeWaitRef.current.timer);
+    resumeWaitRef.current = null;
+  };
+
+  /**
+   * The event stream reopened (it ends every so often, or dropped): a relayed
+   * turn on screen is still running only if the stream's snapshot replays it,
+   * which it does at once. Otherwise it ended while the stream was away, and
+   * its end is only in the history.
+   */
+  const awaitRelayedResume = () => {
+    const relayedTurn = relayedTurnRef.current;
+    clearResumeWait();
+    if (!relayedTurn) return;
+    const timer = window.setTimeout(() => {
+      resumeWaitRef.current = null;
+      if (relayedTurnRef.current !== relayedTurn) return;
+      endRelayedTurn();
+      reloadHistory();
+    }, EVENTS_RESUME_GRACE_MS);
+    resumeWaitRef.current = { turn: relayedTurn, timer };
+  };
+  const awaitRelayedResumeRef = useRef(awaitRelayedResume);
+  awaitRelayedResumeRef.current = awaitRelayedResume;
+
   /** One frame of the conversation's event stream. */
   const handleEventFrame = (evt: Record<string, unknown>) => {
     askHost(onStreamEventRef.current, evt, { relayed: true });
-    const relayedTurn = relayedTurnRef.current;
+    let relayedTurn = relayedTurnRef.current;
     const parsed = parseRestEvent(evt, relayedTurn?.renderer.ctx ?? { hasUsedTools: false, activeNodeId: '' });
     if (applyConversationFrame(parsed)) return;
     if (parsed.action === 'session_ended') {
@@ -1874,6 +1995,31 @@ export function useChat({
     const turnId = typeof evt.turn_id === 'string' && evt.turn_id ? evt.turn_id : null;
     if (ownTurnActiveRef.current || (turnId && turnId === ownTurnIdRef.current)) return;
     if (turnId && turnId === stoppedTurnIdRef.current) return;
+    const provisionalBubble = turnId ? provisionalEndsRef.current.get(turnId) : undefined;
+    if (turnId && provisionalBubble !== undefined) {
+      // A turn a provisional end already ended: its stored end gives the
+      // answer it left its id, and nothing of it reopens the turn.
+      if (applyStoredEnd(provisionalBubble, parsed)) provisionalEndsRef.current.delete(turnId);
+      return;
+    }
+    const awaited = resumeWaitRef.current;
+    if (awaited) {
+      // The first turn frame since the stream reopened says whether the turn
+      // on screen still runs.
+      clearResumeWait();
+      if (relayedTurn && relayedTurn === awaited.turn) {
+        if (turnId !== relayedTurn.turnId) {
+          endRelayedTurn();
+          reloadHistory();
+          relayedTurn = null;
+        } else if (evt.type === 'thinking' && evt.resumed === true) {
+          // Replayed from its start, every segment of it: the replay takes
+          // its place, the turn running all along.
+          withdrawRelayedTurn();
+          relayedTurn = null;
+        }
+      }
+    }
     const skip = skipUnnamedTurnRef.current;
     // A fresh acknowledgement is a new turn: the stopped one ended unseen.
     if (skip !== 'off' && evt.type === 'thinking' && evt.resumed !== true && evt.intermediate !== true) skipUnnamedTurnRef.current = 'off';
@@ -1896,7 +2042,7 @@ export function useChat({
     if (!current) {
       // The end of a turn never seen begins nothing.
       if (parsed.action === 'cancelled' || parsed.action === 'error') return;
-      const bubbleId = crypto.randomUUID();
+      const bubbleId = randomId();
       setMessages((prev) => [...prev, { id: bubbleId, role: 'assistant', content: '', timestamp: new Date() }]);
       current = { turnId, renderer: createTurnRenderer(bubbleId, true) };
       relayedTurnRef.current = current;
@@ -1909,7 +2055,14 @@ export function useChat({
       setIsLoading(true);
       setAgentStatus({ status: 'thinking' });
     }
-    if (current.renderer.apply(parsed) === 'end') endRelayedTurn();
+    if (current.renderer.apply(parsed) === 'end') {
+      if (current.turnId && (parsed.action === 'error' || parsed.action === 'cancelled') && parsed.provisional) {
+        const ends = provisionalEndsRef.current;
+        ends.set(current.turnId, current.renderer.currentAssistantId());
+        while (ends.size > PROVISIONAL_ENDS_KEPT) ends.delete(ends.keys().next().value!);
+      }
+      endRelayedTurn();
+    }
   };
   const handleEventFrameRef = useRef(handleEventFrame);
   handleEventFrameRef.current = handleEventFrame;
@@ -1937,6 +2090,8 @@ export function useChat({
     sessionGate.abandon();
     relayedTurnRef.current?.renderer.deltas.close();
     relayedTurnRef.current = null;
+    clearResumeWait();
+    provisionalEndsRef.current.clear();
     ownTurnActiveRef.current = false;
     if (heldMessageRef.current) onHeldSendSettledRef.current?.(heldMessageRef.current.text, 'cancelled');
     setHeldMessage(null);
@@ -2070,19 +2225,41 @@ export function useChat({
       return;
     }
     if (cancelTimerRef.current !== null) return;
+    setNotice(null);
+    // Put back should the backend refuse the Stop: the turn then goes on.
+    const statusBefore = agentStatus;
+    const approvalsBefore = pendingApprovals;
     setPendingApprovals(null);
     setApprovalError(null);
     setAgentStatus((prev) => ({ ...prev, status: 'cancelling' }));
-    cancelTimerRef.current = window.setTimeout(() => stopLocally(), CANCEL_GRACE_MS);
+    const timer = window.setTimeout(() => stopLocally(), CANCEL_GRACE_MS);
+    cancelTimerRef.current = timer;
+    // Still this Stop's to settle: the turn has not ended meanwhile.
+    const pending = () => cancelTimerRef.current === timer;
     fetch(cancelUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
       body: JSON.stringify({ conversation_id: convId }),
     })
-      .then((res) => {
-        if (!res.ok) stopLocally();
+      .then(async (res) => {
+        if (res.ok) {
+          const data: unknown = await res.json().catch(() => null);
+          // No turn was running anywhere: no `cancelled` will come.
+          if (pending() && data && typeof data === 'object' && (data as { turn?: unknown }).turn === 'none') stopLocally();
+          return;
+        }
+        // Refused (a turn the backend cannot reach right now): it runs on, and the user is told why.
+        const detail = await readRefusalDetail(res);
+        if (!pending()) return;
+        clearCancelRequest();
+        stopRequestedRef.current = false;
+        setAgentStatus((prev) => (prev?.status === 'cancelling' ? statusBefore : prev));
+        if (approvalsBefore) setPendingApprovals((prev) => prev ?? approvalsBefore);
+        setNotice(detail ?? t('The response could not be stopped. Try again.'));
       })
-      .catch(() => stopLocally());
+      .catch(() => {
+        if (pending()) stopLocally();
+      });
   };
 
   const skipWaitUrl = getSkipWaitUrl();
@@ -2161,9 +2338,12 @@ export function useChat({
           return;
         }
         if (!res.ok || !res.body) return;
+        // Open: the next drop, or the server's own end of the stream, is
+        // retried from the shortest delay again (keep-alives are no frames).
+        retry = 0;
+        if (opened) awaitRelayedResumeRef.current();
         opened = true;
         await readSseEvents(res.body, (evt) => {
-          retry = 0;
           try {
             handleEventFrameRef.current(evt);
           } catch {
@@ -2250,22 +2430,20 @@ export function useChat({
       told = true;
       onHeldSendSettledRef.current?.(heldMessage.text, outcome);
     };
-    void handleSendMessageRef
-      .current({
-        ...heldMessage,
-        decided: true,
-        onSent: () => {
-          tell('sent');
-          heldMessage.onSent?.();
-        },
-      })
-      .then(
-        (outcome) => {
-          if (outcome === 'held') return;
-          tell(outcome === 'sent' || outcome === 'steered' ? 'sent' : outcome === 'failed' ? 'failed' : 'dropped');
-        },
-        () => tell('failed'),
-      );
+    const onSent = () => {
+      tell('sent');
+      heldMessage.onSent?.();
+    };
+    const { asked, ...held } = heldMessage;
+    // The host's hook decided it while the turn ran: it is asked again, the
+    // turn over, before the message leaves as a new one.
+    void handleSendMessageRef.current(asked ? { ...held, ...asked, decided: false, onSent } : { ...held, decided: true, onSent }).then(
+      (outcome) => {
+        if (outcome === 'held') return;
+        tell(outcome === 'sent' || outcome === 'steered' ? 'sent' : outcome === 'failed' ? 'failed' : 'dropped');
+      },
+      () => tell('failed'),
+    );
   }, [isLoading, heldMessage]);
   const handleSendMessageRef = useRef(handleSendMessage);
   handleSendMessageRef.current = handleSendMessage;
@@ -2289,6 +2467,7 @@ export function useChat({
       streamDeltasRef.current?.close();
       pageActionControllerRef.current?.abort();
       if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
+      if (resumeWaitRef.current) window.clearTimeout(resumeWaitRef.current.timer);
       // A message still held goes nowhere with the panel.
       if (heldMessageRef.current) onHeldSendSettledRef.current?.(heldMessageRef.current.text, 'cancelled');
     },
@@ -2472,6 +2651,7 @@ export function useChat({
     sentTextOf,
     skipWait: skipWaitUrl ? skipWait : null,
     heldMessage,
+    notice,
     cancelHeldMessage: () => {
       if (heldMessageRef.current) onHeldSendSettledRef.current?.(heldMessageRef.current.text, 'cancelled');
       setHeldMessage(null);

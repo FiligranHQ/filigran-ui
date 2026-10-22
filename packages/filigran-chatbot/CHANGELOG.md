@@ -192,6 +192,31 @@ This file starts at 3.10.0; earlier releases are on the
 - A conversation read back after the user has already sent a message no
   longer replaces that turn: its history goes above the turn once the turn
   ends, and its agent's name shows at once.
+- A turn ended by a provisional `error` or `cancelled` (no `message_id`, no
+  `reason`) no longer opens a second answer, duplicating its text, when the
+  stored end of the same turn follows on the event stream: that end gives the
+  answer its persisted id and starts nothing. The panel's own stream is read
+  on past a provisional end for the same reason, the turn over at once.
+- A relayed turn that ended while the event stream was reconnecting no longer
+  stays running: unless the reopened stream replays it within 5 s, it ends and
+  the conversation is read back. A replayed turn is shown once, every segment.
+- The event stream's reconnection delay starts over once a stream opened, so
+  a backend that ends its streams on schedule is not retried ever more slowly.
+- Stop: an answer of `{ "turn": "none" }` lets go of the turn at once instead
+  of after 10 s, and a refused Stop (e.g. `503`) keeps the turn running and
+  says why above the composer instead of pretending it stopped.
+- A steer the backend refuses resolves `'failed'` (was `'dropped'`) and shows
+  the refusal's `detail` above the composer; a `409` with
+  `holdSendsDuringTurn` is still held and sent as the next turn, also when the
+  turn has already ended on screen by then.
+- A message held during a turn keeps its body fields (`send`'s `extras` and
+  `onBeforeSend`'s); one carrying such fields is held instead of steering,
+  which would drop them; and `onBeforeSend` is asked again, with
+  `turnRunning: false`, before a held message goes out as a new turn.
+- Sending no longer throws on a page served over plain http, where
+  `crypto.randomUUID` does not exist.
+- Page-action answers carry `X-Chat-Client-Id` like every other request of a
+  turn.
 
 ### Host opt-in
 

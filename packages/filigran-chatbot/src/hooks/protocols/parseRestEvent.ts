@@ -14,6 +14,7 @@ import type {
 } from '../../types';
 import type { PageAction } from '../../utils/pageActions';
 import type { ParsedAction, ProtocolContext } from './types';
+import { randomId } from '../../utils/randomId';
 
 /** Wire key → the breakdown field it populates. */
 const BREAKDOWN_KEYS: ReadonlyArray<[string, keyof ChatContextBreakdown]> = [
@@ -272,11 +273,15 @@ export function parseAnsweredBy(raw: unknown): ChatAnsweredBy | undefined {
 export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContext): ParsedAction {
   const type = evt.type as string | undefined;
 
-  if (type === 'error') {
-    return { action: 'error', content: (evt.content as string) || '' };
+  if (type === 'error' || type === 'cancelled') {
+    // A provisional end (a Stop's acknowledgement, a failed loop's error)
+    // carries neither the stored answer's id nor a reason: the stored end of
+    // the same turn follows it.
+    const messageId = optionalString(evt.message_id);
+    const provisional = !messageId && !evt.reason ? (true as const) : undefined;
+    const end = { ...(messageId ? { messageId } : {}), ...(provisional ? { provisional } : {}) };
+    return type === 'error' ? { action: 'error', content: (evt.content as string) || '', ...end } : { action: 'cancelled', ...end };
   }
-
-  if (type === 'cancelled') return { action: 'cancelled' };
   // The user's session ended: the backend closes the stream after this frame,
   // and no turn on screen can go on for this user.
   if (type === 'session_expired') return { action: 'session_ended' };
@@ -289,7 +294,7 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
   if (type === 'user_message') {
     const [message] = parseRestoredMessages([evt.message]);
     if (!message || message.role !== 'user') return { action: 'noop' };
-    return { action: 'user_message', message: { ...message, id: message.serverId ? `relayed-${message.serverId}` : crypto.randomUUID() } };
+    return { action: 'user_message', message: { ...message, id: message.serverId ? `relayed-${message.serverId}` : randomId() } };
   }
   // The native vocabulary acknowledges a turn with a top-level `thinking`
   // frame, which carries how long a resumed turn has run.

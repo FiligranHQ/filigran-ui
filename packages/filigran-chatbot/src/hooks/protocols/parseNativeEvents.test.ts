@@ -29,9 +29,16 @@ test('an announced wait carries its length and reason', () => {
 });
 
 test('cancelled, approval_resolved and folded turns are their own actions', () => {
-  assert.deepEqual(parseRestEvent({ type: 'cancelled' }, ctx()), { action: 'cancelled' });
+  assert.deepEqual(parseRestEvent({ type: 'cancelled', message_id: 'm1' }, ctx()), { action: 'cancelled', messageId: 'm1' });
   assert.deepEqual(parseRestEvent({ type: 'approval_resolved' }, ctx()), { action: 'approval_resolved' });
   assert.deepEqual(parseRestEvent({ type: 'folded_into_active_turn', turn_id: 't1' }, ctx()), { action: 'folded', turnId: 't1' });
+});
+
+test('an end with neither message_id nor reason is provisional: the stored end follows it', () => {
+  assert.deepEqual(parseRestEvent({ type: 'cancelled' }, ctx()), { action: 'cancelled', provisional: true });
+  assert.deepEqual(parseRestEvent({ type: 'error', content: 'Boom' }, ctx()), { action: 'error', content: 'Boom', provisional: true });
+  assert.deepEqual(parseRestEvent({ type: 'error', content: 'Lost', reason: 'lost' }, ctx()), { action: 'error', content: 'Lost' });
+  assert.deepEqual(parseRestEvent({ type: 'cancelled', message_id: 'm2' }, ctx()), { action: 'cancelled', messageId: 'm2' });
 });
 
 test('a new title needs a title', () => {

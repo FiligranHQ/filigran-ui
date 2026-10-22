@@ -15,7 +15,9 @@ import type { Plugin } from 'vite';
  * fence with no info string, a table whose delimiter row is a column short, a
  * `javascript:` link, a markdown block containing its own fences). Ask for
  * "json" to get a bare-JSON reply, "long" for a thread long enough to exercise
- * the render window, or "slow" for a turn that stalls into the waiting game.
+ * the render window, "slow" for a turn that stalls into the waiting game, or
+ * "fail" for a turn that ends with a provisional error and then the
+ * stored end, as XTM One's does.
  */
 
 const PATH_PREFIX = '/api/xtmone';
@@ -27,6 +29,12 @@ const PATH_PREFIX = '/api/xtmone';
 const NATIVE_PREFIX = '/api/xtmone-web';
 /** How many messages a web restore returns; older ones are paged. */
 const RESTORE_WINDOW = 50;
+/**
+ * How long an event stream lives before the mock ends it, as XTM One ends its
+ * own every 15 minutes: the panel reconnects and the snapshot resyncs it.
+ * Shorter here, so a dev session sees it happen.
+ */
+const EVENTS_LIFETIME_MS = 2 * 60 * 1000;
 
 /** A 160×100 bar chart in the accent colour — stands in for a code-interpreter
  *  plot, and is obviously *there* when an image preview renders correctly. */
@@ -216,11 +224,12 @@ function json(res: ServerResponse, payload: unknown, status = 200) {
 }
 
 /** Pick the scripted answer from what the user typed. */
-function scriptFor(prompt: string): { text: string; stall: boolean; history: number } {
+function scriptFor(prompt: string): { text: string; stall: boolean; history: number; fail?: boolean } {
   const p = prompt.toLowerCase();
   if (p.includes('json')) return { text: BARE_JSON, stall: false, history: 0 };
   if (p.includes('fence') || p.includes('nested')) return { text: NESTED_FENCES, stall: false, history: 0 };
   if (p.includes('slow')) return { text: 'That took a while — the waiting game should have appeared.', stall: true, history: 0 };
+  if (p.includes('fail')) return { text: 'I encountered an error: the mock was asked to fail.', stall: false, history: 0, fail: true };
   if (p.includes('long')) return { text: KITCHEN_SINK, stall: false, history: 200 };
   return { text: KITCHEN_SINK, stall: false, history: 0 };
 }
@@ -336,7 +345,7 @@ export function mockChatApi(): Plugin {
         else if (frame.type === 'status' && frame.status === 'thinking_text') turn.journal.thinking += String(frame.content ?? '');
         else if (frame.type === 'status') turn.journal.status = frame;
         for (const follow of turn.followers) follow(frame);
-        broadcast(conv.id, frame, origin);
+        broadcast(conv.id, { ...frame, relayed: true }, origin);
       }
       activeTurns.delete(conv.id);
       for (const follow of turn.followers) follow(null);
@@ -355,7 +364,7 @@ export function mockChatApi(): Plugin {
     if (turn.journal.status) frames.push(turn.journal.status);
     if (turn.journal.thinking) frames.push({ type: 'status', status: 'thinking_text', content: turn.journal.thinking, turn_id: turn.id });
     if (turn.journal.text) frames.push({ type: 'stream', content: turn.journal.text, turn_id: turn.id });
-    return frames;
+    return frames.map((frame) => ({ ...frame, relayed: true }));
   }
 
   /** Stream *turn* to *res* until it ends; a dropped stream leaves the turn running. */
@@ -434,36 +443,54 @@ export function mockChatApi(): Plugin {
     prompt: string,
     { cancelled, wait }: { cancelled: () => boolean; wait: (ms: number) => Promise<unknown> },
   ): AsyncGenerator<Record<string, unknown>, void> {
-    const { text, stall } = scriptFor(prompt);
+    const { text, stall, fail } = scriptFor(prompt);
     const waitTurn = prompt.toLowerCase().includes('wait');
+    // A stopped turn, as XTM One ends one: the Stop's acknowledgement (a
+    // provisional end, no `message_id`), then the stored end once the cut
+    // answer is persisted.
+    async function* stopped(): AsyncGenerator<Record<string, unknown>, void> {
+      yield { type: 'cancelled' };
+      await sleep(150);
+      const messageId = `msg-${++seq}`;
+      conv.messages.push({ id: messageId, role: 'assistant', content: 'The request was cancelled.', createdAt: new Date().toISOString() });
+      yield { type: 'cancelled', message_id: messageId, conversation_id: conv.id };
+    }
     // The window fills as the thread grows. The real backend hangs these
     // on the per-iteration `thinking` frame, so the gauge climbs during
     // the turn rather than jumping at the end.
     conv.contextTokens = Math.min(conv.contextTokens + CONTEXT_PER_TURN, CONTEXT_WINDOW);
     yield { type: 'status', status: 'thinking', iteration: 1, context_tokens: conv.contextTokens, context_window: CONTEXT_WINDOW, context_breakdown: mockContextBreakdown(conv.contextTokens) };
     await wait(300);
-    if (cancelled()) return yield { type: 'cancelled' };
+    if (cancelled()) return yield* stopped();
     yield { type: 'status', status: 'thinking_text', content: 'Working out what the user wants, then checking how the answer will render.' };
     await wait(400);
-    if (cancelled()) return yield { type: 'cancelled' };
+    if (cancelled()) return yield* stopped();
     if (waitTurn) {
       // An announced pause, which `Continue now` (skip-wait) ends early.
       yield { type: 'status', status: 'wait_start', seconds: 20, reason: 'Waiting for the sandbox to start…' };
       await wait(20000);
-      if (cancelled()) return yield { type: 'cancelled' };
+      if (cancelled()) return yield* stopped();
     }
     yield { type: 'status', status: 'tool_start', tools: ['search_entities'] };
     // Heartbeats drive the elapsed counter; the panel ticks between them.
     yield { type: 'status', status: 'tool_heartbeat', tools: ['search_entities'], elapsed_s: 16 };
     await wait(stall ? 9000 : 900);
-    if (cancelled()) return yield { type: 'cancelled' };
+    if (cancelled()) return yield* stopped();
     if (stall) yield { type: 'status', status: 'tool_heartbeat', tools: ['search_entities'], elapsed_s: 25 };
+    if (fail) {
+      // A failed loop: the provisional error, then the stored `done` carrying it.
+      yield { type: 'error', content: text };
+      await sleep(150);
+      const messageId = `msg-${++seq}`;
+      conv.messages.push({ id: messageId, role: 'assistant', content: text, createdAt: new Date().toISOString() });
+      return yield { type: 'done', content: text, conversation_id: conv.id, message_id: messageId };
+    }
     yield { type: 'status', status: 'streaming' };
 
     for (let i = 0; i < text.length; i += 24) {
       yield { type: 'stream', content: text.slice(i, i + 24) };
       await sleep(12);
-      if (cancelled()) return yield { type: 'cancelled' };
+      if (cancelled()) return yield* stopped();
     }
 
     quotaUsed += 17;
@@ -528,21 +555,25 @@ export function mockChatApi(): Plugin {
             if (!listeners.has(convId)) listeners.set(convId, new Set());
             listeners.get(convId)!.add(listener);
             const keepalive = setInterval(() => res.write(': keepalive\n\n'), 15000);
+            const lifetime = setTimeout(() => res.end(), EVENTS_LIFETIME_MS);
             req.on('close', () => {
               clearInterval(keepalive);
+              clearTimeout(lifetime);
               listeners.get(convId)?.delete(listener);
             });
             return;
           }
 
           // ---- Stop, "Continue now", what a turn waits on ----
+          // 202 either way, as XTM One answers: `turn` says whether one was running.
           if ((path === '/chat/messages/cancel' || path === '/chat/messages/skip-wait') && method === 'POST') {
             const body = await readBody(req);
             const turn = typeof body.conversation_id === 'string' ? activeTurns.get(body.conversation_id) : undefined;
-            if (!turn) return json(res, { detail: 'No turn is running' }, 409);
+            const status = path.endsWith('/cancel') ? 'cancelled' : 'wait_skipped';
+            if (!turn) return json(res, { status, turn: 'none' }, 202);
             if (path.endsWith('/cancel')) turn.cancelled = true;
             turn.skip();
-            return json(res, { status: 'ok' });
+            return json(res, { status, turn: 'local' }, 202);
           }
           const pending = /^\/chat\/conversations\/([^/]+)\/pending-approvals$/.exec(path);
           if (pending && method === 'GET') {
@@ -553,7 +584,8 @@ export function mockChatApi(): Plugin {
           if (path === '/chat/messages/steer' && method === 'POST') {
             const body = await readBody(req);
             const turn = typeof body.conversation_id === 'string' ? activeTurns.get(body.conversation_id) : undefined;
-            if (!turn) return json(res, { detail: 'No turn is running' }, 409);
+            // No turn to hand it to (or it ended in between): 409, never stored.
+            if (!turn) return json(res, { detail: 'No response is currently being generated for this conversation' }, 409);
             const message = { id: `msg-${++seq}`, role: 'user' as const, content: String(body.content ?? ''), createdAt: new Date().toISOString() };
             conversations.get(turn.convId)?.messages.push(message);
             broadcast(turn.convId, { type: 'user_message', message: { id: message.id, role: 'user', content: message.content, created_at: message.createdAt } }, req.headers['x-chat-client-id'] as string | undefined);
@@ -716,7 +748,10 @@ export function mockChatApi(): Plugin {
             return res.end();
           }
           broadcast(conv.id, { type: 'user_message', message: { id: userMessage.id, role: 'user', content: userMessage.content, created_at: userMessage.createdAt } }, clientId);
-          return followTurn(startTurn(conv, prompt, clientId), req, res);
+          const turn = startTurn(conv, prompt, clientId);
+          // As XTM One's stream names its turn first.
+          send({ type: 'turn_started', turn_id: turn.id });
+          return followTurn(turn, req, res);
         }
 
         // ---- steering ----

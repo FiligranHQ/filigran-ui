@@ -92,9 +92,18 @@ export type ParsedAction =
       pageAction: PageAction;
       conversationId?: string;
     }
-  | { action: 'error'; content: string }
-  /** The turn was stopped (`cancelled`): terminal. */
-  | { action: 'cancelled' }
+  /**
+   * The turn failed: terminal. *provisional*: an end its backend follows with
+   * the stored one (see `cancelled`).
+   */
+  | { action: 'error'; content: string; messageId?: string; provisional?: true }
+  /**
+   * The turn was stopped (`cancelled`): terminal. *provisional*: an end with
+   * neither `message_id` nor `reason`, which the backend follows with the
+   * stored end of the same turn (a `done` or `cancelled` carrying
+   * `message_id`); *messageId*: the stored answer's id, when it says.
+   */
+  | { action: 'cancelled'; messageId?: string; provisional?: true }
   /** The user's session ended (`session_expired`): terminal, the stream that said so ends with it. */
   | { action: 'session_ended' }
   /** Nothing is waiting on a decision any more: another device answered it. */

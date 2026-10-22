@@ -179,6 +179,7 @@ const fr: Catalog = {
   'This conversation could not be loaded.': 'Impossible de charger cette conversation.',
   'This decision could not be sent. Reload the chat and try again.': 'Cette décision n’a pas pu être envoyée. Actualisez le chat et réessayez.',
   'This item could not be loaded.': 'Impossible de charger cet élément.',
+  'The response could not be stopped. Try again.': 'La réponse n’a pas pu être arrêtée. Réessayez.',
   'This turn is no longer waiting for a decision.': 'Ce tour n’attend plus de décision.',
   'Tool definitions': 'Définitions des outils',
   'Tool results': 'Résultats des outils',

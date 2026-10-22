@@ -2,6 +2,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import type { ChatArtifact, ChatArtifactKind, ChatAttachment, ChatPanelHandle, ChatPanelProps, ChatSendOutcome, Translate } from '../types';
 import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
 import { speakableText } from '../utils/speech';
+import { randomId } from '../utils/randomId';
 import { createTranslate } from '../i18n';
 import { feedbackBaseUrl } from '../utils/feedback';
 import { conversationReferencesUrl } from '../utils/conversationRefs';
@@ -261,6 +262,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     sentTextOf,
     skipWait,
     heldMessage,
+    notice,
     cancelHeldMessage,
     agentMentions,
     addAgentMention,
@@ -515,7 +517,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       const known = new Set(messagesRef.current.map((m) => m.serverId).filter(Boolean));
       const earlier = parseRestoredMessages(data?.messages)
         .filter((m) => !m.serverId || !known.has(m.serverId))
-        .map((m) => ({ ...m, id: m.serverId ? `msg-${m.serverId}` : crypto.randomUUID() }));
+        .map((m) => ({ ...m, id: m.serverId ? `msg-${m.serverId}` : randomId() }));
       setMessages((prev) => [...earlier, ...prev]);
       setServerHasEarlier(data?.has_more === true && earlier.length > 0);
       return earlier.length;
@@ -1410,6 +1412,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
               steerAttachments={steerAttachments}
               canHold={holdSendsDuringTurn}
               heldMessage={heldMessage}
+              notice={notice}
               onCancelHeld={cancelHeldMessage}
               agentMentions={agentMentionsEnabled && agents.length > 0 ? { agents, mentions: agentMentions, onPick: addAgentMention } : undefined}
               inputValue={inputValue}

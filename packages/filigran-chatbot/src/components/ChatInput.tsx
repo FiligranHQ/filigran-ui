@@ -20,6 +20,8 @@ interface ChatInputProps {
   canHold?: boolean;
   /** The message held, shown with a way to take it back. */
   heldMessage?: { text: string } | null;
+  /** What the backend said when it refused a steer or a Stop. */
+  notice?: string | null;
   onCancelHeld?: () => void;
   inputValue: string;
   onInputChange: (value: string) => void;
@@ -74,6 +76,7 @@ export const ChatInput = ({
   steerAttachments = false,
   canHold = false,
   heldMessage,
+  notice,
   onCancelHeld,
   inputValue,
   onInputChange,
@@ -220,6 +223,11 @@ export const ChatInput = ({
       data-testid="filigran-chat-composer"
     >
       {header && <div className="mb-2">{header}</div>}
+      {notice && (
+        <div role="alert" data-testid="filigran-chat-composer-notice" className="mb-2 text-[0.75rem] text-red-500 dark:text-red-400">
+          {notice}
+        </div>
+      )}
       {heldMessage && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
           <span className="shrink-0 text-gray-500 dark:text-white/50">{t('Sends when the answer ends:')}</span>

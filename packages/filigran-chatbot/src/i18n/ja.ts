@@ -180,6 +180,7 @@ const ja: Catalog = {
   'This decision could not be sent. Reload the chat and try again.':
     'この決定を送信できませんでした。チャットを再読み込みして、もう一度お試しください。',
   'This item could not be loaded.': 'この項目を読み込めませんでした。',
+  'The response could not be stopped. Try again.': '応答を停止できませんでした。もう一度お試しください。',
   'This turn is no longer waiting for a decision.': 'このターンでは、決定を待つ必要がなくなりました。',
   'Tool definitions': 'ツールの定義',
   'Tool results': 'ツールの結果',
