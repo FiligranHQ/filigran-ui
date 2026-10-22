@@ -156,6 +156,11 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
   }
 }
 
+/** The status line's text for *agentStatus*: the host's (`statusLabel`), else the built-in one. */
+export function statusLineText(agentStatus: AgentStatusState | null, t: Translate, statusLabel?: ThinkingOverrides['statusLabel']): string {
+  return (agentStatus && statusLabel?.(agentStatus)) || resolveStatusVisual(agentStatus, t).label;
+}
+
 /**
  * Light markdown cleanup for reasoning prose. Preserves paragraph breaks so
  * multi-step reasoning stays readable inside the small scrolling window

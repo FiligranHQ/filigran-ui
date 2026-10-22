@@ -147,6 +147,13 @@ function mergeHeld(prev: HeldMessage | null, next: HeldMessage): HeldMessage {
       prev.displayText !== undefined || next.displayText !== undefined
         ? [prev.displayText ?? prev.text, next.displayText ?? next.text].filter(Boolean).join('\n\n')
         : undefined,
+    onSent:
+      prev.onSent && next.onSent
+        ? () => {
+            prev.onSent!();
+            next.onSent!();
+          }
+        : (prev.onSent ?? next.onSent),
   };
 }
 
@@ -254,6 +261,10 @@ export interface SendOverride {
   displayText?: string;
   /** Called as the message opens a turn, long before the send itself resolves at the turn's end. */
   onSent?: () => void;
+  /** Called once the message steered the running turn, with the turn the backend named (`null`: none). */
+  onSteered?: (turnId: string | null) => void;
+  /** Who sends it, as `onBeforeSend` is told: the host (default) or a voice call. */
+  source?: 'host' | 'voice';
 }
 
 /** A message waiting for the running turn to end. */
@@ -267,6 +278,8 @@ export interface HeldMessage {
   extras?: Record<string, unknown>;
   /** What the user's bubble shows in place of `text`, when the host said. */
   displayText?: string;
+  /** Told as the message goes out (see `SendOverride.onSent`). */
+  onSent?: () => void;
 }
 
 export interface TransferredAgent {
@@ -978,10 +991,10 @@ export function useChat({
     files: ChatFile[] = [],
     restoreToComposer = true,
     shown = content,
-  ): Promise<'ok' | 'ended' | 'failed'> => {
+  ): Promise<{ result: 'ok'; turnId: string | null } | { result: 'ended' | 'failed' }> => {
     const steerUrl = getSteerUrl();
     const convId = conversationIdRef.current;
-    if (!steerUrl || !convId) return 'failed';
+    if (!steerUrl || !convId) return { result: 'failed' };
 
     const optimistic: ChatMessage = {
       id: crypto.randomUUID(),
@@ -1000,10 +1013,15 @@ export function useChat({
         headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}), ...clientIdHeader() },
         body: JSON.stringify({ conversation_id: convId, content, agent_slug: agentSlug, ...(fileIds.length > 0 ? { file_ids: fileIds } : {}) }),
       });
-      if (res.ok) return 'ok';
+      if (res.ok) {
+        // The turn the backend handed it to, when it says.
+        const data: unknown = await res.json().catch(() => null);
+        const turnId = data && typeof data === 'object' ? (data as { turn_id?: unknown }).turn_id : null;
+        return { result: 'ok', turnId: typeof turnId === 'string' && turnId ? turnId : null };
+      }
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       // Nothing running any more: the turn ended while this was on its way.
-      if (res.status === 409 && holdSends) return 'ended';
+      if (res.status === 409 && holdSends) return { result: 'ended' };
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
     }
@@ -1012,7 +1030,7 @@ export function useChat({
       setInputValue((prev) => (prev ? `${shown}\n${prev}` : shown));
       if (files.length > 0) setAttachedFiles((prev) => [...files, ...prev]);
     }
-    return 'failed';
+    return { result: 'failed' };
   };
 
   /**
@@ -1438,7 +1456,11 @@ export function useChat({
       rawText,
       override?.decided
         ? undefined
-        : askHost(onBeforeSendRef.current, { text: rawText, source: fromComposer ? 'composer' : 'host', turnRunning: isLoadingRef.current }),
+        : askHost(onBeforeSendRef.current, {
+            text: rawText,
+            source: fromComposer ? 'composer' : (override?.source ?? 'host'),
+            turnRunning: isLoadingRef.current,
+          }),
     );
     if (!decided) return 'dropped';
     const hookExtras = decided.extras;
@@ -1479,19 +1501,41 @@ export function useChat({
       if (canSteerThis) {
         clearComposer();
         const steered = await steerMessage(steerText, files, fromComposer, shownText);
-        if (steered === 'ended') {
+        if (steered.result === 'ended') {
           setHeldMessage((prev) =>
-            mergeHeld(prev, { text: steerText, draft, files, refs: [], mentions: [], extras: hookExtras, displayText: heldDisplay }),
+            mergeHeld(prev, {
+              text: steerText,
+              draft,
+              files,
+              refs: [],
+              mentions: [],
+              extras: hookExtras,
+              displayText: heldDisplay,
+              onSent: override?.onSent,
+            }),
           );
           return 'held';
         }
-        return steered === 'ok' ? 'steered' : 'dropped';
+        if (steered.result === 'ok') {
+          override?.onSteered?.(steered.turnId);
+          return 'steered';
+        }
+        return 'dropped';
       }
       // Otherwise it waits for the turn to end, where the host allows it.
       if (holdSends && uploaded) {
         clearComposer();
         setHeldMessage((prev) =>
-          mergeHeld(prev, { text: steerText, draft, files, refs: sentRefs, mentions: sentMentions, extras: hookExtras, displayText: heldDisplay }),
+          mergeHeld(prev, {
+            text: steerText,
+            draft,
+            files,
+            refs: sentRefs,
+            mentions: sentMentions,
+            extras: hookExtras,
+            displayText: heldDisplay,
+            onSent: override?.onSent,
+          }),
         );
         return 'held';
       }
@@ -2149,13 +2193,22 @@ export function useChat({
       told = true;
       onHeldSendSettledRef.current?.(heldMessage.text, outcome);
     };
-    void handleSendMessageRef.current({ ...heldMessage, decided: true, onSent: () => tell('sent') }).then(
-      (outcome) => {
-        if (outcome === 'held') return;
-        tell(outcome === 'sent' || outcome === 'steered' ? 'sent' : outcome === 'failed' ? 'failed' : 'dropped');
-      },
-      () => tell('failed'),
-    );
+    void handleSendMessageRef
+      .current({
+        ...heldMessage,
+        decided: true,
+        onSent: () => {
+          tell('sent');
+          heldMessage.onSent?.();
+        },
+      })
+      .then(
+        (outcome) => {
+          if (outcome === 'held') return;
+          tell(outcome === 'sent' || outcome === 'steered' ? 'sent' : outcome === 'failed' ? 'failed' : 'dropped');
+        },
+        () => tell('failed'),
+      );
   }, [isLoading, heldMessage]);
   const handleSendMessageRef = useRef(handleSendMessage);
   handleSendMessageRef.current = handleSendMessage;

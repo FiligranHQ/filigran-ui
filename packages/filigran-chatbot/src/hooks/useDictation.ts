@@ -3,7 +3,8 @@ import { createDictationController, type DictationController, type SpeechRecogni
 
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
-function getSpeechRecognition(): SpeechRecognitionCtor | null {
+/** The browser's speech recogniser, vendor-prefixed or not; `null` without one. */
+export function getSpeechRecognition(): SpeechRecognitionCtor | null {
   if (typeof window === 'undefined') return null;
   const w = window as unknown as {
     SpeechRecognition?: SpeechRecognitionCtor;

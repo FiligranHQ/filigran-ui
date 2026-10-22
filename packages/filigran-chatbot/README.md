@@ -114,7 +114,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
 | `onReady`           | `() => void`                              | —            | Called once, when the panel has chosen its agent and read back the conversation on screen; handle calls made earlier wait for it and then run in order |
 | `onHeldSendSettled` | `(text, outcome) => void`                 | —            | What became of a message held until the turn ended (`send` resolved `'held'`): `'sent'`, `'failed'`, `'dropped'`, `'returned'` (given back by Stop) or `'cancelled'` |
-| `onBeforeSend`      | `(draft) => false \| { text?, displayText?, extras? } \| void` | — | Sees every non-empty send first, synchronously (`draft.source`: `'composer'` or `'host'`; `draft.turnRunning`: it would steer): `false` takes it over (the composer keeps its draft), an object rewords it (`text`, what the backend receives), shows the user's bubble other words (`displayText`) or adds body fields. The panel's own fields cannot be set this way |
+| `onBeforeSend`      | `(draft) => false \| { text?, displayText?, extras? } \| void` | — | Sees every non-empty send first, synchronously (`draft.source`: `'composer'`, `'host'` or `'voice'`; `draft.turnRunning`: it would steer): `false` takes it over (the composer keeps its draft), an object rewords it (`text`, what the backend receives), shows the user's bubble other words (`displayText`) or adds body fields. The panel's own fields cannot be set this way |
 | `hideConversationList` | `boolean`                              | `false`      | Hides the conversation list of fullscreen and inline modes, for a rail or a task pane (usable from 320 px wide); the header's history menu stands in for it — see [Host extensions](#host-extensions) |
 | `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer |
 
@@ -152,7 +152,8 @@ chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigatio
 | `newConversation({ workspaceId, agent })` | Starts a new chat, in a workspace and with an agent (id or slug) if given |
 | `selectConversation(id)` | Opens a conversation |
 | `setDraft(text)` / `focusComposer()` | Fills / focuses the composer |
-| `stop()` | Same as the Stop button |
+| `stop()` | Same as the Stop button; during a voice call it also drops the question awaited and stops speaking |
+| `startVoiceCall()` | Starts a [voice call](#voice-call) over the panel; `false` when this browser has no speech recognition or the panel is `readOnly` |
 | `reloadAgents()` | Reads the agent list again, keeping the agent picked unless it is gone |
 | `scrollToMessage(id)` | Scrolls to a message by its server id and highlights it; `false` when it is not on screen |
 
@@ -226,6 +227,31 @@ still there, in the header's history menu (open, delete, Clear all), and a
 referenced conversation's chip still opens it; the `sidebar*` slots render
 nothing meanwhile. To drop the history altogether, set `apiEndpoints.history`
 to `null` instead.
+
+#### Voice call
+
+`startVoiceCall()` on the handle opens a call over the panel, for a host's own
+button (`voiceCallSupported()` says whether the browser can hold one): the
+browser's speech recognition listens in `locale`, a phrase is sent after one
+second of silence (as the user, `onBeforeSend` seeing `source: 'voice'`), and
+the answer is said through `apiEndpoints.tts` in pieces of about 200
+characters, all requested at once and played in order, each piece the route
+fails (or every piece, without the route) in the browser's voice. Then it
+listens again. The thread under the call shows the conversation as usual.
+
+- Only the answer to the question is said: the final `done` of the panel's own
+  turn, or of the turn a `folded_into_active_turn` frame (or the steer
+  route's `turn_id`) names, never a turn of another tab and never a mid-turn
+  segment on its own. Only the addressed agent (the conversation's, or the one
+  a `transfer_start` hands it to) speaks; replies the turn's other agents give
+  (`answered_by`) show by name, `Did not answer` beside one that carries
+  `mention_failed`.
+- Speech over the answer (barge-in), a tap on the call or Skip stops it and
+  listens; a tap while the answer is awaited cancels the question and stops
+  its turn, and so does the handle's `stop()`. The microphone can be muted.
+- A turn silent for 120 s is checked through `apiEndpoints.pendingApprovals`
+  (its `turn: 'running'`): still running, the call waits on; over (or with no
+  such route), it gives up on that question and listens again.
 
 #### Resizable Sidebar Example
 

@@ -75,6 +75,18 @@ This file starts at 3.10.0; earlier releases are on the
   one after another go together, and Stop gives back to the composer what
   the user typed for them.
 - `scrollToMessage` on the panel's handle jumps to a message and highlights it.
+- A voice call over the panel, started with `startVoiceCall()` on the handle
+  (`voiceCallSupported()` tells a host whether to offer it): the browser's
+  speech recognition listens, a phrase is sent after one second of silence
+  (`onBeforeSend` sees `source: 'voice'`), and the answer is said through
+  `apiEndpoints.tts` in pieces of about 200 characters, in the browser's voice
+  where the route fails or is not named. Only the final answer of the turn
+  that answers the question is said (the panel's own, or the one a fold or a
+  steer names), and only the addressed agent's: the other agents' replies show
+  by name, `Did not answer` beside a failed one. Speaking over the answer, a
+  tap or Skip stops it; a tap while it is awaited cancels the question and its
+  turn, as `stop()` does; a turn silent for 120 s is checked through
+  `apiEndpoints.pendingApprovals` and given up on once over.
 - Stable `data-testid`s for host tests: `filigran-chat-panel`,
   `filigran-chat-transcript`, `filigran-chat-user-message`,
   `filigran-chat-assistant-message`, `filigran-chat-composer`,
@@ -98,6 +110,7 @@ This file starts at 3.10.0; earlier releases are on the
 - `onHeldSendSettled(text, outcome)` tells the host what became of a message
   held until the turn ended: `'sent'`, `'failed'`, `'dropped'`, `'returned'`
   (given back to the composer by Stop) or `'cancelled'`.
+- `ChatSendDraft.source` can be `'voice'`, for a question spoken in a voice call.
 - New exported types: `ChatPanelHandle`, `ChatPanelMode`, `ChatSendOptions`,
   `ChatSendOutcome`, `ChatSendDraft`, `ChatSendDecision`, `ChatHeldOutcome`,
   `ChatMarkerRenderer`, `ChatMarkerContext`, `ChatCodeBlockRenderer`,

@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { ChatArtifact, ChatArtifactKind, ChatAttachment, ChatPanelHandle, ChatPanelProps, ChatSendOutcome, Translate } from '../types';
-import { artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
+import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
+import { speakableText } from '../utils/speech';
 import { createTranslate } from '../i18n';
 import { feedbackBaseUrl } from '../utils/feedback';
 import { conversationReferencesUrl } from '../utils/conversationRefs';
@@ -16,10 +17,13 @@ import { useAwayCompletionNotice } from '../hooks/useAwayCompletionNotice';
 import { useComposerExtras } from '../hooks/useComposerExtras';
 import { useAgentSuggestions } from '../hooks/useAgentSuggestions';
 import { useLatestCallback, useShallowStable } from '../hooks/useStableProps';
+import { useVoiceCall } from '../hooks/useVoiceCall';
 import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
+import { statusLineText } from './ChatThinking';
+import { ChatVoiceCall } from './ChatVoiceCall';
 import { waitingGameUrl } from './ChatWaitingPanel';
 import { ChatWelcome } from './ChatWelcome';
 import { ConversationSidebar } from './ConversationSidebar';
@@ -218,6 +222,15 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   const [restoreRefused, setRestoreRefused] = useState<{ conversationId: string; detail: string | null; headersKey: string } | null>(null);
   // Retitled elsewhere, or by the backend after the first answer.
   const refreshConversationsRef = useRef<() => Promise<unknown>>(async () => undefined);
+  // Every frame of both streams goes to the voice call first, then to the host.
+  const voiceFrameRef = useRef<(frame: Record<string, unknown>, relayed: boolean) => void>(() => undefined);
+  const handleStreamFrame = useCallback(
+    (frame: Record<string, unknown>, info: { relayed: boolean }) => {
+      voiceFrameRef.current(frame, info.relayed);
+      onStreamEvent?.(frame, info);
+    },
+    [onStreamEvent],
+  );
 
   const {
     messages,
@@ -274,7 +287,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     controlledConversationId,
     onConversationIdChange: onConversationChangeProp ? onConversationChange : undefined,
     getRequestExtras: getRequestExtrasProp ? getRequestExtras : undefined,
-    onStreamEvent: onStreamEventProp ? onStreamEvent : undefined,
+    onStreamEvent: handleStreamFrame,
     onConversationTitle: () => void refreshConversationsRef.current(),
     historySettledFor: eventsReadyId,
     steerAttachments,
@@ -1057,6 +1070,44 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   const readOnlyRef = useRef(readOnly);
   readOnlyRef.current = readOnly;
 
+  // The voice call: questions go out through the panel's own send, and the
+  // answer is read off its streams. A question addresses the conversation's
+  // agent: the one it was transferred to, the restored conversation's, or the
+  // one picked.
+  const addressedAgentId =
+    transferredAgent?.id ??
+    (conversationAgentName ? agents.find((a) => a.name === conversationAgentName)?.id : undefined) ??
+    selectedAgent?.id ??
+    null;
+  const pendingApprovalsBase =
+    backendType === 'rest' && !apiEndpoints?.singleEndpoint && apiEndpoints?.pendingApprovals
+      ? `${apiBaseUrl}${apiEndpoints.pendingApprovals}`
+      : null;
+  const voice = useVoiceCall({
+    send: (text, hooks) => handleSendMessageRef.current({ text, source: 'voice', onSent: hooks.onAccepted, onSteered: hooks.onSteered }),
+    stopTurn: () => handleStopGeneratingRef.current(),
+    // Whether the turn still runs, read where a paused turn is recovered from.
+    readTurnState: pendingApprovalsBase
+      ? async () => {
+          const convId = conversationIdRef.current;
+          if (!convId) return null;
+          const res = await fetch(`${pendingApprovalsBase}/${encodeURIComponent(convId)}/pending-approvals`, {
+            headers: { ...(requestHeaders ?? {}) },
+          });
+          if (!res.ok) return null;
+          const data = await res.json();
+          return { running: data?.turn === 'running' };
+        }
+      : undefined,
+    addressedAgentId: () => addressedAgentId,
+    speakable: (text) => speakableText(answerMarkdownSources(text, markerKindList)),
+    present: (text) =>
+      transformMessageText ? transformMessageText(text, { id: 'voice-call', role: 'assistant', content: text, timestamp: new Date() }) : text,
+    tts: ttsRoute,
+    locale,
+  });
+  voiceFrameRef.current = voice.onFrame;
+
   const onSwitchAgent = (agent: typeof selectedAgent) => {
     if (!agent) return;
     handleSwitchAgent(agent, () => {
@@ -1094,7 +1145,12 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       selectConversation: (id) => enqueue(() => handleSwitchConversationRef.current(id)),
       setDraft: (text) => setInputValue(text),
       focusComposer: () => rootRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus(),
-      stop: () => handleStopGeneratingRef.current(),
+      stop: () => {
+        // A question a voice call awaits goes with its turn.
+        voice.cancel();
+        handleStopGeneratingRef.current();
+      },
+      startVoiceCall: () => !readOnlyRef.current && voice.start(),
       reloadAgents,
       scrollToMessage: (messageId) => {
         const target = [...(rootRef.current?.querySelectorAll<HTMLElement>('[data-message-id]') ?? [])].find(
@@ -1107,7 +1163,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         return true;
       },
     }),
-    // setInputValue and reloadAgents are stable; everything else goes through a ref.
+    // setInputValue, reloadAgents and the voice call's controls are stable; everything else goes through a ref.
     [],
   );
 
@@ -1360,6 +1416,18 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
           )}
         </div>
       </div>
+      {voice.snapshot && (
+        <ChatVoiceCall
+          call={voice.snapshot}
+          agentName={agentName}
+          logoIcon={resolvedLogo}
+          processingLabel={statusLineText(agentStatus, t, statusLabel)}
+          onInterrupt={voice.interrupt}
+          onToggleMute={voice.toggleMute}
+          onEnd={voice.end}
+          t={t}
+        />
+      )}
     </div>
   );
 });

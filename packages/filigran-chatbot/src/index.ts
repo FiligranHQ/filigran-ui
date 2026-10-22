@@ -42,6 +42,7 @@ export type {
   ApiEndpoints,
 } from './types';
 export type { TransferredAgent } from './hooks/useChat';
+export { voiceCallSupported } from './hooks/useVoiceCall';
 
 // The markdown normalisation helpers are NOT re-exported here on purpose: they
 // live at `@filigran/chatbot/markdown`, a React-free entry point, so a host can

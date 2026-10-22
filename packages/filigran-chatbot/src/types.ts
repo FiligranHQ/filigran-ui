@@ -77,6 +77,9 @@ export interface ApiEndpoints {
    * No default, for the same reason as {@link ApiEndpoints.approve}: a proxied
    * host has to expose the route before the panel starts calling it. Unset, the
    * live flow still works and only reload recovery is absent.
+   *
+   * A voice call also reads its `turn` here when the turn its question waits
+   * on has been silent for 120 s: `running` keeps the wait.
    */
   pendingApprovals?: string | null;
   /** Path for fetching agents. Default: '/chat/agents'. Set to null to disable. */
@@ -241,8 +244,9 @@ export interface ApiEndpoints {
   clearAll?: string | null;
   /**
    * Path that reads text aloud: `POST {tts}` with `{ text, format: 'mp3' }`,
-   * answered with the audio. Read aloud then uses the backend's voice, and
-   * the browser's when the route fails.
+   * answered with the audio. Read aloud and the voice call
+   * (`ChatPanelHandle.startVoiceCall`) then use the backend's voice, and the
+   * browser's when the route fails.
    *
    * No default. REST backend only.
    */
@@ -711,7 +715,19 @@ export interface ChatPanelHandle {
   /** Replace the composer's text. */
   setDraft: (text: string) => void;
   focusComposer: () => void;
+  /** Same as the Stop button; also cancels the question a voice call awaits, and stops it speaking. */
   stop: () => void;
+  /**
+   * Start a voice call over the panel: the browser listens, a phrase is sent
+   * after a second of silence (`onBeforeSend` sees `source: 'voice'`), and the
+   * answer is spoken through {@link ApiEndpoints.tts} (the browser's voice
+   * without it), until the user ends the call. Only the final answer of the
+   * turn that answers the question is spoken, and only the addressed agent's;
+   * the other agents' replies are shown by name. `false` when it cannot
+   * start: no speech recognition in this browser (`voiceCallSupported()`), or
+   * `readOnly`.
+   */
+  startVoiceCall: () => boolean;
   /** Read the agent list again, keeping the agent picked unless it is gone. */
   reloadAgents: () => void;
   /** Scroll to a message on screen (by its server id) and highlight it; false when it is not there. */
@@ -721,8 +737,8 @@ export interface ChatPanelHandle {
 /** A send about to leave, as `onBeforeSend` sees it. */
 export interface ChatSendDraft {
   text: string;
-  /** Typed in the composer, or sent through the handle. */
-  source: 'composer' | 'host';
+  /** Typed in the composer, sent through the handle, or spoken in a voice call. */
+  source: 'composer' | 'host' | 'voice';
   /** A turn is running: the send would steer it. */
   turnRunning: boolean;
 }
