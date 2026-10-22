@@ -114,7 +114,8 @@ import { ChatPanel } from '@filigran/chatbot';
 | `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
 | `onReady`           | `() => void`                              | —            | Called once, when the panel has chosen its agent and read back the conversation on screen; handle calls made earlier wait for it and then run in order |
 | `onHeldSendSettled` | `(text, outcome) => void`                 | —            | What became of a message held until the turn ended (`send` resolved `'held'`): `'sent'`, `'failed'`, `'dropped'`, `'returned'` (given back by Stop) or `'cancelled'` |
-| `onBeforeSend`      | `(draft) => false \| { text?, extras? } \| void` | — | Sees every non-empty send first, synchronously (`draft.source`: `'composer'` or `'host'`; `draft.turnRunning`: it would steer): `false` takes it over (the composer keeps its draft), an object rewords it or adds body fields. The panel's own fields cannot be set this way |
+| `onBeforeSend`      | `(draft) => false \| { text?, displayText?, extras? } \| void` | — | Sees every non-empty send first, synchronously (`draft.source`: `'composer'` or `'host'`; `draft.turnRunning`: it would steer): `false` takes it over (the composer keeps its draft), an object rewords it (`text`, what the backend receives), shows the user's bubble other words (`displayText`) or adds body fields. The panel's own fields cannot be set this way |
+| `hideConversationList` | `boolean`                              | `false`      | Hides the conversation list of fullscreen and inline modes, for a rail or a task pane (usable from 320 px wide); the header's history menu stands in for it — see [Host extensions](#host-extensions) |
 | `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer |
 
 Plain-data props (`requestHeaders`, `apiEndpoints`, `pageContext`, `promptSuggestions`) are compared by content and callback props are called
@@ -205,6 +206,26 @@ loaded.` and leaves the rest of the answer on screen. A marker's arguments come 
 treat them as untrusted input, never as markup or a URL to follow unchecked. Like `t`, the function props are used as given: keep
 them stable, and a new one re-renders every message, which is also how to
 refresh what they render.
+
+A host that wraps what the user typed in context of its own (the open document,
+the page) sends one text and shows another: `onBeforeSend` returns `text`, what
+the backend receives, and `displayText`, what the user's bubble shows. A held
+message keeps both, and a conversation read back shows what the backend stored:
+
+```tsx
+<ChatPanel
+  onBeforeSend={({ text }) => ({ text: `${documentContext()}\n\n${text}`, displayText: text })}
+  // ...
+/>;
+```
+
+`hideConversationList` gives the thread the panel's whole width in inline (or
+fullscreen) mode, for a rail beside the host's own content or an add-in's task
+pane: the header, thread and composer hold from 320 px wide. The history is
+still there, in the header's history menu (open, delete, Clear all), and a
+referenced conversation's chip still opens it; the `sidebar*` slots render
+nothing meanwhile. To drop the history altogether, set `apiEndpoints.history`
+to `null` instead.
 
 #### Resizable Sidebar Example
 
@@ -812,12 +833,17 @@ chat) opts into six more routes, none with a default:
 | `skipWait` | `POST {skipWait}` with `{ conversation_id }` | `Continue now` on `status: wait_start` (`{ seconds, reason }`) |
 | `events` | `GET {events}/{conversation_id}/events?client_id=<id>` → SSE | Turns this panel did not start (another tab, a reload mid-turn), `user_message`, `conversation_title`, `approval_resolved` |
 | `messagesPage` | `GET {messagesPage}/{conversation_id}/messages?before=<message id>&limit=50&supports_artifacts=true` → `{ messages, has_more }` | "Load earlier messages" past the restored ones, offered when the restore answers `has_more: true` |
-| `clearAll` | `DELETE {clearAll}` | "Clear all conversations" in the conversation list |
+| `clearAll` | `DELETE {clearAll}` | "Clear all conversations" in the conversation list and the header's history menu, confirmed first |
 | `tts` | `POST {tts}` with `{ text, format: 'mp3' }` → audio | Read aloud in the backend's voice; the browser's when it fails |
 
 The event stream is opened once the conversation's history is read back (not
 while it could not be, for want of an agent or a reachable backend) and
-reconnected with backoff while the page is visible; a `404` or `405` stops it,
+reconnected with backoff while the page is visible. Once the page has been
+hidden for 60 s it is closed (under HTTP/1.1 a background tab would otherwise
+hold one of the browser's six connections to the origin), and the relayed turn
+it fed is taken off screen; shown again, it reopens, the backend's snapshot
+replays a turn still running, and the conversation is read back for what ended
+meanwhile. A `404` or `405` stops it,
 and a `401` or `403` stops it until `requestHeaders` change, when it is tried
 once more (a refreshed token picks it up). With `events` named, every message, steer, decision, Stop and
 "Continue now" carries the same id in `X-Chat-Client-Id`, which the backend

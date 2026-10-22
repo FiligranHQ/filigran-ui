@@ -630,7 +630,8 @@ export interface ChatPanelProps {
   /**
    * Sees every send first, from the composer or the handle: `false` takes it
    * over (nothing is sent, the composer keeps its text), an object rewords it
-   * or adds fields to its body.
+   * (`text`), shows the user something other than what is sent (`displayText`)
+   * or adds fields to its body (`extras`).
    */
   onBeforeSend?: (draft: ChatSendDraft) => ChatSendDecision;
   /**
@@ -657,6 +658,15 @@ export interface ChatPanelProps {
    * A message that mentions an agent never steers the running turn.
    */
   agentMentions?: boolean;
+  /**
+   * Hides the conversation list that fullscreen and inline modes show beside
+   * the thread, for a panel too narrow for both (a rail, a task pane; the
+   * thread, header and composer hold at 320 px). The history stays: the
+   * header's history menu lists, opens and deletes conversations and offers
+   * Clear all, and a referenced conversation still opens in the panel. The
+   * `sidebar*` slots render nothing meanwhile. Default: false.
+   */
+  hideConversationList?: boolean;
 }
 
 /** What a marker card is drawn from. */
@@ -726,8 +736,14 @@ export type ChatSendOutcome = 'sent' | 'steered' | 'held' | 'dropped' | 'failed'
 /** What became of a held message once its turn ended (see `onHeldSendSettled`). */
 export type ChatHeldOutcome = 'sent' | 'failed' | 'dropped' | 'returned' | 'cancelled';
 
-/** What `onBeforeSend` decides: `false` takes the send over, an object adjusts it. */
-export type ChatSendDecision = false | { text?: string; extras?: Record<string, unknown> } | void;
+/**
+ * What `onBeforeSend` decides: `false` takes the send over, an object adjusts it.
+ * `text` is what the backend receives; `displayText` is what the user's bubble
+ * shows in its place (a prompt wrapped in the host's context, shown as typed).
+ * Without `displayText` the bubble shows the text sent. A conversation read
+ * back shows what the backend stored.
+ */
+export type ChatSendDecision = false | { text?: string; displayText?: string; extras?: Record<string, unknown> } | void;
 
 /** Per-send options of {@link ChatPanelHandle.send}. */
 export interface ChatSendOptions {

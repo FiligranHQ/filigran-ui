@@ -184,6 +184,42 @@ test('the send hook can take a send over, or reword it and add fields', async ()
   await finish(stream);
 });
 
+test('the send hook can show the user other words than it sends, for a new turn and a steer', async () => {
+  const stream = sseStream();
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ ok: true }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render(
+    {
+      conversationId: 'c1',
+      onBeforeSend: ({ text: typed }) => ({ text: `[Document: Q3 report]\n\n${typed}`, displayText: typed }),
+    },
+    ref,
+  );
+  await act(async () => {
+    void ref.current!.send('Summarize it');
+    await settle();
+  });
+  const body = requests.find((r) => r.url === '/api/chat/messages')!.body as Record<string, unknown>;
+  assert.equal(body.content, '[Document: Q3 report]\n\nSummarize it');
+  const bubbles = () => [...container.querySelectorAll('[data-testid="filigran-chat-user-message"]')].map((b) => b.textContent ?? '');
+  assert.ok(bubbles()[0].includes('Summarize it'));
+  assert.ok(!text().includes('[Document: Q3 report]'), 'the context is sent, never shown');
+  await act(async () => {
+    void ref.current!.send('Shorter');
+    await settle();
+  });
+  const steer = requests.find((r) => r.url === '/api/chat/messages/steer')!.body as Record<string, unknown>;
+  assert.equal(steer.content, '[Document: Q3 report]\n\nShorter');
+  assert.ok(bubbles()[1].includes('Shorter'));
+  assert.ok(!text().includes('[Document: Q3 report]'));
+  await finish(stream);
+});
+
 test('a stopped answer says so, even when nothing was written yet', async () => {
   const stream = sseStream();
   fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);

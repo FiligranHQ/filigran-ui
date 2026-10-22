@@ -84,7 +84,14 @@ This file starts at 3.10.0; earlier releases are on the
   for it, and all of them run in order (a new conversation's agent is in
   place before the send that follows it).
 - `onBeforeSend` sees every send first, from the composer or the handle: it
-  can take a send over, or reword it and add fields to its body.
+  can take a send over, or reword it and add fields to its body. It can also
+  return `displayText`: the backend receives `text`, and the user's bubble
+  (live, steered or held) shows `displayText`, for a host that wraps what the
+  user typed in context of its own.
+- `hideConversationList` hides the conversation list of inline and fullscreen
+  modes, for a rail or a task pane: the header, thread and composer hold from
+  320 px wide, and the header's history menu stands in for the list (open,
+  delete, Clear all), while a referenced conversation still opens in the panel.
 - `reloadAgents()` on the handle reads the agent list again, keeping the agent
   picked unless it is gone (none is picked once the list is empty). A failed
   reload keeps the list it had, and only the latest reload lands.
@@ -135,6 +142,8 @@ This file starts at 3.10.0; earlier releases are on the
   elements too. A host element outside the panel no longer inherits them.
 - A fenced code block's language label shows the whole language
   (`objective-c`, not `objective`).
+- A long agent name in the header is cut short rather than pushing the
+  header's controls off a narrow panel.
 
 ### Fixed
 
@@ -158,15 +167,18 @@ This file starts at 3.10.0; earlier releases are on the
   without the turn's last frame, picks the turn up from the event stream
   under a new id; Stop meanwhile sticks. The stream is followed only once the
   conversation's history is on screen, and a turn stopped here, named or
-  not, stays stopped.
+  not, stays stopped. Once the page has been hidden for 60 s the stream is
+  closed, and the relayed turn it fed taken off screen; shown again, the
+  stream reopens (its snapshot replays a turn still running) and the
+  conversation is read back for what ended meanwhile.
 - With `cancel`, `skipWait` or `events` named, a new chat's conversation is
   created before its first message, so Stop, "Continue now" and steering
   reach the backend from the first turn.
 - `apiEndpoints.messagesPage` (no default): "Load earlier messages" fetches
   older messages from the backend a page at a time, when the restore says
   there are some (`has_more`), and keeps the reader where they were.
-- `apiEndpoints.clearAll` (no default): the conversation list offers "Clear
-  all conversations".
+- `apiEndpoints.clearAll` (no default): the conversation list and the
+  header's history menu offer "Clear all conversations", confirmed first.
 - `apiEndpoints.tts` (no default): read aloud uses the backend's voice, a
   long answer in several bounded requests played in turn, and the browser's
   voice for what is left when the route fails.

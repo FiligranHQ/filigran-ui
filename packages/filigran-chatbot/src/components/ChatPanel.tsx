@@ -125,6 +125,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     steerAttachments = false,
     holdSendsDuringTurn = false,
     agentMentions: agentMentionsEnabled = false,
+    hideConversationList = false,
   },
   ref,
 ) {
@@ -241,6 +242,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     handleFileAdd,
     handlePaste,
     handleSendMessage,
+    sentTextOf,
     skipWait,
     heldMessage,
     cancelHeldMessage,
@@ -360,7 +362,9 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   // fetched on entry rather than lazily when a menu opens. Kept collapsible:
   // fullscreen is also the mode people use to read a long answer.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const showConversationSidebar = isWide && historyEnabled;
+  // A host may give the thread the whole width (a rail, a task pane): the
+  // header's history menu then stands in for the list.
+  const showConversationSidebar = isWide && historyEnabled && !hideConversationList;
 
   // Re-read on entry AND whenever the active conversation changes, so a chat
   // created by the first send appears in the list. The header menu could fetch
@@ -499,10 +503,11 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         const shown = new Set(prev.map((m) => m.serverId).filter(Boolean));
         // A message sent while the history was read back may be in it already,
         // stored: the one on screen, which has no server id yet, is that one.
+        // A bubble showing other words than it sent is matched on what it sent.
         const unsaved = new Map<string, number>();
         for (const m of prev) {
           if (m.serverId) continue;
-          const key = `${m.role}\u0000${m.content}`;
+          const key = `${m.role}\u0000${m.role === 'user' ? sentTextOf(m) : m.content}`;
           unsaved.set(key, (unsaved.get(key) ?? 0) + 1);
         }
         const earlier = restored.filter((m) => {
@@ -1170,6 +1175,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         activeConversationId={conversationId}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={(id) => void handleDeleteConversation(id)}
+        onClearAll={clearConversations ? () => void handleClearAll() : undefined}
         t={t}
       />
       {/* Fullscreen puts the conversation list beside the thread. The header

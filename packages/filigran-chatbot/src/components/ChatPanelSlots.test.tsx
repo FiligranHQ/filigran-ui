@@ -204,6 +204,80 @@ test('the layout slots, row and message extras all render', async () => {
   }
 });
 
+test('an inline panel can hide its conversation list and keep the history in the header', async () => {
+  const requests = fakeBackend([
+    agentsRoute,
+    (req) =>
+      req.url === '/api/chat/sessions' && req.method === 'GET'
+        ? json([
+            { conversation_id: 'c1', title: 'Current one' },
+            { conversation_id: 'c2', title: 'Hunting APT28' },
+          ])
+        : undefined,
+    (req) => {
+      if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+      const id = (req.body as { conversation_id?: string }).conversation_id;
+      return json({
+        conversation_id: id,
+        messages:
+          id === 'c1'
+            ? [
+                {
+                  id: 'm1',
+                  role: 'user',
+                  content: 'Compare with @apt28',
+                  conversation_refs: [{ conversation_id: 'c2', title: 'Hunting APT28', key: 'apt28' }],
+                },
+                { id: 'm2', role: 'assistant', content: 'Answer' },
+              ]
+            : [{ id: 'm3', role: 'assistant', content: 'The APT28 thread' }],
+      });
+    },
+  ]);
+  container.style.width = '320px';
+  await render({
+    conversationId: 'c1',
+    hideConversationList: true,
+    apiEndpoints: { clearAll: '/chat/sessions' },
+    sidebarHeaderActions: <button type="button">Filter</button>,
+  });
+  assert.ok(container.querySelector('[data-testid="filigran-chat-composer"]'), 'the composer');
+  assert.ok(text().includes('Answer'), 'the thread');
+  assert.ok(!text().includes('Filter'), 'no list, and none of its slots');
+  assert.ok(!text().includes('Current one'));
+  const agentButton = [...container.querySelectorAll('button')].find((b) => b.textContent?.includes('Hunter'))!;
+  assert.ok(agentButton.querySelector('span.truncate'), 'a long agent name is cut, not pushed off a narrow header');
+
+  const history = container.querySelector<HTMLButtonElement>('button[aria-label="Conversation history"]');
+  assert.ok(history, 'the header offers the history instead');
+  await act(async () => {
+    history!.click();
+    await settle();
+  });
+  assert.ok(document.body.textContent?.includes('Current one'));
+  assert.ok(document.body.textContent?.includes('Clear all conversations'));
+  await act(async () => {
+    history!.click();
+    await settle();
+  });
+
+  const chip = [...container.querySelectorAll('button')].find((b) => b.textContent?.includes('Hunting APT28'));
+  assert.ok(chip, 'a referenced conversation still opens in the panel');
+  await act(async () => {
+    chip!.click();
+    await settle(10);
+  });
+  assert.ok(requests.some((r) => r.method === 'POST' && (r.body as { conversation_id?: string })?.conversation_id === 'c2'));
+  assert.ok(text().includes('The APT28 thread'));
+});
+
+test('without hideConversationList an inline panel lists its conversations beside the thread', async () => {
+  fakeBackend([agentsRoute, historyRoute, restoreRoute([{ id: 'm1', role: 'assistant', content: 'Answer' }])]);
+  await render({ conversationId: 'c1' });
+  assert.ok(text().includes('Hunting APT28'));
+  assert.equal(container.querySelector('button[aria-label="Conversation history"]'), null);
+});
+
 test('the welcome slot replaces the welcome screen', async () => {
   fakeBackend([agentsRoute]);
   await render({ welcome: <div>Start an investigation</div> });

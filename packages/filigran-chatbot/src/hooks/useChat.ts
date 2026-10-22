@@ -106,6 +106,13 @@ const CANCEL_GRACE_MS = 10000;
 /** Reconnection backoff of the conversation's event stream. */
 const EVENTS_RETRY_BASE_MS = 1000;
 const EVENTS_RETRY_MAX_MS = 30000;
+/**
+ * How long the page may stay hidden before its event stream is closed. Under
+ * HTTP/1.1 a browser holds six connections per origin, and a background tab
+ * keeping one open starves the tabs in use; shown again, the stream reopens
+ * and the conversation is read back.
+ */
+const EVENTS_HIDDEN_CLOSE_MS = 60000;
 
 /** The actions that belong to a turn, as opposed to the conversation. */
 const TURN_ACTIONS: ReadonlySet<ParsedAction['action']> = new Set(['status', 'stream', 'done', 'approval_required', 'error', 'cancelled']);
@@ -136,7 +143,31 @@ function mergeHeld(prev: HeldMessage | null, next: HeldMessage): HeldMessage {
     refs: [...prev.refs, ...next.refs.filter((r) => !refIds.has(r.conversationId))],
     mentions: [...prev.mentions, ...next.mentions.filter((m) => !mentionIds.has(m.agentId))],
     extras: prev.extras || next.extras ? { ...prev.extras, ...next.extras } : undefined,
+    displayText:
+      prev.displayText !== undefined || next.displayText !== undefined
+        ? [prev.displayText ?? prev.text, next.displayText ?? next.text].filter(Boolean).join('\n\n')
+        : undefined,
   };
+}
+
+/** A send once `onBeforeSend` had its say: what is sent, what the user's bubble shows, the host's fields. */
+export interface DecidedSend {
+  text: string;
+  displayText: string;
+  extras?: Record<string, unknown>;
+}
+
+/**
+ * Apply `onBeforeSend`'s *decision* to *text*: `null` when the host took the
+ * send over. The bubble shows `displayText` when the host gave one that says
+ * something, the text sent otherwise.
+ */
+export function applySendDecision(text: string, decision: ChatSendDecision | undefined): DecidedSend | null {
+  if (decision === false) return null;
+  const adjust = decision && typeof decision === 'object' ? decision : undefined;
+  const sent = (typeof adjust?.text === 'string' ? adjust.text : text).trim();
+  const shown = typeof adjust?.displayText === 'string' ? adjust.displayText.trim() : '';
+  return { text: sent, displayText: shown || sent, extras: adjust?.extras };
 }
 
 /** A host callback's answer; one that throws is reported and answers nothing, never breaking the turn. */
@@ -219,6 +250,8 @@ export interface SendOverride {
   mentions?: AgentMention[];
   /** Already seen by `onBeforeSend` (a held message going out). */
   decided?: boolean;
+  /** What the user's bubble shows in place of `text` (see `ChatSendDecision`). */
+  displayText?: string;
   /** Called as the message opens a turn, long before the send itself resolves at the turn's end. */
   onSent?: () => void;
 }
@@ -232,6 +265,8 @@ export interface HeldMessage {
   refs: ChatConversationRef[];
   mentions: AgentMention[];
   extras?: Record<string, unknown>;
+  /** What the user's bubble shows in place of `text`, when the host said. */
+  displayText?: string;
 }
 
 export interface TransferredAgent {
@@ -307,6 +342,11 @@ interface UseChatReturn {
   conversationIdRef: React.MutableRefObject<string | null>;
   handleFileAdd: (fileList: FileList | null) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
+  /**
+   * The text a user message was sent with, when its bubble shows other words
+   * (`displayText`): what the backend stored, and echoes back.
+   */
+  sentTextOf: (message: ChatMessage) => string;
   /** Send the composer's content, or *override*'s without touching the composer. */
   handleSendMessage: (override?: SendOverride) => Promise<ChatSendOutcome>;
   /** A message held until the running turn ends (`holdSends`), if any. */
@@ -539,6 +579,9 @@ export function useChat({
   const [heldMessage, setHeldMessage] = useState<HeldMessage | null>(null);
   const heldMessageRef = useRef(heldMessage);
   heldMessageRef.current = heldMessage;
+  // The text each user bubble showing other words was sent with, by bubble id.
+  const sentTextRef = useRef(new Map<string, string>());
+  const sentTextOf = useCallback((message: ChatMessage) => sentTextRef.current.get(message.id) ?? message.content, []);
   // This panel's identity on the conversation's event stream: the backend
   // never relays to it the turns it started itself.
   const [clientId, setClientId] = useState(() => randomId());
@@ -930,7 +973,12 @@ export function useChat({
    * its own line if the user already typed something new — so the message is
    * never silently lost and never resets the in-flight run state.
    */
-  const steerMessage = async (content: string, files: ChatFile[] = [], restoreToComposer = true): Promise<'ok' | 'ended' | 'failed'> => {
+  const steerMessage = async (
+    content: string,
+    files: ChatFile[] = [],
+    restoreToComposer = true,
+    shown = content,
+  ): Promise<'ok' | 'ended' | 'failed'> => {
     const steerUrl = getSteerUrl();
     const convId = conversationIdRef.current;
     if (!steerUrl || !convId) return 'failed';
@@ -938,10 +986,11 @@ export function useChat({
     const optimistic: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
-      content,
+      content: shown,
       timestamp: new Date(),
       files: files.length > 0 ? files : undefined,
     };
+    if (shown !== content) sentTextRef.current.set(optimistic.id, content);
     setMessages((prev) => [...prev, optimistic]);
     const fileIds = files.filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
 
@@ -960,7 +1009,7 @@ export function useChat({
     }
     // A message the user typed goes back where it came from; one the host sent does not land in the composer.
     if (restoreToComposer) {
-      setInputValue((prev) => (prev ? `${content}\n${prev}` : content));
+      setInputValue((prev) => (prev ? `${shown}\n${prev}` : shown));
       if (files.length > 0) setAttachedFiles((prev) => [...files, ...prev]);
     }
     return 'failed';
@@ -1359,7 +1408,7 @@ export function useChat({
           // This tab's own message, echoed back: it takes the persisted id rather than a second bubble.
           // Looked for among the latest messages only: an older one with the same words is another message.
           let own = prev.length - 1;
-          while (own >= 0 && !(prev[own].role === 'user' && !prev[own].serverId && prev[own].content === relayedMessage.content)) own -= 1;
+          while (own >= 0 && !(prev[own].role === 'user' && !prev[own].serverId && sentTextOf(prev[own]) === relayedMessage.content)) own -= 1;
           if (own >= 0 && prev.length - own <= 3) return prev.map((m, i) => (i === own ? { ...m, serverId: relayedMessage.serverId } : m));
           return [...prev, relayedMessage];
         });
@@ -1385,13 +1434,20 @@ export function useChat({
     const files = fromComposer ? attachedFiles : (override?.files ?? []);
     if (!rawText.trim() && files.length === 0) return 'dropped';
     // The host's say before anything leaves: it may take the send over, or reword it.
-    const decision = override?.decided
-      ? undefined
-      : askHost(onBeforeSendRef.current, { text: rawText, source: fromComposer ? 'composer' : 'host', turnRunning: isLoadingRef.current });
-    if (decision === false) return 'dropped';
-    const hookExtras = decision && typeof decision === 'object' ? decision.extras : undefined;
-    if (decision && typeof decision === 'object' && typeof decision.text === 'string') rawText = decision.text;
-    const steerText = rawText.trim();
+    const decided = applySendDecision(
+      rawText,
+      override?.decided
+        ? undefined
+        : askHost(onBeforeSendRef.current, { text: rawText, source: fromComposer ? 'composer' : 'host', turnRunning: isLoadingRef.current }),
+    );
+    if (!decided) return 'dropped';
+    const hookExtras = decided.extras;
+    rawText = decided.text;
+    const steerText = decided.text;
+    // What the user's bubble shows: the host's words for it, else the text sent.
+    const shownText = override?.decided ? override.displayText?.trim() || steerText : decided.displayText;
+    // Kept on a held message only when it differs, so a plain one merges as before.
+    const heldDisplay = shownText !== steerText ? shownText : undefined;
     // The picks the text still holds, when the host still offers the feature.
     const sentRefs = !fromComposer
       ? (override?.refs ?? [])
@@ -1422,9 +1478,11 @@ export function useChat({
         (files.length === 0 || (steerAttachments && uploaded));
       if (canSteerThis) {
         clearComposer();
-        const steered = await steerMessage(steerText, files, fromComposer);
+        const steered = await steerMessage(steerText, files, fromComposer, shownText);
         if (steered === 'ended') {
-          setHeldMessage((prev) => mergeHeld(prev, { text: steerText, draft, files, refs: [], mentions: [], extras: hookExtras }));
+          setHeldMessage((prev) =>
+            mergeHeld(prev, { text: steerText, draft, files, refs: [], mentions: [], extras: hookExtras, displayText: heldDisplay }),
+          );
           return 'held';
         }
         return steered === 'ok' ? 'steered' : 'dropped';
@@ -1432,7 +1490,9 @@ export function useChat({
       // Otherwise it waits for the turn to end, where the host allows it.
       if (holdSends && uploaded) {
         clearComposer();
-        setHeldMessage((prev) => mergeHeld(prev, { text: steerText, draft, files, refs: sentRefs, mentions: sentMentions, extras: hookExtras }));
+        setHeldMessage((prev) =>
+          mergeHeld(prev, { text: steerText, draft, files, refs: sentRefs, mentions: sentMentions, extras: hookExtras, displayText: heldDisplay }),
+        );
         return 'held';
       }
       return 'dropped';
@@ -1443,11 +1503,12 @@ export function useChat({
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
-      content,
+      content: shownText,
       timestamp: new Date(),
       files: files.length > 0 ? [...files] : undefined,
       conversationRefs: sentRefs.length > 0 ? sentRefs : undefined,
     };
+    if (shownText !== content) sentTextRef.current.set(userMsg.id, content);
     const assistantId = crypto.randomUUID();
     setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
     if (fromComposer) {
@@ -1687,6 +1748,17 @@ export function useChat({
 
   const endRelayedTurnRef = useRef(endRelayedTurn);
   endRelayedTurnRef.current = endRelayedTurn;
+
+  /** Take the relayed turn on screen off it whole: the event stream, reopened, replays it from its start. */
+  const withdrawRelayedTurn = () => {
+    const relayedTurn = relayedTurnRef.current;
+    if (!relayedTurn) return;
+    const segments = new Set(relayedTurn.renderer.segmentIds());
+    endRelayedTurn();
+    setMessages((prev) => prev.filter((m) => !segments.has(m.id)));
+  };
+  const withdrawRelayedTurnRef = useRef(withdrawRelayedTurn);
+  withdrawRelayedTurnRef.current = withdrawRelayedTurn;
 
   /** One frame of the conversation's event stream. */
   const handleEventFrame = (evt: Record<string, unknown>) => {
@@ -1934,6 +2006,9 @@ export function useChat({
    * elsewhere (another tab, a reload mid-turn, a second device), user
    * messages sent there, new titles and approvals answered there. Reconnects
    * with backoff while the page is visible; a route refused outright stops it.
+   * Closed once the page has been hidden for {@link EVENTS_HIDDEN_CLOSE_MS};
+   * shown again, the stream reopens (its snapshot replays a turn still
+   * running) and the conversation is read back for what ended meanwhile.
    * A refusal of the credentials (401, 403) is tried once more each time the
    * host's `requestHeaders` change, so a refreshed token picks the stream up.
    */
@@ -1956,10 +2031,20 @@ export function useChat({
     let retry = 0;
     let timer: number | null = null;
     let controller: AbortController | null = null;
+    let hiddenTimer: number | null = null;
+    // Opened at least once: a stream not followed since then missed frames.
+    let opened = false;
+    // Frames were missed while the page was hidden: the reopened stream comes
+    // with a read-back of the conversation.
+    let missed = false;
 
     const connect = async () => {
       timer = null;
-      if (stopped || connected || document.visibilityState === 'hidden') return;
+      if (stopped || connected) return;
+      if (document.visibilityState === 'hidden') {
+        if (opened) missed = true;
+        return;
+      }
       connected = true;
       controller = new AbortController();
       let refused = false;
@@ -1975,6 +2060,7 @@ export function useChat({
           return;
         }
         if (!res.ok || !res.body) return;
+        opened = true;
         await readSseEvents(res.body, (evt) => {
           retry = 0;
           try {
@@ -1987,30 +2073,53 @@ export function useChat({
         // Dropped or aborted: reconnected below unless the effect is gone.
       } finally {
         connected = false;
-        if (!stopped && !refused) {
+        if (!stopped && !refused && !missed) {
           const delay = Math.min(EVENTS_RETRY_MAX_MS, EVENTS_RETRY_BASE_MS * 2 ** retry);
           retry += 1;
           timer = window.setTimeout(() => void connect(), delay * (0.5 + Math.random() / 2));
         }
       }
     };
-    const onVisible = () => {
+    // Hidden long enough, the stream is let go of, and with it the relayed
+    // turn it fed: the reopened stream replays that turn if it still runs.
+    const closeWhileHidden = () => {
+      hiddenTimer = null;
+      if (stopped || document.visibilityState !== 'hidden') return;
+      missed = true;
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
+      controller?.abort();
+      withdrawRelayedTurnRef.current();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        if (hiddenTimer === null) hiddenTimer = window.setTimeout(closeWhileHidden, EVENTS_HIDDEN_CLOSE_MS);
+        return;
+      }
+      if (hiddenTimer !== null) window.clearTimeout(hiddenTimer);
+      hiddenTimer = null;
       if (document.visibilityState !== 'visible' || connected) return;
       if (timer !== null) window.clearTimeout(timer);
       retry = 0;
+      if (missed) {
+        missed = false;
+        // What ended while the stream was closed is only in the history.
+        reloadHistory();
+      }
       void connect();
     };
     void connect();
-    document.addEventListener('visibilitychange', onVisible);
+    document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
       stopped = true;
       if (timer !== null) window.clearTimeout(timer);
+      if (hiddenTimer !== null) window.clearTimeout(hiddenTimer);
       controller?.abort();
-      document.removeEventListener('visibilitychange', onVisible);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       // A relayed turn nothing feeds any more is over, as far as this panel can tell.
       endRelayedTurnRef.current();
     };
-  }, [eventsUrl, clientId, eventsReopen]);
+  }, [eventsUrl, clientId, eventsReopen, reloadHistory]);
 
   // The turn is over: what was held goes out as the next one.
   useEffect(() => {
@@ -2249,6 +2358,7 @@ export function useChat({
     handleFileAdd,
     handlePaste,
     handleSendMessage,
+    sentTextOf,
     skipWait: skipWaitUrl ? skipWait : null,
     heldMessage,
     cancelHeldMessage: () => {

@@ -1046,3 +1046,89 @@ test('an event stream refused for its credentials reopens once each time they ch
   assert.equal(subscriptions().length, 3);
   await finish(events);
 });
+
+test('the event stream closes once the page has been hidden 60 s, and reopens with a read-back when shown', async () => {
+  let visibility = 'visible';
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility });
+  // The 60 s timers are run by hand; every other timer runs as usual.
+  const realSetTimeout = window.setTimeout;
+  const realClearTimeout = window.clearTimeout;
+  const longTimers = new Map<number, () => void>();
+  let nextLongTimer = -1;
+  window.setTimeout = ((fn: () => void, ms?: number, ...args: unknown[]) => {
+    if (ms !== 60000) return realSetTimeout(fn, ms, ...args);
+    longTimers.set(nextLongTimer, fn);
+    return nextLongTimer--;
+  }) as typeof window.setTimeout;
+  window.clearTimeout = ((id?: number) => (longTimers.delete(id!) ? undefined : realClearTimeout(id))) as typeof window.clearTimeout;
+  const setVisibility = (state: string) =>
+    act(async () => {
+      visibility = state;
+      document.dispatchEvent(new Event('visibilitychange'));
+      await settle(10);
+    });
+  try {
+    let restores = 0;
+    const subscriptions: ReturnType<typeof sseStream>[] = [];
+    const requests = fakeBackend([
+      agentsRoute,
+      (req) => {
+        if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+        restores += 1;
+        return json({ conversation_id: 'c1', messages: [{ id: 'm1', role: 'user', content: 'asked earlier' }] });
+      },
+      (req) => {
+        if (!req.url.startsWith('/api/chat/conversations/c1/events')) return undefined;
+        const events = sseStream();
+        subscriptions.push(events);
+        return events.response();
+      },
+    ]);
+    const opened = () => requests.filter((r) => r.url.includes('/events')).length;
+    await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } });
+    assert.equal(opened(), 1);
+    assert.equal(restores, 1);
+
+    // A short look away keeps the stream.
+    await setVisibility('hidden');
+    assert.equal(longTimers.size, 1);
+    await setVisibility('visible');
+    assert.equal(longTimers.size, 0, 'the close is called off');
+    assert.equal(opened(), 1);
+
+    await act(async () => {
+      subscriptions[0].send({ type: 'thinking', turn_id: 't1' });
+      subscriptions[0].send({ type: 'stream', turn_id: 't1', content: 'Relayed so far' });
+      await settle(10);
+    });
+    assert.ok(text().includes('Relayed so far'));
+
+    await setVisibility('hidden');
+    await act(async () => {
+      for (const fn of [...longTimers.values()]) fn();
+      longTimers.clear();
+      await settle(10);
+    });
+    assert.ok(!text().includes('Relayed so far'), 'the turn it fed goes, to be replayed whole');
+    assert.ok(!container.querySelector('button[aria-label="Stop generating"]'));
+    await act(async () => settle(10));
+    assert.equal(opened(), 1, 'not reopened while hidden');
+
+    await setVisibility('visible');
+    assert.equal(opened(), 2, 'reopened when shown');
+    assert.equal(restores, 2, 'and the conversation read back for what ended meanwhile');
+    await act(async () => {
+      subscriptions[1].send({ type: 'thinking', turn_id: 't1', resumed: true });
+      subscriptions[1].send({ type: 'stream', turn_id: 't1', content: 'Relayed so far, and the rest' });
+      subscriptions[1].send({ type: 'done', turn_id: 't1', content: 'Relayed so far, and the rest', message_id: 'm2' });
+      await settle(10);
+    });
+    assert.equal(text().split('Relayed so far').length - 1, 1, 'shown once');
+    assert.ok(text().includes('and the rest'));
+    await finish(...subscriptions);
+  } finally {
+    window.setTimeout = realSetTimeout;
+    window.clearTimeout = realClearTimeout;
+    delete (document as unknown as Record<string, unknown>).visibilityState;
+  }
+});
