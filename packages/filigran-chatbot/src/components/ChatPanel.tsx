@@ -5,6 +5,7 @@ import { createTranslate } from '../i18n';
 import { feedbackBaseUrl } from '../utils/feedback';
 import { conversationReferencesUrl } from '../utils/conversationRefs';
 import { pendingWorkspaceStillFileable, returnRefreshDue } from '../utils/workspaces';
+import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
 import { parseArtifact, parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
 import { useChat } from '../hooks/useChat';
 import { findAgent, useAgents } from '../hooks/useAgents';
@@ -15,7 +16,7 @@ import { useAwayCompletionNotice } from '../hooks/useAwayCompletionNotice';
 import { useComposerExtras } from '../hooks/useComposerExtras';
 import { useAgentSuggestions } from '../hooks/useAgentSuggestions';
 import { useLatestCallback, useShallowStable } from '../hooks/useStableProps';
-import { DefaultLogoIcon } from './icons';
+import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
@@ -37,6 +38,8 @@ interface RestoredHistory {
 }
 // A backend down, or out of its gateway's reach: it says nothing of the conversation asked for.
 const BACKEND_DOWN_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
+// The credentials refused, not the conversation: kept, and read back once the host's credentials change.
+const RESTORE_REFUSED_STATUSES: ReadonlySet<number> = new Set([401, 403]);
 const RESTORE_RETRY_BASE_MS = 5000;
 const RESTORE_RETRY_MAX_MS = 60000;
 
@@ -99,6 +102,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     getRequestExtras: getRequestExtrasProp,
     onStreamEvent: onStreamEventProp,
     markerRenderers: markerRenderersProp,
+    codeBlockRenderers: codeBlockRenderersProp,
     transformMessageText,
     onArtifactOpen: onArtifactOpenProp,
     headerActions,
@@ -157,6 +161,13 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     () => (markerRenderersProp ? Object.fromEntries(Object.entries(markerRenderersProp).map(([k, r]) => [k.toUpperCase(), r])) : undefined),
     [markerRenderersProp],
   );
+  // The host's code block renderers by lower-cased fence language, the form the renderer looks up.
+  const codeBlockRenderers = useShallowStable(
+    useMemo(
+      () => (codeBlockRenderersProp ? Object.fromEntries(Object.entries(codeBlockRenderersProp).map(([k, r]) => [k.toLowerCase(), r])) : undefined),
+      [codeBlockRenderersProp],
+    ),
+  );
   const markerKindList = useShallowStable(useMemo(() => markerKinds(markerRenderers && Object.keys(markerRenderers)), [markerRenderers]));
   const thinking = useMemo(() => ({ statusLabel, waitingMessages, renderWaitingPanel }), [statusLabel, waitingMessages, renderWaitingPanel]);
   // Inline mode is laid out like fullscreen, inside the host's container.
@@ -201,6 +212,9 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   // A conversation the backend could not be reached for: read back once it can.
   const [restoreOwedId, setRestoreOwedId] = useState<string | null>(null);
   const restoreAttemptsRef = useRef(0);
+  // A conversation whose read-back refused the credentials (401, 403): what the
+  // backend said, and the headers it refused.
+  const [restoreRefused, setRestoreRefused] = useState<{ conversationId: string; detail: string | null; headersKey: string } | null>(null);
   // Retitled elsewhere, or by the backend after the first answer.
   const refreshConversationsRef = useRef<() => Promise<unknown>>(async () => undefined);
 
@@ -552,6 +566,19 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     };
   }, [restoreOwedId, conversationId, isLoading, reloadHistory]);
 
+  // A read-back refused for its credentials is tried again once the host's
+  // credentials change (a token refreshed), or when the user asks.
+  const headersKey = requestHeadersKey(requestHeaders);
+  const retryRefusedRestore = useCallback(() => {
+    setRestoreRefused(null);
+    reloadHistory();
+  }, [reloadHistory]);
+  useEffect(() => {
+    if (!restoreRefused || restoreRefused.conversationId !== conversationId || isLoading) return;
+    if (restoreRefused.headersKey !== headersKey) retryRefusedRestore();
+  }, [restoreRefused, conversationId, isLoading, headersKey, retryRefusedRestore]);
+  const refusedRestore = restoreRefused && restoreRefused.conversationId === conversationId ? restoreRefused : null;
+
   // A conversation being read back shows its shape, not the welcome screen.
   const restoreEnabled = backendType === 'rest' && !apiEndpoints?.singleEndpoint && apiEndpoints?.sessions !== null;
   const restoringHistory = restoreEnabled && !!conversationId && historySettledId !== conversationId;
@@ -879,6 +906,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     // response can't write to localStorage / state after the panel is gone.
     const requestedConversationId = conversationId;
     const isStale = () => !isMountedRef.current || conversationIdRef.current !== requestedConversationId;
+    const requestedHeadersKey = requestHeadersKey(requestHeaders);
 
     fetch(sessionsUrl, {
       method: 'POST',
@@ -898,12 +926,22 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
           // forcing the user to click "New conversation". A backend that is
           // down or unreachable through its gateway says nothing of the id,
           // which is kept and read back once it answers.
+          // Credentials refused (an expired token) say nothing of the id
+          // either: it is kept, with what the backend said, until the host's
+          // credentials change or the user retries.
+          if (RESTORE_REFUSED_STATUSES.has(res.status)) {
+            return readRefusalDetail(res).then((detail) => {
+              if (!isStale()) setRestoreRefused({ conversationId: requestedConversationId, detail, headersKey: requestedHeadersKey });
+              return null;
+            });
+          }
           if (BACKEND_DOWN_STATUSES.has(res.status)) setRestoreOwedId(requestedConversationId);
           else updateConversationId(null);
           return null;
         }
         restoreAttemptsRef.current = 0;
         setRestoreOwedId(null);
+        setRestoreRefused(null);
         return res.json();
       })
       .then((data) => {
@@ -1200,6 +1238,24 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
                 </div>
               ))}
             </div>
+          ) : messages.length === 0 && refusedRestore ? (
+            <div
+              data-testid="filigran-chat-restore-error"
+              role="alert"
+              className="flex-1 flex flex-col items-center justify-center gap-3 px-6 py-6 text-center"
+            >
+              <AlertTriangleIcon size={18} className="text-amber-500 dark:text-amber-400" />
+              <p className="max-w-sm text-[0.8125rem] leading-6 text-gray-600 dark:text-white/60">
+                {refusedRestore.detail ?? t('This conversation could not be loaded.')}
+              </p>
+              <button
+                type="button"
+                onClick={retryRefusedRestore}
+                className="rounded-md border border-gray-200 dark:border-white/10 px-3 py-1 text-[0.75rem] font-medium text-gray-700 dark:text-white/80 transition-colors hover:bg-gray-100 dark:hover:bg-white/[0.06]"
+              >
+                {t('Retry')}
+              </button>
+            </div>
           ) : messages.length === 0 ? (
             welcome ? (
               <div className="flex-1 min-h-0 overflow-y-auto filigran-chat-scrollable">{welcome}</div>
@@ -1248,6 +1304,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
               onOpenConversation={onOpenConversation}
               markerRenderers={markerRenderers}
               markerKindList={markerKindList}
+              codeBlockRenderers={codeBlockRenderers}
               transformMessageText={transformMessageText}
               onArtifactOpen={onArtifactOpen}
               renderMessageExtras={renderMessageExtras}

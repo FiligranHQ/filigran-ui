@@ -938,3 +938,111 @@ test('a file that failed to upload offers neither a steer nor a hold while the t
   assert.equal(container.querySelector('button[aria-label="Send when the answer ends"]'), null);
   await finish(stream);
 });
+
+test("a send refused before its stream shows the backend's detail, and the generic words only when there is none", async () => {
+  const answers = [
+    () => json({ detail: 'Too many messages. Try again in 30 seconds.' }, 429),
+    () => json({ detail: { code: 'pack_invalid', message: 'The pack "apt" does not exist.' } }, 400),
+    () => json({ detail: { code: 'held', detail: 'This conversation is held by a channel.' } }, 409),
+    () => new Response('<html>Bad gateway</html>', { status: 502 }),
+  ];
+  let sent = 0;
+  fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? answers[sent++]() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({}, ref);
+  const outcomes: unknown[] = [];
+  for (const message of ['one', 'two', 'three', 'four']) {
+    let outcome!: Promise<unknown>;
+    await act(async () => {
+      outcome = ref.current!.send(message);
+      await settle(10);
+    });
+    outcomes.push(await outcome);
+  }
+  assert.deepEqual(outcomes, ['failed', 'failed', 'failed', 'failed']);
+  assert.ok(text().includes('Too many messages. Try again in 30 seconds.'));
+  assert.ok(text().includes('The pack "apt" does not exist.'));
+  assert.ok(text().includes('This conversation is held by a channel.'));
+  assert.equal(text().split('Unable to connect. Please check the configuration.').length - 1, 1, 'only the refusal with no detail');
+});
+
+test('a read-back refused for its credentials keeps the conversation, and is read again with new credentials or on retry', async () => {
+  let allowed = 'Bearer fresh';
+  const requests = fakeBackend([
+    agentsRoute,
+    (req) => {
+      if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+      if (req.headers.authorization !== allowed)
+        return req.headers.authorization === 'Bearer gone' ? json({}, 403) : json({ detail: 'Your session has expired.' }, 401);
+      return json({ conversation_id: 'c1', messages: [{ id: 'm1', role: 'assistant', content: 'The answer kept' }] });
+    },
+  ]);
+  const restores = () => requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST').length;
+  const changes: (string | null)[] = [];
+  const props = { conversationId: 'c1', onConversationChange: (id: string | null) => changes.push(id) };
+  await render({ ...props, requestHeaders: { Authorization: 'Bearer stale' } });
+  assert.deepEqual(changes, [], 'the conversation is kept');
+  assert.ok(container.querySelector('[data-testid="filigran-chat-restore-error"]'));
+  assert.ok(text().includes('Your session has expired.'));
+  // The same credentials, in a new object: nothing to retry with.
+  await render({ ...props, requestHeaders: { Authorization: 'Bearer stale' } });
+  assert.equal(restores(), 1);
+  // The host refreshed its token.
+  await render({ ...props, requestHeaders: { Authorization: 'Bearer fresh' } });
+  assert.equal(restores(), 2);
+  assert.ok(text().includes('The answer kept'));
+  assert.equal(container.querySelector('[data-testid="filigran-chat-restore-error"]'), null);
+  assert.deepEqual(changes, []);
+
+  // A 403 with no detail, then the user retries once the backend lets them in.
+  await act(async () => root.unmount());
+  root = createRoot(container);
+  allowed = 'none yet';
+  await render({ ...props, requestHeaders: { Authorization: 'Bearer gone' } });
+  assert.ok(text().includes('This conversation could not be loaded.'));
+  allowed = 'Bearer gone';
+  await act(async () => {
+    [...container.querySelectorAll('button')].find((b) => b.textContent === 'Retry')!.click();
+    await settle(10);
+  });
+  assert.ok(text().includes('The answer kept'));
+  assert.deepEqual(changes, []);
+});
+
+test('an event stream refused for its credentials reopens once each time they change', async () => {
+  let allowed = 'Bearer fresh';
+  const events = sseStream();
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    (req) => {
+      if (!req.url.startsWith('/api/chat/conversations/c1/events')) return undefined;
+      return req.headers.authorization === allowed ? events.response() : json({ detail: 'Not authenticated' }, 401);
+    },
+  ]);
+  const subscriptions = () => requests.filter((r) => r.url.includes('/events'));
+  const props = { conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } };
+  allowed = 'none yet';
+  await render({ ...props, requestHeaders: { Authorization: 'Bearer stale' } });
+  assert.equal(subscriptions().length, 1);
+  await render({ ...props, requestHeaders: { Authorization: 'Bearer stale' } });
+  assert.equal(subscriptions().length, 1, 'not reopened with the credentials refused');
+  await render({ ...props, requestHeaders: { Authorization: 'Bearer newer' } });
+  assert.equal(subscriptions().length, 2, 'reopened with new ones');
+  await act(async () => settle(10));
+  assert.equal(subscriptions().length, 2, 'refused again: tried once, not in a loop');
+  allowed = 'Bearer fresh';
+  await render({ ...props, requestHeaders: { Authorization: 'Bearer fresh' } });
+  assert.equal(subscriptions().length, 3);
+  assert.equal(subscriptions()[2].headers.authorization, 'Bearer fresh');
+  await act(async () => {
+    events.send({ type: 'thinking', turn_id: 't1' });
+    events.send({ type: 'stream', turn_id: 't1', content: 'Relayed once allowed' });
+    await settle(10);
+  });
+  assert.ok(text().includes('Relayed once allowed'));
+  // A live stream is not reopened when the credentials rotate.
+  await render({ ...props, requestHeaders: { Authorization: 'Bearer rotated' } });
+  assert.equal(subscriptions().length, 3);
+  await finish(events);
+});

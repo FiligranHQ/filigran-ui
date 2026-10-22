@@ -99,6 +99,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `getRequestExtras`  | `() => Record<string, unknown>`           | —            | Fields merged into every message body, read at send time (the host's own per-message options). They never override the panel's fields |
 | `onStreamEvent`     | `(event, { relayed }) => void`            | —            | Every frame received, on the message stream or the [event stream](#turns-that-outlive-their-stream) (`relayed: true`), including those the panel does not render |
 | `markerRenderers`   | `Record<string, ChatMarkerRenderer>`      | —            | The host's cards for answer markers, by name — see [Host extensions](#host-extensions) |
+| `codeBlockRenderers` | `Record<string, ChatCodeBlockRenderer>`  | —            | The host's rendering of fenced code blocks, by language: `(code, { streaming }) => React.ReactNode` — see [Host extensions](#host-extensions) |
 | `transformMessageText` | `(text, message) => string`            | —            | Rewrites a message's text before it is shown, copied or read aloud |
 | `onArtifactOpen`    | `(artifact: ChatArtifact) => void`        | —            | Opens a deck, report or video in the host, in place of the `Open in XTM One` link |
 | `headerActions` / `banner` / `composerHeader` / `transcriptFooter` / `welcome` | `React.ReactNode` | — | The host's content in the header, above the thread, above the composer, after the last message, or in place of the welcome screen |
@@ -181,8 +182,26 @@ const markers = useMemo(
 />;
 ```
 
-A card that throws shows `This item could not be loaded.` and leaves the rest
-of the answer on screen. A marker's arguments come from the model's answer:
+A fenced code block whose language a host renderer names (`codeBlockRenderers`,
+matched case-insensitively) renders that node in place of the code block -
+a chart drawn from the block's data, for instance. The renderer gets the
+block's text and `streaming`, true while the answer is still coming (the block
+may then be incomplete); a language no renderer names, or a renderer that
+returns `null` (a block it cannot read), stays a code block:
+
+```tsx
+const codeBlocks = useMemo(
+  () => ({
+    chart: (code: string, { streaming }: { streaming: boolean }) => (streaming ? <ChartSkeleton /> : <Chart spec={code} />),
+  }),
+  [],
+);
+
+<ChatPanel codeBlockRenderers={codeBlocks} />;
+```
+
+A card or a code block renderer that throws shows `This item could not be
+loaded.` and leaves the rest of the answer on screen. A marker's arguments come from the model's answer:
 treat them as untrusted input, never as markup or a URL to follow unchecked. Like `t`, the function props are used as given: keep
 them stable, and a new one re-renders every message, which is also how to
 refresh what they render.
@@ -300,7 +319,12 @@ empty `messages` array. The component adopts whatever id the response returns
 against a dead conversation — which would otherwise fail with a
 "conversation does not exist" error and force the user to manually start a new
 conversation. If the endpoint responds with a non-2xx status, the component
-silently resets the stored id and starts fresh on the next message.
+silently resets the stored id and starts fresh on the next message, except
+when it says nothing of the conversation: a `502`, `503` or `504` (or no
+answer at all) keeps the id and reads it back once the backend answers, and a
+`401` or `403` (expired credentials) keeps it, shows the response's `detail`
+(or "This conversation could not be loaded.") with a Retry button, and reads
+it back as soon as `requestHeaders` change.
 
 Assistant history messages **should echo the same `attachments[]` array** that
 was sent on the original `done` event (see [Agent-generated file attachments](#agent-generated-file-attachments)),
@@ -455,6 +479,12 @@ the agent aware of the user's current location/page; the shape is up to the
 host and can be extended later (page title, selected entity, user role, etc.).
 It must be JSON-serializable — a non-serializable value (circular reference,
 `BigInt`, …) is skipped rather than breaking the request.
+
+A refusal before the stream (a non-2xx answer: a rate limit, a refused
+option, an unknown conversation) shows the response's `detail` in place of the
+answer - a string, or the `message` (or `detail`) of an object - and
+"Unable to connect. Please check the configuration." when it has none; the
+handle's `send` resolves `'failed'`.
 
 **Response:** Server-Sent Events stream with these event types:
 
@@ -787,8 +817,9 @@ chat) opts into six more routes, none with a default:
 
 The event stream is opened once the conversation's history is read back (not
 while it could not be, for want of an agent or a reachable backend) and
-reconnected with backoff while the page is visible; a `401`, `403`, `404` or
-`405` stops it. With `events` named, every message, steer, decision, Stop and
+reconnected with backoff while the page is visible; a `404` or `405` stops it,
+and a `401` or `403` stops it until `requestHeaders` change, when it is tried
+once more (a refreshed token picks it up). With `events` named, every message, steer, decision, Stop and
 "Continue now" carries the same id in `X-Chat-Client-Id`, which the backend
 uses to never relay a panel's own turn back to it; frames naming the `turn_id`
 of the panel's own turn are dropped too. When the panel's own stream drops
@@ -1003,11 +1034,15 @@ The component uses Tailwind CSS classes and CSS custom properties for theming. T
 The stylesheet is isolated from the host page in both directions. Every utility
 is scoped to the panel (`.filigran-chatbot` and its descendants) and declared
 outside any cascade layer, and the theme variables (`--radius-*`, `--spacing`,
-...) are declared on the panel root. The host's own utilities and `:root`
-tokens - a Tailwind build shipped without layers, such as the Filigran design
-system's - therefore never restyle the panel, and the panel's utilities never
-style the host page. Panel overlays (menus, dialogs, tooltips) render inside
-the panel root, so they keep its styles.
+`--color-*`, ...) are declared on the panel root only, never on `:root` or
+`:host`. The host's own utilities and `:root` tokens - a Tailwind build shipped
+without layers, such as the Filigran design system's - therefore never restyle
+the panel, and loading the stylesheet neither styles the host page nor
+redeclares the host's own variables. Panel overlays (menus, dialogs, tooltips,
+the image viewer) render inside the panel root, so they keep its styles; so
+does `ChatToggleButton`, which carries the `filigran-chatbot` class itself. A
+host element rendered outside the panel does not get the panel's variables:
+declare its own.
 
 ### Composer toolbar
 

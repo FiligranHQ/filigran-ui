@@ -88,6 +88,83 @@ test("a host's marker renders its card in place, and one that throws takes only 
   assert.ok(!text().includes('[[WORK_ITEM'));
 });
 
+test("a host's code block renderer stands in for its language's fenced blocks, and one that throws takes only itself down", async () => {
+  const fence = (language: string, code: string) => '```' + language + '\n' + code + '\n```';
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: [
+          'Before',
+          fence('vega-lite', '{"type":"bar"}'),
+          fence('python', 'print(1)'),
+          fence('Broken', 'x'),
+          fence('vega-lite', 'not a chart'),
+          'After',
+        ].join('\n\n'),
+      },
+    ]),
+  ]);
+  const calls: [string, boolean][] = [];
+  const original = console.error;
+  console.error = () => undefined;
+  try {
+    await render({
+      conversationId: 'c1',
+      codeBlockRenderers: {
+        'VEGA-LITE': (code, { streaming }) => {
+          calls.push([code, streaming]);
+          return code.startsWith('{') ? <figure>Chart of {code}</figure> : null;
+        },
+        broken: () => {
+          throw new Error('unreadable chart');
+        },
+      },
+    });
+  } finally {
+    console.error = original;
+  }
+  assert.ok(text().includes('Chart of {"type":"bar"}'));
+  assert.ok(calls.length > 0 && calls.every(([, streaming]) => !streaming));
+  assert.ok(text().includes('not a chart'), 'a renderer returning null keeps the block as code');
+  assert.ok(text().includes('print(1)'), 'a language no renderer names stays a code block');
+  assert.ok(text().includes('python'));
+  assert.equal(text().split('This item could not be loaded.').length - 1, 1);
+  assert.ok(text().includes('Before') && text().includes('After'), 'the rest of the answer stays');
+  assert.ok(!container.querySelector('figure')?.closest('pre'));
+});
+
+test('a code block renderer is told while the answer streams', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const seen: boolean[] = [];
+  const ref = createRef<Handle>();
+  await render(
+    {
+      codeBlockRenderers: { 'vega-lite': (code, { streaming }) => (seen.push(streaming), (<span>{streaming ? 'Drawing' : `Drawn ${code}`}</span>)) },
+    },
+    ref,
+  );
+  await act(async () => {
+    void ref.current!.send('chart it');
+    await settle();
+  });
+  await act(async () => {
+    stream.send({ type: 'stream', content: 'Here:\n\n```vega-lite\n{"a":1}' });
+    await settle(10);
+  });
+  assert.ok(text().includes('Drawing'), text());
+  await act(async () => {
+    stream.send({ type: 'done', content: 'Here:\n\n```vega-lite\n{"a":1}\n```', conversation_id: 'c1' });
+    stream.close();
+    await settle(10);
+  });
+  assert.ok(text().includes('Drawn {"a":1}'));
+  assert.ok(seen.includes(true) && seen.at(-1) === false);
+});
+
 test('the text transform is what is shown', async () => {
   fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'assistant', content: 'Key is [[SECRET_VARIABLE:s1:0123456789abcdef]]' }])]);
   await render({

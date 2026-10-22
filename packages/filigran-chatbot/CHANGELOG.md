@@ -48,6 +48,12 @@ This file starts at 3.10.0; earlier releases are on the
   alone. A marker no renderer names stays text, as before.
 - `transformMessageText` rewrites a message's text before it is shown, copied
   or read aloud (masking secrets, converting a channel's syntax).
+- `codeBlockRenderers` renders a fenced code block of a language the host
+  names (`(code, { streaming }) => ReactNode`, matched case-insensitively) in
+  place of the code block, e.g. a chart drawn from the block's data. A
+  renderer that throws shows `This item could not be loaded.`, as a marker
+  card does; a language no renderer names, or a renderer returning `null`,
+  stays a code block.
 - `onArtifactOpen` opens a deck, report or video in the host, in place of the
   link to XTM One.
 - Slots for the host's own content: `headerActions`, `banner`,
@@ -87,8 +93,8 @@ This file starts at 3.10.0; earlier releases are on the
   (given back to the composer by Stop) or `'cancelled'`.
 - New exported types: `ChatPanelHandle`, `ChatPanelMode`, `ChatSendOptions`,
   `ChatSendOutcome`, `ChatSendDraft`, `ChatSendDecision`, `ChatHeldOutcome`,
-  `ChatMarkerRenderer`, `ChatMarkerContext`, `ChatStreamEventInfo` and
-  `AgentStatusState`.
+  `ChatMarkerRenderer`, `ChatMarkerContext`, `ChatCodeBlockRenderer`,
+  `ChatCodeBlockContext`, `ChatStreamEventInfo` and `AgentStatusState`.
 
 ### Changed
 
@@ -113,6 +119,22 @@ This file starts at 3.10.0; earlier releases are on the
   chat, and is read back once the backend answers (retried with backoff, and
   at once when the browser is back online or the page is shown again, never
   over a turn in progress); any other error still resets it.
+- A conversation whose restore answers 401 or 403 (expired credentials) keeps
+  its id too, rather than being dropped for a new chat (a host's `?c=`
+  survives): the panel shows the response's `detail` (or `This conversation
+  could not be loaded.`) with a Retry button, and reads the conversation back
+  as soon as `requestHeaders` change.
+- A message the backend refuses before streaming (a non-2xx answer) shows the
+  response's `detail` (a string, or the `message` or `detail` of an object)
+  instead of `Unable to connect. Please check the configuration.`, which stays
+  for a refusal that says nothing; `send` still resolves `'failed'`.
+- The stylesheet declares Tailwind's theme variables (`--color-*`,
+  `--radius-*`, `--shadow-*`, ...) on the panel root only, no longer on
+  `:root` and `:host`, so loading it never redeclares a host's own variables;
+  the `@property` fallbacks of browsers without it are kept to the panel's
+  elements too. A host element outside the panel no longer inherits them.
+- A fenced code block's language label shows the whole language
+  (`objective-c`, not `objective`).
 
 ### Fixed
 
@@ -128,6 +150,8 @@ This file starts at 3.10.0; earlier releases are on the
 - `apiEndpoints.events` (no default): the panel follows the conversation's
   event stream, and renders turns started in another tab or before a reload,
   user messages sent elsewhere, new titles and approvals answered elsewhere.
+  Refused with 401 or 403, the stream is tried once more each time
+  `requestHeaders` change, so a refreshed token picks it up.
   Messages, steers, decisions, Stop, "Continue now" and the event stream
   itself then carry `X-Chat-Client-Id`, so a panel's own turns are never
   relayed back to it. A panel whose own stream drops mid-turn, or ends

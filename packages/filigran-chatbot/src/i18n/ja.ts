@@ -129,6 +129,7 @@ const ja: Catalog = {
   Report: 'レポート',
   'Response ready': '応答準備完了',
   'Reticulating splines': 'スプラインを網状化しています',
+  Retry: '再試行',
   Save: '保存',
   'Search agents...': 'エージェントを検索...',
   'Search conversations...': '会話を検索...',
@@ -165,6 +166,7 @@ const ja: Catalog = {
   'The workspace could not be renamed': 'ワークスペースの名前を変更できませんでした',
   'Thinking it through': 'じっくり考えています',
   'Thinking...': '考え中...',
+  'This conversation could not be loaded.': 'この会話を読み込めませんでした。',
   'This decision could not be sent. Reload the chat and try again.':
     'この決定を送信できませんでした。チャットを再読み込みして、もう一度お試しください。',
   'This item could not be loaded.': 'この項目を読み込めませんでした。',

@@ -2,14 +2,13 @@ import resolve from '@rollup/plugin-node-resolve';
 import terser from '@rollup/plugin-terser';
 import json from '@rollup/plugin-json';
 import postcss from 'rollup-plugin-postcss';
-import tailwindcssPostcss from '@tailwindcss/postcss';
 import typescript from '@rollup/plugin-typescript';
 import commonjs from '@rollup/plugin-commonjs';
 import dts from 'rollup-plugin-dts';
 import { typescriptPaths } from 'rollup-plugin-typescript-paths';
 import serve from 'rollup-plugin-serve';
 import livereload from 'rollup-plugin-livereload';
-import isolateFromHost from './postcss/isolate-from-host.js';
+import { stylesheetPlugins } from './postcss/pipeline.js';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -36,7 +35,7 @@ const indexConfig = {
     json(),
     typescript(typescriptOptions),
     postcss({
-      plugins: [tailwindcssPostcss(), isolateFromHost()],
+      plugins: stylesheetPlugins(),
       extract: 'styles.css',
       modules: false,
       autoModules: false,

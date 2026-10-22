@@ -25,6 +25,7 @@ import { takePageSnapshot } from '../utils/pageSnapshot';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { readSseEvents } from '../utils/sse';
 import { randomId } from '../utils/randomId';
+import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
 import { mentionedAgentIds, pruneAgentMentions, withAgentMention, type AgentMention } from '../utils/agentMentions';
 
 // Unsent composer text is kept per conversation so closing the panel (hosts
@@ -1564,8 +1565,11 @@ export function useChat({
       });
 
       if (!res.ok || !res.body) {
+        // A refusal before the stream (a rate limit, a refused option, an
+        // unknown conversation) says why in its `detail`: that is what shows.
+        const detail = res.ok ? null : await readRefusalDetail(res);
         setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, content: t('Unable to connect. Please check the configuration.') } : m)),
+          prev.map((m) => (m.id === assistantId ? { ...m, content: detail ?? t('Unable to connect. Please check the configuration.') } : m)),
         );
         return 'failed';
       }
@@ -1930,8 +1934,21 @@ export function useChat({
    * elsewhere (another tab, a reload mid-turn, a second device), user
    * messages sent there, new titles and approvals answered there. Reconnects
    * with backoff while the page is visible; a route refused outright stops it.
+   * A refusal of the credentials (401, 403) is tried once more each time the
+   * host's `requestHeaders` change, so a refreshed token picks the stream up.
    */
   const eventsUrl = conversationId && historySettledFor === conversationId ? getEventsUrl(conversationId) : null;
+  const headersKey = requestHeadersKey(requestHeaders);
+  const headersKeyRef = useRef(headersKey);
+  headersKeyRef.current = headersKey;
+  // The stream refused for its credentials: its URL and the headers it was refused with.
+  const [eventsRefused, setEventsRefused] = useState<{ url: string; headersKey: string } | null>(null);
+  const [eventsReopen, setEventsReopen] = useState(0);
+  useEffect(() => {
+    if (!eventsRefused || eventsRefused.url !== eventsUrl || eventsRefused.headersKey === headersKey) return;
+    setEventsRefused(null);
+    setEventsReopen((n) => n + 1);
+  }, [eventsRefused, eventsUrl, headersKey]);
   useEffect(() => {
     if (!eventsUrl) return;
     let stopped = false;
@@ -1947,12 +1964,14 @@ export function useChat({
       controller = new AbortController();
       let refused = false;
       try {
+        const sentHeadersKey = headersKeyRef.current;
         const res = await fetch(eventsUrl, {
           headers: { ...(requestHeadersRef.current ?? {}), 'X-Chat-Client-Id': clientId },
           signal: controller.signal,
         });
         if ([401, 403, 404, 405].includes(res.status)) {
           refused = true;
+          if ((res.status === 401 || res.status === 403) && !stopped) setEventsRefused({ url: eventsUrl, headersKey: sentHeadersKey });
           return;
         }
         if (!res.ok || !res.body) return;
@@ -1991,7 +2010,7 @@ export function useChat({
       // A relayed turn nothing feeds any more is over, as far as this panel can tell.
       endRelayedTurnRef.current();
     };
-  }, [eventsUrl, clientId]);
+  }, [eventsUrl, clientId, eventsReopen]);
 
   // The turn is over: what was held goes out as the next one.
   useEffect(() => {

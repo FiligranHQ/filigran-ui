@@ -577,6 +577,16 @@ export interface ChatPanelProps {
    */
   markerRenderers?: Record<string, ChatMarkerRenderer>;
   /**
+   * Renderers for fenced code blocks, by the fence's language (```` ```chart ````,
+   * matched case-insensitively): the node returned stands in place of the code
+   * block (a chart, a diagram, a table drawn from the block's data). The
+   * renderer gets the block's text, and `streaming` while the answer is still
+   * coming, when the block may be incomplete. One that throws, or whose node
+   * does, shows `This item could not be loaded.` and leaves the rest of the
+   * answer alone. A language no renderer names stays a code block.
+   */
+  codeBlockRenderers?: Record<string, ChatCodeBlockRenderer>;
+  /**
    * Rewrites a message's text before it is shown, copied or read aloud: the
    * host's own markup (masking secrets, converting a channel's syntax).
    */
@@ -665,6 +675,15 @@ export interface ChatMarkerRenderer {
   /** Give it the thread's full width rather than the prose's. */
   fullWidth?: boolean;
 }
+
+/** What a code block renderer is drawn from. */
+export interface ChatCodeBlockContext {
+  /** The answer is still streaming: the block may not be complete yet. */
+  streaming: boolean;
+}
+
+/** Renders one fenced code block of a language (see `ChatPanelProps.codeBlockRenderers`); *code* is the block's text. `null` keeps the block as code. */
+export type ChatCodeBlockRenderer = (code: string, context: ChatCodeBlockContext) => React.ReactNode;
 
 /** Where a frame passed to `onStreamEvent` came from. */
 export interface ChatStreamEventInfo {

@@ -1,7 +1,8 @@
-import { Component, memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type {
   AgentStatusState,
   ChatMarkerRenderer,
+  ChatCodeBlockRenderer,
   ChatArtifact,
   ChatArtifactKind,
   ChatAttachment,
@@ -45,6 +46,7 @@ import { ArtifactCard } from './ArtifactCard';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
 import { ChatThinking, type ThinkingOverrides } from './ChatThinking';
+import { HostRenderBoundary, HostRenderFallback, HostRendered } from './HostRenderBoundary';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ReasoningDetailsDialog } from './ReasoningDetailsDialog';
 import { Tooltip } from './Tooltip';
@@ -57,32 +59,6 @@ import { Tooltip } from './Tooltip';
  */
 const INITIAL_RENDER_WINDOW = 150;
 const RENDER_WINDOW_STEP = 50;
-
-/**
- * A host's marker card that throws takes only itself down: the answer around
- * it, and the rest of the thread, stay on screen. A new *resetKey* (the
- * marker's arguments completed by the stream) gives the card another try.
- */
-class MarkerBoundary extends Component<{ fallback: ReactNode; children: ReactNode; resetKey: string }, { failed: boolean; resetKey: string }> {
-  state = { failed: false, resetKey: this.props.resetKey };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  static getDerivedStateFromProps(props: { resetKey: string }, state: { failed: boolean; resetKey: string }) {
-    return props.resetKey === state.resetKey ? null : { failed: false, resetKey: props.resetKey };
-  }
-  componentDidCatch(error: unknown, info: ErrorInfo) {
-    console.error('A chat marker card failed to render', error, info.componentStack);
-  }
-  render() {
-    return this.state.failed ? this.props.fallback : this.props.children;
-  }
-}
-
-/** A host's card, drawn inside the boundary: a renderer that throws itself is caught too. */
-function HostMarker({ draw }: { draw: () => ReactNode }) {
-  return <>{draw()}</>;
-}
 
 /** How long the copy affordance stays in its confirmed state. */
 const COPY_FEEDBACK_DELAY = 2000;
@@ -167,6 +143,8 @@ interface ChatMessagesProps {
   onOpenConversation?: (conversationId: string) => void;
   markerRenderers?: Record<string, ChatMarkerRenderer>;
   markerKindList?: readonly string[];
+  /** The host's code block renderers by lower-cased language (see `ChatPanelProps.codeBlockRenderers`). */
+  codeBlockRenderers?: Record<string, ChatCodeBlockRenderer>;
   transformMessageText?: (text: string, message: ChatMessage) => string;
   onArtifactOpen?: (artifact: ChatArtifact) => void;
   renderMessageExtras?: (message: ChatMessage) => React.ReactNode;
@@ -448,6 +426,7 @@ interface MessageRowProps {
   markerRenderers?: Record<string, ChatMarkerRenderer>;
   /** Their names, as `markerKinds` normalizes them. */
   markerKindList?: readonly string[];
+  codeBlockRenderers?: Record<string, ChatCodeBlockRenderer>;
   transformMessageText?: (text: string, message: ChatMessage) => string;
   onArtifactOpen?: (artifact: ChatArtifact) => void;
   renderMessageExtras?: (message: ChatMessage) => React.ReactNode;
@@ -490,6 +469,7 @@ const MessageRow = memo(
     onOpenConversation,
     markerRenderers,
     markerKindList = NO_KINDS,
+    codeBlockRenderers,
     transformMessageText,
     onArtifactOpen,
     renderMessageExtras,
@@ -573,12 +553,9 @@ const MessageRow = memo(
       if (!renderer || (isStreaming && !renderer.renderWhileStreaming)) return null;
       return (
         <div key={key} className={renderer.fullWidth ? 'w-full' : 'w-full max-w-[90%]'}>
-          <MarkerBoundary
-            resetKey={`${args}\u0000${isStreaming}`}
-            fallback={<p className="pl-1 text-[0.75rem] italic text-gray-400 dark:text-white/40">{t('This item could not be loaded.')}</p>}
-          >
-            <HostMarker draw={() => renderer.render(args, { message: msg, streaming: isStreaming })} />
-          </MarkerBoundary>
+          <HostRenderBoundary label="A chat marker card" resetKey={`${args}\u0000${isStreaming}`} fallback={<HostRenderFallback t={t} />}>
+            <HostRendered draw={() => renderer.render(args, { message: msg, streaming: isStreaming })} />
+          </HostRenderBoundary>
         </div>
       );
     };
@@ -610,6 +587,7 @@ const MessageRow = memo(
                   streaming={isStreaming}
                   onRelativeLinkClick={onRelativeLinkClick}
                   requestHeaders={requestHeaders}
+                  codeBlockRenderers={codeBlockRenderers}
                   t={t}
                 />
               </div>,
@@ -901,6 +879,7 @@ export const ChatMessages = ({
   onOpenConversation,
   markerRenderers,
   markerKindList,
+  codeBlockRenderers,
   transformMessageText,
   onArtifactOpen,
   renderMessageExtras,
@@ -1184,6 +1163,7 @@ export const ChatMessages = ({
             onOpenConversation={msg.conversationRefs?.length ? onOpenConversation : undefined}
             markerRenderers={markerRenderers}
             markerKindList={markerKindList}
+            codeBlockRenderers={codeBlockRenderers}
             transformMessageText={transformMessageText}
             onArtifactOpen={onArtifactOpen}
             renderMessageExtras={renderMessageExtras}

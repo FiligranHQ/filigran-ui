@@ -13,6 +13,8 @@ export type {
   ChatStreamEventInfo,
   ChatMarkerContext,
   ChatMarkerRenderer,
+  ChatCodeBlockContext,
+  ChatCodeBlockRenderer,
   AgentStatusState,
   BackendType,
   ChatPanelProps,
