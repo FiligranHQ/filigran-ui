@@ -167,18 +167,20 @@ export interface DecidedSend {
 /**
  * Apply `onBeforeSend`'s *decision* to *text*: `null` when the host took the
  * send over. The bubble shows `displayText` when the host gave one that says
- * something, the text sent otherwise.
+ * something, else *displayFallback* (the handle's `displayText`) when it
+ * does, the text sent otherwise.
  */
-export function applySendDecision(text: string, decision: ChatSendDecision | undefined): DecidedSend | null {
+export function applySendDecision(text: string, decision: ChatSendDecision | undefined, displayFallback?: string): DecidedSend | null {
   if (decision === false) return null;
   const adjust = decision && typeof decision === 'object' ? decision : undefined;
   const sent = (typeof adjust?.text === 'string' ? adjust.text : text).trim();
   const shown = typeof adjust?.displayText === 'string' ? adjust.displayText.trim() : '';
-  return { text: sent, displayText: shown || sent, extras: adjust?.extras };
+  const fallback = typeof displayFallback === 'string' ? displayFallback.trim() : '';
+  return { text: sent, displayText: shown || fallback || sent, extras: adjust?.extras };
 }
 
 /** A host callback's answer; one that throws is reported and answers nothing, never breaking the turn. */
-function askHost<A extends unknown[], R>(callback: ((...args: A) => R) | undefined, ...args: A): R | undefined {
+export function askHost<A extends unknown[], R>(callback: ((...args: A) => R) | undefined, ...args: A): R | undefined {
   if (!callback) return undefined;
   try {
     return callback(...args);
@@ -257,7 +259,10 @@ export interface SendOverride {
   mentions?: AgentMention[];
   /** Already seen by `onBeforeSend` (a held message going out). */
   decided?: boolean;
-  /** What the user's bubble shows in place of `text` (see `ChatSendDecision`). */
+  /**
+   * What the user's bubble shows in place of `text` (see `ChatSendDecision`):
+   * a held message's, or the handle's own, which `onBeforeSend`'s wins over.
+   */
   displayText?: string;
   /** Called as the message opens a turn, long before the send itself resolves at the turn's end. */
   onSent?: () => void;
@@ -1214,8 +1219,8 @@ export function useChat({
     const segmentIds = [firstAssistantId];
     let accumulated = '';
     let doneReceived = false;
-    // An error or a stop the stream reported: what it wrote must not be put back over it.
-    let ended: 'error' | 'cancelled' | null = null;
+    // An error, a stop or the session's end the stream reported: what it wrote must not be put back over it.
+    let ended: 'error' | 'cancelled' | 'session' | null = null;
     const ctx: ProtocolContext = { hasUsedTools: false, activeNodeId: '' };
 
     const deltas = createStreamDeltas((textChanged, thinking) => {
@@ -1344,7 +1349,9 @@ export function useChat({
                 toolCallTrace: parsed.toolCallTrace,
                 transferChain: parsed.transferChain,
                 isTruncated: parsed.isTruncated,
-                agentName: parsed.answeredBy ?? m.agentName,
+                agentName: parsed.answeredBy?.agentName ?? m.agentName,
+                answeredBy: parsed.answeredBy,
+                mentionFailed: parsed.mentionFailed,
                 serverId: parsed.messageId ?? m.serverId,
               }
             : m,
@@ -1397,6 +1404,14 @@ export function useChat({
           ended = 'cancelled';
           const segId = currentAssistantId;
           setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, stopped: true } : m)));
+          return 'end';
+        }
+        case 'session_ended': {
+          // The user is signed out: what was written stays, an empty bubble goes.
+          deltas.flush();
+          ended = 'session';
+          const segId = currentAssistantId;
+          setMessages((prev) => prev.filter((m) => !(m.id === segId && !m.content)));
           return 'end';
         }
         default:
@@ -1461,6 +1476,7 @@ export function useChat({
             source: fromComposer ? 'composer' : (override?.source ?? 'host'),
             turnRunning: isLoadingRef.current,
           }),
+      override?.displayText,
     );
     if (!decided) return 'dropped';
     const hookExtras = decided.extras;
@@ -1710,7 +1726,14 @@ export function useChat({
             void answerPageAction(parsed.actionId, parsed.pageAction, parsed.conversationId);
             return true;
           }
-          if (parsed.action === 'error' || parsed.action === 'cancelled' || (parsed.action === 'done' && !parsed.intermediate)) sawTurnEnd = true;
+          if (
+            parsed.action === 'error' ||
+            parsed.action === 'cancelled' ||
+            parsed.action === 'session_ended' ||
+            (parsed.action === 'done' && !parsed.intermediate)
+          ) {
+            sawTurnEnd = true;
+          }
           return turn.apply(parsed) !== 'end';
         } catch {
           // A frame that could not be applied is skipped, not fatal.
@@ -1810,6 +1833,18 @@ export function useChat({
     const relayedTurn = relayedTurnRef.current;
     const parsed = parseRestEvent(evt, relayedTurn?.renderer.ctx ?? { hasUsedTools: false, activeNodeId: '' });
     if (applyConversationFrame(parsed)) return;
+    if (parsed.action === 'session_ended') {
+      // Signed out: no turn of another origin goes on for this user, and a
+      // handed-over turn of our own will not be replayed.
+      endRelayedTurn();
+      if (handoverTurnIdRef.current !== null && !ownTurnActiveRef.current) {
+        clearHandover();
+        isLoadingRef.current = false;
+        setIsLoading(false);
+        setAgentStatus(null);
+      }
+      return;
+    }
     if (!TURN_ACTIONS.has(parsed.action)) return;
     // The turn this panel streams itself is never rendered twice.
     const turnId = typeof evt.turn_id === 'string' && evt.turn_id ? evt.turn_id : null;

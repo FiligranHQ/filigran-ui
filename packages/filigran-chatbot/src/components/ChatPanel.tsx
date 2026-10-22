@@ -8,7 +8,7 @@ import { conversationReferencesUrl } from '../utils/conversationRefs';
 import { pendingWorkspaceStillFileable, returnRefreshDue } from '../utils/workspaces';
 import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
 import { parseArtifact, parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
-import { useChat } from '../hooks/useChat';
+import { askHost, useChat } from '../hooks/useChat';
 import { findAgent, useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
 import { useWorkspaces } from '../hooks/useWorkspaces';
@@ -126,6 +126,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     onReady: onReadyProp,
     onBeforeSend: onBeforeSendProp,
     onHeldSendSettled: onHeldSendSettledProp,
+    onTurnRunningChange: onTurnRunningChangeProp,
     steerAttachments = false,
     holdSendsDuringTurn = false,
     agentMentions: agentMentionsEnabled = false,
@@ -155,6 +156,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   const onBeforeSend = useLatestCallback(onBeforeSendProp);
   const onHeldSendSettled = useLatestCallback(onHeldSendSettledProp);
   const onStreamEvent = useLatestCallback(onStreamEventProp);
+  const onTurnRunningChange = useLatestCallback(onTurnRunningChangeProp);
   // A click handler, not content: held stable so a host's inline one spares every row.
   const onArtifactOpen = useLatestCallback(onArtifactOpenProp);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -414,6 +416,23 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       window.removeEventListener('focus', onReturn);
     };
   }, [showConversationSidebar, refreshConversations, refreshWorkspaces]);
+
+  // The host hears when a turn starts or stops running on screen, once per
+  // change, and that it stopped when the panel goes away in the middle of one.
+  const reportedRunningRef = useRef(false);
+  useEffect(() => {
+    if (reportedRunningRef.current === isLoading) return;
+    reportedRunningRef.current = isLoading;
+    askHost(onTurnRunningChange, isLoading);
+  }, [isLoading, onTurnRunningChange]);
+  useEffect(
+    () => () => {
+      if (!reportedRunningRef.current) return;
+      reportedRunningRef.current = false;
+      askHost(onTurnRunningChange, false);
+    },
+    [onTurnRunningChange],
+  );
 
   // A finished turn has consumed allowance and may have retitled the chat.
   const wasLoadingRef = useRef(false);
@@ -1130,7 +1149,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
                   }
                   // A new turn resolves once the backend takes it, not when its answer ends.
                   handleSendMessageRef
-                    .current({ text, extras: options?.extras, onSent: () => resolve('sent') })
+                    .current({ text, extras: options?.extras, displayText: options?.displayText, onSent: () => resolve('sent') })
                     .then(resolve, () => resolve('failed'));
                 },
                 () => resolve('dropped'),

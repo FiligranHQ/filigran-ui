@@ -1,4 +1,5 @@
 import type {
+  ChatAnsweredBy,
   ChatArtifact,
   ChatAttachment,
   ChatContextUsage,
@@ -61,7 +62,9 @@ export type ParsedAction =
       /** A segment closed mid-turn: the turn goes on after it. */
       intermediate?: boolean;
       /** The agent that wrote this segment, when it is not the conversation's own. */
-      answeredBy?: string;
+      answeredBy?: ChatAnsweredBy;
+      /** The segment is a note written in place of a mentioned agent that could not answer. */
+      mentionFailed?: boolean;
     }
   | {
       /**
@@ -92,6 +95,8 @@ export type ParsedAction =
   | { action: 'error'; content: string }
   /** The turn was stopped (`cancelled`): terminal. */
   | { action: 'cancelled' }
+  /** The user's session ended (`session_expired`): terminal, the stream that said so ends with it. */
+  | { action: 'session_ended' }
   /** Nothing is waiting on a decision any more: another device answered it. */
   | { action: 'approval_resolved' }
   /** A user message sent from another device or tab. */

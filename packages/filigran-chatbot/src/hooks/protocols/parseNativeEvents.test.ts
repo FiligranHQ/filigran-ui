@@ -61,8 +61,21 @@ test('done says whether the turn goes on, and who answered', () => {
   assert.equal(parsed.action, 'done');
   if (parsed.action !== 'done') return;
   assert.equal(parsed.intermediate, true);
-  assert.equal(parsed.answeredBy, 'Hunter');
+  assert.deepEqual(parsed.answeredBy, { agentId: 'a', agentName: 'Hunter' });
+  assert.equal(parsed.mentionFailed, undefined);
   const plain = parseRestEvent({ type: 'done', content: 'x', answered_by: 'Analyst' }, ctx());
-  assert.equal(plain.action === 'done' && plain.answeredBy, 'Analyst');
+  assert.deepEqual(plain.action === 'done' && plain.answeredBy, { agentName: 'Analyst' });
   assert.equal(plain.action === 'done' && plain.intermediate, undefined);
+  const failed = parseRestEvent(
+    { type: 'done', content: 'n', mention_failed: true, answered_by: { agent_id: 'b', agent_name: 'Analyst', agent_icon: '🛰️', extra: 1 } },
+    ctx(),
+  );
+  assert.deepEqual(failed.action === 'done' && failed.answeredBy, { agentId: 'b', agentName: 'Analyst', agentIcon: '🛰️' });
+  assert.equal(failed.action === 'done' && failed.mentionFailed, true);
+  const nobody = parseRestEvent({ type: 'done', content: 'x', answered_by: { agent_icon: '🛰️' } }, ctx());
+  assert.equal(nobody.action === 'done' && nobody.answeredBy, undefined, 'an attribution naming no agent is none');
+});
+
+test('a session_expired frame ends the turn', () => {
+  assert.deepEqual(parseRestEvent({ type: 'session_expired', reason: 'idle' }, ctx()), { action: 'session_ended' });
 });

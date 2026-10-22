@@ -1,4 +1,5 @@
 import type {
+  ChatAnsweredBy,
   ChatArtifact,
   ChatArtifactKind,
   ChatAttachment,
@@ -248,12 +249,21 @@ function parsePageAction(raw: unknown): PageAction {
 
 const optionalString = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined);
 
-/** `answered_by` is a name, or an agent object carrying one. */
-function answeredByName(raw: unknown): string | undefined {
-  if (typeof raw === 'string') return optionalString(raw);
+/**
+ * `answered_by`: an agent object (`agent_id`, `agent_name`, `agent_icon`), or
+ * a bare name. Undefined when it names nothing.
+ */
+export function parseAnsweredBy(raw: unknown): ChatAnsweredBy | undefined {
+  if (typeof raw === 'string') return raw ? { agentName: raw } : undefined;
   if (!raw || typeof raw !== 'object') return undefined;
   const a = raw as Record<string, unknown>;
-  return optionalString(a.agent_name) ?? optionalString(a.name);
+  const by: ChatAnsweredBy = {
+    agentId: optionalString(a.agent_id),
+    agentName: optionalString(a.agent_name) ?? optionalString(a.name),
+    agentIcon: optionalString(a.agent_icon),
+  };
+  if (!by.agentId && !by.agentName) return undefined;
+  return Object.fromEntries(Object.entries(by).filter(([, v]) => v !== undefined)) as ChatAnsweredBy;
 }
 
 /**
@@ -267,6 +277,9 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
   }
 
   if (type === 'cancelled') return { action: 'cancelled' };
+  // The user's session ended: the backend closes the stream after this frame,
+  // and no turn on screen can go on for this user.
+  if (type === 'session_expired') return { action: 'session_ended' };
   if (type === 'approval_resolved') return { action: 'approval_resolved' };
   if (type === 'folded_into_active_turn') return { action: 'folded', turnId: optionalString(evt.turn_id) };
   if (type === 'conversation_title') {
@@ -382,7 +395,8 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       contextUsage: parseContextUsage(evt),
       messageId: typeof evt.message_id === 'string' && evt.message_id ? evt.message_id : undefined,
       intermediate: evt.intermediate === true || undefined,
-      answeredBy: answeredByName(evt.answered_by),
+      answeredBy: parseAnsweredBy(evt.answered_by),
+      mentionFailed: evt.mention_failed === true || undefined,
     };
   }
 
@@ -418,6 +432,7 @@ export function parseRestoredMessages(raw: unknown): ChatMessage[] {
     if (m.role !== 'user' && m.role !== 'assistant') return;
     const createdAt = typeof m.created_at === 'string' ? new Date(m.created_at) : null;
     const sentAt = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt : null;
+    const answeredBy = m.role === 'assistant' ? parseAnsweredBy(m.answered_by) : undefined;
     out.push({
       id: `restored-${i}`,
       serverId: typeof m.id === 'string' && m.id ? m.id : undefined,
@@ -426,11 +441,14 @@ export function parseRestoredMessages(raw: unknown): ChatMessage[] {
       timestamp: sentAt ?? new Date(),
       timestampUnknown: sentAt ? undefined : true,
       feedback: m.role === 'assistant' ? parsePersistedFeedback(m.feedback) : undefined,
-      // Per-message attribution when the backend keeps it — the only way a
-      // thread that changed hands mid-way reads correctly. Nothing records it
-      // today, so this is normally undefined and the conversation's agent
-      // applies to the whole thread.
-      agentName: typeof m.agent_name === 'string' ? m.agent_name : undefined,
+      // Per-message attribution: the agent that wrote an answer of a turn
+      // several agents answered (as a live `done` names it), else the
+      // message's own agent when the backend keeps one; undefined lets the
+      // conversation's agent apply to the whole thread.
+      agentName: answeredBy?.agentName ?? (typeof m.agent_name === 'string' ? m.agent_name : undefined),
+      answeredBy,
+      // Whether it is a note in place of an answer that could not be given, for the host.
+      mentionFailed: m.role === 'assistant' && m.mention_failed === true ? true : undefined,
       // Downloadable file chips on both roles: agent-generated deliverables on
       // assistant messages (their [[FILE:…]] markers are stripped at render
       // time) and user uploads, so an upload stays downloadable after a reload

@@ -645,6 +645,17 @@ export interface ChatPanelProps {
    */
   onHeldSendSettled?: (text: string, outcome: ChatHeldOutcome) => void;
   /**
+   * Called when a turn starts or stops running on screen: the state that shows
+   * the Stop button and the status line, and that `ChatSendDraft.turnRunning`
+   * reports. True for the panel's own turn from its send, and for a turn the
+   * event stream relays; false once it ends - its stream closes after the last
+   * `done` (an intermediate one goes on), an `error`, `cancelled` or
+   * `session_expired` frame, a Stop, a new conversation - and when the panel
+   * unmounts during a turn. Called on changes only, never with the value it
+   * last gave.
+   */
+  onTurnRunningChange?: (running: boolean) => void;
+  /**
    * Uploaded files may steer the running turn: the steer route takes
    * `file_ids`. Without it, a message with files waits for the turn to end.
    */
@@ -765,6 +776,11 @@ export type ChatSendDecision = false | { text?: string; displayText?: string; ex
 export interface ChatSendOptions {
   /** Merged into that one message's request body (see `getRequestExtras`). */
   extras?: Record<string, unknown>;
+  /**
+   * What the user's bubble shows in place of the text sent, as `onBeforeSend`'s
+   * `displayText` does (which wins when it gives one).
+   */
+  displayText?: string;
 }
 
 export interface ChatToggleButtonProps {
@@ -813,6 +829,17 @@ export interface ChatMessage {
    * back to the conversation's agent, then to the selected one.
    */
   agentName?: string;
+  /**
+   * The agent that wrote this answer, as the backend names it (`answered_by`
+   * of its `done` frame or restored entry): on a turn several agents answer,
+   * each reply names its own. Absent when the backend does not say.
+   */
+  answeredBy?: ChatAnsweredBy;
+  /**
+   * The answer is a note written in place of a mentioned agent that could not
+   * answer (`mention_failed`).
+   */
+  mentionFailed?: boolean;
   files?: ChatFile[];
   /**
    * The conversations a user message references with `@` (see
@@ -849,6 +876,14 @@ export interface ChatMessage {
    * reasoning-details affordance, mirroring the XTM One web chat.
    */
   isTruncated?: boolean;
+}
+
+/** The agent an answer names as its author (`answered_by`); either field may be missing. */
+export interface ChatAnsweredBy {
+  agentId?: string;
+  agentName?: string;
+  /** An image URL or an emoji, as `XtmAgent.icon`. */
+  agentIcon?: string;
 }
 
 /** A rating as the feedback endpoint stores it. */

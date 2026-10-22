@@ -111,10 +111,34 @@ This file starts at 3.10.0; earlier releases are on the
   held until the turn ended: `'sent'`, `'failed'`, `'dropped'`, `'returned'`
   (given back to the composer by Stop) or `'cancelled'`.
 - `ChatSendDraft.source` can be `'voice'`, for a question spoken in a voice call.
+- `onTurnRunningChange(running)` tells the host when a turn starts or stops
+  running on screen, own or relayed: the state of the Stop button, the status
+  line and `draft.turnRunning`. `false` comes once the turn's stream closes
+  after its last `done` (not an intermediate one), on `error`, `cancelled` or
+  `session_expired`, on Stop, a new conversation, or the panel unmounting
+  mid-turn; it is called on changes only. A host no longer re-derives it from
+  `onStreamEvent`.
+- `send(text, { displayText })` on the handle: the backend receives *text*
+  and the user's bubble shows `displayText`, as with `onBeforeSend`'s
+  `displayText` (which wins when it gives one).
+- `ChatMessage.answeredBy` (`{ agentId, agentName, agentIcon }`) and
+  `ChatMessage.mentionFailed`, from the `answered_by` and `mention_failed` of
+  each `done` frame (intermediate ones included) and of each restored entry,
+  for a host's own rendering of a turn several agents answer. The panel's own
+  rendering is unchanged.
+- A `session_expired` frame on the message stream or the event stream ends
+  the turn on screen at once, keeping what it wrote, rather than handing an
+  own turn over to an event stream that cannot replay it.
+- `@filigran/chatbot/markdown` also exports the answer-marker helpers the
+  panel reads markers with: `splitAnswerMarkers`, `stripAnswerMarkers`,
+  `markerKinds` and the `AnswerPart` type (and `ChatArtifactKind`), still free
+  of React and side effects, so a host renders, previews or strips markers
+  exactly as the panel does.
 - New exported types: `ChatPanelHandle`, `ChatPanelMode`, `ChatSendOptions`,
   `ChatSendOutcome`, `ChatSendDraft`, `ChatSendDecision`, `ChatHeldOutcome`,
   `ChatMarkerRenderer`, `ChatMarkerContext`, `ChatCodeBlockRenderer`,
-  `ChatCodeBlockContext`, `ChatStreamEventInfo` and `AgentStatusState`.
+  `ChatCodeBlockContext`, `ChatStreamEventInfo`, `ChatAnsweredBy` and
+  `AgentStatusState`.
 
 ### Changed
 

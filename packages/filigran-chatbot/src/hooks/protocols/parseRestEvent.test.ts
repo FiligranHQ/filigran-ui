@@ -48,6 +48,27 @@ test('a restore from a backend without ids or times still restores', () => {
   assert.equal(entry.timestampUnknown, true);
 });
 
+test('a restored answer of a multi-agent turn names its agent, and says when it is a note for one that failed', () => {
+  const [user, reply, note, plain] = parseRestoredMessages([
+    { role: 'user', content: '@Analyst @Hunter go', answered_by: { agent_id: 'x', agent_name: 'X' }, mention_failed: true },
+    { role: 'assistant', content: 'On it.', answered_by: { agent_id: 'a2', agent_name: 'Analyst', agent_icon: '🛰️' } },
+    { role: 'assistant', content: 'Hunter did not answer.', answered_by: { agent_id: 'a1', agent_name: 'Hunter' }, mention_failed: true },
+    { role: 'assistant', content: 'Plain.' },
+  ]);
+  assert.equal(user.answeredBy, undefined, 'a user message names no answering agent');
+  assert.equal(user.mentionFailed, undefined);
+  assert.deepEqual(reply.answeredBy, { agentId: 'a2', agentName: 'Analyst', agentIcon: '🛰️' });
+  assert.equal(reply.mentionFailed, undefined);
+  assert.deepEqual(note.answeredBy, { agentId: 'a1', agentName: 'Hunter' });
+  assert.equal(note.mentionFailed, true);
+  assert.equal(plain.answeredBy, undefined);
+  assert.equal(plain.mentionFailed, undefined);
+  assert.equal(reply.agentName, 'Analyst', 'a restored answer is named after the agent that wrote it, as a live one is');
+  assert.equal(note.agentName, 'Hunter');
+  assert.equal(plain.agentName, undefined);
+  assert.equal(user.agentName, undefined);
+});
+
 test('entries that are not a user or an assistant message are skipped', () => {
   const restored = parseRestoredMessages([{ role: 'system', content: 'x' }, null, 'x', { role: 'user', content: 'Hi' }]);
   assert.deepEqual(

@@ -114,6 +114,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
 | `onReady`           | `() => void`                              | —            | Called once, when the panel has chosen its agent and read back the conversation on screen; handle calls made earlier wait for it and then run in order |
 | `onHeldSendSettled` | `(text, outcome) => void`                 | —            | What became of a message held until the turn ended (`send` resolved `'held'`): `'sent'`, `'failed'`, `'dropped'`, `'returned'` (given back by Stop) or `'cancelled'` |
+| `onTurnRunningChange` | `(running: boolean) => void`            | —            | A turn started or stopped running on screen, own or relayed: the state of the Stop button and of `draft.turnRunning` — see [Host extensions](#host-extensions) |
 | `onBeforeSend`      | `(draft) => false \| { text?, displayText?, extras? } \| void` | — | Sees every non-empty send first, synchronously (`draft.source`: `'composer'`, `'host'` or `'voice'`; `draft.turnRunning`: it would steer): `false` takes it over (the composer keeps its draft), an object rewords it (`text`, what the backend receives), shows the user's bubble other words (`displayText`) or adds body fields. The panel's own fields cannot be set this way |
 | `hideConversationList` | `boolean`                              | `false`      | Hides the conversation list of fullscreen and inline modes, for a rail or a task pane (usable from 320 px wide); the header's history menu stands in for it — see [Host extensions](#host-extensions) |
 | `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer |
@@ -148,7 +149,7 @@ chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigatio
 
 | Method | What it does |
 | --- | --- |
-| `send(text, { extras })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body. Resolves to `'sent'` (once the backend takes it), `'steered'` (joined the running turn), `'held'` (sent when the turn ends), `'dropped'` (empty, taken over by `onBeforeSend`, `readOnly`, or the panel unmounted first) or `'failed'` (the backend refused it) |
+| `send(text, { extras, displayText })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body, and the user's bubble shows `displayText` in place of *text* (as `onBeforeSend`'s `displayText`, which wins when it gives one). Resolves to `'sent'` (once the backend takes it), `'steered'` (joined the running turn), `'held'` (sent when the turn ends), `'dropped'` (empty, taken over by `onBeforeSend`, `readOnly`, or the panel unmounted first) or `'failed'` (the backend refused it) |
 | `newConversation({ workspaceId, agent })` | Starts a new chat, in a workspace and with an agent (id or slug) if given |
 | `selectConversation(id)` | Opens a conversation |
 | `setDraft(text)` / `focusComposer()` | Fills / focuses the composer |
@@ -219,6 +220,35 @@ message keeps both, and a conversation read back shows what the backend stored:
   // ...
 />;
 ```
+
+A host's own send does the same through the handle (the send hook's
+`displayText` wins when it gives one):
+
+```tsx
+chat.current?.send(`${documentContext()}\n\n${typed}`, { displayText: typed });
+```
+
+`onTurnRunningChange(running)` tells the host when a turn starts or stops
+running on screen - the state that shows the Stop button, the status line and
+the waiting panel, and that `onBeforeSend` reports as `draft.turnRunning` -
+so it never re-derives it from `onStreamEvent`. `true` comes with the panel's
+own send and with a turn the [event stream](#turns-that-outlive-their-stream)
+relays; `false` once that turn ends: its stream closes after the last `done`
+(an intermediate `done` goes on), an `error`, `cancelled` or `session_expired`
+frame comes, Stop lets go of it, a new conversation replaces it, or the panel
+unmounts in the middle of it. A turn handed over to the event stream stays
+running meanwhile. It is called on changes only:
+
+```tsx
+<ChatPanel onTurnRunningChange={setAgentWorking} />
+```
+
+Each answer says which agent wrote it, for a host's own rendering
+(`renderMessageExtras`, `messageFooterActions`): `message.answeredBy`
+(`{ agentId, agentName, agentIcon }`, from `answered_by`) and
+`message.mentionFailed` (`mention_failed`: a note written in place of a
+mentioned agent that could not answer), read from every `done` frame,
+intermediate ones included, and from each restored entry.
 
 `hideConversationList` gives the thread the panel's whole width in inline (or
 fullscreen) mode, for a rail beside the host's own content or an add-in's task
@@ -349,7 +379,11 @@ Restores conversation history (and, implicitly, resolves the session).
 }
 ```
 
-`id`, `created_at` and `feedback` are optional. `id` is the message's
+`id`, `created_at` and `feedback` are optional, and so are `answered_by`
+(`{ agent_id, agent_name, agent_icon }`, the agent that wrote an answer of a
+turn several agents answered) and `mention_failed` (`true` on a note written
+in place of an agent that could not answer), handed to the host as
+`message.answeredBy` and `message.mentionFailed`. `id` is the message's
 persisted id, what its rating is stored against (see
 [Message feedback](#message-feedback));
 `created_at` (ISO 8601) is when it was sent, shown in its footer - a message
@@ -544,6 +578,11 @@ data: {"type": "stream", "content": "The weather "}
 data: {"type": "stream", "content": "today is sunny."}
 data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "message_id": "msg-2", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1, "reasoning": "Let me check the weather data first.", "tool_call_trace": [{"name": "search_web", "input": "{\"query\": \"weather\"}", "output": "Sunny, 24C", "success": true}], "transfer_chain": [{"agent_id": "uuid", "agent_name": "General"}], "is_truncated": false}
 ```
+
+A `done` may carry `answered_by` and `mention_failed`, as a restored entry
+does, and a `{"type": "session_expired", "reason": "idle"}` frame (the user's
+session ended, the stream ends with it) ends the turn on screen there and
+then, keeping what it wrote; it does the same on the event stream.
 
 The optional `message_id` on `done` is the answer's persisted id: without it
 (and without a restore naming the message) the answer cannot be rated through
@@ -875,7 +914,7 @@ once more (a refreshed token picks it up). With `events` named, every message, s
 "Continue now" carries the same id in `X-Chat-Client-Id`, which the backend
 uses to never relay a panel's own turn back to it; frames naming the `turn_id`
 of the panel's own turn are dropped too. When the panel's own stream drops
-mid-turn, or ends without the turn's last frame (`done`, `error` or
+mid-turn, or ends without the turn's last frame (`done`, `error`, `session_expired` or
 `cancelled`), it takes a new id and picks the turn up from the event stream (or
 reads the history back when nothing comes within 15 s). A relayed turn uses the frames of `POST /chat/messages`, plus:
 
@@ -1204,8 +1243,8 @@ Anything host-specific goes through `composerToolbar`:
 A host that renders assistant prose with its **own** markdown component (its
 design tokens, its icon set) should still normalise the text the same way the
 panel does, rather than maintaining a divergent copy. These pure
-`string → string` helpers ship from the dedicated **`@filigran/chatbot/markdown`**
-entry point — ~2 kB, no React, no CSS. Import them from there and never from the
+`string → string` helpers ship, with the answer-marker helpers below, from the dedicated **`@filigran/chatbot/markdown`**
+entry point — ~5 kB, no React, no CSS. Import them from there and never from the
 package root, which is the full panel bundle:
 
 ```tsx
@@ -1237,6 +1276,24 @@ the JSON wrap must see the raw payload before fences are hardened.
 
 None of them touch content they don't apply to — an already-valid document is
 returned byte-identical.
+
+The same entry point reads the `[[KIND:args]]` markers of an answer exactly as
+the panel does, for a host that renders answers, previews or notifications of
+its own:
+
+```ts
+import { markerKinds, splitAnswerMarkers, stripAnswerMarkers, type AnswerPart } from '@filigran/chatbot/markdown';
+
+const kinds = markerKinds(['WORK_ITEM', 'INVESTIGATION']); // the host's own kinds
+const parts: AnswerPart[] = splitAnswerMarkers(content, isStreaming, kinds);
+const preview = stripAnswerMarkers(content, kinds);
+```
+
+| Helper | What it does |
+| --- | --- |
+| `markerKinds(names)` | The host's marker names upper-cased, deduplicated and sorted, invalid ones (anything but `A-Z`, `0-9`, `_`, starting with a letter) dropped: the `kinds` the two others take |
+| `splitAnswerMarkers(content, streaming?, kinds?)` | The answer as ordered parts: `{ type: 'text', value }`, `{ type: 'file', fileId }`, `{ type: 'artifact', kind, id, slideRef? }` (`PRESENTATION`, `REPORT`, `VIDEO`, the id lower-cased, a deck's `#/<slide>`), and `{ type: 'marker', kind, args }` for a kind in `kinds` (a built-in one named there included, its arguments as written). A marker cut off at the end is dropped, and so, while `streaming`, is a chunk that stopped inside a marker's name (`[[PRES`). A marker of a kind no one names stays text |
+| `stripAnswerMarkers(content, kinds?)` | The answer with its markers removed (copy, a preview, a notification); prose with none is returned untouched |
 
 ## Peer Dependencies
 

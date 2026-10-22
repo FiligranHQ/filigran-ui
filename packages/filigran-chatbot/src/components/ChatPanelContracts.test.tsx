@@ -1132,3 +1132,41 @@ test('the event stream closes once the page has been hidden 60 s, and reopens wi
     delete (document as unknown as Record<string, unknown>).visibilityState;
   }
 });
+
+test('each answer says which agent wrote it and whether it is a note for one that failed, live and restored', async () => {
+  const stream = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: '@Analyst @Hunter look' },
+      { id: 'm2', role: 'assistant', content: 'Restored reply', answered_by: { agent_id: 'a2', agent_name: 'Analyst', agent_icon: '🛰️' } },
+      { id: 'm3', role: 'assistant', content: 'Restored note', answered_by: { agent_id: 'a1', agent_name: 'Hunter' }, mention_failed: true },
+    ]),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  const attribution = (m: import('../types.ts').ChatMessage) =>
+    m.role === 'assistant' && m.content ? (
+      <span data-testid="attribution">{`${m.content}|${m.answeredBy?.agentId ?? '-'}|${m.answeredBy?.agentName ?? '-'}|${m.mentionFailed ? 'failed' : 'answered'}`}</span>
+    ) : null;
+  await render({ conversationId: 'c1', renderMessageExtras: attribution }, ref);
+  await act(async () => {
+    void ref.current!.send('@Analyst @Hunter again');
+    await settle();
+  });
+  await act(async () => {
+    stream.send({ type: 'stream', content: 'Live reply' });
+    stream.send({ type: 'done', content: 'Live reply', intermediate: true, answered_by: { agent_id: 'a2', agent_name: 'Analyst' } });
+    stream.send({ type: 'stream', content: 'Live note' });
+    stream.send({ type: 'done', content: 'Live note', answered_by: { agent_id: 'a1', agent_name: 'Hunter' }, mention_failed: true });
+    await settle(10);
+  });
+  const shown = [...container.querySelectorAll('[data-testid="attribution"]')].map((e) => e.textContent);
+  assert.deepEqual(shown, [
+    'Restored reply|a2|Analyst|answered',
+    'Restored note|a1|Hunter|failed',
+    'Live reply|a2|Analyst|answered',
+    'Live note|a1|Hunter|failed',
+  ]);
+  await finish(stream);
+});

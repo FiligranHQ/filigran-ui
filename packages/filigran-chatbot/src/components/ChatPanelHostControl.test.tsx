@@ -268,3 +268,146 @@ test('a reload that finds no agent left picks none', async () => {
   });
   assert.ok(!text().includes('Hunter'), 'the removed agent is no longer shown as picked');
 });
+
+test('a send from the handle can show the user other words than it sends, unless the send hook says otherwise', async () => {
+  const streams = [sseStream(), sseStream()];
+  let next = 0;
+  const requests = fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({}, ref);
+  await act(async () => {
+    void ref.current!.send('[Page: Report 42]\n\nSummarize', { displayText: 'Summarize', extras: { mode: 'deep' } });
+    await settle();
+  });
+  const sent = requests.filter((r) => r.url === '/api/chat/messages').map((r) => r.body as Record<string, unknown>);
+  assert.equal(sent[0].content, '[Page: Report 42]\n\nSummarize');
+  assert.equal(sent[0].mode, 'deep');
+  const bubbles = () => [...container.querySelectorAll('[data-testid="filigran-chat-user-message"]')].map((b) => b.textContent ?? '');
+  assert.ok(bubbles()[0].includes('Summarize'));
+  assert.ok(!text().includes('[Page: Report 42]'), 'what is sent in place of the words shown is never shown');
+  await finish(streams[0]);
+
+  const drafts: string[] = [];
+  await render(
+    {
+      onBeforeSend: ({ text: draft }) => {
+        drafts.push(draft);
+        return { displayText: 'From the hook' };
+      },
+    },
+    ref,
+  );
+  await act(async () => {
+    void ref.current!.send('Context\n\nShorter', { displayText: 'Shorter' });
+    await settle();
+  });
+  assert.deepEqual(drafts, ['Context\n\nShorter'], 'the send hook sees the text sent');
+  assert.ok(bubbles()[1].includes('From the hook'), "the send hook's words win");
+  await finish(streams[1]);
+});
+
+test('the host hears when a turn runs on screen, own or relayed, and when it ends however it ends', async () => {
+  const turns = [sseStream(), sseStream(), sseStream(), sseStream()];
+  let next = 0;
+  const events = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    (req) => (req.url === '/api/chat/messages' ? turns[next++].response() : undefined),
+    (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  const seen: boolean[] = [];
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange: (running) => seen.push(running) }, ref);
+  assert.deepEqual(seen, [], 'nothing to say before a turn');
+  const stopShown = () => !!container.querySelector('button[aria-label="Stop generating"]');
+
+  await act(async () => {
+    void ref.current!.send('one');
+    await settle();
+  });
+  assert.deepEqual(seen, [true]);
+  await act(async () => {
+    turns[0].send({ type: 'stream', content: 'Part' });
+    turns[0].send({ type: 'done', content: 'Part', intermediate: true });
+    await settle(10);
+  });
+  assert.deepEqual(seen, [true], 'an intermediate done goes on');
+  await act(async () => {
+    turns[0].send({ type: 'done', content: 'Whole' });
+    turns[0].close();
+    await settle(10);
+  });
+  assert.deepEqual(seen, [true, false], 'the last done ends it');
+
+  // An error, a stop the backend reports and the session's end each end the turn there and then.
+  for (const [turn, frame] of [
+    [turns[1], { type: 'error', content: 'Boom' }],
+    [turns[2], { type: 'cancelled' }],
+    [turns[3], { type: 'session_expired', reason: 'idle' }],
+  ] as const) {
+    await act(async () => {
+      void ref.current!.send(`after ${frame.type}`);
+      await settle();
+    });
+    await act(async () => {
+      turn.send({ type: 'stream', content: 'Some' });
+      turn.send(frame);
+      await settle(10);
+    });
+    assert.deepEqual(seen.slice(-2), [true, false], `${frame.type} ends it`);
+    assert.equal(stopShown(), false, `no Stop button after ${frame.type}`);
+  }
+  assert.equal(seen.length, 8);
+
+  // A turn of another tab, relayed by the event stream.
+  await act(async () => {
+    events.send({ type: 'thinking', turn_id: 't9' });
+    events.send({ type: 'stream', turn_id: 't9', content: 'Relayed' });
+    events.send({ type: 'done', turn_id: 't9', content: 'Relayed', intermediate: true });
+    await settle(10);
+  });
+  assert.deepEqual(seen.slice(8), [true], 'a relayed turn runs, past its intermediate done');
+  await act(async () => {
+    events.send({ type: 'done', turn_id: 't9', content: 'Relayed, whole' });
+    await settle(10);
+  });
+  assert.deepEqual(seen.slice(8), [true, false]);
+  await act(async () => {
+    events.send({ type: 'thinking', turn_id: 't10' });
+    await settle(10);
+  });
+  await act(async () => {
+    events.send({ type: 'session_expired', reason: 'lifetime' });
+    await settle(10);
+  });
+  assert.deepEqual(seen.slice(10), [true, false], 'the session ending ends a relayed turn');
+  assert.equal(stopShown(), false);
+
+  // The panel goes away in the middle of one.
+  await act(async () => {
+    events.send({ type: 'thinking', turn_id: 't11' });
+    await settle(10);
+  });
+  assert.deepEqual(seen.slice(12), [true]);
+  await act(async () => root.render(<div />));
+  assert.deepEqual(seen.slice(12), [true, false], 'unmounted mid-turn, it is over for the host');
+  events.close();
+});
+
+test('a turn whose stream ends, with no event stream to pick it up, is over for the host', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  const seen: boolean[] = [];
+  await render({ onTurnRunningChange: (running) => seen.push(running) }, ref);
+  await act(async () => {
+    void ref.current!.send('go');
+    await settle();
+    stream.send({ type: 'stream', content: 'Half' });
+    await settle(10);
+  });
+  assert.deepEqual(seen, [true]);
+  await finish(stream);
+  assert.deepEqual(seen, [true, false]);
+});
