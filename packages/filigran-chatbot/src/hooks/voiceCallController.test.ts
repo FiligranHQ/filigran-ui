@@ -58,7 +58,7 @@ function setup(overrides: Partial<VoiceCallDeps> = {}) {
   const sent: string[] = [];
   const spoken: string[] = [];
   const speeches: { signal: AbortSignal; done: () => void }[] = [];
-  let hooks!: { onAccepted: () => void; onSteered: (turnId: string | null, unanswered: boolean) => void };
+  let hooks!: { onAccepted: () => void; onNotSent: () => void; onSteered: (turnId: string | null, unanswered: boolean) => void };
   let settleSend!: (outcome: ChatSendOutcome) => void;
   // What the call last showed.
   let snapshot: VoiceCallSnapshot | null = null;
@@ -294,6 +294,20 @@ test('a refused or dropped send, a cancelled turn and an error each end the wait
   }
 });
 
+test('a held question that never goes out ends the wait, and no later turn answers it', () => {
+  const s = setup();
+  s.call.start();
+  s.recognition.hear('Held question');
+  s.elapse(VOICE_SILENCE_MS);
+  s.hooks().onNotSent();
+  assert.equal(s.snapshot().phase, 'error');
+  s.hooks().onAccepted();
+  s.call.frame({ type: 'done', content: 'Not its answer', turn_id: 't2' }, false);
+  assert.deepEqual(s.spoken, []);
+  s.elapse(VOICE_RETRY_MS);
+  assert.equal(s.snapshot().phase, 'listening');
+});
+
 test('a silent turn is asked after 120 s: still running keeps the wait, over ends it', async () => {
   const s = setup();
   s.call.start();
@@ -337,6 +351,40 @@ test('a recogniser that keeps failing is muted rather than restarted in a loop',
     s.recognition.end();
     s.elapse(300);
   }
+  assert.equal(s.snapshot().muted, true);
+});
+
+test('a recogniser failing for any other reason than silence is muted after five failures in a row', () => {
+  for (const error of ['network', 'language-not-supported']) {
+    const s = setup();
+    s.call.start();
+    for (let i = 0; i < 4; i++) {
+      s.recognition.onerror?.({ error });
+      s.recognition.end();
+      s.elapse(300);
+    }
+    assert.equal(s.snapshot().muted, false, `${error}: tried again`);
+    s.recognition.onerror?.({ error });
+    s.recognition.end();
+    assert.equal(s.snapshot().muted, true, `${error}: muted`);
+  }
+});
+
+test('what the recogniser hears ends a run of failures, and its routine errors count for none', () => {
+  const s = setup();
+  s.call.start();
+  const fail = (error: string) => {
+    s.recognition.onerror?.({ error });
+    s.recognition.end();
+    s.elapse(300);
+  };
+  for (let i = 0; i < 4; i++) fail('network');
+  s.recognition.hear('hello', false);
+  for (let i = 0; i < 4; i++) fail('network');
+  fail('no-speech');
+  fail('aborted');
+  assert.equal(s.snapshot().muted, false, 'four in a row since the result');
+  fail('network');
   assert.equal(s.snapshot().muted, true);
 });
 

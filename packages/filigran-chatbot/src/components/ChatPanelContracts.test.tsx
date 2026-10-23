@@ -932,6 +932,45 @@ test('a file that failed to upload offers neither a steer nor a hold while the t
   assert.equal(container.querySelector('button[aria-label="Send now"]'), null);
   assert.equal(container.querySelector('button[aria-label="Send when the answer ends"]'), null);
   assert.ok(!text().includes('Enter to send now'), 'nor says Enter sends it');
+  assert.ok(text().includes('A file failed to upload: remove it, or send once the answer ends'), 'it says what to do');
+  assert.ok(!text().includes('Attachments wait for the current response'));
+  await finish(stream);
+});
+
+test('a file uploading for a steer leaves the footer saying Enter sends it now, the steer button waiting for the upload', async () => {
+  const stream = sseStream();
+  let uploaded!: () => void;
+  fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) =>
+      req.url === '/api/chat/upload' ? new Promise<Response>((resolve) => (uploaded = () => resolve(json({ file_ids: ['f1'] })))) : undefined,
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', steerAttachments: true }, ref);
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle();
+    stream.send({ type: 'stream', content: 'Working' });
+    await settle(10);
+  });
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+  await act(async () => {
+    const file = new File(['x'], 'report.pdf', { type: 'application/pdf' });
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await settle(10);
+  });
+  assert.ok(text().includes('Enter to send now'), 'while it uploads');
+  assert.ok(!text().includes('Attachments wait for the current response'));
+  assert.equal(container.querySelector('button[aria-label="Send now"]'), null, 'no steer before the upload ends');
+  await act(async () => {
+    uploaded();
+    await settle(10);
+  });
+  assert.ok(text().includes('Enter to send now'));
+  assert.ok(container.querySelector('button[aria-label="Send now"]'), 'the steer, the file uploaded');
   await finish(stream);
 });
 

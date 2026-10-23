@@ -171,10 +171,10 @@ export const ChatInput = ({
     (Boolean(conversationReferences) && referencedConversations(conversationReferences?.refs ?? NO_REFS, inputValue).length > 0) ||
     (Boolean(agentMentions) && mentionedAgentIds(agentMentions?.mentions ?? [], inputValue).length > 0);
   // What the composer holds can steer the running agent: text, and
-  // attachments only with steerAttachments, once uploaded. The accent Send
-  // button shows NEXT to Stop while there is something to send.
-  const steerable = isLoading && canSteer && !waitsForTurn && !hasFilesUploading && !hasFailedFiles && (!hasAttachments || steerAttachments);
-  const showSteerSend = steerable && (hasAttachments || Boolean(inputValue.trim()));
+  // attachments only with steerAttachments. The accent Send button shows NEXT
+  // to Stop while there is something to send, its files uploaded.
+  const steerable = isLoading && canSteer && !waitsForTurn && (!hasAttachments || steerAttachments);
+  const showSteerSend = steerable && !hasFilesUploading && !hasFailedFiles && (hasAttachments || Boolean(inputValue.trim()));
   // What cannot steer waits for the turn to end, one message at a time.
   const showHoldSend = isLoading && canHold && !showSteerSend && !heldMessage && !hasFailedFiles && Boolean(canSend);
 
@@ -203,13 +203,15 @@ export const ChatInput = ({
 
   const footerText = showHoldSend
     ? t('Enter to send when the answer ends · Esc to stop')
-    : steerable
-      ? t('Enter to send now · Esc to stop')
-      : isLoading && hasAttachments
-        ? t('Attachments wait for the current response')
-        : isLoading && waitsForTurn
-          ? t('This message waits for the current response')
-          : t('Uses AI. Verify results.');
+    : isLoading && hasFailedFiles
+      ? t('A file failed to upload: remove it, or send once the answer ends')
+      : steerable
+        ? t('Enter to send now · Esc to stop')
+        : isLoading && hasAttachments
+          ? t('Attachments wait for the current response')
+          : isLoading && waitsForTurn
+            ? t('This message waits for the current response')
+            : t('Uses AI. Verify results.');
 
   return (
     <div

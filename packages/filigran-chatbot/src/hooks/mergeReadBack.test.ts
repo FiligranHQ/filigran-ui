@@ -1,12 +1,13 @@
 /**
  * Unit tests for a read-back that waited for a turn to end, merged into the
- * thread on screen - `yarn test`.
+ * thread on screen, and for how a turn that ended out of sight ended by it -
+ * `yarn test`.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { ChatMessage } from '../types.ts';
-import { mergeReadBack } from './useChat.ts';
+import { mergeReadBack, unseenTurnOutcome } from './useChat.ts';
 
 const at = new Date(0);
 const msg = (id: string, role: ChatMessage['role'], content: string, serverId?: string): ChatMessage => ({
@@ -52,4 +53,15 @@ test('a bubble matched keeps the words it shows', () => {
 test('nothing missing and nothing to adopt leaves the thread as it is', () => {
   const prev = [msg('b1', 'user', 'Question', 'u1')];
   assert.equal(mergeReadBack(prev, [msg('r0', 'user', 'Question', 'u1')], plain), prev);
+});
+
+test('a turn that ended out of sight answered when the read-back holds an answer after what was shown, and stopped otherwise', () => {
+  const question = msg('r0', 'user', 'Question', 'u1');
+  const segment = msg('r1', 'assistant', 'Seg one', 'a1');
+  const answer = msg('r2', 'assistant', 'Seg two', 'a2');
+  assert.equal(unseenTurnOutcome([question, segment, answer], 'a1'), 'answered');
+  assert.equal(unseenTurnOutcome([question, segment], 'a1'), 'stopped', 'nothing stored since');
+  assert.equal(unseenTurnOutcome([question], 'u1'), 'stopped');
+  assert.equal(unseenTurnOutcome([question, answer], null), 'answered', 'nothing stored was shown');
+  assert.equal(unseenTurnOutcome([segment, answer], 'u0'), 'stopped', 'what was shown is no longer read');
 });

@@ -4,6 +4,8 @@ const fr: Catalog = {
   '(no output)': '(pas de sortie)',
   '1 tool call': '1 appel d’outil',
   '1 transfer': '1 transfert',
+  'A file failed to upload: remove it, or send once the answer ends':
+    'Un fichier n’a pas pu être envoyé : retirez-le, ou envoyez une fois la réponse terminée',
   'A message references at most {count} conversations': 'Un message fait référence à {count} conversations au maximum',
   'Acting on the page…': 'Action sur la page…',
   'Agent switching is not available here': 'Le changement d’agent n’est pas disponible ici',

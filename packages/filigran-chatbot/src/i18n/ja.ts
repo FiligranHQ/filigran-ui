@@ -4,6 +4,8 @@ const ja: Catalog = {
   '(no output)': '（出力なし）',
   '1 tool call': 'ツール呼び出し 1 件',
   '1 transfer': '転送 1 件',
+  'A file failed to upload: remove it, or send once the answer ends':
+    'ファイルのアップロードに失敗しました。削除するか、応答の終了後に送信してください',
   'A message references at most {count} conversations': '1 つのメッセージで参照できる会話は最大 {count} 件です',
   'Acting on the page…': 'ページを操作中…',
   'Agent switching is not available here': 'ここではエージェントの切り替えは利用できません',

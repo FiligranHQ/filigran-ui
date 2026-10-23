@@ -4,6 +4,7 @@ const es: Catalog = {
   '(no output)': '(sin salida)',
   '1 tool call': '1 llamada a una herramienta',
   '1 transfer': '1 transferencia',
+  'A file failed to upload: remove it, or send once the answer ends': 'Un archivo no se pudo subir: quítelo, o envíe cuando termine la respuesta',
   'A message references at most {count} conversations': 'Un mensaje puede hacer referencia a {count} conversaciones como máximo',
   'Acting on the page…': 'Actuando en la página…',
   'Agent switching is not available here': 'El cambio de agente no está disponible aquí',

@@ -214,6 +214,64 @@ test('a question asked after cancelling the last one goes out once the stopped t
   });
 });
 
+test('a held voice question the send hook takes over as it leaves ends its wait, and the answer to the rest is not said', async () => {
+  const streams = [sseStream(), sseStream()];
+  let next = 0;
+  const requests = fakeBackend([
+    agentsRoute,
+    (req) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages: [] }) : undefined),
+    (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
+    (req) => (req.url === '/api/chat/tts' ? new Response(new Blob(['mp3']), { status: 200 }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render(
+    {
+      conversationId: 'c1',
+      holdSendsDuringTurn: true,
+      apiEndpoints: { tts: '/chat/tts', steer: null },
+      // The voice question is the host's to handle once the turn is over.
+      onBeforeSend: ({ source, held }) => (source === 'voice' && held ? false : undefined),
+    },
+    ref,
+  );
+  const questions = () => requests.filter((r) => r.url === '/api/chat/messages').map((r) => (r.body as { content: string }).content);
+  await act(async () => {
+    void ref.current!.send('First');
+    await settle(10);
+    streams[0].send({ type: 'turn_started', turn_id: 't1' });
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.setDraft('Typed question');
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send when the answer ends"]')!.click();
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.startVoiceCall();
+    await settle();
+  });
+  await say('Voice question');
+  assert.deepEqual(questions(), ['First'], 'both held');
+  await act(async () => {
+    streams[0].send({ type: 'done', turn_id: 't1', content: 'First answer' });
+    streams[0].close();
+    await settle(20);
+  });
+  assert.deepEqual(questions(), ['First', 'Typed question'], 'only what the hook kept goes');
+  assert.ok(overlay()!.textContent?.includes('Failed to get a response. Resuming…'), 'the voice question’s wait is over');
+  await act(async () => {
+    streams[1].send({ type: 'turn_started', turn_id: 't2' });
+    streams[1].send({ type: 'done', turn_id: 't2', content: 'Typed answer' });
+    streams[1].close();
+    await settle(20);
+  });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/tts').length, 0, 'nothing said');
+  assert.ok(!overlay()!.textContent?.includes('Speaking…'));
+});
+
 test('without speech recognition no call starts', async () => {
   delete (window as unknown as Record<string, unknown>).SpeechRecognition;
   fakeBackend([agentsRoute]);

@@ -118,11 +118,14 @@ const EVENTS_RETRY_MAX_MS = 30000;
  */
 const EVENTS_HIDDEN_CLOSE_MS = 60000;
 /**
- * How long a relayed turn on screen waits, once its event stream reopened, for
- * the stream's snapshot to replay it: nothing by then, and it ended while the
- * stream was away (a reopened stream never brings back a turn already over).
+ * How long a relayed turn waits for the event stream's snapshot to replay it,
+ * once the stream reopened or the page that let go of it shows again: nothing
+ * by then, and it ended while the stream was away (a reopened stream never
+ * brings back a turn already over).
  */
 const EVENTS_RESUME_GRACE_MS = 5000;
+/** How long a relayed turn that ended out of sight waits for the read-back that says how. */
+const UNSEEN_END_READ_BACK_MS = 10000;
 /** How many turns ended by a provisional end are remembered, awaiting their stored end. */
 const PROVISIONAL_ENDS_KEPT = 20;
 /**
@@ -347,21 +350,18 @@ function joinHeldParts(a: HeldPart, b: HeldPart): HeldPart {
 const NO_HELD_PART: HeldPart = { text: '', draft: '', files: [], refs: [], mentions: [] };
 
 /** The message *parts* make, sent as one. */
-function heldMessageOf(parts: HeldPart[], onSent?: () => void): HeldMessage {
-  return { ...parts.reduce(joinHeldParts, NO_HELD_PART), parts, onSent };
+function heldMessageOf(parts: HeldPart[]): HeldMessage {
+  return { ...parts.reduce(joinHeldParts, NO_HELD_PART), parts };
 }
 
 /** *part* added to the message already held: one message, sent when the turn ends. */
-function mergeHeld(prev: HeldMessage | null, part: HeldPart, onSent?: () => void): HeldMessage {
-  const previous = prev?.onSent;
-  const both =
-    previous && onSent
-      ? () => {
-          previous();
-          onSent();
-        }
-      : (previous ?? onSent);
-  return heldMessageOf([...(prev?.parts ?? []), part], both);
+function mergeHeld(prev: HeldMessage | null, part: HeldPart): HeldMessage {
+  return heldMessageOf([...(prev?.parts ?? []), part]);
+}
+
+/** Tell each of *parts* it never went out. */
+function tellNotSent(parts: HeldPart[]) {
+  for (const part of parts) askHost(part.onNotSent);
 }
 
 /** A send once `onBeforeSend` had its say: what is sent, what the user's bubble shows, the host's fields. */
@@ -497,6 +497,12 @@ interface SendOverride {
   /** Called as the message opens a turn, long before the send itself resolves at the turn's end. */
   onSent?: () => void;
   /**
+   * Called when the message, held (the send resolved `'held'`), never goes
+   * out: `onBeforeSend` took it over, Stop or a new conversation let go of
+   * it, or the send failed.
+   */
+  onNotSent?: () => void;
+  /**
    * Called once the message steered the running turn, with the turn the
    * backend named (`null`: none) and whether the backend said no turn took it
    * (`answered: false`; otherwise a turn it does not name may have).
@@ -522,13 +528,44 @@ interface HeldPart {
    * with `turnRunning: false`, before it leaves as a new turn.
    */
   asked?: { text: string; source: ChatSendDraft['source']; extras?: Record<string, unknown>; displayText?: string };
+  /** Told as it goes out, or that it never does (see `SendOverride.onSent`, `onNotSent`). */
+  onSent?: () => void;
+  onNotSent?: () => void;
 }
 
 /** A message waiting for the running turn to end: its sends (`parts`), joined. */
-interface HeldMessage extends Omit<HeldPart, 'asked'> {
+interface HeldMessage extends Omit<HeldPart, 'asked' | 'onSent' | 'onNotSent'> {
   parts: HeldPart[];
-  /** Told as the message goes out (see `SendOverride.onSent`). */
-  onSent?: () => void;
+}
+
+/** A relayed turn let go of with the event stream (see `withdrawRelayedTurn`). */
+interface WithdrawnTurn {
+  turnId: string | null;
+  /** The last stored message on screen as it was let go of: what its answer comes after. */
+  shownUpTo: string | null;
+  /** Its end, out of sight, awaits the read-back past the *from*-th `reloadHistory` (see `endTurnUnseen`). */
+  readBack?: { from: number; timer: number };
+}
+
+/** The backend's id of the last message of *messages* it stored, if any. */
+function lastStoredId(messages: ChatMessage[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const id = messages[i].serverId;
+    if (id) return id;
+  }
+  return null;
+}
+
+/**
+ * How a turn that ended out of sight ended, by the conversation read back
+ * (*restored*): answered when it holds an answer after *shownUpTo* (the last
+ * stored message on screen as the turn was let go of; `null`: from the
+ * start), stopped when it holds none, or no longer holds *shownUpTo*.
+ */
+export function unseenTurnOutcome(restored: ChatMessage[], shownUpTo: string | null): ChatTurnOutcome {
+  const from = shownUpTo === null ? 0 : restored.findIndex((m) => m.serverId === shownUpTo) + 1;
+  if (shownUpTo !== null && from === 0) return 'stopped';
+  return restored.slice(from).some((m) => m.role === 'assistant') ? 'answered' : 'stopped';
 }
 
 /** What the pause-recovery route says of a conversation. */
@@ -641,6 +678,11 @@ interface UseChatReturn {
    * false when the read-back is the panel's to apply.
    */
   mergeTurnHistory: (restored: ChatMessage[]) => boolean;
+  /**
+   * The conversation read back for the *readFor*-th read-back asked for
+   * (`historyReloadNonce`): *restored*, or `null` when it could not be read.
+   */
+  settleUnseenEnd: (readFor: number, restored: ChatMessage[] | null) => void;
   /** The agents picked from the `@` menu whose `@key` the draft still holds. */
   agentMentions: AgentMention[];
   addAgentMention: (mention: AgentMention) => void;
@@ -909,13 +951,20 @@ export function useChat({
   const turnReadBackRef = useRef<ReturnType<typeof createTurnRenderer> | null>(null);
   // A relayed turn let go of with the event stream (see `withdrawRelayedTurn`),
   // whose replay reads the conversation back: until the reopened stream says
-  // whether it runs on, sends wait and the host is not told it ended.
-  const withdrawnTurnRef = useRef<{ turnId: string | null } | null>(null);
+  // whether it runs on, or a read-back how it ended (`endTurnUnseen`), sends
+  // wait and the host is not told it ended.
+  const withdrawnTurnRef = useRef<WithdrawnTurn | null>(null);
   const [turnWithdrawn, setTurnWithdrawn] = useState(false);
-  const setWithdrawnTurn = (turn: { turnId: string | null } | null) => {
+  const setWithdrawnTurn = (turn: WithdrawnTurn | null) => {
+    const readBack = withdrawnTurnRef.current?.readBack;
+    if (readBack && turn !== withdrawnTurnRef.current) window.clearTimeout(readBack.timer);
     withdrawnTurnRef.current = turn;
     setTurnWithdrawn(turn !== null);
   };
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  // Read-backs asked for so far (`reloadHistory`): `historyReloadNonce`.
+  const historyReloadsRef = useRef(0);
   // The text each user bubble showing other words was sent with, by bubble id.
   const sentTextRef = useRef(new Map<string, string>());
   const sentTextOf = useCallback((message: ChatMessage) => sentTextRef.current.get(message.id) ?? message.content, []);
@@ -1131,7 +1180,8 @@ export function useChat({
    */
   const reloadHistory = useCallback(() => {
     historyLoadedRef.current = false;
-    setHistoryReloadNonce((n) => n + 1);
+    historyReloadsRef.current += 1;
+    setHistoryReloadNonce(historyReloadsRef.current);
   }, []);
 
   // Determine upload endpoint URL (null disables file upload proxying)
@@ -1971,7 +2021,18 @@ export function useChat({
         const steered = await steerMessage(text, files, fromComposer ? draft : null, shownText);
         if (steered.result === 'ended') {
           setHeldMessage((prev) =>
-            mergeHeld(prev, { text, draft, files, refs: [], mentions: [], extras: sendExtras, displayText: heldDisplay, asked }, override?.onSent),
+            mergeHeld(prev, {
+              text,
+              draft,
+              files,
+              refs: [],
+              mentions: [],
+              extras: sendExtras,
+              displayText: heldDisplay,
+              asked,
+              onSent: override?.onSent,
+              onNotSent: override?.onNotSent,
+            }),
           );
           return 'held';
         }
@@ -1991,11 +2052,18 @@ export function useChat({
       if ((holdSends || windingDownNow) && uploaded) {
         clearComposer();
         setHeldMessage((prev) =>
-          mergeHeld(
-            prev,
-            { text, draft, files, refs: sentRefs, mentions: sentMentions, extras: sendExtras, displayText: heldDisplay, asked },
-            override?.onSent,
-          ),
+          mergeHeld(prev, {
+            text,
+            draft,
+            files,
+            refs: sentRefs,
+            mentions: sentMentions,
+            extras: sendExtras,
+            displayText: heldDisplay,
+            asked,
+            onSent: override?.onSent,
+            onNotSent: override?.onNotSent,
+          }),
         );
         return 'held';
       }
@@ -2277,7 +2345,7 @@ export function useChat({
     if (!relayedTurn) return;
     const unfinished = relayedTurn.renderer.doneReceived() ? null : relayedTurn.renderer.currentAssistantId();
     endRelayedTurn();
-    setWithdrawnTurn({ turnId: relayedTurn.turnId });
+    setWithdrawnTurn({ turnId: relayedTurn.turnId, shownUpTo: lastStoredId(messagesRef.current) });
     if (unfinished) setMessages((prev) => prev.filter((m) => m.id !== unfinished));
   };
   const withdrawRelayedTurnRef = useRef(withdrawRelayedTurn);
@@ -2298,27 +2366,66 @@ export function useChat({
   };
 
   /**
-   * The event stream reopened (it ends every so often, or dropped): a relayed
-   * turn on screen is still running only if the stream's snapshot replays it,
-   * which it does at once. Otherwise it ended while the stream was away, and
-   * its end is only in the history.
+   * The relayed turn on screen, or the one let go of, ended out of sight:
+   * nothing replayed it, or the event stream cannot reopen. It still runs for
+   * sends and the host until the conversation read back says how it ended
+   * (`settleUnseenEnd`), {@link UNSEEN_END_READ_BACK_MS} at most; a replay
+   * meanwhile carries it on.
+   */
+  const endTurnUnseen = () => {
+    clearResumeWait();
+    const relayedTurn = relayedTurnRef.current;
+    if (relayedTurn) {
+      // What it wrote stays until the read-back brings what it stored.
+      const shownUpTo = lastStoredId(messagesRef.current);
+      endRelayedTurn();
+      setWithdrawnTurn({ turnId: relayedTurn.turnId, shownUpTo });
+    }
+    const withdrawn = withdrawnTurnRef.current;
+    if (!withdrawn || withdrawn.readBack) return;
+    if (!getSessionsUrl()) {
+      endWithdrawnTurn('stopped');
+      return;
+    }
+    reloadHistory();
+    const timer = window.setTimeout(() => {
+      if (withdrawnTurnRef.current === withdrawn) endWithdrawnTurn('stopped');
+    }, UNSEEN_END_READ_BACK_MS);
+    withdrawn.readBack = { from: historyReloadsRef.current, timer };
+  };
+  const endTurnUnseenRef = useRef(endTurnUnseen);
+  endTurnUnseenRef.current = endTurnUnseen;
+
+  /**
+   * The conversation read back for the *readFor*-th `reloadHistory` (*restored*;
+   * `null`: it could not be read): a turn that ended out of sight ends, as
+   * the read-back says (`unseenTurnOutcome`).
+   */
+  const settleUnseenEnd = (readFor: number, restored: ChatMessage[] | null) => {
+    const withdrawn = withdrawnTurnRef.current;
+    if (!withdrawn?.readBack || readFor < withdrawn.readBack.from) return;
+    endWithdrawnTurn(restored ? unseenTurnOutcome(restored, withdrawn.shownUpTo) : 'stopped');
+  };
+
+  /**
+   * The event stream reopened (it ends every so often, or dropped), or the
+   * page that let go of a relayed turn shows again: that turn is still running
+   * only if the stream's snapshot replays it, which it does at once. Otherwise
+   * it ended while the stream was away, and its end is only in the history.
+   * A turn let go of waits from the page showing again, however often the
+   * stream reopens since.
    */
   const awaitRelayedResume = () => {
     const relayedTurn = relayedTurnRef.current;
     const withdrawn = withdrawnTurnRef.current;
+    if (!relayedTurn && withdrawn && (withdrawn.readBack || resumeWaitRef.current?.turn === withdrawn)) return;
     clearResumeWait();
     const awaited = relayedTurn ?? withdrawn;
     if (!awaited) return;
     const timer = window.setTimeout(() => {
       resumeWaitRef.current = null;
-      if (relayedTurn) {
-        if (relayedTurnRef.current !== relayedTurn) return;
-        endRelayedTurn();
-      } else {
-        if (withdrawnTurnRef.current !== withdrawn) return;
-        endWithdrawnTurn();
-      }
-      reloadHistory();
+      if (relayedTurn ? relayedTurnRef.current !== relayedTurn : withdrawnTurnRef.current !== withdrawn) return;
+      endTurnUnseen();
     }, EVENTS_RESUME_GRACE_MS);
     resumeWaitRef.current = { turn: awaited, timer };
   };
@@ -2433,12 +2540,15 @@ export function useChat({
       // it ended while the stream was away, and its answer is in the history.
       const withdrawn = withdrawnTurnRef.current;
       const replayed = withdrawn !== null && (withdrawn.turnId === null || withdrawn.turnId === turnId);
+      // The end of a turn never seen begins nothing.
+      if ((parsed.action === 'cancelled' || parsed.action === 'error') && !replayed) {
+        if (withdrawn) endTurnUnseen();
+        return;
+      }
       if (withdrawn && !replayed) {
         endWithdrawnTurn();
         reloadHistory();
       }
-      // The end of a turn never seen begins nothing.
-      if ((parsed.action === 'cancelled' || parsed.action === 'error') && !replayed) return;
       const bubbleId = randomId();
       setMessages((prev) => [...prev, { id: bubbleId, role: 'assistant', content: '', timestamp: new Date() }]);
       current = { turnId, renderer: createTurnRenderer(bubbleId, true) };
@@ -2488,7 +2598,11 @@ export function useChat({
 
   /** Let go of the message held, if any: the host hears it goes nowhere. */
   const cancelHeld = () => {
-    if (heldMessageRef.current) onHeldSendSettledRef.current?.(heldMessageRef.current.text, 'cancelled');
+    const held = heldMessageRef.current;
+    if (held) {
+      onHeldSendSettledRef.current?.(held.text, 'cancelled');
+      tellNotSent(held.parts);
+    }
     setHeldMessage(null);
   };
 
@@ -2760,7 +2874,10 @@ export function useChat({
    * with backoff while the page is visible; a route refused outright stops it.
    * Closed once the page has been hidden for {@link EVENTS_HIDDEN_CLOSE_MS};
    * shown again, the stream reopens (its snapshot replays a turn still
-   * running) and the conversation is read back for what ended meanwhile.
+   * running) and the conversation is read back for what ended meanwhile: a
+   * relayed turn it let go of and does not replay within
+   * {@link EVENTS_RESUME_GRACE_MS} of the page showing, or that a refusal
+   * keeps from reopening, ended (`endTurnUnseen`).
    * A refusal of the credentials (401, 403) is tried once more each time the
    * host's `requestHeaders` change, so a refreshed token picks the stream up.
    */
@@ -2810,6 +2927,8 @@ export function useChat({
         if ([401, 403, 404, 405].includes(res.status)) {
           refused = true;
           if ((res.status === 401 || res.status === 403) && !stopped) setEventsRefused({ url: eventsUrl, headersKey: sentHeadersKey });
+          // Nothing replays a relayed turn now: how it ended is read back.
+          if (!stopped) endTurnUnseenRef.current();
           return;
         }
         if (!res.ok || !res.body) return;
@@ -2858,7 +2977,11 @@ export function useChat({
       }
       if (hiddenTimer !== null) window.clearTimeout(hiddenTimer);
       hiddenTimer = null;
-      if (document.visibilityState !== 'visible' || connected) return;
+      if (document.visibilityState !== 'visible') return;
+      // A turn let go of while hidden ran on only if the stream replays it
+      // soon, whether or not the stream reopens.
+      if (withdrawnTurnRef.current) awaitRelayedResumeRef.current();
+      if (connected) return;
       if (timer !== null) window.clearTimeout(timer);
       retry = 0;
       if (missed) {
@@ -2906,6 +3029,7 @@ export function useChat({
         // Stopped: the user takes back what they typed rather than see it go;
         // a host's send is not theirs to take back, and goes nowhere.
         setHeldMessage(null);
+        tellNotSent(heldMessage.parts);
         if (!heldMessage.draft && heldMessage.files.length === 0) {
           onHeldSendSettledRef.current?.(heldMessage.text, 'dropped');
           return;
@@ -2954,6 +3078,7 @@ export function useChat({
         asked: undefined,
       });
     }
+    tellNotSent(takenOver);
     const givenBack = takenOver.filter((part) => part.draft || part.files.length > 0);
     for (const part of givenBack) returnToComposer(part, { before: false });
     if (kept.length === 0) {
@@ -2974,15 +3099,21 @@ export function useChat({
         decided: true,
         onSent: () => {
           tell('sent');
-          heldMessage.onSent?.();
+          for (const part of kept) askHost(part.onSent);
         },
+        onNotSent: () => tellNotSent(kept),
       })
       .then(
         (outcome) => {
           if (outcome === 'held') return;
-          tell(outcome === 'sent' || outcome === 'steered' ? 'sent' : outcome === 'failed' ? 'failed' : 'dropped');
+          const sent = outcome === 'sent' || outcome === 'steered';
+          tell(sent ? 'sent' : outcome === 'failed' ? 'failed' : 'dropped');
+          if (!sent) tellNotSent(kept);
         },
-        () => tell('failed'),
+        () => {
+          tell('failed');
+          tellNotSent(kept);
+        },
       );
   }, [isLoading, turnWithdrawn, windingDown, heldMessage]);
 
@@ -3202,6 +3333,7 @@ export function useChat({
     cancelHeldMessage: cancelHeld,
     reloadHistory,
     mergeTurnHistory,
+    settleUnseenEnd,
     agentMentions,
     addAgentMention,
     handleNewChat,

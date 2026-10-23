@@ -664,15 +664,16 @@ export interface ChatPanelProps {
    */
   onHeldSendSettled?: (text: string, outcome: ChatHeldOutcome) => void;
   /**
-   * Called when a turn starts or stops running on screen: the state that shows
-   * the Stop button and the status line, and that `ChatSendDraft.turnRunning`
-   * reports. True for the panel's own turn from its send, and for a turn the
-   * event stream relays; false once it ends - its stream closes after the last
-   * `done` (an intermediate one goes on), an `error`, `cancelled` or
-   * `session_expired` frame, a Stop, a new conversation - and when the panel
-   * unmounts during a turn. A relayed turn let go of with the event stream
-   * while the page was hidden runs on until the reopened stream says it is
-   * over. Called on changes only, never with the value it last gave. With
+   * Called when a turn starts or stops running: on screen (the Stop button and
+   * the status line show), or a relayed turn let go of while the page was
+   * hidden; the state `ChatSendDraft.turnRunning` reports. True for the
+   * panel's own turn from its send, and for a turn the event stream relays;
+   * false once it ends - its stream closes after the last `done` (an
+   * intermediate one goes on), an `error`, `cancelled` or `session_expired`
+   * frame, a Stop, a new conversation - and when the panel unmounts during a
+   * turn. A relayed turn let go of with the event stream runs on until the
+   * reopened stream replays it, or the conversation read back says how it
+   * ended. Called on changes only, never with the value it last gave. With
    * `false` comes how the turn ended (`info.ended`): answered, stopped or
    * failed (see `ChatTurnOutcome`). After a provisional end (an `error` or
    * `cancelled` whose stored end is still to come, from a backend whose turns
@@ -828,11 +829,15 @@ export type ChatHeldOutcome = 'sent' | 'failed' | 'dropped' | 'returned' | 'canc
 /**
  * How a turn ended (see `onTurnRunningChange`):
  * - `'answered'`: its last `done` came (not an intermediate one), and nothing
- *   after it said otherwise;
+ *   after it said otherwise; for a relayed turn that ended out of sight (no
+ *   replay, or an event stream that could not reopen), the conversation read
+ *   back holds an answer stored after what was shown;
  * - `'stopped'`: it ended short of its answer - a `cancelled` frame (even
  *   after the last `done`), a `session_expired` frame, Stop, a new
- *   conversation, the panel unmounting, or a stream that closed before its
- *   last `done` with no event stream to carry the turn to its end;
+ *   conversation, the panel unmounting, a stream that closed before its last
+ *   `done` with no event stream to carry the turn to its end, or a relayed
+ *   turn that ended out of sight with no answer read back (none stored, or no
+ *   read-back);
  * - `'failed'`: an `error` frame, or a send the backend refused or could not
  *   be reached for, before the turn streamed anything.
  */

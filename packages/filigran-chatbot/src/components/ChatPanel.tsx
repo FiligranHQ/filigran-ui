@@ -286,6 +286,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     historyReloadNonce,
     reloadHistory,
     mergeTurnHistory,
+    settleUnseenEnd,
     historyLoadedRef,
     conversationIdRef,
     handleFileAdd,
@@ -897,6 +898,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // The restore merges a replayed turn's read-back through this, outside its deps.
   const mergeTurnHistoryRef = useRef(mergeTurnHistory);
   mergeTurnHistoryRef.current = mergeTurnHistory;
+  const settleUnseenEndRef = useRef(settleUnseenEnd);
+  settleUnseenEndRef.current = settleUnseenEnd;
 
   // Tracks whether this panel is still mounted. Flipped to false ONLY on a
   // real unmount (empty-deps cleanup) — never on the benign teardowns that an
@@ -964,6 +967,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     const requestedConversationId = conversationId;
     const isStale = () => !isMountedRef.current || conversationIdRef.current !== requestedConversationId;
     const requestedHeadersKey = requestHeadersKey(requestHeaders);
+    // What a turn that ended out of sight is told of this read-back (see `settleUnseenEnd`).
+    const readFor = historyReloadNonce;
 
     panelFetch(sessionsUrl, {
       method: 'POST',
@@ -977,6 +982,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       .then((res) => {
         if (isStale()) return null;
         if (!res.ok) {
+          settleUnseenEndRef.current(readFor, null);
           // Stale or invalid stored id (e.g. the platform was reset but the
           // browser kept an old id) — silently reset so a fresh conversation
           // is created on the next message instead of surfacing an error and
@@ -1018,9 +1024,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         // tell us. Both land on the selected-agent fallback, but only the
         // first is a deliberate answer.
         setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
+        const restored = parseRestoredMessages(data.messages);
+        settleUnseenEndRef.current(readFor, restored);
         // Read back for a relayed turn the reopened event stream replayed: the
         // segments it closed meanwhile go into it, and it runs on.
-        if (mergeTurnHistoryRef.current(parseRestoredMessages(data.messages))) return;
+        if (mergeTurnHistoryRef.current(restored)) return;
         // A turn started meanwhile is on screen: the history waits for it to
         // end, and so does the event stream, which follows that history.
         if (isLoadingNowRef.current) {
@@ -1031,7 +1039,9 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       })
       // Unreachable: nothing is known of the conversation, whose id is kept.
       .catch(() => {
-        if (!isStale()) setRestoreOwedId(requestedConversationId);
+        if (isStale()) return;
+        settleUnseenEndRef.current(readFor, null);
+        setRestoreOwedId(requestedConversationId);
       })
       .finally(() => {
         if (restoringIdRef.current === requestedConversationId) restoringIdRef.current = null;
@@ -1130,7 +1140,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     selectedAgent?.id ??
     null;
   const voice = useVoiceCall({
-    send: (text, hooks) => handleSendMessageRef.current({ text, source: 'voice', onSent: hooks.onAccepted, onSteered: hooks.onSteered }),
+    send: (text, hooks) =>
+      handleSendMessageRef.current({ text, source: 'voice', onSent: hooks.onAccepted, onNotSent: hooks.onNotSent, onSteered: hooks.onSteered }),
     stopTurn: () => handleStopGeneratingRef.current(),
     // Whether the turn still runs, read where a paused turn is recovered from.
     readTurnState: readPendingApprovals

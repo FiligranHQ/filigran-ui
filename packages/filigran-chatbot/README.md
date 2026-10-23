@@ -254,26 +254,33 @@ chat.current?.send(`${documentContext()}\n\n${typed}`, { displayText: typed });
 ```
 
 `onTurnRunningChange(running)` tells the host when a turn starts or stops
-running on screen - the state that shows the Stop button, the status line and
-the waiting panel, and that `onBeforeSend` reports as `draft.turnRunning` -
-so it never re-derives it from `onStreamEvent`. `true` comes with the panel's
+running - on screen, where it shows the Stop button, the status line and the
+waiting panel, or a relayed turn let go of while the page was hidden; the
+state `onBeforeSend` reports as `draft.turnRunning` - so it never re-derives
+it from `onStreamEvent`. `true` comes with the panel's
 own send and with a turn the [event stream](#turns-that-outlive-their-stream)
 relays; `false` once that turn ends: its stream closes after the last `done`
 (an intermediate `done` goes on), an `error`, `cancelled` or `session_expired`
 frame comes, Stop lets go of it, a new conversation replaces it, or the panel
 unmounts in the middle of it. A turn handed over to the event stream stays
 running meanwhile, and so does a relayed turn let go of while the page was
-hidden, until the reopened stream says it is over. It is called on changes
-only.
+hidden, until the reopened stream replays it or the conversation read back
+says how it ended. It is called on changes only.
 
 With `false` comes how the turn ended, `info.ended` (`ChatTurnOutcome`), so a
 host running a sequence of turns goes on only while they are answered:
 
 - `'answered'`: its last `done` came, with nothing after it saying otherwise;
+  for a relayed turn that ended out of sight (nothing replayed it, or the event
+  stream could not reopen), the conversation read back holds an answer stored
+  after what was shown (an `error` or a `cancelled` the backend stores as an
+  answer reads the same);
 - `'stopped'`: a `cancelled` frame (even after the last `done`), a
-  `session_expired` frame, Stop, a new conversation, the panel unmounting, or a
+  `session_expired` frame, Stop, a new conversation, the panel unmounting, a
   stream that closed before its last `done` with no event stream to carry the
-  turn to its end (a turn the event stream does carry ends as its replay does);
+  turn to its end (a turn the event stream does carry ends as its replay does),
+  or a relayed turn that ended out of sight with no answer read back (none
+  stored, or the conversation could not be read back);
 - `'failed'`: an `error` frame, or a send the backend refused or could not be
   reached for.
 
@@ -359,8 +366,12 @@ conversation as usual.
 - Speech over the answer (barge-in), a tap on the call or Skip stops it and
   listens; a tap while the answer is awaited cancels the question and stops
   its turn, and so does the handle's `stop()`. The microphone can be muted;
-  the call mutes it itself when the recogniser is refused it five times in a
-  row (`not-allowed`, `service-not-allowed`, `audio-capture`).
+  the call mutes it itself when the recogniser fails five times in a row with
+  nothing heard between (a refused or missing microphone, no network, a
+  language it lacks), silence (`no-speech`) and an aborted session aside.
+- A question held while a turn runs (`holdSendsDuringTurn`) is awaited once
+  it goes out; one that never does (`onBeforeSend` takes it over as it
+  leaves, Stop, a failed send) gets no answer, and the call listens again.
 - A turn silent for 120 s is checked through `apiEndpoints.pendingApprovals`
   (its `turn: 'running'`): still running, the call waits on; over (or with no
   such route), it gives up on that question and listens again.
@@ -1007,15 +1018,18 @@ reconnected with backoff while the page is visible. Once the page has been
 hidden for 60 s it is closed (under HTTP/1.1 a background tab would otherwise
 hold one of the browser's six connections to the origin), and the relayed turn
 it fed is let go of: the segment it was writing goes, those it closed stay.
-That turn may run on: until the reopened stream replays it, shows another
-turn, or replays none within 5 s, sends wait for it (as while a turn winds
-down) and `onTurnRunningChange` says nothing. Shown again, the stream reopens,
-the backend's snapshot replays a turn still running, and the conversation is
-read back for what ended meanwhile. The backend may end the event stream at
-any time; a stream it ends, or that drops, is reopened, from the shortest
-delay again once it had delivered a frame or lived 5 s (one that closes at
-once backs off); a relayed turn on screen then runs on only if the snapshot
-replays it within 5 s, and otherwise ends and the conversation is read back.
+Shown again, the stream reopens, the backend's snapshot replays a turn still
+running, and the conversation is read back for what ended meanwhile. The turn
+let go of may run on: sends wait for it (as while a turn winds down) and
+`onTurnRunningChange` says nothing until the reopened stream replays it or
+shows another turn. Not replayed within 5 s of the page showing again, or
+with the stream refused, it ended: the conversation is read back, and the
+turn ends as it says (`info.ended`), 10 s at most after. The backend may end
+the event stream at any time; a stream it ends, or that drops, is reopened,
+from the shortest delay again once it had delivered a frame or lived 5 s (one
+that closes at once backs off); a relayed turn on screen then runs on only if
+the snapshot replays it within 5 s, or ends as the conversation read back
+says.
 A `404` or `405` stops it, and a `401` or `403` stops it until
 `requestHeaders` change, when it is tried once more (a refreshed token picks
 it up).

@@ -138,7 +138,7 @@ This file starts at 3.10.0; earlier releases are on the
   it leaves; told once the composer shows it, so `getDraft()` reads it) or
   `'cancelled'`.
 - `onTurnRunningChange(running, info)` tells the host when a turn starts or
-  stops running on screen, own or relayed, and with `false` how it ended
+  stops running, own or relayed, and with `false` how it ended
   (`info.ended`: `'answered'`, `'stopped'` or `'failed'`): see
   [Host extensions](README.md#host-extensions) and
   [Turns that outlive their stream](README.md#turns-that-outlive-their-stream).
@@ -256,7 +256,11 @@ This file starts at 3.10.0; earlier releases are on the
   event stream and renders turns started in another tab or before a reload,
   user messages sent elsewhere, new titles and approvals answered elsewhere;
   a panel whose own stream drops mid-turn picks the turn up from it, keeping
-  the segments it closed. Stop during the handover ends the turn. See
+  the segments it closed. Stop during the handover ends the turn. A relayed
+  turn the stream let go of while the page was hidden holds sends, and runs
+  on for `onTurnRunningChange`, until the reopened stream replays it, or, 5 s
+  after the page shows again or at once on a refused stream, until the
+  conversation read back says how it ended. See
   [Turns that outlive their stream](README.md#turns-that-outlive-their-stream)
   for reconnection, the client id and replays.
 - With `cancel`, `skipWait` or `events` named, a send made while a turn ended
