@@ -18,6 +18,10 @@
       "types": "./dist/markdown.d.ts",
       "import": "./dist/markdown.js"
     },
+    "./workspaces": {
+      "types": "./dist/workspaces.d.ts",
+      "import": "./dist/workspaces.js"
+    },
     "./styles.css": "./dist/styles.css"
   },
   "scripts": {

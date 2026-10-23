@@ -12,6 +12,7 @@ import type {
   ChatConversationRef,
   ChatFile,
   ChatMessage,
+  ChatStreamEventInfo,
   ToolApprovalDecision,
   ToolApprovalProposal,
 } from '../types';
@@ -28,6 +29,7 @@ import { readSseEvents } from '../utils/sse';
 import { randomId } from '../utils/randomId';
 import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
 import { mentionedAgentIds, pruneAgentMentions, withAgentMention, type AgentMention } from '../utils/agentMentions';
+import { usePanelFetch } from './usePanelRequests';
 
 // Unsent composer text is kept per conversation so closing the panel (hosts
 // unmount `<ChatPanel/>` when it is closed) or switching conversation doesn't
@@ -172,6 +174,7 @@ function withDone(message: ChatMessage, parsed: DoneAction, content: string, com
     answeredBy: parsed.answeredBy,
     mentionFailed: parsed.mentionFailed,
     serverId: parsed.messageId ?? message.serverId,
+    raw: parsed.raw ?? message.raw,
   };
 }
 
@@ -198,7 +201,7 @@ const STORED_ANSWER_FIELDS = [
  * id, and an answer what the store adds to it.
  */
 function adoptStored(shown: ChatMessage, stored: ChatMessage): ChatMessage {
-  const next: ChatMessage = { ...shown, serverId: stored.serverId ?? shown.serverId };
+  const next: ChatMessage = { ...shown, serverId: stored.serverId ?? shown.serverId, raw: stored.raw ?? shown.raw };
   if (shown.role !== 'assistant') return next;
   const fields = next as unknown as Record<string, unknown>;
   for (const key of STORED_ANSWER_FIELDS) if (stored[key] !== undefined) fields[key] = stored[key];
@@ -381,6 +384,17 @@ export function askHost<A extends unknown[], R>(callback: ((...args: A) => R) | 
   }
 }
 
+/** What `onStreamEvent` is told of a frame, from the panel's own reading of it (*parsed*, none when unreadable). */
+export function streamEventInfo(relayed: boolean, parsed: ParsedAction | undefined): ChatStreamEventInfo {
+  const info: ChatStreamEventInfo = { relayed };
+  if (!parsed) return info;
+  const end = parsed.action === 'error' || parsed.action === 'cancelled' || (parsed.action === 'done' && !parsed.intermediate) ? parsed : null;
+  if (end && end.action !== 'done' && end.provisional) info.end = 'provisional';
+  else if (end?.messageId) info.end = 'stored';
+  if (parsed.action === 'status' && parsed.resumed) info.replayed = true;
+  return info;
+}
+
 /** The host's extra body fields, read at send time; a throwing getter sends none. */
 function readRequestExtras(getter: (() => Record<string, unknown> | undefined) | undefined): Record<string, unknown> {
   try {
@@ -421,7 +435,9 @@ interface UseChatOptions {
   /** Extra fields merged into each REST message body (see `getRequestExtras` on the panel). */
   getRequestExtras?: () => Record<string, unknown> | undefined;
   /** Every frame of the message stream and the event stream, as received. */
-  onStreamEvent?: (event: Record<string, unknown>, info: { relayed: boolean }) => void;
+  onStreamEvent?: (event: Record<string, unknown>, info: ChatStreamEventInfo) => void;
+  /** A frame of either stream said the user's session ended. */
+  onSessionEnded?: (reason: string | undefined) => void;
   /** A conversation was retitled (`conversation_title`). */
   onConversationTitle?: (conversationId: string | null, title: string) => void;
   /**
@@ -739,6 +755,7 @@ export function useChat({
   onConversationIdChange,
   getRequestExtras,
   onStreamEvent,
+  onSessionEnded,
   onConversationTitle,
   historySettledFor = null,
   steerAttachments = false,
@@ -747,6 +764,7 @@ export function useChat({
   onBeforeSend,
   onHeldSendSettled,
 }: UseChatOptions): UseChatReturn {
+  const panelFetch = usePanelFetch();
   const isLegacy = backendType === 'legacy';
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -891,6 +909,8 @@ export function useChat({
   getRequestExtrasRef.current = getRequestExtras;
   const onStreamEventRef = useRef(onStreamEvent);
   onStreamEventRef.current = onStreamEvent;
+  const onSessionEndedRef = useRef(onSessionEnded);
+  onSessionEndedRef.current = onSessionEnded;
   const onConversationTitleRef = useRef(onConversationTitle);
   onConversationTitleRef.current = onConversationTitle;
   const onBeforeSendRef = useRef(onBeforeSend);
@@ -1029,7 +1049,7 @@ export function useChat({
     const url = getPendingApprovalsUrl(convId);
     if (!url) return null;
     try {
-      const res = await fetch(url, { headers: { ...(requestHeaders ?? {}) } });
+      const res = await panelFetch(url, { headers: { ...(requestHeaders ?? {}) } });
       if (!res.ok) return null;
       const data = await res.json();
       return {
@@ -1122,7 +1142,7 @@ export function useChat({
 
     return sessionGate.run(async (isCurrent, signal) => {
       const workspaceId = pendingWorkspaceRef.current;
-      const res = await fetch(sessionsUrl, {
+      const res = await panelFetch(sessionsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
         body: JSON.stringify(workspaceId ? { agent_slug: slug, workspace_id: workspaceId } : { agent_slug: slug }),
@@ -1165,7 +1185,7 @@ export function useChat({
         )
       : undefined;
 
-    const res = await fetch(uploadUrl, {
+    const res = await panelFetch(uploadUrl, {
       method: 'POST',
       headers: uploadHeaders,
       body: formData,
@@ -1299,7 +1319,7 @@ export function useChat({
     let detail: string | null = null;
 
     try {
-      const res = await fetch(steerUrl, {
+      const res = await panelFetch(steerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}), ...clientIdHeader() },
         body: JSON.stringify({ conversation_id: convId, content, agent_slug: agentSlug, ...(fileIds.length > 0 ? { file_ids: fileIds } : {}) }),
@@ -1366,7 +1386,7 @@ export function useChat({
     setApprovalError(null);
     setIsSubmittingApproval(true);
     try {
-      const res = await fetch(approveUrl, {
+      const res = await panelFetch(approveUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}), ...clientIdHeader() },
         body: JSON.stringify({
@@ -1433,7 +1453,7 @@ export function useChat({
     // cancel the request too and leave it waiting out its timeout per step.
     const refuse = async (error: string) => {
       try {
-        await fetch(approveUrl, {
+        await panelFetch(approveUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
           body: JSON.stringify({
@@ -1473,7 +1493,7 @@ export function useChat({
         pageRefsRef.current = new Map();
         snapshotError = `${err instanceof Error ? err.message : String(err)}`.slice(0, 500);
       }
-      await fetch(approveUrl, {
+      await panelFetch(approveUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
         signal,
@@ -1739,10 +1759,31 @@ export function useChat({
       if (prev.some((m) => m.id !== bubbleId && m.serverId === messageId)) return prev.filter((m) => m.id !== bubbleId);
       return prev.map((m) => {
         if (m.id !== bubbleId) return m;
-        return end.action === 'done' ? withDone(m, end, end.content || m.content, completedAt) : { ...m, serverId: messageId };
+        return end.action === 'done' ? withDone(m, end, end.content || m.content, completedAt) : { ...m, serverId: messageId, raw: end.raw ?? m.raw };
       });
     });
     return true;
+  };
+
+  /**
+   * One frame of either stream, as the panel reads it, told to the host with
+   * what was read in it; `undefined` (told all the same) when it cannot be read.
+   */
+  const readFrame = (
+    parse: (evt: Record<string, unknown>, ctx: ProtocolContext) => ParsedAction,
+    evt: Record<string, unknown>,
+    ctx: ProtocolContext,
+    relayed: boolean,
+  ): ParsedAction | undefined => {
+    let parsed: ParsedAction | undefined;
+    try {
+      parsed = parse(evt, ctx);
+    } catch {
+      parsed = undefined;
+    }
+    askHost(onStreamEventRef.current, evt, streamEventInfo(relayed, parsed));
+    if (parsed?.action === 'session_ended') askHost(onSessionEndedRef.current, parsed.reason);
+    return parsed;
   };
 
   /** Frames about the conversation rather than a turn; true when handled. */
@@ -1756,7 +1797,9 @@ export function useChat({
           // Looked for among the latest messages only: an older one with the same words is another message.
           let own = prev.length - 1;
           while (own >= 0 && !(prev[own].role === 'user' && !prev[own].serverId && sentTextOf(prev[own]) === relayedMessage.content)) own -= 1;
-          if (own >= 0 && prev.length - own <= 3) return prev.map((m, i) => (i === own ? { ...m, serverId: relayedMessage.serverId } : m));
+          if (own >= 0 && prev.length - own <= 3) {
+            return prev.map((m, i) => (i === own ? { ...m, serverId: relayedMessage.serverId, raw: relayedMessage.raw } : m));
+          }
           return [...prev, relayedMessage];
         });
         return true;
@@ -2062,7 +2105,7 @@ export function useChat({
 
       setAgentStatus({ status: 'thinking' });
 
-      const res = await fetch(getMessagesUrl(), {
+      const res = await panelFetch(getMessagesUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}), ...clientIdHeader() },
         body: JSON.stringify(requestBody),
@@ -2084,12 +2127,12 @@ export function useChat({
 
       const parseEvent = getParser(backendType);
       await readSseEvents(res.body, (evt) => {
+        const parsed = readFrame(parseEvent, evt, turn.ctx, false);
+        if (!parsed) return true;
         try {
-          askHost(onStreamEventRef.current, evt, { relayed: false });
           if (awaitingStoredEnd) {
             // A new chat took the panel over: nothing of this turn is on screen.
             if (sessionGate.generation !== turnGeneration) return false;
-            const parsed = parseEvent(evt, turn.ctx);
             if (applyConversationFrame(parsed)) return true;
             return !applyStoredEnd(turn.currentAssistantId(), parsed, false);
           }
@@ -2104,7 +2147,6 @@ export function useChat({
             }
           }
           if (!ownTurnIdRef.current && typeof evt.turn_id === 'string' && evt.turn_id) ownTurnIdRef.current = evt.turn_id;
-          const parsed = parseEvent(evt, turn.ctx);
           if (parsed.action === 'folded') {
             if (parsed.turnId && relayedTurnRef.current?.turnId === parsed.turnId) {
               handedOver = true;
@@ -2264,9 +2306,9 @@ export function useChat({
 
   /** One frame of the conversation's event stream. */
   const handleEventFrame = (evt: Record<string, unknown>) => {
-    askHost(onStreamEventRef.current, evt, { relayed: true });
     let relayedTurn = relayedTurnRef.current;
-    const parsed = parseRestEvent(evt, relayedTurn?.renderer.ctx ?? { hasUsedTools: false, activeNodeId: '' });
+    const parsed = readFrame(parseRestEvent, evt, relayedTurn?.renderer.ctx ?? { hasUsedTools: false, activeNodeId: '' }, true);
+    if (!parsed) return;
     if (applyConversationFrame(parsed)) return;
     if (parsed.action === 'session_ended') {
       // Signed out: no turn of another origin goes on for this user, and a
@@ -2562,7 +2604,7 @@ export function useChat({
     const awaitingHandover = handoverTurnIdRef.current !== null && !relayedTurnRef.current;
     if (!cancelUrl || !convId || awaitingHandover) {
       if (cancelUrl && convId) {
-        void fetch(cancelUrl, {
+        void panelFetch(cancelUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
           body: JSON.stringify({ conversation_id: convId }),
@@ -2600,7 +2642,7 @@ export function useChat({
     if (beforeStart) cancelBeforeStartRef.current = 'asked';
     // Still this Stop's to settle: the turn has not ended meanwhile.
     const pending = () => cancelTimerRef.current === timer;
-    fetch(cancelUrl, {
+    panelFetch(cancelUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
       body: JSON.stringify(beforeStart ? { conversation_id: convId, awaiting_send: true } : { conversation_id: convId }),
@@ -2657,7 +2699,7 @@ export function useChat({
     const convId = conversationIdRef.current;
     if (!url || !convId) return;
     try {
-      const res = await fetch(url, {
+      const res = await panelFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
         body: JSON.stringify({ conversation_id: convId }),
@@ -2718,7 +2760,7 @@ export function useChat({
       let openedAt: number | null = null;
       try {
         const sentHeadersKey = headersKeyRef.current;
-        const res = await fetch(eventsUrl, {
+        const res = await panelFetch(eventsUrl, {
           headers: { ...(requestHeadersRef.current ?? {}), 'X-Chat-Client-Id': clientId },
           signal: controller.signal,
         });
@@ -2976,7 +3018,7 @@ export function useChat({
     const url = convId ? getPendingApprovalsUrl(convId) : null;
     if (!url) return;
     const id = window.setInterval(() => {
-      fetch(url, { headers: { ...(requestHeaders ?? {}) } }).catch(() => {
+      panelFetch(url, { headers: { ...(requestHeaders ?? {}) } }).catch(() => {
         /* A missed heartbeat is survivable: the next one is well inside the
            server's window. */
       });

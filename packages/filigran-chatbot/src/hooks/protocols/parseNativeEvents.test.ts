@@ -29,7 +29,11 @@ test('an announced wait carries its length and reason', () => {
 });
 
 test('cancelled, approval_resolved and folded turns are their own actions', () => {
-  assert.deepEqual(parseRestEvent({ type: 'cancelled', message_id: 'm1' }, ctx()), { action: 'cancelled', messageId: 'm1' });
+  assert.deepEqual(parseRestEvent({ type: 'cancelled', message_id: 'm1' }, ctx()), {
+    action: 'cancelled',
+    messageId: 'm1',
+    raw: { type: 'cancelled', message_id: 'm1' },
+  });
   assert.deepEqual(parseRestEvent({ type: 'approval_resolved' }, ctx()), { action: 'approval_resolved' });
   assert.deepEqual(parseRestEvent({ type: 'folded_into_active_turn', turn_id: 't1' }, ctx()), { action: 'folded', turnId: 't1' });
 });
@@ -38,7 +42,11 @@ test('an end with neither message_id nor reason is provisional: the stored end f
   assert.deepEqual(parseRestEvent({ type: 'cancelled' }, ctx()), { action: 'cancelled', provisional: true });
   assert.deepEqual(parseRestEvent({ type: 'error', content: 'Boom' }, ctx()), { action: 'error', content: 'Boom', provisional: true });
   assert.deepEqual(parseRestEvent({ type: 'error', content: 'Lost', reason: 'lost' }, ctx()), { action: 'error', content: 'Lost' });
-  assert.deepEqual(parseRestEvent({ type: 'cancelled', message_id: 'm2' }, ctx()), { action: 'cancelled', messageId: 'm2' });
+  assert.deepEqual(parseRestEvent({ type: 'cancelled', message_id: 'm2' }, ctx()), {
+    action: 'cancelled',
+    messageId: 'm2',
+    raw: { type: 'cancelled', message_id: 'm2' },
+  });
 });
 
 test('a new title needs a title', () => {
@@ -83,6 +91,16 @@ test('done says whether the turn goes on, and who answered', () => {
   assert.equal(nobody.action === 'done' && nobody.answeredBy, undefined, 'an attribution naming no agent is none');
 });
 
-test('a session_expired frame ends the turn', () => {
-  assert.deepEqual(parseRestEvent({ type: 'session_expired', reason: 'idle' }, ctx()), { action: 'session_ended' });
+test('a session_expired frame ends the turn, with its reason', () => {
+  assert.deepEqual(parseRestEvent({ type: 'session_expired', reason: 'idle' }, ctx()), { action: 'session_ended', reason: 'idle' });
+  assert.deepEqual(parseRestEvent({ type: 'session_expired' }, ctx()), { action: 'session_ended', reason: undefined });
+});
+
+test('a done frame, and a stored end, carry a copy of the frame for the host', () => {
+  const frame = { type: 'done', content: 'x', message_id: 'm1', llm_trace_id: 'tr-1', channel: { kind: 'teams' } };
+  const done = parseRestEvent(frame, ctx());
+  assert.deepEqual(done.action === 'done' && done.raw, frame);
+  assert.notEqual(done.action === 'done' && done.raw, frame, 'a copy, not the frame itself');
+  const stored = parseRestEvent({ type: 'error', content: 'Boom', message_id: 'm2', llm_trace_id: 'tr-2' }, ctx());
+  assert.deepEqual(stored.action === 'error' && stored.raw, { type: 'error', content: 'Boom', message_id: 'm2', llm_trace_id: 'tr-2' });
 });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ApiEndpoints, BackendType, XtmAgent } from '../types';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
+import { usePanelFetch } from './usePanelRequests';
 
 interface UseAgentsOptions {
   apiBaseUrl: string;
@@ -70,6 +71,7 @@ export function useAgents({
   initialAgent,
   onAgentChange,
 }: UseAgentsOptions): UseAgentsReturn {
+  const panelFetch = usePanelFetch();
   const agentsDisabled = apiEndpoints?.agents === null || !!apiEndpoints?.singleEndpoint || backendType === 'legacy';
   const agentStorageKey = storageKey(storageKeyPrefix, STORAGE_KEYS.agentSlug);
   const [agents, setAgents] = useState<XtmAgent[]>([]);
@@ -94,7 +96,7 @@ export function useAgents({
     const seq = ++requestSeqRef.current;
     const isLatest = () => seq === requestSeqRef.current;
     setAgentsLoading(true);
-    fetch(agentsUrl, { headers: requestHeaders })
+    panelFetch(agentsUrl, { headers: requestHeaders })
       .then((res) => {
         // A non-2xx is a failure, not an empty catalogue. Mapping it to `[]`
         // was why an unreachable backend left the menu spinning forever with

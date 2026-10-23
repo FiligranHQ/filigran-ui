@@ -18,10 +18,25 @@ test('the entry point exports the markdown and answer-marker helpers, and nothin
     'markerKinds',
     'normalizeImageMarkdown',
     'normalizeMarkdownTables',
+    'prepareMarkdown',
     'splitAnswerMarkers',
     'stripAnswerMarkers',
     'wrapBareJson',
   ]);
+});
+
+test('prepareMarkdown applies the helpers in the panel’s order', () => {
+  const { hardenNestedCodeFences, normalizeImageMarkdown, normalizeMarkdownTables, prepareMarkdown, wrapBareJson } = markdown;
+  // Alt text spread over lines that look like a table: flattened first, no table is "repaired" in it.
+  assert.equal(prepareMarkdown('| x | ![alt\n|---|\nmore](u) |'), '| x | ![alt |---| more](u) |');
+  // A table inside a markdown block with nested fences: read before the block's fence is lengthened.
+  assert.equal(
+    prepareMarkdown('```markdown\n# Doc\n```js\nx\n```\n| a | b |\n|---|\n```'),
+    '````markdown\n# Doc\n```js\nx\n```\n| a | b |\n| --- | --- |\n````',
+  );
+  for (const content of ['{"a": [1, 2]}', '![a\nb](u)\n\n| a | b |\n|---|\n| 1 | 2 |', 'plain *prose*']) {
+    assert.equal(prepareMarkdown(content), hardenNestedCodeFences(normalizeMarkdownTables(wrapBareJson(normalizeImageMarkdown(content)))));
+  }
 });
 
 test('a host reads the markers of an answer as the panel does, its own kinds included', () => {

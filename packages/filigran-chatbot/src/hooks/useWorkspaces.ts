@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatWorkspace } from '../types';
 import { isTransientListFailure, parseWorkspaces, refusalMessage } from '../utils/workspaces';
+import { usePanelFetch } from './usePanelRequests';
 
 interface UseWorkspacesOptions {
   apiBaseUrl: string;
@@ -30,6 +31,7 @@ interface UseWorkspacesReturn {
  * also leaves it off, so the history stays the flat list it always was.
  */
 export function useWorkspaces({ apiBaseUrl, apiEndpoints, backendType = 'rest', requestHeaders }: UseWorkspacesOptions): UseWorkspacesReturn {
+  const panelFetch = usePanelFetch();
   const [workspaces, setWorkspaces] = useState<ChatWorkspace[]>([]);
   const [answered, setAnswered] = useState(false);
   // Refreshes overlap (after each write, on remount): only the latest answers.
@@ -43,7 +45,7 @@ export function useWorkspaces({ apiBaseUrl, apiEndpoints, backendType = 'rest', 
     if (!url) return;
     const ticket = ++latestRef.current;
     try {
-      const res = await fetch(url, { method: 'GET', headers: { ...(requestHeaders ?? {}) } });
+      const res = await panelFetch(url, { method: 'GET', headers: { ...(requestHeaders ?? {}) } });
       if (ticket !== latestRef.current) return;
       if (!res.ok) {
         // A passing failure keeps the last list: emptying it would turn the
@@ -66,7 +68,7 @@ export function useWorkspaces({ apiBaseUrl, apiEndpoints, backendType = 'rest', 
   const write = useCallback(
     async (method: 'POST' | 'PATCH' | 'DELETE', target: string, body?: Record<string, unknown>): Promise<WorkspaceWriteResult> => {
       try {
-        const res = await fetch(target, {
+        const res = await panelFetch(target, {
           method,
           headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(requestHeaders ?? {}) },
           ...(body ? { body: JSON.stringify(body) } : {}),

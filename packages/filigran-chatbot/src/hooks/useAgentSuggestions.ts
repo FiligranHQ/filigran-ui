@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ApiEndpoints, BackendType } from '../types';
+import { usePanelFetch } from './usePanelRequests';
 
 interface UseAgentSuggestionsOptions {
   apiBaseUrl: string;
@@ -58,6 +59,7 @@ export function useAgentSuggestions({
   requestHeaders,
   agentSlug,
 }: UseAgentSuggestionsOptions): UseAgentSuggestionsReturn {
+  const panelFetch = usePanelFetch();
   const [suggestions, setSuggestions] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -76,7 +78,7 @@ export function useAgentSuggestions({
     // that ignores it still answers with its generic set, which is exactly the
     // "generic today, personalised later" progression.
     const url = agentSlug ? `${baseUrl}?agent_slug=${encodeURIComponent(agentSlug)}` : baseUrl;
-    fetch(url, { credentials: 'include', headers: { ...(requestHeaders ?? {}) } })
+    panelFetch(url, { credentials: 'include', headers: { ...(requestHeaders ?? {}) } })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled) return;

@@ -394,9 +394,16 @@ export interface ChatPanelProps {
   /**
    * The XTM One URL: the header's "Browse agents" / "Create agent" links, and
    * the waiting panel's invitation to play the arcade there
-   * (`{agentDashboardUrl}/chat?arcade=play`). Only an http(s) URL is linked.
+   * (`{agentDashboardUrl}/chat?arcade=play`, unless `waitingGameUrl` says
+   * where). Only an http(s) URL is linked.
    */
   agentDashboardUrl?: string;
+  /**
+   * Where the waiting panel's invitation to play leads, over
+   * `{agentDashboardUrl}/chat?arcade=play`: an http(s) URL or a path of the
+   * host's own origin (`/…`); anything else links nothing.
+   */
+  waitingGameUrl?: string;
   user: { firstName: string };
   /**
    * The host's translations, over the panel's own catalog: a key it returns
@@ -574,6 +581,14 @@ export interface ChatPanelProps {
    */
   onStreamEvent?: (event: Record<string, unknown>, info: ChatStreamEventInfo) => void;
   /**
+   * The user's session ended: a `session_expired` frame on either stream, or a
+   * `401` whose body's `detail.code` is `session_expired` on any request the
+   * panel makes. *reason* is the frame's or the `detail`'s `reason`, when it
+   * gives one. Called once per set of `requestHeaders`: again only once they
+   * change.
+   */
+  onSessionEnded?: (reason: string | undefined) => void;
+  /**
    * Cards for the `[[KIND:args]]` markers an answer embeds, by marker name
    * (`WORK_ITEM`, `INVESTIGATION`): rendered where the marker stands. Naming
    * `FILE`, `PRESENTATION`, `REPORT` or `VIDEO` replaces the built-in card. A
@@ -607,10 +622,10 @@ export interface ChatPanelProps {
   transcriptFooter?: React.ReactNode;
   /** Replaces the welcome screen of an empty conversation. */
   welcome?: React.ReactNode;
-  /** Rendered under a message's content, before its footer. */
-  renderMessageExtras?: (message: ChatMessage) => React.ReactNode;
+  /** Rendered under a message's content, before its footer; `context.streaming` while the answer is still coming. */
+  renderMessageExtras?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   /** Controls added to a finished message's footer. */
-  messageFooterActions?: (message: ChatMessage) => React.ReactNode;
+  messageFooterActions?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   /** Controls added to a conversation's row in the conversation list. */
   sidebarRowActions?: (conversation: ChatConversationSummary) => React.ReactNode;
   /** Controls added beside New conversation, atop the conversation list. */
@@ -658,8 +673,9 @@ export interface ChatPanelProps {
    * last gave. With `false` comes how the turn ended (`info.ended`): answered,
    * stopped or failed (see `ChatTurnOutcome`). After a provisional end (an
    * `error` or `cancelled` whose stored end is still to come, from a backend
-   * whose turns outlive their stream) `false` comes at once, while sends are
-   * still held for up to 5 s as the turn winds down.
+   * whose turns outlive their stream) `false` comes at once, while the panel
+   * still holds sends as the turn winds down: until its stored end or its
+   * stream's close, at most 5 s.
    */
   onTurnRunningChange?: (running: boolean, info?: ChatTurnEnd) => void;
   /**
@@ -671,7 +687,8 @@ export interface ChatPanelProps {
    * A message that cannot steer the running turn (files, `@` references, a
    * turn that just ended) is held and sent as the next turn once it ends,
    * rather than waiting in the composer. A turn winding down after a
-   * provisional end (see `onTurnRunningChange`) holds sends with or without it.
+   * provisional end (until its stored end or its stream's close, at most 5 s;
+   * see `onTurnRunningChange`) holds sends with or without it.
    */
   holdSendsDuringTurn?: boolean;
   /**
@@ -718,10 +735,25 @@ export interface ChatCodeBlockContext {
 /** Renders one fenced code block of a language (see `ChatPanelProps.codeBlockRenderers`); *code* is the block's text. `null` keeps the block as code. */
 export type ChatCodeBlockRenderer = (code: string, context: ChatCodeBlockContext) => React.ReactNode;
 
-/** Where a frame passed to `onStreamEvent` came from. */
+/** What a message slot (`renderMessageExtras`, `messageFooterActions`) is drawn with. */
+export interface ChatMessageSlotContext {
+  /** The message is the answer still being written. */
+  streaming: boolean;
+}
+
+/** Where a frame passed to `onStreamEvent` came from, and what the panel read in it. */
 export interface ChatStreamEventInfo {
   /** True for a turn this panel did not start, relayed by the event stream. */
   relayed: boolean;
+  /**
+   * The frame ends a turn: `'provisional'` for an `error` or `cancelled` with
+   * neither `message_id` nor `reason` (its stored end follows), `'stored'` for
+   * an end carrying the stored answer's `message_id` (a `done` that is not
+   * intermediate, a `cancelled` or an `error`). Absent on any other frame.
+   */
+  end?: 'provisional' | 'stored';
+  /** The frame acknowledges a turn replayed from its start (`thinking` with `resumed`). */
+  replayed?: boolean;
 }
 
 /** What a host can do to a mounted panel, through its `ref`. */
@@ -919,6 +951,14 @@ export interface ChatMessage {
    * reasoning-details affordance, mirroring the XTM One web chat.
    */
   isTruncated?: boolean;
+  /**
+   * The backend's own fields for the message, as it sent them: the restored
+   * (or paged, or relayed) entry, or the `done` frame - or the stored end -
+   * that closed a live answer. A plain copy, whose fields are the backend's to
+   * define; the panel reads none of it. Absent on a message no backend object
+   * describes yet (one being written, a user message sent from this panel).
+   */
+  raw?: Record<string, unknown>;
 }
 
 /** The agent an answer names as its author (`answered_by`); either field may be missing. */

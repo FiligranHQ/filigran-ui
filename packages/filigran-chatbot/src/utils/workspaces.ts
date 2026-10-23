@@ -1,22 +1,33 @@
 import type { ChatConversationSummary, ChatWorkspace } from '../types';
 
 /**
- * The conversation list grouped by workspace, by the XTM One web sidebar's
- * rule so both surfaces show the same groups. No local runtime imports, so
+ * The conversation list grouped by workspace, the one rule a host's own list
+ * shares through `@filigran/chatbot/workspaces`. No local runtime imports, so
  * `node --test` runs it as is.
  */
 
+/** The key of the group of conversations filed in a workspace the list does not show. */
 export const ELSEWHERE_GROUP = '__elsewhere__';
 
-export interface WorkspaceGroup {
+/** What the grouping reads of a conversation; a host's own type passes through whole. */
+export type GroupableConversation = Pick<ChatConversationSummary, 'conversationId' | 'workspaceId'>;
+
+export interface WorkspaceGroup<C extends GroupableConversation = ChatConversationSummary, W extends ChatWorkspace = ChatWorkspace> {
   /** `null` for the `elsewhere` group. */
-  workspace: ChatWorkspace | null;
+  workspace: W | null;
+  /** The workspace's id, or `ELSEWHERE_GROUP`. */
   key: string;
-  conversations: ChatConversationSummary[];
+  conversations: C[];
 }
 
-/** Defensive parse of the workspace list: entries without an id or a name are skipped. */
-export function parseWorkspaces(data: unknown): ChatWorkspace[] {
+/**
+ * Defensive parse of the workspace list (a bare array or `{ workspaces }`):
+ * entries without an id or a name are skipped, and so are archived ones,
+ * which take no conversation. A workspace is the caller's own by its
+ * `is_own`, or, where the backend sends none, by its `user_id` being
+ * *userId*.
+ */
+export function parseWorkspaces(data: unknown, options: { userId?: string } = {}): ChatWorkspace[] {
   const list = Array.isArray(data)
     ? data
     : Array.isArray((data as Record<string, unknown> | null)?.workspaces)
@@ -33,7 +44,7 @@ export function parseWorkspaces(data: unknown): ChatWorkspace[] {
     out.push({
       id: w.id,
       name: w.name,
-      isOwn: w.is_own === true,
+      isOwn: typeof w.is_own === 'boolean' ? w.is_own : !!options.userId && w.user_id === options.userId,
       isDefault: w.is_default === true,
       canManage: w.can_manage === true,
     });
@@ -42,7 +53,7 @@ export function parseWorkspaces(data: unknown): ChatWorkspace[] {
 }
 
 /** The caller's own default first, then by name. */
-export function sortWorkspaces(workspaces: ChatWorkspace[]): ChatWorkspace[] {
+export function sortWorkspaces<W extends ChatWorkspace>(workspaces: W[]): W[] {
   const mine = (w: ChatWorkspace) => w.isDefault && w.isOwn;
   return [...workspaces].sort((a, b) => {
     if (mine(a) !== mine(b)) return mine(a) ? -1 : 1;
@@ -88,23 +99,31 @@ export function returnRefreshDue(now: number, last: number | null): boolean {
 }
 
 /** The workspaces a conversation can be moved into, in the order the list shows them. */
-export function fileableWorkspaces(workspaces: ChatWorkspace[]): ChatWorkspace[] {
+export function fileableWorkspaces<W extends ChatWorkspace>(workspaces: W[]): W[] {
   return sortWorkspaces(workspaces.filter((w) => w.canManage));
 }
 
-export function groupConversations(
-  conversations: ChatConversationSummary[],
-  workspaces: ChatWorkspace[],
-  options: { matches?: (c: ChatConversationSummary) => boolean } = {},
-): { groups: WorkspaceGroup[]; unfiled: ChatConversationSummary[] } {
+/**
+ * The groups of the conversation list, in order, and the conversations filed
+ * in none: a group for each workspace the caller may file into, empty or not,
+ * and for one they may only read while it holds a conversation of theirs;
+ * the conversations filed in a workspace not listed go to one `ELSEWHERE_GROUP`.
+ * With *matches* (a search) only the matching conversations are kept, and
+ * the groups left empty go.
+ */
+export function groupConversations<C extends GroupableConversation, W extends ChatWorkspace>(
+  conversations: C[],
+  workspaces: W[],
+  options: { matches?: (c: C) => boolean } = {},
+): { groups: WorkspaceGroup<C, W>[]; unfiled: C[] } {
   const { matches } = options;
   const shown = matches ? conversations.filter(matches) : conversations;
   const known = new Set(workspaces.map((w) => w.id));
   const held = new Set(conversations.map((c) => c.workspaceId).filter((id): id is string => !!id));
 
-  const byWorkspace = new Map<string, ChatConversationSummary[]>();
-  const elsewhere: ChatConversationSummary[] = [];
-  const unfiled: ChatConversationSummary[] = [];
+  const byWorkspace = new Map<string, C[]>();
+  const elsewhere: C[] = [];
+  const unfiled: C[] = [];
   for (const c of shown) {
     const id = c.workspaceId ?? null;
     if (!id) unfiled.push(c);
@@ -112,7 +131,7 @@ export function groupConversations(
     else elsewhere.push(c);
   }
 
-  const groups: WorkspaceGroup[] = [];
+  const groups: WorkspaceGroup<C, W>[] = [];
   for (const workspace of sortWorkspaces(workspaces)) {
     const inside = byWorkspace.get(workspace.id) ?? [];
     if (!workspace.canManage && !held.has(workspace.id)) continue;
@@ -131,7 +150,7 @@ export function groupConversations(
 export function groupIsOpen(
   key: string,
   collapsed: ReadonlySet<string>,
-  group: { conversations: ChatConversationSummary[] },
+  group: { conversations: GroupableConversation[] },
   activeConversationId: string | null,
   searching: boolean,
 ): boolean {
@@ -145,11 +164,7 @@ export function groupIsOpen(
  * or by the conversation on screen, where a click would flip a remembered
  * state nobody sees, which then folds the group later.
  */
-export function groupCanToggle(
-  group: { conversations: ChatConversationSummary[] },
-  activeConversationId: string | null,
-  searching: boolean,
-): boolean {
+export function groupCanToggle(group: { conversations: GroupableConversation[] }, activeConversationId: string | null, searching: boolean): boolean {
   if (searching) return false;
   return !(activeConversationId && group.conversations.some((c) => c.conversationId === activeConversationId));
 }

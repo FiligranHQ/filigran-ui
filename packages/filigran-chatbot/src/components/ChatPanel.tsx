@@ -19,6 +19,8 @@ import { useComposerExtras } from '../hooks/useComposerExtras';
 import { useAgentSuggestions } from '../hooks/useAgentSuggestions';
 import { useLatestCallback, useShallowStable } from '../hooks/useStableProps';
 import { useVoiceCall } from '../hooks/useVoiceCall';
+import { PanelRequestsProvider, usePanelRequests, type PanelRequests } from '../hooks/usePanelRequests';
+import { watchSessionEnd } from '../utils/sessionEnd';
 import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
@@ -60,7 +62,33 @@ const defaultSuggestions = (t: Translate) => [
   t('Summarize my recent findings'),
 ];
 
-export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanel(
+/**
+ * The panel, its requests reporting the end of the user's session
+ * (`onSessionEnded`): once per set of `requestHeaders`, whichever request or
+ * stream said it first.
+ */
+export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanel(props, ref) {
+  const onSessionEndedRef = useRef(props.onSessionEnded);
+  onSessionEndedRef.current = props.onSessionEnded;
+  const headersKeyRef = useRef('');
+  headersKeyRef.current = requestHeadersKey(props.requestHeaders);
+  const requests = useMemo<PanelRequests>(() => {
+    let endedFor: string | null = null;
+    const sessionEnded = (reason: string | undefined) => {
+      if (!onSessionEndedRef.current || endedFor === headersKeyRef.current) return;
+      endedFor = headersKeyRef.current;
+      askHost(onSessionEndedRef.current, reason);
+    };
+    return { sessionEnded, fetch: watchSessionEnd(() => (onSessionEndedRef.current ? sessionEnded : undefined)) };
+  }, []);
+  return (
+    <PanelRequestsProvider value={requests}>
+      <ChatPanelBody {...props} ref={ref} />
+    </PanelRequestsProvider>
+  );
+});
+
+const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanelBody(
   {
     mode,
     onClose,
@@ -69,6 +97,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     apiBaseUrl,
     apiEndpoints: apiEndpointsProp,
     agentDashboardUrl,
+    waitingGameUrl: waitingGameUrlProp,
     user,
     t: hostT,
     accentColor = '#7b5cff',
@@ -161,6 +190,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   // A click handler, not content: held stable so a host's inline one spares every row.
   const onArtifactOpen = useLatestCallback(onArtifactOpenProp);
   const rootRef = useRef<HTMLDivElement>(null);
+  const { fetch: panelFetch, sessionEnded } = usePanelRequests();
   // The panel's own catalog in `locale`, under whatever the host translates itself.
   const t = useMemo(() => createTranslate(hostT, locale), [hostT, locale]);
   const waitingMessages = useShallowStable(waitingMessagesProp);
@@ -294,6 +324,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     onConversationIdChange: onConversationChangeProp ? onConversationChange : undefined,
     getRequestExtras: getRequestExtrasProp ? getRequestExtras : undefined,
     onStreamEvent: handleStreamFrame,
+    onSessionEnded: sessionEnded,
     onConversationTitle: () => void refreshConversationsRef.current(),
     historySettledFor: eventsReadyId,
     steerAttachments,
@@ -506,7 +537,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       return 0;
     }
     try {
-      const res = await fetch(
+      const res = await panelFetch(
         `${messagesPageBase}/${encodeURIComponent(convId)}/messages?before=${encodeURIComponent(oldest)}&limit=50&supports_artifacts=true`,
         {
           headers: { ...(requestHeaders ?? {}) },
@@ -698,7 +729,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   // Stable across renders so the memoized message rows (which take it as a
   // prop) aren't invalidated on every streamed frame.
   const resolvedLogo = useMemo(() => logoIcon ?? <DefaultLogoIcon size={24} />, [logoIcon]);
-  const playUrl = useMemo(() => waitingGameUrl(agentDashboardUrl), [agentDashboardUrl]);
+  const playUrl = useMemo(() => waitingGameUrl(agentDashboardUrl, waitingGameUrlProp), [agentDashboardUrl, waitingGameUrlProp]);
   const firstName = user.firstName;
   /**
    * The agent a *restored* conversation belongs to, as the backend reports it.
@@ -781,7 +812,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     async (att: ChatAttachment) => {
       const url = resolveAttachmentUrl(att);
       try {
-        const res = await fetch(url, {
+        const res = await panelFetch(url, {
           method: 'GET',
           credentials: 'include',
           headers: { ...(requestHeaders ?? {}) },
@@ -821,7 +852,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     async (artifact: ChatArtifact, format: string) => {
       const fallbackName = `${artifact.title || artifact.kind}.${artifactFileExtension(format)}`;
       try {
-        const res = await fetch(`${artifactUrl(artifact.kind, artifact.id)}/download`, {
+        const res = await panelFetch(`${artifactUrl(artifact.kind, artifact.id)}/download`, {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
@@ -848,7 +879,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
 
   const handleRefreshArtifact = useCallback(
     async (kind: ChatArtifactKind, id: string) => {
-      const res = await fetch(artifactUrl(kind, id), { credentials: 'include', headers: { ...(requestHeaders ?? {}) } });
+      const res = await panelFetch(artifactUrl(kind, id), { credentials: 'include', headers: { ...(requestHeaders ?? {}) } });
       if (!res.ok) return undefined;
       return parseArtifact(await res.json());
     },
@@ -935,7 +966,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     const isStale = () => !isMountedRef.current || conversationIdRef.current !== requestedConversationId;
     const requestedHeadersKey = requestHeadersKey(requestHeaders);
 
-    fetch(sessionsUrl, {
+    panelFetch(sessionsUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
       body: JSON.stringify({
@@ -1106,7 +1137,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
       ? async () => {
           const convId = conversationIdRef.current;
           if (!convId) return null;
-          const res = await fetch(`${pendingApprovalsBase}/${encodeURIComponent(convId)}/pending-approvals`, {
+          const res = await panelFetch(`${pendingApprovalsBase}/${encodeURIComponent(convId)}/pending-approvals`, {
             headers: { ...(requestHeaders ?? {}) },
           });
           if (!res.ok) return null;

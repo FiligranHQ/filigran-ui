@@ -153,11 +153,41 @@ This file starts at 3.10.0; earlier releases are on the
   `markerKinds` and the `AnswerPart` type (and `ChatArtifactKind`), still free
   of React and side effects, so a host renders, previews or strips markers
   exactly as the panel does.
+- `onStreamEvent`'s second argument says what the panel read in the frame:
+  `end` (`'provisional'` on an `error` or `cancelled` with neither
+  `message_id` nor `reason`, `'stored'` on an end naming the stored answer's
+  `message_id`: a `done` that is not intermediate, a `cancelled`, an
+  `error`) and `replayed` (the `thinking` frame of a turn replayed from its
+  start, `resumed: true`).
+- `onSessionEnded(reason)` tells the host the user's session ended: a
+  `session_expired` frame on either stream, or a `401` whose body's
+  `detail.code` is `session_expired` on any request the panel makes, with the
+  frame's or the `detail`'s `reason`. It comes once per set of
+  `requestHeaders`.
+- `renderMessageExtras` and `messageFooterActions` get a second argument,
+  `{ streaming }` (`ChatMessageSlotContext`): the message is the answer still
+  being written.
+- `ChatMessage.raw`: the backend's own object for the message, a plain copy
+  (the restored, paged or relayed entry; the `done` frame of a live answer,
+  or the stored end after a provisional one), for the fields the panel does
+  not read.
+- `@filigran/chatbot/workspaces`, a React-free entry point with the panel's
+  grouping of a conversation list by workspace: `parseWorkspaces` (which,
+  given `userId`, tells the caller's own workspaces by `user_id` where the
+  backend sends no `is_own`), `sortWorkspaces`, `groupConversations`
+  (generic over the host's conversation and workspace types),
+  `fileableWorkspaces`, `groupIsOpen`, `groupCanToggle`, `ELSEWHERE_GROUP`
+  and the `WorkspaceGroup`, `GroupableConversation` and `ChatWorkspace` types.
+- `prepareMarkdown` on `@filigran/chatbot/markdown`: the panel's markdown
+  normalisation in its order, for a host's own markdown component.
+- `waitingGameUrl` says where the waiting panel's invitation to play leads
+  (an http(s) URL or a path of the host's origin), over
+  `{agentDashboardUrl}/chat?arcade=play`.
 - New exported types: `ChatPanelHandle`, `ChatPanelMode`, `ChatSendOptions`,
   `ChatSendOutcome`, `ChatSendDraft`, `ChatSendDecision`, `ChatHeldOutcome`,
   `ChatMarkerRenderer`, `ChatMarkerContext`, `ChatCodeBlockRenderer`,
-  `ChatCodeBlockContext`, `ChatStreamEventInfo`, `ChatAnsweredBy` and
-  `AgentStatusState`.
+  `ChatCodeBlockContext`, `ChatStreamEventInfo`, `ChatMessageSlotContext`,
+  `ChatAnsweredBy` and `AgentStatusState`.
 
 ### Changed
 
@@ -263,8 +293,8 @@ This file starts at 3.10.0; earlier releases are on the
   gauge and agent alone.
 - With `cancel`, `skipWait` or `events` named, a send made while a turn ended
   provisionally still winds down is held, as during a turn, until its stored
-  end, another turn starting, the close of the panel's own stream (for its
-  own turn) or 5 s: the backend still holds the conversation, and the message
+  end or its stream's close (the panel's own, for its own turn; another turn
+  starting ends it too), at most 5 s: the backend still holds the conversation, and the message
   would join the ending turn unanswered. A relayed turn winds down across
   the event stream's reopening.
 - With `cancel`, `skipWait` or `events` named, a new chat's conversation is

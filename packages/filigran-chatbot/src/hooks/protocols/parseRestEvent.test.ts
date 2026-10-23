@@ -69,6 +69,20 @@ test('a restored answer of a multi-agent turn names its agent, and says when it 
   assert.equal(user.agentName, undefined);
 });
 
+test('a restored entry keeps a copy of all the backend sent, for the host', () => {
+  const entry = {
+    id: 'm-9',
+    role: 'assistant',
+    content: 'Done.',
+    llm_trace_id: 'tr-9',
+    runner_activity: [{ command: 'ls' }],
+    content_format: 'html',
+  };
+  const [answer] = parseRestoredMessages([entry]);
+  assert.deepEqual(answer.raw, entry);
+  assert.notEqual(answer.raw, entry);
+});
+
 test('entries that are not a user or an assistant message are skipped', () => {
   const restored = parseRestoredMessages([{ role: 'system', content: 'x' }, null, 'x', { role: 'user', content: 'Hi' }]);
   assert.deepEqual(

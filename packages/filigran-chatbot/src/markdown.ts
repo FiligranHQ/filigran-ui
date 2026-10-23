@@ -9,15 +9,17 @@
  * route would risk pulling the panel into its entry chunk. This subpath carries
  * only pure functions of strings — no React, no DOM, no CSS.
  *
- * Apply them in this order — alt-text is flattened before anything reads line
- * structure, and the JSON wrap must see the raw payload before fences are
- * hardened:
+ * `prepareMarkdown` applies them as the panel does, in this order — alt-text
+ * is flattened before anything reads line structure, and the JSON wrap must
+ * see the raw payload before fences are hardened:
  *
  * ```ts
  * hardenNestedCodeFences(
  *   normalizeMarkdownTables(wrapBareJson(normalizeImageMarkdown(content))),
  * )
  * ```
+ *
+ * A host rewriting the text first (its own URLs) hands the result to it.
  *
  * `markdownUrlTransform` goes to react-markdown's `urlTransform` prop.
  *
@@ -35,6 +37,7 @@ export {
   markerKinds,
   normalizeImageMarkdown,
   normalizeMarkdownTables,
+  prepareMarkdown,
   splitAnswerMarkers,
   stripAnswerMarkers,
   wrapBareJson,

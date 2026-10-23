@@ -8,6 +8,7 @@ import type {
   ChatAttachment,
   ChatConversationRef,
   ChatMessage,
+  ChatMessageSlotContext,
   MessageFeedback,
   ToolApprovalDecision,
   ToolApprovalProposal,
@@ -147,8 +148,8 @@ interface ChatMessagesProps {
   codeBlockRenderers?: Record<string, ChatCodeBlockRenderer>;
   transformMessageText?: (text: string, message: ChatMessage) => string;
   onArtifactOpen?: (artifact: ChatArtifact) => void;
-  renderMessageExtras?: (message: ChatMessage) => React.ReactNode;
-  messageFooterActions?: (message: ChatMessage) => React.ReactNode;
+  renderMessageExtras?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
+  messageFooterActions?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   /** Shown after the last message. */
   transcriptFooter?: React.ReactNode;
   /** The backend's voice for read aloud (`apiEndpoints.tts`). */
@@ -429,8 +430,8 @@ interface MessageRowProps {
   codeBlockRenderers?: Record<string, ChatCodeBlockRenderer>;
   transformMessageText?: (text: string, message: ChatMessage) => string;
   onArtifactOpen?: (artifact: ChatArtifact) => void;
-  renderMessageExtras?: (message: ChatMessage) => React.ReactNode;
-  messageFooterActions?: (message: ChatMessage) => React.ReactNode;
+  renderMessageExtras?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
+  messageFooterActions?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   t: (key: string) => string;
 }
 
@@ -778,7 +779,9 @@ const MessageRow = memo(
           </div>
         )}
 
-        {renderMessageExtras && <div className={`w-full ${isAssistant ? '' : 'flex justify-end'}`}>{renderMessageExtras(msg)}</div>}
+        {renderMessageExtras && (
+          <div className={`w-full ${isAssistant ? '' : 'flex justify-end'}`}>{renderMessageExtras(msg, { streaming: isStreaming })}</div>
+        )}
 
         {/* The user's side mirrors the answer's: the time hugs the bubble's edge. */}
         {!isAssistant && (
@@ -826,7 +829,7 @@ const MessageRow = memo(
             {speechDocuments && hasSpeakableWords(speechDocuments) && (
               <ReadAloudButton speaking={isSpeaking} onToggle={() => onToggleSpeech(speechKey, speechDocuments)} t={t} />
             )}
-            {messageFooterActions?.(msg)}
+            {messageFooterActions?.(msg, { streaming: isStreaming })}
           </div>
         )}
         {showActions && feedback?.commentOpen && (

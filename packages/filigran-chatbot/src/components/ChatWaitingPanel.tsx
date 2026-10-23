@@ -24,11 +24,16 @@ const defaultMessages = (t: Translate) => [
 const ROTATE_MS = 2600;
 
 /**
- * Where the waiting game is played: XTM One's arcade, which `?arcade=play`
- * opens on any XTM One page, the chat being where it lives. `xtmOneUrl` is
- * host input that ends up in an href, so only an http(s) base is linked.
+ * Where the waiting game is played: the host's own *gameUrl* when it names
+ * one, else XTM One's arcade, which `?arcade=play` opens on any XTM One page,
+ * the chat being where it lives. Both are host input that ends up in an href,
+ * so only an http(s) URL is linked, or (*gameUrl*) a path of the host's origin.
  */
-export function waitingGameUrl(xtmOneUrl: string | undefined): string | null {
+export function waitingGameUrl(xtmOneUrl: string | undefined, gameUrl?: string): string | null {
+  if (gameUrl !== undefined) {
+    const url = gameUrl.trim();
+    return /^https?:\/\//i.test(url) || /^\/(?![/\\])/.test(url) ? url : null;
+  }
   const base = xtmOneUrl?.trim().replace(/\/+$/, '');
   if (!base || !/^https?:\/\//i.test(base)) return null;
   return `${base}/chat?arcade=play`;

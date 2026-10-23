@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CloseIcon, ImageIcon, MaximizeIcon } from './icons';
 import { findChatbotRoot } from '../utils';
+import { usePanelFetch } from '../hooks/usePanelRequests';
 
 interface ImageLightboxProps {
   src: string;
@@ -104,13 +105,14 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [errored, setErrored] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const panelFetch = usePanelFetch();
 
   useEffect(() => {
     if (!needsAuth) return;
     let cancelled = false;
     let objectUrl: string | null = null;
 
-    fetch(src, { credentials: 'include', headers: { ...requestHeaders } })
+    panelFetch(src, { credentials: 'include', headers: { ...requestHeaders } })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.blob();

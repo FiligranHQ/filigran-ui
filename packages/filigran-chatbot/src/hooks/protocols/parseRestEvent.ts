@@ -279,12 +279,13 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
     // the same turn follows it.
     const messageId = optionalString(evt.message_id);
     const provisional = !messageId && !evt.reason ? (true as const) : undefined;
-    const end = { ...(messageId ? { messageId } : {}), ...(provisional ? { provisional } : {}) };
+    // A stored end describes the stored answer: the host reads it as it came.
+    const end = { ...(messageId ? { messageId, raw: { ...evt } } : {}), ...(provisional ? { provisional } : {}) };
     return type === 'error' ? { action: 'error', content: (evt.content as string) || '', ...end } : { action: 'cancelled', ...end };
   }
   // The user's session ended: the backend closes the stream after this frame,
   // and no turn on screen can go on for this user.
-  if (type === 'session_expired') return { action: 'session_ended' };
+  if (type === 'session_expired') return { action: 'session_ended', reason: optionalString(evt.reason) };
   if (type === 'approval_resolved') return { action: 'approval_resolved' };
   if (type === 'folded_into_active_turn') return { action: 'folded', turnId: optionalString(evt.turn_id) };
   if (type === 'conversation_title') {
@@ -402,6 +403,7 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
       intermediate: evt.intermediate === true || undefined,
       answeredBy: parseAnsweredBy(evt.answered_by),
       mentionFailed: evt.mention_failed === true || undefined,
+      raw: { ...evt },
     };
   }
 
@@ -472,6 +474,8 @@ export function parseRestoredMessages(raw: unknown): ChatMessage[] {
       toolCallTrace: parseToolCallTrace(m.tool_call_trace),
       transferChain: parseTransferChain(m.transfer_chain),
       isTruncated: m.is_truncated === true || undefined,
+      // What the backend stores beyond what the panel reads, for the host.
+      raw: { ...m },
     });
   });
   return out;

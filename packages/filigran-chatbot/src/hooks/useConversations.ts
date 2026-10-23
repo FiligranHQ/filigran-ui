@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatConversationSummary } from '../types';
 import { refusalMessage, revertMove } from '../utils/workspaces';
+import { usePanelFetch } from './usePanelRequests';
 
 interface UseConversationsOptions {
   apiBaseUrl: string;
@@ -68,6 +69,7 @@ export function useConversations({
   backendType = 'rest',
   requestHeaders,
 }: UseConversationsOptions): UseConversationsReturn {
+  const panelFetch = usePanelFetch();
   const [conversations, setConversations] = useState<ChatConversationSummary[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(false);
 
@@ -79,7 +81,7 @@ export function useConversations({
     if (!historyEnabled) return;
     setConversationsLoading(true);
     try {
-      const res = await fetch(sessionsUrl, {
+      const res = await panelFetch(sessionsUrl, {
         method: 'GET',
         headers: { ...(requestHeaders ?? {}) },
       });
@@ -105,7 +107,7 @@ export function useConversations({
     async (id: string): Promise<boolean> => {
       if (!historyEnabled) return false;
       try {
-        const res = await fetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
+        const res = await panelFetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
           method: 'DELETE',
           headers: { ...(requestHeaders ?? {}) },
         });
@@ -123,7 +125,7 @@ export function useConversations({
   const clearConversations = useCallback(async (): Promise<boolean> => {
     if (!clearAllUrl) return false;
     try {
-      const res = await fetch(clearAllUrl, { method: 'DELETE', headers: { ...(requestHeaders ?? {}) } });
+      const res = await panelFetch(clearAllUrl, { method: 'DELETE', headers: { ...(requestHeaders ?? {}) } });
       if (!res.ok) return false;
       setConversations([]);
       return true;
@@ -144,7 +146,7 @@ export function useConversations({
       const previous = conversations;
       setConversations((prev) => prev.map((c) => (c.conversationId === id ? { ...c, title: trimmed } : c)));
       try {
-        const res = await fetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
+        const res = await panelFetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
           body: JSON.stringify({ title: trimmed }),
@@ -173,7 +175,7 @@ export function useConversations({
       const revert = () => setConversations((prev) => revertMove(prev, id, workspaceId, previous));
       setConversations((prev) => prev.map((c) => (c.conversationId === id ? { ...c, workspaceId } : c)));
       try {
-        const res = await fetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
+        const res = await panelFetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
           body: JSON.stringify({ workspace_id: workspaceId }),

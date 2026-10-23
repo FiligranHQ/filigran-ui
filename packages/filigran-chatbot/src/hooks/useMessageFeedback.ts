@@ -1,6 +1,7 @@
 import { useCallback, useInsertionEffect, useRef, useState } from 'react';
 import type { ChatMessage, MessageFeedback, Translate } from '../types';
 import { normalizeFeedbackComment, ratingOf, submitFeedback } from '../utils/feedback';
+import { usePanelFetch } from './usePanelRequests';
 
 /** What the user did to one answer's rating in this session. */
 export interface FeedbackEntry {
@@ -41,6 +42,7 @@ interface Options {
  * discrete event, so the row has rendered the previous one's outcome by then.
  */
 export function useMessageFeedback({ feedbackUrl, conversationId, requestHeaders, onMessageFeedback, t }: Options) {
+  const panelFetch = usePanelFetch();
   const [state, setState] = useState<{ scope: string | null | undefined; entries: Record<string, FeedbackEntry> }>(() => ({
     scope: conversationId,
     entries: {},
@@ -83,7 +85,7 @@ export function useMessageFeedback({ feedbackUrl, conversationId, requestHeaders
       }
       if (!convId || !msg.serverId) return;
       put(key, { seq, value: next, comment: null, pending: true, error: null, commentOpen: false });
-      const stored = await submitFeedback(fetch, url, convId, msg.serverId, next ? { rating: ratingOf(next), comment: null } : null, headers);
+      const stored = await submitFeedback(panelFetch, url, convId, msg.serverId, next ? { rating: ratingOf(next), comment: null } : null, headers);
       if (!stored) {
         const error = tr(next ? 'Could not submit feedback.' : 'Could not retract feedback.');
         patch(key, seq, () =>
@@ -112,7 +114,7 @@ export function useMessageFeedback({ feedbackUrl, conversationId, requestHeaders
       }
       const seq = ++seqRef.current;
       put(key, { ...current, seq, pending: true, error: null });
-      const stored = await submitFeedback(fetch, url, convId, msg.serverId, { rating: 'negative', comment }, headers);
+      const stored = await submitFeedback(panelFetch, url, convId, msg.serverId, { rating: 'negative', comment }, headers);
       patch(key, seq, (entry) =>
         stored
           ? { ...entry, comment, pending: false, commentOpen: false }

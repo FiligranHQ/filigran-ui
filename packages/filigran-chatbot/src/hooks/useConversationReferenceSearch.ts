@@ -6,6 +6,7 @@ import {
   referenceSearchUrl,
   type ReferenceSearchState,
 } from '../utils/conversationRefs';
+import { usePanelFetch } from './usePanelRequests';
 
 interface UseConversationReferenceSearchOptions {
   /** `conversationReferencesUrl(...)`: null while the feature is off. */
@@ -26,6 +27,7 @@ interface UseConversationReferenceSearchOptions {
  * answer stays until then, so typing never empties the menu.
  */
 export function useConversationReferenceSearch({ url, query, exclude, requestHeaders }: UseConversationReferenceSearchOptions): ReferenceSearchState {
+  const panelFetch = usePanelFetch();
   const [state, setState] = useState<ReferenceSearchState>(EMPTY_REFERENCE_SEARCH);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export function useConversationReferenceSearch({ url, query, exclude, requestHea
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       try {
-        const res = await fetch(referenceSearchUrl(url, query, exclude), {
+        const res = await panelFetch(referenceSearchUrl(url, query, exclude), {
           credentials: 'include',
           headers: { ...(requestHeaders ?? {}) },
           signal: controller.signal,

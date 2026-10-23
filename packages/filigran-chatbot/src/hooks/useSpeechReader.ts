@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useInsertionEffect, useRef, useState } from 'react';
 import { chunkSpeech, createSpeechController, speakableText, type SpeechController } from '../utils/speech';
+import { usePanelFetch } from './usePanelRequests';
 
 const speechSupported = (): boolean =>
   typeof window !== 'undefined' && !!window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function';
@@ -22,6 +23,7 @@ export interface TtsRoute {
  * Whatever is being read stops when the transcript unmounts.
  */
 export function useSpeechReader(locale?: string, tts?: TtsRoute) {
+  const panelFetch = usePanelFetch();
   const [browserSupported] = useState(speechSupported);
   const supported = browserSupported || !!tts;
   const [speakingId, setSpeakingId] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export function useSpeechReader(locale?: string, tts?: TtsRoute) {
       const audio = new Audio();
       playback.audio = audio;
       const fetchChunk = async (chunk: string): Promise<Blob> => {
-        const res = await fetch(route.url, {
+        const res = await panelFetch(route.url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(route.requestHeaders ?? {}) },
           body: JSON.stringify({ text: chunk, format: 'mp3' }),

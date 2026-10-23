@@ -30,9 +30,9 @@ const NATIVE_PREFIX = '/api/xtmone-web';
 /** How many messages a web restore returns; older ones are paged. */
 const RESTORE_WINDOW = 50;
 /**
- * How long an event stream lives before the mock ends it, as XTM One ends its
- * own every 15 minutes: the panel reconnects and the snapshot resyncs it.
- * Shorter here, so a dev session sees it happen.
+ * How long an event stream lives before the mock ends it: a backend may end
+ * the stream at any time, and the panel reopens it, the snapshot resyncing it.
+ * Short, so a dev session sees it happen.
  */
 const EVENTS_LIFETIME_MS = 2 * 60 * 1000;
 

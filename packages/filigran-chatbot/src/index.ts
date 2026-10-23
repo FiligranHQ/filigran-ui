@@ -13,6 +13,7 @@ export type {
   ChatTurnEnd,
   ChatTurnOutcome,
   ChatStreamEventInfo,
+  ChatMessageSlotContext,
   ChatMarkerContext,
   ChatMarkerRenderer,
   ChatCodeBlockContext,

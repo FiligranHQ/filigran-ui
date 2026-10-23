@@ -4,6 +4,7 @@ import { getSpeechRecognition } from './useDictation';
 import type { TtsRoute } from './useSpeechReader';
 import { createVoiceCall, type VoiceCallController, type VoiceCallDeps, type VoiceCallSnapshot } from './voiceCallController';
 import { probeTurn } from './voiceTurn';
+import { usePanelFetch } from './usePanelRequests';
 
 /** Longest piece of an answer spoken at once: the first one plays while the next are made. */
 export const VOICE_CHUNK_LENGTH = 200;
@@ -28,9 +29,9 @@ interface UseVoiceCallOptions {
 }
 
 /** Fetch the backend's audio for *text*; `null` when the route fails. */
-async function fetchSpeech(route: TtsRoute, text: string, signal: AbortSignal): Promise<Blob | null> {
+async function fetchSpeech(fetchImpl: typeof fetch, route: TtsRoute, text: string, signal: AbortSignal): Promise<Blob | null> {
   try {
-    const res = await fetch(route.url, {
+    const res = await fetchImpl(route.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(route.requestHeaders ?? {}) },
       body: JSON.stringify({ text, format: 'mp3' }),
@@ -88,6 +89,7 @@ function speakInBrowser(text: string, lang: string | undefined, signal: AbortSig
  * browser's voice. `onFrame` must see every frame of both streams.
  */
 export function useVoiceCall(options: UseVoiceCallOptions) {
+  const panelFetch = usePanelFetch();
   const optionsRef = useRef(options);
   useInsertionEffect(() => {
     optionsRef.current = options;
@@ -99,7 +101,7 @@ export function useVoiceCall(options: UseVoiceCallOptions) {
     const { tts, locale } = optionsRef.current;
     const lang = locale || (typeof navigator !== 'undefined' ? navigator.language : undefined);
     const chunks = chunkSpeech(text, VOICE_CHUNK_LENGTH);
-    const audio = chunks.map((chunk) => (tts ? fetchSpeech(tts, chunk, signal) : Promise.resolve(null)));
+    const audio = chunks.map((chunk) => (tts ? fetchSpeech(panelFetch, tts, chunk, signal) : Promise.resolve(null)));
     for (let i = 0; i < chunks.length; i += 1) {
       if (signal.aborted) return;
       const blob = await audio[i];
