@@ -640,8 +640,11 @@ export interface ChatPanelProps {
   onBeforeSend?: (draft: ChatSendDraft) => ChatSendDecision;
   /**
    * What became of a message held until the turn ended (a send that resolved
-   * `'held'`): sent, refused, dropped, given back to the composer by Stop, or
-   * cancelled (by the user, or a new conversation). Messages held together settle together.
+   * `'held'`): sent, refused, dropped, given back to the composer (held when
+   * Stop ended its turn, or taken over by `onBeforeSend` as it leaves; told
+   * once the composer shows it, so `getDraft` reads it), or cancelled (by the
+   * user, or a new conversation). A message sent after a stopped turn ended
+   * goes out once that turn winds down. Messages held together settle together.
    */
   onHeldSendSettled?: (text: string, outcome: ChatHeldOutcome) => void;
   /**
@@ -653,7 +656,10 @@ export interface ChatPanelProps {
    * `session_expired` frame, a Stop, a new conversation - and when the panel
    * unmounts during a turn. Called on changes only, never with the value it
    * last gave. With `false` comes how the turn ended (`info.ended`): answered,
-   * stopped or failed (see `ChatTurnOutcome`).
+   * stopped or failed (see `ChatTurnOutcome`). After a provisional end (an
+   * `error` or `cancelled` whose stored end is still to come, from a backend
+   * whose turns outlive their stream) `false` comes at once, while sends are
+   * still held for up to 5 s as the turn winds down.
    */
   onTurnRunningChange?: (running: boolean, info?: ChatTurnEnd) => void;
   /**
@@ -664,7 +670,8 @@ export interface ChatPanelProps {
   /**
    * A message that cannot steer the running turn (files, `@` references, a
    * turn that just ended) is held and sent as the next turn once it ends,
-   * rather than waiting in the composer.
+   * rather than waiting in the composer. A turn winding down after a
+   * provisional end (see `onTurnRunningChange`) holds sends with or without it.
    */
   holdSendsDuringTurn?: boolean;
   /**
@@ -772,7 +779,9 @@ export interface ChatSendDraft {
 
 /**
  * What became of a send: the backend took it as a new turn, it joined the
- * running one, it waits for that turn to end, it went nowhere, or the backend refused it.
+ * running one, it waits for that turn to end (or for one ended provisionally
+ * to wind down, with or without `holdSendsDuringTurn`), it went nowhere, or
+ * the backend refused it.
  */
 export type ChatSendOutcome = 'sent' | 'steered' | 'held' | 'dropped' | 'failed';
 

@@ -113,11 +113,11 @@ import { ChatPanel } from '@filigran/chatbot';
 | `agentMentions`     | `boolean`                                 | `false`      | `@` also mentions agents of the agent list; the message carries their ids as `mentioned_agent_ids` |
 | `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
 | `onReady`           | `() => void`                              | —            | Called once, when the panel has chosen its agent and read back the conversation on screen; handle calls made earlier wait for it and then run in order |
-| `onHeldSendSettled` | `(text, outcome) => void`                 | —            | What became of a message held until the turn ended (`send` resolved `'held'`): `'sent'`, `'failed'`, `'dropped'`, `'returned'` (given back to the composer by Stop, or by `onBeforeSend` taking it over as it leaves) or `'cancelled'` |
-| `onTurnRunningChange` | `(running: boolean, info?: ChatTurnEnd) => void` | —     | A turn started or stopped running on screen, own or relayed: the state of the Stop button and of `draft.turnRunning`; with `false` comes how it ended, `info.ended`: `'answered'`, `'stopped'` or `'failed'` — see [Host extensions](#host-extensions) |
+| `onHeldSendSettled` | `(text, outcome) => void`                 | —            | What became of a message held until the turn ended (`send` resolved `'held'`): `'sent'`, `'failed'`, `'dropped'`, `'returned'` (given back to the composer: held when Stop ended its turn, or taken over by `onBeforeSend` as it leaves; told once the composer shows it, so `getDraft()` reads it) or `'cancelled'`. A message sent after a stopped turn ended goes out once that turn winds down |
+| `onTurnRunningChange` | `(running: boolean, info?: ChatTurnEnd) => void` | —     | A turn started or stopped running on screen, own or relayed: the state of the Stop button and of `draft.turnRunning`; with `false` comes how it ended, `info.ended`: `'answered'`, `'stopped'` or `'failed'` — see [Host extensions](#host-extensions). After a provisional end (see [Turns that outlive their stream](#turns-that-outlive-their-stream)) `false` comes at once, while sends are still held for up to 5 s as the turn winds down |
 | `onBeforeSend`      | `(draft) => false \| { text?, displayText?, extras? } \| void` | — | Sees every non-empty send first, synchronously (`draft.source`: `'composer'`, `'host'` or `'voice'`; `draft.turnRunning`: a turn is running; a message held while one ran is asked about again, with `turnRunning: false` and `held: true`, before it leaves as a new turn): `false` takes it over (the composer keeps its draft; a held message taken over as it leaves goes back to the composer, after what was typed since, and is settled `'returned'`, or `'dropped'` when the user typed nothing for it), an object rewords it (`text`, what the backend receives), shows the user's bubble other words (`displayText`) or adds body fields (a message with fields of its own never steers: it is held). The panel's own fields cannot be set this way |
 | `hideConversationList` | `boolean`                              | `false`      | Hides the conversation list of fullscreen and inline modes, for a rail or a task pane (usable from 320 px wide); the header's history menu stands in for it — see [Host extensions](#host-extensions) |
-| `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer |
+| `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer. A turn winding down after a provisional end holds sends with or without it |
 
 Plain-data props (`requestHeaders`, `apiEndpoints`, `pageContext`, `promptSuggestions`) are compared by content and callback props are called
 through a stable wrapper, so building them inline is fine. `t` and `logoIcon` are used as given: keep them stable (`useCallback` / `useMemo`),
@@ -149,7 +149,7 @@ chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigatio
 
 | Method | What it does |
 | --- | --- |
-| `send(text, { extras, displayText })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body, and the user's bubble shows `displayText` in place of *text* (as `onBeforeSend`'s `displayText`, which wins when it gives one). Resolves to `'sent'` (once the backend takes it), `'steered'` (joined the running turn), `'held'` (sent when the turn ends), `'dropped'` (empty, taken over by `onBeforeSend`, `readOnly`, or the panel unmounted first) or `'failed'` (the backend refused it) |
+| `send(text, { extras, displayText })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body, and the user's bubble shows `displayText` in place of *text* (as `onBeforeSend`'s `displayText`, which wins when it gives one). Resolves to `'sent'` (once the backend takes it), `'steered'` (joined the running turn), `'held'` (sent when the turn ends - also, with or without `holdSendsDuringTurn`, while a turn ended provisionally winds down, after `onTurnRunningChange(false)`), `'dropped'` (empty, taken over by `onBeforeSend`, `readOnly`, or the panel unmounted first) or `'failed'` (the backend refused it) |
 | `newConversation({ workspaceId, agent })` | Starts a new chat, in a workspace and with an agent (id or slug) if given |
 | `selectConversation(id)` | Opens a conversation |
 | `setDraft(text)` / `focusComposer()` | Fills / focuses the composer |
@@ -668,6 +668,7 @@ Download failures (403/404/5xx/network) are reported through the optional `onDow
 - `thinking` — Agent is processing
 - `tool_start` — Agent is using tools (with `tools` array)
 - `tool_heartbeat` — Liveness signal during a long tool execution (with `tools` and `elapsed_s`). The widget keeps the current status label and renders a live elapsed-time indicator next to it once the execution exceeds ~15 s, so long operations (background tasks, agent consults) never look stuck
+- `wait_start` — The agent pauses (with `seconds` and `reason`): the reason and a countdown show, with `Continue now` when the host names `skipWait`. The pause stays on screen through `wait_status` (what it watches changed state), `tool_heartbeat`, `tool_progress` and `consult_progress`; streamed text or any other status ends it
 - `analyzing` — Agent is analyzing tool results
 - `composing` — Agent is composing the response
 - `streaming` — Content is being streamed
@@ -701,7 +702,10 @@ A 2xx response means the message was persisted and will be injected into the
 running agentic loop at the next iteration boundary (`turn_id`, when the body
 names it, is the turn it joined), whatever else the body says: XTM One's
 `{"status": "stored", "turn_id": null}` (stored in the thread, handed to no turn
-it can name) keeps the bubble and resolves `'steered'` too. On a non-2xx
+it can name) keeps the bubble and resolves `'steered'` too. With
+`"answered": false` the backend knows no turn took it: the bubble stays and a
+notice above the composer says the message will be read with the next one,
+until the next send. On a non-2xx
 response or a network error nothing was stored: the optimistic user bubble is
 rolled back, the text is restored into the composer (prepended on its own line
 if the user already typed something new), the send resolves `'failed'` and the
@@ -926,8 +930,8 @@ chat) opts into six more routes, none with a default:
 
 | `apiEndpoints` key | Request | What it does |
 | --- | --- | --- |
-| `cancel` | `POST {cancel}` with `{ conversation_id }` | Stop asks the backend to end the turn; the panel keeps reading until the stream's `cancelled` frame (or lets go after 10 s, or at once on a network error or an answer of `{ "turn": "none" }`, reading the conversation back for an end it had not read yet). A `none` answered before the panel's own send started its turn (its stream delivered nothing yet) says nothing of it: the Stop stays pending and is sent again as the turn starts, so the backend must take a second cancel of one turn. A refusal (non-2xx) keeps the turn running and shows its `detail` above the composer |
-| `skipWait` | `POST {skipWait}` with `{ conversation_id }` | `Continue now` on `status: wait_start` (`{ seconds, reason }`) |
+| `cancel` | `POST {cancel}` with `{ conversation_id }` | Stop asks the backend to end the turn; the panel keeps reading until the stream's `cancelled` frame (or lets go after 10 s, or at once on a network error or an answer of `{ "turn": "none" }`, reading the conversation back for an end it had not read yet). A Stop pressed before the panel's own send started its turn (its stream delivered nothing yet) carries `"awaiting_send": true`, and its `none` says nothing of that turn: the Stop stays pending and is sent again, without the flag, as the turn starts (or as the answer comes, the turn started meanwhile); any other answer reached a turn, and nothing goes again. A backend may keep a Stop with that flag for the send's turn, and must then take a second cancel of one turn; a Stop without it says nothing of a later send. A refusal (non-2xx) keeps the turn running and shows its `detail` above the composer |
+| `skipWait` | `POST {skipWait}` with `{ conversation_id }` | `Continue now` on `status: wait_start` (`{ seconds, reason }`), for as long as the pause lasts (see the status values) |
 | `events` | `GET {events}/{conversation_id}/events?client_id=<id>` → SSE | Turns this panel did not start (another tab, a reload mid-turn), `user_message`, `conversation_title`, `approval_resolved` |
 | `messagesPage` | `GET {messagesPage}/{conversation_id}/messages?before=<message id>&limit=50&supports_artifacts=true` → `{ messages, has_more }` | "Load earlier messages" past the restored ones, offered when the restore answers `has_more: true` |
 | `clearAll` | `DELETE {clearAll}` | "Clear all conversations" in the conversation list and the header's history menu, confirmed first |
@@ -938,9 +942,9 @@ while it could not be, for want of an agent or a reachable backend) and
 reconnected with backoff while the page is visible. Once the page has been
 hidden for 60 s it is closed (under HTTP/1.1 a background tab would otherwise
 hold one of the browser's six connections to the origin), and the relayed turn
-it fed is taken off screen; shown again, it reopens, the backend's snapshot
-replays a turn still running, and the conversation is read back for what ended
-meanwhile. A stream the backend ends (XTM One ends it every 15 minutes) or that
+it fed is let go of: the segment it was writing goes, those it closed stay.
+Shown again, the stream reopens, the backend's snapshot replays a turn still
+running, and the conversation is read back for what ended meanwhile. A stream the backend ends (XTM One ends it every 15 minutes) or that
 drops is reopened, from the shortest delay again once it had delivered a frame
 or lived 5 s (one that closes at once backs off); a relayed
 turn on screen then runs on only if the snapshot replays it within 5 s, and
@@ -954,15 +958,22 @@ of the panel's own turn are dropped too. When the panel's own stream drops
 mid-turn, or ends without the turn's last frame (`done`, `error`, `session_expired` or
 `cancelled`), it takes a new id and picks the turn up from the event stream,
 keeping the segments it closed (or reads the history back when nothing comes
-within 15 s). A relayed turn uses the frames of `POST /chat/messages`, plus:
+within 15 s). A read-back that waited for a turn to end joins the thread in
+place: each stored message missing from the screen goes after the one stored
+before it, so nothing lands above messages it follows. A relayed turn uses the frames of `POST /chat/messages`, plus:
 
 - `{"type": "thinking", "resumed": true, "elapsed_s": 42}` — a turn re-attached
   mid-way: the segment being written follows, whole (XTM One's snapshot holds
   that one only); the segments an intermediate `done` closed stay on screen.
-  Replaying a relayed turn on a reopened event stream, the panel reads the
-  conversation back as the turn runs on: the segments closed while the stream
-  was away (stored by then) take their place before the one being written,
-  matched to those on screen by `message_id`, else by text, so none shows twice.
+  Replaying a turn it lost sight of (a relayed turn on a reopened event
+  stream, its own turn after its stream dropped, a relayed turn let go of
+  while the page was hidden), the panel reads the conversation back as the
+  turn runs on: the segments closed meanwhile (stored by then) take their
+  place before the one being written, matched to those on screen by
+  `message_id`, else by text, so none shows twice; a bubble matched keeps
+  what it shows (a user bubble's `displayText`, its files) and takes the
+  stored id. A replay naming another turn means the one on screen ended
+  meanwhile: the answer it was writing goes, its stored copy read back.
 - `{"type": "done", "intermediate": true, …}` — a segment closed, the turn goes on.
 - `{"type": "cancelled"}` — the turn was stopped.
 - A provisional end — an `error` or `cancelled` with neither `message_id` nor
@@ -972,10 +983,13 @@ within 15 s). A relayed turn uses the frames of `POST /chat/messages`, plus:
   naming no `turn_id`) only gives the answer its id, and a `done` its stored
   text and all a live `done` carries (attachments, reasoning, tool trace, the
   agent that answered, context usage, a transfer); also while the panel's own
-  turn runs. The panel's own stream is read on for it. The backend still holds
-  the conversation until then, so sends wait meanwhile, held as during a turn
-  (with or without `holdSendsDuringTurn`): until that stored end, the stream's
-  close, or 5 s.
+  turn runs, whose context usage and agent then stay. The panel's own stream
+  is read on for it. The backend still holds the conversation until then, so
+  sends wait meanwhile, held as during a turn (with or without
+  `holdSendsDuringTurn`): until that stored end, another turn starting, the
+  close of the panel's own stream (for its own turn), or 5 s. A relayed turn
+  winds down across the event stream's reopening, whose replay of it holds
+  sends too.
 - `{"type": "folded_into_active_turn", "turn_id": "…"}` (message stream) — the
   message joined a turn already running, whose frames follow.
 

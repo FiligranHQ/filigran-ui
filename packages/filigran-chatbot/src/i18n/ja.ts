@@ -179,6 +179,7 @@ const ja: Catalog = {
   'This conversation could not be loaded.': 'この会話を読み込めませんでした。',
   'This decision could not be sent. Reload the chat and try again.':
     'この決定を送信できませんでした。チャットを再読み込みして、もう一度お試しください。',
+  'This message will be read with your next one.': 'このメッセージは次のメッセージと一緒に読まれます。',
   'This item could not be loaded.': 'この項目を読み込めませんでした。',
   'The response could not be stopped. Try again.': '応答を停止できませんでした。もう一度お試しください。',
   'This turn is no longer waiting for a decision.': 'このターンでは、決定を待つ必要がなくなりました。',

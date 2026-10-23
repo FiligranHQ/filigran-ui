@@ -194,6 +194,49 @@ test('the handle’s stop cancels the question a call awaits, and a read-only pa
   assert.equal(overlay(), null);
 });
 
+test('a question asked after cancelling the last one goes out once the stopped turn winds down', async () => {
+  const streams = [sseStream(), sseStream()];
+  let next = 0;
+  const requests = fakeBackend([
+    agentsRoute,
+    (req) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages: [] }) : undefined),
+    (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
+    (req) => (req.url === '/api/chat/messages/cancel' ? json({ status: 'cancelled', turn: 'local' }, 202) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { cancel: '/chat/messages/cancel' } }, ref);
+  const questions = () => requests.filter((r) => r.url === '/api/chat/messages').map((r) => (r.body as { content: string }).content);
+  await act(async () => {
+    ref.current!.startVoiceCall();
+    await settle();
+  });
+  await say('First question');
+  await act(async () => {
+    streams[0].send({ type: 'turn_started', turn_id: 't1' });
+    streams[0].send({ type: 'stream', turn_id: 't1', content: 'Partial' });
+    await settle(10);
+  });
+  await act(async () => {
+    (overlay()!.querySelector('button[aria-label="Cancel question"]') as HTMLButtonElement).click();
+    await settle(10);
+  });
+  await act(async () => {
+    streams[0].send({ type: 'cancelled', turn_id: 't1' });
+    await settle(10);
+  });
+  await say('Second question');
+  assert.deepEqual(questions(), ['First question'], 'held while the stopped turn winds down');
+  await act(async () => {
+    streams[0].send({ type: 'cancelled', turn_id: 't1', message_id: 'm1' });
+    await settle(20);
+  });
+  assert.deepEqual(questions(), ['First question', 'Second question']);
+  await act(async () => {
+    for (const stream of streams) stream.close();
+    await settle();
+  });
+});
+
 test('without speech recognition no call starts', async () => {
   delete (window as unknown as Record<string, unknown>).SpeechRecognition;
   fakeBackend([agentsRoute]);

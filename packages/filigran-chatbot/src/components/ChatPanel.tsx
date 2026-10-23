@@ -9,7 +9,7 @@ import { conversationReferencesUrl } from '../utils/conversationRefs';
 import { pendingWorkspaceStillFileable, returnRefreshDue } from '../utils/workspaces';
 import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
 import { parseArtifact, parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
-import { askHost, useChat } from '../hooks/useChat';
+import { askHost, mergeReadBack, useChat } from '../hooks/useChat';
 import { findAgent, useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
 import { useWorkspaces } from '../hooks/useWorkspaces';
@@ -528,36 +528,16 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   }, [messagesPageBase, conversationIdRef, requestHeaders, setMessages]);
 
   /**
-   * Put a conversation's history read back on screen. *aboveTurn*: a turn ran
-   * meanwhile, which stays below the history fetched before it.
+   * Put a conversation's history read back on screen. *merge*: a turn ran
+   * meanwhile, and the history joins what is shown (see `mergeReadBack`).
    */
-  const applyRestoredHistory = (convId: string, data: RestoredHistory, aboveTurn: boolean) => {
+  const applyRestoredHistory = (convId: string, data: RestoredHistory, merge: boolean) => {
     setEventsReadyId(convId);
     setServerHasEarlier(!!messagesPageBase && data.has_more === true);
     if (!data.messages?.length) return;
     const restored = parseRestoredMessages(data.messages);
-    if (aboveTurn) {
-      setMessages((prev) => {
-        const shown = new Set(prev.map((m) => m.serverId).filter(Boolean));
-        // A message sent while the history was read back may be in it already,
-        // stored: the one on screen, which has no server id yet, is that one.
-        // A bubble showing other words than it sent is matched on what it sent.
-        const unsaved = new Map<string, number>();
-        for (const m of prev) {
-          if (m.serverId) continue;
-          const key = `${m.role}\u0000${m.role === 'user' ? sentTextOf(m) : m.content}`;
-          unsaved.set(key, (unsaved.get(key) ?? 0) + 1);
-        }
-        const earlier = restored.filter((m) => {
-          if (m.serverId && shown.has(m.serverId)) return false;
-          const key = `${m.role}\u0000${m.content}`;
-          const pending = unsaved.get(key) ?? 0;
-          if (pending === 0) return true;
-          unsaved.set(key, pending - 1);
-          return false;
-        });
-        return [...earlier, ...prev];
-      });
+    if (merge) {
+      setMessages((prev) => mergeReadBack(prev, restored, sentTextOf));
       return;
     }
     setMessages(restored);

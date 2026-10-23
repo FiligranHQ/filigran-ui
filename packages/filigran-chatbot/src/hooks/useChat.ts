@@ -131,6 +131,9 @@ const WIND_DOWN_MS = 5000;
 /** How long an event stream must have lived, with no frame on it, for its next drop to retry from the shortest delay. */
 const EVENTS_HEALTHY_MS = 5000;
 
+/** The statuses that do not end an agent's wait (`wait_start`). */
+const STATUSES_DURING_WAIT: ReadonlySet<string> = new Set(['wait_status', 'tool_progress', 'consult_progress']);
+
 /** The actions that belong to a turn, as opposed to the conversation. */
 const TURN_ACTIONS: ReadonlySet<ParsedAction['action']> = new Set(['status', 'stream', 'done', 'approval_required', 'error', 'cancelled']);
 
@@ -172,13 +175,44 @@ function withDone(message: ChatMessage, parsed: DoneAction, content: string, com
   };
 }
 
+/** What a stored assistant message adds to the bubble on screen it matches: never its text. */
+const STORED_ANSWER_FIELDS = [
+  'toolNames',
+  'toolCallCount',
+  'iterations',
+  'attachments',
+  'artifacts',
+  'reasoning',
+  'toolCallTrace',
+  'transferChain',
+  'isTruncated',
+  'agentName',
+  'answeredBy',
+  'mentionFailed',
+  'feedback',
+] as const satisfies readonly (keyof ChatMessage)[];
+
+/**
+ * *shown*, the bubble on screen that *stored* is: it keeps what it shows (the
+ * words a user bubble was given, the files sent live) and takes the stored
+ * id, and an answer what the store adds to it.
+ */
+function adoptStored(shown: ChatMessage, stored: ChatMessage): ChatMessage {
+  const next: ChatMessage = { ...shown, serverId: stored.serverId ?? shown.serverId };
+  if (shown.role !== 'assistant') return next;
+  const fields = next as unknown as Record<string, unknown>;
+  for (const key of STORED_ANSWER_FIELDS) if (stored[key] !== undefined) fields[key] = stored[key];
+  return next;
+}
+
 /**
  * *prev* with the conversation read back (*restored*) put into a turn on
  * screen, *turnIds* its bubbles and *liveId* the one it writes to. The stored
  * messages past those shown before the turn take the place of its bubbles
- * they match - by server id, else by role and text, keeping the bubble's id -
- * and what the turn shows that is not stored, its live bubble among it,
- * follows them. *prev* as it is when nothing stored is missing.
+ * they match - by server id, else by role and text, the bubble staying (see
+ * `adoptStored`) - and what the turn shows that is not stored, its live
+ * bubble among it, follows them. *prev* as it is when nothing stored is
+ * missing.
  */
 function mergeIntoTurn(
   prev: ChatMessage[],
@@ -217,10 +251,62 @@ function mergeIntoTurn(
     const match =
       region.find((r) => !taken.has(r.id) && !!m.serverId && r.serverId === m.serverId) ??
       region.find((r) => !taken.has(r.id) && r.id !== liveId && !r.serverId && shownKey(r) === storedKey(m));
-    if (match) taken.add(match.id);
-    return { ...m, id: match?.id ?? (m.serverId ? `msg-${m.serverId}` : randomId()) };
+    if (!match) return { ...m, id: m.serverId ? `msg-${m.serverId}` : randomId() };
+    taken.add(match.id);
+    return adoptStored(match, m);
   });
   return [...before, ...stored, ...region.filter((m) => !taken.has(m.id))];
+}
+
+/**
+ * *prev* with the conversation read back (*restored*) merged in, for a
+ * read-back that waited for a turn to end. A stored message already on
+ * screen - by server id, else an unsaved one by role and text - stays where
+ * it is (see `adoptStored`); one missing goes after the message shown for the
+ * stored one before it, in stored order, and before anything shown since
+ * that the store does not hold. With none of it on screen (a first
+ * read-back), the history goes above what is shown.
+ */
+export function mergeReadBack(prev: ChatMessage[], restored: ChatMessage[], sentTextOf: (message: ChatMessage) => string): ChatMessage[] {
+  const shownKey = (m: ChatMessage) => `${m.role}\u0000${m.role === 'user' ? sentTextOf(m) : m.content}`;
+  const storedKey = (m: ChatMessage) => `${m.role}\u0000${m.content}`;
+  const next = [...prev];
+  const byServerId = new Map<string, number>();
+  next.forEach((m, i) => {
+    if (m.serverId) byServerId.set(m.serverId, i);
+  });
+  const taken = new Set<number>();
+  // Per position on screen (-1: above it all), the stored messages that go after it.
+  const inserts = new Map<number, ChatMessage[]>();
+  let anchor = -1;
+  let changed = false;
+  for (const m of restored) {
+    let at = m.serverId !== undefined ? byServerId.get(m.serverId) : undefined;
+    if (at === undefined) {
+      const key = storedKey(m);
+      const found = next.findIndex((p, i) => !taken.has(i) && !p.serverId && shownKey(p) === key);
+      if (found >= 0) {
+        at = found;
+        next[found] = adoptStored(next[found], m);
+        changed = true;
+      }
+    }
+    if (at !== undefined) {
+      taken.add(at);
+      // Never back up: a stored message shown out of order keeps the rest after the latest one.
+      anchor = Math.max(anchor, at);
+      continue;
+    }
+    const list = inserts.get(anchor) ?? [];
+    list.push({ ...m, id: m.serverId ? `msg-${m.serverId}` : randomId() });
+    inserts.set(anchor, list);
+  }
+  if (inserts.size === 0) return changed ? next : prev;
+  const out: ChatMessage[] = [...(inserts.get(-1) ?? [])];
+  next.forEach((m, i) => {
+    out.push(m, ...(inserts.get(i) ?? []));
+  });
+  return out;
 }
 
 /** *next* added to the message already held: one message, sent when the turn ends. */
@@ -729,6 +815,8 @@ export function useChat({
   heldMessageRef.current = heldMessage;
   // A refused steer's or Stop's reason, until the next send or the turn's end.
   const [notice, setNotice] = useState<string | null>(null);
+  // The notice says what becomes of the next send: it outlives the turn's end.
+  const noticeUntilSendRef = useRef(false);
   // Relayed turns ended by a provisional end, by turn id, with the answer each
   // left on screen: their stored end only gives that answer its id.
   const provisionalEndsRef = useRef(new Map<string, string>());
@@ -745,9 +833,10 @@ export function useChat({
   // The panel's own turn has started on the backend: its stream delivered a
   // frame (XTM One answers a send only once its turn holds the conversation).
   const ownTurnStartedRef = useRef(false);
-  // A cancel was sent before the own turn started: its `turn: "none"` says
-  // nothing of that turn, and the cancel goes again once the turn starts.
-  const cancelBeforeStartRef = useRef(false);
+  // A cancel sent before the own turn started: its answer is awaited
+  // ('asked'), or was `turn: "none"`, which says nothing of that turn, and the
+  // cancel goes again once the turn starts ('resend').
+  const cancelBeforeStartRef = useRef<'off' | 'asked' | 'resend'>('off');
   // Frames applied to the turn on screen so far, and what a Stop found at its
   // click: a refused Stop restores the status only if no frame came since.
   const turnFrameSeqRef = useRef(0);
@@ -760,6 +849,9 @@ export function useChat({
   // The renderer of a relayed turn the reopened event stream replayed, whose
   // conversation is read back for the segments it closed meanwhile.
   const turnReadBackRef = useRef<ReturnType<typeof createTurnRenderer> | null>(null);
+  // A relayed turn let go of with the event stream (see `withdrawRelayedTurn`),
+  // whose replay reads the conversation back.
+  const withdrawnTurnRef = useRef<{ turnId: string | null } | null>(null);
   // The text each user bubble showing other words was sent with, by bubble id.
   const sentTextRef = useRef(new Map<string, string>());
   const sentTextOf = useCallback((message: ChatMessage) => sentTextRef.current.get(message.id) ?? message.content, []);
@@ -791,8 +883,6 @@ export function useChat({
     windDownRef.current = null;
     setWindingDown(false);
   };
-  const endWindDownRef = useRef(endWindDown);
-  endWindDownRef.current = endWindDown;
 
   // A stopped relayed turn whose frames name no turn: skipped until it ends
   // ('skipping'), then its stored end too, should one follow ('ended').
@@ -822,7 +912,7 @@ export function useChat({
     if (isLoadingRef.current) setTurnEnd(ended);
     isLoadingRef.current = false;
     setIsLoading(false);
-    setNotice(null);
+    if (!noticeUntilSendRef.current) setNotice(null);
   };
   // Ref mirror of pageContext so the value sent reflects the page the user is
   // on at send time, regardless of when the send handler closure was created.
@@ -1190,7 +1280,7 @@ export function useChat({
     files: ChatFile[] = [],
     restoreToComposer = true,
     shown = content,
-  ): Promise<{ result: 'ok'; turnId: string | null } | { result: 'ended' } | { result: 'failed'; detail?: string | null }> => {
+  ): Promise<{ result: 'ok'; turnId: string | null; unanswered: boolean } | { result: 'ended' } | { result: 'failed'; detail?: string | null }> => {
     const steerUrl = getSteerUrl();
     const convId = conversationIdRef.current;
     if (!steerUrl || !convId) return { result: 'failed' };
@@ -1216,10 +1306,12 @@ export function useChat({
       });
       if (res.ok) {
         // Stored in the thread, whatever the body says (`stored`: handed to
-        // no turn the backend can name). The turn it joined, when it says.
+        // no turn the backend can name). The turn it joined, when it says;
+        // `answered: false`, no turn took it, and the next one reads it.
         const data: unknown = await res.json().catch(() => null);
-        const turnId = data && typeof data === 'object' ? (data as { turn_id?: unknown }).turn_id : null;
-        return { result: 'ok', turnId: typeof turnId === 'string' && turnId ? turnId : null };
+        const body = data && typeof data === 'object' ? (data as { turn_id?: unknown; answered?: unknown }) : {};
+        const turnId = body.turn_id;
+        return { result: 'ok', turnId: typeof turnId === 'string' && turnId ? turnId : null, unanswered: body.answered === false };
       }
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       // Nothing running any more: the turn ended while this was on its way.
@@ -1506,7 +1598,14 @@ export function useChat({
           waitStartMs: Date.now(),
         }));
       } else {
-        setAgentStatus((prev) => ({ status: parsed.status, tools: parsed.tools, thinkingContent: prev?.thinkingContent }));
+        // What a wait reports while it lasts (what it watches, a running
+        // tool's progress) leaves it on screen, with its countdown and
+        // "Continue now"; any other status ends it, as streamed text does.
+        setAgentStatus((prev) =>
+          prev?.status === 'wait_start' && STATUSES_DURING_WAIT.has(parsed.status)
+            ? prev
+            : { status: parsed.status, tools: parsed.tools, thinkingContent: prev?.thinkingContent },
+        );
       }
     };
 
@@ -1632,7 +1731,8 @@ export function useChat({
     const end = (parsed.action === 'done' && !parsed.intermediate) || parsed.action === 'cancelled' || parsed.action === 'error' ? parsed : null;
     const messageId = end?.messageId;
     if (!end || !messageId) return false;
-    if (end.action === 'done') applyDoneEffects(end, relayed);
+    // The context gauge and a transfer are the running turn's to say, when one runs since.
+    if (end.action === 'done' && !isLoadingRef.current) applyDoneEffects(end, relayed);
     const completedAt = new Date();
     setMessages((prev) => {
       // Read back meanwhile: the answer is on screen already.
@@ -1707,6 +1807,7 @@ export function useChat({
       if (override?.held) override.onTakenOver?.();
       return 'dropped';
     }
+    noticeUntilSendRef.current = false;
     setNotice(null);
     const hookExtras = decided.extras;
     // The fields this message adds to the body: the handle's, then the hook's.
@@ -1768,6 +1869,10 @@ export function useChat({
           return 'held';
         }
         if (steered.result === 'ok') {
+          if (steered.unanswered) {
+            noticeUntilSendRef.current = true;
+            setNotice(t('This message will be read with your next one.'));
+          }
           override?.onSteered?.(steered.turnId);
           return 'steered';
         }
@@ -1989,11 +2094,12 @@ export function useChat({
             return !applyStoredEnd(turn.currentAssistantId(), parsed, false);
           }
           if (!ownTurnStartedRef.current && liveRendererRef.current === turn) {
-            // The turn holds the conversation now: a cancel sent before it
-            // did (answered `none`, or not yet) goes again, to reach it.
+            // The turn holds the conversation now: a cancel answered `none`
+            // before it did goes again, to reach it (one not answered yet
+            // goes again on its answer).
             ownTurnStartedRef.current = true;
-            if (cancelBeforeStartRef.current) {
-              cancelBeforeStartRef.current = false;
+            if (cancelBeforeStartRef.current === 'resend') {
+              cancelBeforeStartRef.current = 'off';
               if (cancelTimerRef.current !== null) postCancel(cancelTimerRef.current);
             }
           }
@@ -2103,13 +2209,18 @@ export function useChat({
   const endRelayedTurnRef = useRef(endRelayedTurn);
   endRelayedTurnRef.current = endRelayedTurn;
 
-  /** Take the relayed turn on screen off it whole: the event stream, reopened, replays it from its start. */
+  /**
+   * Let go of the relayed turn on screen, the event stream closed: reopened,
+   * it replays the segment being written, which goes; those an intermediate
+   * `done` closed stay, and the replay reads back the ones closed meanwhile.
+   */
   const withdrawRelayedTurn = () => {
     const relayedTurn = relayedTurnRef.current;
     if (!relayedTurn) return;
-    const segments = new Set(relayedTurn.renderer.segmentIds());
+    const unfinished = relayedTurn.renderer.doneReceived() ? null : relayedTurn.renderer.currentAssistantId();
+    withdrawnTurnRef.current = { turnId: relayedTurn.turnId };
     endRelayedTurn();
-    setMessages((prev) => prev.filter((m) => !segments.has(m.id)));
+    if (unfinished) setMessages((prev) => prev.filter((m) => m.id !== unfinished));
   };
   const withdrawRelayedTurnRef = useRef(withdrawRelayedTurn);
   withdrawRelayedTurnRef.current = withdrawRelayedTurn;
@@ -2181,14 +2292,11 @@ export function useChat({
       }
       return;
     }
-    // The turn this panel streams itself is never rendered twice.
-    if (ownTurnActiveRef.current || (turnId && turnId === ownTurnIdRef.current)) return;
-    if (turnId && turnId === stoppedTurnIdRef.current) return;
     if (!turnId && unnamedProvisionalRef.current !== null && !relayedTurn) {
       // The same for a turn naming none: what follows its provisional end is
-      // its own, up to its stored end, unless an acknowledgement starts
-      // another turn.
-      const freshAck = evt.type === 'thinking' && evt.intermediate !== true;
+      // its own, up to its stored end - a replay of it included - unless an
+      // acknowledgement starts another turn.
+      const freshAck = evt.type === 'thinking' && evt.intermediate !== true && evt.resumed !== true;
       if (!freshAck) {
         if (applyStoredEnd(unnamedProvisionalRef.current, parsed, true)) {
           unnamedProvisionalRef.current = null;
@@ -2198,13 +2306,21 @@ export function useChat({
       }
       unnamedProvisionalRef.current = null;
     }
+    // The turn this panel streams itself is never rendered twice.
+    if (ownTurnActiveRef.current || (turnId && turnId === ownTurnIdRef.current)) return;
+    if (turnId && turnId === stoppedTurnIdRef.current) return;
     const awaited = resumeWaitRef.current;
     if (awaited) {
       // The first turn frame since the stream reopened says whether the turn
       // on screen still runs.
       clearResumeWait();
       if (relayedTurn && relayedTurn === awaited.turn && turnId !== relayedTurn.turnId) {
+        // Another turn runs: this one ended while the stream was away, and
+        // the read-back brings its stored answer in place of the one it was
+        // writing.
+        const unfinished = relayedTurn.renderer.doneReceived() ? null : relayedTurn.renderer.currentAssistantId();
         endRelayedTurn();
+        if (unfinished) setMessages((prev) => prev.filter((m) => m.id !== unfinished));
         reloadHistory();
         relayedTurn = null;
       } else if (relayedTurn && relayedTurn === awaited.turn) {
@@ -2249,6 +2365,18 @@ export function useChat({
 
       streamDeltasRef.current = current.renderer.deltas;
       liveRendererRef.current = current.renderer;
+      // A turn this panel lost sight of (its own stream dropped, the event
+      // stream closed while the page was hidden), replayed: the segments it
+      // closed meanwhile are only in the history, read back into it.
+      const withdrawn = withdrawnTurnRef.current;
+      withdrawnTurnRef.current = null;
+      const lostSight =
+        (turnId !== null && turnId === handoverTurnIdRef.current) ||
+        (withdrawn !== null && (withdrawn.turnId === null || withdrawn.turnId === turnId));
+      if (evt.resumed === true && lostSight) {
+        turnReadBackRef.current = current.renderer;
+        reloadHistory();
+      }
       clearHandover();
       skipUnnamedTurnRef.current = 'off';
       stopRequestedRef.current = false;
@@ -2301,6 +2429,7 @@ export function useChat({
     relayedTurnRef.current = null;
     clearResumeWait();
     turnReadBackRef.current = null;
+    withdrawnTurnRef.current = null;
     provisionalEndsRef.current.clear();
     unnamedProvisionalRef.current = null;
     // The abandoned chat's own stream, read on for a stored end, goes too.
@@ -2313,6 +2442,7 @@ export function useChat({
     clearCancelRequest();
     clearHandover();
     skipUnnamedTurnRef.current = 'off';
+    noticeUntilSendRef.current = false;
     stopRunning('stopped');
     setMessages([]);
     setInputValue('');
@@ -2368,7 +2498,7 @@ export function useChat({
   const clearCancelRequest = () => {
     if (cancelTimerRef.current !== null) window.clearTimeout(cancelTimerRef.current);
     cancelTimerRef.current = null;
-    cancelBeforeStartRef.current = false;
+    cancelBeforeStartRef.current = 'off';
     stopContextRef.current = null;
   };
 
@@ -2442,6 +2572,7 @@ export function useChat({
       return;
     }
     if (cancelTimerRef.current !== null) return;
+    noticeUntilSendRef.current = false;
     setNotice(null);
     setPendingApprovals(null);
     setApprovalError(null);
@@ -2455,31 +2586,43 @@ export function useChat({
 
   /**
    * Ask the backend to end the turn, for the Stop of *timer*. Sent again once
-   * the panel's own turn starts when it went before (see
-   * `cancelBeforeStartRef`): asking twice ends one turn.
+   * the panel's own turn starts when it went before and was answered `none`
+   * (see `cancelBeforeStartRef`): asking twice ends one turn.
    */
   const postCancel = (timer: number) => {
     const cancelUrl = getCancelUrl();
     const convId = conversationIdRef.current;
     if (!cancelUrl || !convId) return;
     // The panel's own send has not started its turn yet: the backend may
-    // answer that none runs, and start it right after.
+    // answer that none runs, and start it right after. `awaiting_send` says
+    // so, and the backend may keep the Stop for that send.
     const beforeStart = ownTurnActiveRef.current && !ownTurnStartedRef.current;
-    if (beforeStart) cancelBeforeStartRef.current = true;
+    if (beforeStart) cancelBeforeStartRef.current = 'asked';
     // Still this Stop's to settle: the turn has not ended meanwhile.
     const pending = () => cancelTimerRef.current === timer;
     fetch(cancelUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(requestHeadersRef.current ?? {}), ...clientIdHeader() },
-      body: JSON.stringify({ conversation_id: convId }),
+      body: JSON.stringify(beforeStart ? { conversation_id: convId, awaiting_send: true } : { conversation_id: convId }),
     })
       .then(async (res) => {
         if (res.ok) {
           const data: unknown = await res.json().catch(() => null);
-          if (!pending() || !data || typeof data !== 'object' || (data as { turn?: unknown }).turn !== 'none') return;
-          // Said before the own turn started: it says nothing of that turn,
-          // which the cancel sent again once it starts reaches.
-          if (beforeStart) return;
+          if (!pending()) return;
+          const none = !!data && typeof data === 'object' && (data as { turn?: unknown }).turn === 'none';
+          if (beforeStart) {
+            // Said before the own turn started: `none` says nothing of that
+            // turn, which the cancel sent again once it starts reaches; any
+            // other answer reached a turn, and nothing goes again.
+            if (!none) cancelBeforeStartRef.current = 'off';
+            else if (!ownTurnStartedRef.current) cancelBeforeStartRef.current = 'resend';
+            else {
+              cancelBeforeStartRef.current = 'off';
+              postCancel(timer);
+            }
+            return;
+          }
+          if (!none) return;
           // No turn was running anywhere: no `cancelled` will come. The turn
           // may have ended as this was on its way, its end not read yet: what
           // it stored is read back.
@@ -2605,8 +2748,6 @@ export function useChat({
         // So is one that lived a while, keep-alives only: one that opens and
         // closes at once is not, and backs off.
         if (openedAt !== null && Date.now() - openedAt >= EVENTS_HEALTHY_MS) retry = 0;
-        // A relayed turn winding down hears no stored end from a closed stream.
-        if (windDownRef.current?.relayed) endWindDownRef.current();
         if (!stopped && !refused && !missed) {
           const delay = Math.min(EVENTS_RETRY_MAX_MS, EVENTS_RETRY_BASE_MS * 2 ** retry);
           retry += 1;
@@ -2655,27 +2796,40 @@ export function useChat({
     };
   }, [eventsUrl, clientId, eventsReopen, reloadHistory]);
 
+  // Held messages given back to the composer, told to the host once the
+  // composer shows them (`getDraft` reads it then).
+  const returnedRef = useRef<string[]>([]);
+  const [returnedTick, setReturnedTick] = useState(0);
+  const settleReturned = (text: string) => {
+    returnedRef.current.push(text);
+    setReturnedTick((n) => n + 1);
+  };
+  useEffect(() => {
+    for (const text of returnedRef.current.splice(0)) onHeldSendSettledRef.current?.(text, 'returned');
+  }, [returnedTick]);
+
   // The turn is over, and no longer holds the conversation (see
   // `WIND_DOWN_MS`): what was held goes out as the next one.
   useEffect(() => {
-    if (isLoading || windingDown) return;
-    if (!heldMessage) {
-      // A Stop with nothing held is over with its turn: it says nothing of a later one.
-      stopRequestedRef.current = false;
-      return;
-    }
-    setHeldMessage(null);
+    if (isLoading) return;
     if (stopRequestedRef.current) {
-      // Stopped: the user takes back what they typed rather than see it go; a
-      // host's send is not theirs to take back.
+      // A Stop is over with its turn: it says nothing of a later send, which
+      // goes out once the turn winds down.
       stopRequestedRef.current = false;
-      onHeldSendSettledRef.current?.(heldMessage.text, 'returned');
-      if (heldMessage.draft) setInputValue((prev) => (prev ? `${heldMessage.draft}\n${prev}` : heldMessage.draft));
-      setAttachedFiles((prev) => [...heldMessage.files, ...prev]);
-      setConversationRefs((prev) => [...heldMessage.refs, ...prev]);
-      setAgentMentions((prev) => [...heldMessage.mentions, ...prev]);
-      return;
+      if (heldMessage) {
+        // Stopped: the user takes back what they typed rather than see it go;
+        // a host's send is not theirs to take back.
+        setHeldMessage(null);
+        settleReturned(heldMessage.text);
+        if (heldMessage.draft) setInputValue((prev) => (prev ? `${heldMessage.draft}\n${prev}` : heldMessage.draft));
+        setAttachedFiles((prev) => [...heldMessage.files, ...prev]);
+        setConversationRefs((prev) => [...heldMessage.refs, ...prev]);
+        setAgentMentions((prev) => [...heldMessage.mentions, ...prev]);
+        return;
+      }
     }
+    if (windingDown || !heldMessage) return;
+    setHeldMessage(null);
     // Told once: as the backend takes it, or as it fails or goes nowhere. Held
     // again behind a turn started meanwhile, it is told when that one ends.
     let told = false;
@@ -2693,7 +2847,8 @@ export function useChat({
     const onTakenOver = () => {
       const { draft, files, refs, mentions } = heldMessage;
       if (!draft && files.length === 0) return;
-      tell('returned');
+      told = true;
+      settleReturned(heldMessage.text);
       if (draft) setInputValue((prev) => (prev ? `${prev}\n\n${draft}` : draft));
       if (files.length > 0) setAttachedFiles((prev) => [...prev, ...files]);
       if (refs.length > 0) setConversationRefs((prev) => [...prev, ...refs.filter((r) => !prev.some((p) => p.conversationId === r.conversationId))]);

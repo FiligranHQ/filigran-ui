@@ -238,7 +238,8 @@ test('a backend whose turns outlive their stream gets the conversation created b
     ref.current!.stop();
     await settle();
   });
-  assert.deepEqual(requests.find((r) => r.url === '/api/chat/messages/cancel')?.body, { conversation_id: 'c-new' });
+  // Nothing of the turn came yet: the Stop says it awaits the send.
+  assert.deepEqual(requests.find((r) => r.url === '/api/chat/messages/cancel')?.body, { conversation_id: 'c-new', awaiting_send: true });
   stream.send({ type: 'cancelled' });
   await finish(stream);
 });

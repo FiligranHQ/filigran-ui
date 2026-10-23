@@ -78,7 +78,8 @@ This file starts at 3.10.0; earlier releases are on the
   cannot steer (files, references, mentions, body fields of its own, a turn
   that has just ended) and sends it as the next turn, with a way to cancel it
   meanwhile. Messages held one after another go together, keeping their body
-  fields, and Stop gives back to the composer what the user typed for them.
+  fields, and Stop gives back to the composer what the user typed for them;
+  a message sent once the stopped turn ended goes out as it winds down.
 - `scrollToMessage` on the panel's handle jumps to a message and highlights it.
 - `getDraft()` on the panel's handle reads the composer's text as it stands
   (typed, or set by `setDraft`), e.g. for a host taking over a held message
@@ -121,7 +122,8 @@ This file starts at 3.10.0; earlier releases are on the
 - `onHeldSendSettled(text, outcome)` tells the host what became of a message
   held until the turn ended: `'sent'`, `'failed'`, `'dropped'`, `'returned'`
   (given back to the composer by Stop, or by `onBeforeSend` taking it over as
-  it leaves) or `'cancelled'`.
+  it leaves; told once the composer shows it, so `getDraft()` reads it) or
+  `'cancelled'`.
 - `ChatSendDraft.source` can be `'voice'`, for a question spoken in a voice call.
 - `onTurnRunningChange(running)` tells the host when a turn starts or stops
   running on screen, own or relayed: the state of the Stop button, the status
@@ -200,13 +202,20 @@ This file starts at 3.10.0; earlier releases are on the
   header's controls off a narrow panel.
 - A steer the backend refuses shows the refusal's `detail` above the composer,
   the text going back to the composer as before; a `409` (the turn has just
-  ended, an ordinary race) shows nothing.
+  ended, an ordinary race) shows nothing. A steer stored that the backend
+  says no turn will answer (`"answered": false`) stays, with a notice that it
+  will be read with the next message, until that send.
+- An agent's wait (`status: wait_start`) keeps its label, countdown and
+  `Continue now` through what it reports meanwhile (`wait_status`,
+  `tool_heartbeat`, `tool_progress`, `consult_progress`); streamed text or any
+  other status ends it.
 
 ### Fixed
 
 - A conversation read back after the user has already sent a message no
-  longer replaces that turn: its history goes above the turn once the turn
-  ends, and its agent's name shows at once.
+  longer replaces that turn: its history joins the thread in place once the
+  turn ends (a stored message missing from the screen after the one stored
+  before it), and its agent's name shows at once.
 - Sending no longer throws on a page served over plain http, where
   `crypto.randomUUID` does not exist.
 
@@ -215,8 +224,10 @@ This file starts at 3.10.0; earlier releases are on the
 - `apiEndpoints.cancel` (no default): Stop asks the backend to end the turn and
   waits for the stream's `cancelled` frame, instead of dropping the stream. An
   answer of `{ "turn": "none" }` lets go of the turn at once and reads the
-  conversation back, unless it came before the panel's own send started its
-  turn: the Stop then stays pending and is sent again as the turn starts. A
+  conversation back, unless the Stop went before the panel's own send started
+  its turn: it then carries `"awaiting_send": true`, and on `none` stays
+  pending and is sent again, without the flag, as the turn starts; any other
+  answer reached a turn, and nothing goes again. A
   refused Stop (e.g. `503`) keeps the turn running and says why above the
   composer; the status line keeps what the turn reported since the click.
 - `apiEndpoints.skipWait` (no default): `Continue now` on an agent's wait.
@@ -236,18 +247,26 @@ This file starts at 3.10.0; earlier releases are on the
   it delivered a frame or lived 5 s; a relayed turn on screen then runs on
   only if the reopened stream replays it within 5 s (the segment being
   written; those an intermediate `done` closed stay), and otherwise ends and
-  the conversation is read back. A replayed turn reads the conversation back
-  too, while it runs on: the segments it closed while the stream was away
-  come back, in order, before the one being written, each shown once. Once the page has been hidden for 60 s the
-  stream is closed, and the relayed turn it fed taken off screen; shown
-  again, the stream reopens (its snapshot replays a turn still running) and
-  the conversation is read back for what ended meanwhile. The stored end of a
+  the conversation is read back, the answer it was writing giving way to its
+  stored copy when another turn is replayed instead. A replayed turn the
+  panel lost sight of (on a reopened stream, its own after its stream
+  dropped, or one let go of while the page was hidden) reads the conversation
+  back too, while it runs on: the segments it closed meanwhile come back, in
+  order, before the one being written, each shown once, a bubble matched
+  keeping what it shows and taking the stored id. Once the page has been
+  hidden for 60 s the stream is closed, and the relayed turn it fed let go
+  of: the segment it was writing goes, those it closed stay; shown again, the
+  stream reopens (its snapshot replays a turn still running) and the
+  conversation is read back for what ended meanwhile. The stored end of a
   relayed turn ended provisionally lands on its answer also while the panel's
-  own turn runs, and one naming no turn too.
+  own turn runs, and one naming no turn too, leaving that turn's context
+  gauge and agent alone.
 - With `cancel`, `skipWait` or `events` named, a send made while a turn ended
   provisionally still winds down is held, as during a turn, until its stored
-  end, the stream's close or 5 s: the backend still holds the conversation,
-  and the message would join the ending turn unanswered.
+  end, another turn starting, the close of the panel's own stream (for its
+  own turn) or 5 s: the backend still holds the conversation, and the message
+  would join the ending turn unanswered. A relayed turn winds down across
+  the event stream's reopening.
 - With `cancel`, `skipWait` or `events` named, a new chat's conversation is
   created before its first message, so Stop, "Continue now" and steering
   reach the backend from the first turn.

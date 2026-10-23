@@ -312,6 +312,10 @@ export function mockChatApi(): Plugin {
     followers: Set<(frame: Record<string, unknown> | null) => void>;
   }
   const activeTurns = new Map<string, ActiveTurn>();
+  // As XTM One: a Stop saying it awaits a send (`awaiting_send`) that finds no
+  // turn is kept, by the panel's client id, for the turn that send starts.
+  const keptStops = new Map<string, number>();
+  const KEPT_STOP_MS = 30000;
   const listeners = new Map<string, Set<{ clientId?: string; send: (frame: Record<string, unknown>) => void }>>();
 
   function broadcast(convId: string, frame: Record<string, unknown>, exceptClient?: string) {
@@ -583,6 +587,12 @@ export function mockChatApi(): Plugin {
             const body = await readBody(req);
             const turn = typeof body.conversation_id === 'string' ? activeTurns.get(body.conversation_id) : undefined;
             const status = path.endsWith('/cancel') ? 'cancelled' : 'wait_skipped';
+            const clientId = typeof req.headers['x-chat-client-id'] === 'string' ? req.headers['x-chat-client-id'] : undefined;
+            if (path.endsWith('/cancel') && clientId) {
+              // Any other Stop of that panel reaches its turn, or says nothing of a later one.
+              if (!turn && body.awaiting_send === true) keptStops.set(clientId, Date.now() + KEPT_STOP_MS);
+              else keptStops.delete(clientId);
+            }
             if (!turn) return json(res, { status, turn: 'none' }, 202);
             if (path.endsWith('/cancel')) turn.cancelled = true;
             turn.skip();
@@ -761,7 +771,11 @@ export function mockChatApi(): Plugin {
             return res.end();
           }
           broadcast(conv.id, { type: 'user_message', message: { id: userMessage.id, role: 'user', content: userMessage.content, created_at: userMessage.createdAt } }, clientId);
+          const keptUntil = clientId ? keptStops.get(clientId) : undefined;
+          if (clientId) keptStops.delete(clientId);
           const turn = startTurn(conv, prompt, clientId);
+          // A Stop kept for this send stops its turn as it starts.
+          if (keptUntil !== undefined && keptUntil > Date.now()) turn.cancelled = true;
           // As XTM One's stream names its turn first.
           send({ type: 'turn_started', turn_id: turn.id });
           return followTurn(turn, req, res);
