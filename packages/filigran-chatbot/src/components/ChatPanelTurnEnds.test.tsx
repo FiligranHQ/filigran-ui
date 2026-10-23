@@ -267,6 +267,102 @@ test('a relayed turn is over when the reopened event stream does not replay it, 
   }
 });
 
+/**
+ * A relayed turn of two segments (the first closed, the second being written)
+ * whose event stream ends, and reopens on the turn still running: *stored* is
+ * what the history holds by then, *resumed* what the replay writes.
+ */
+async function resumeRelayedTurn(stored: { id: string; role: 'user' | 'assistant'; content: string }[], resumed: string) {
+  const timers = manualTimers([1000, 5000]);
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  let history: unknown[] = [];
+  const restore = (req: RecordedRequest) =>
+    req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages: history }) : undefined;
+  const requests = fakeBackend([agentsRoute, restore, eventsRoute(subscriptions)]);
+  const restores = () => requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST').length;
+  const log = turnLog();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange: log.onTurnRunningChange });
+  await act(async () => {
+    subscriptions[0].send({ type: 'user_message', message: { id: 'u1', role: 'user', content: 'Question' } });
+    subscriptions[0].send({ type: 'thinking', turn_id: 't1' });
+    subscriptions[0].send({ type: 'stream', turn_id: 't1', content: 'Seg one' });
+    subscriptions[0].send({ type: 'done', turn_id: 't1', content: 'Seg one', message_id: 'a1', intermediate: true });
+    subscriptions[0].send({ type: 'stream', turn_id: 't1', content: 'Seg two, so far' });
+    await settle(10);
+  });
+  const restoresBefore = restores();
+  await finish(subscriptions[0]);
+  history = stored;
+  await timers.run(1000);
+  await act(async () => {
+    subscriptions[1].send({ type: 'thinking', turn_id: 't1', resumed: true });
+    subscriptions[1].send({ type: 'stream', turn_id: 't1', content: resumed });
+    await settle(10);
+  });
+  return { timers, subscriptions, heard: log.heard, readBacks: () => restores() - restoresBefore };
+}
+/** The bubbles on screen, in order: the stored id of each, else what it says. */
+const thread = () =>
+  [...container.querySelectorAll<HTMLElement>('[data-message-id]')].map((e) =>
+    /^(u|a)\d$/.test(e.dataset.messageId ?? '') ? e.dataset.messageId : (e.textContent ?? '').includes('Seg') ? 'live' : '?',
+  );
+
+test('a relayed turn resumed by a reopened event stream reads back the segments closed meanwhile, its live one after them', async () => {
+  const resume = await resumeRelayedTurn(
+    [
+      { id: 'u1', role: 'user', content: 'Question' },
+      { id: 'a1', role: 'assistant', content: 'Seg one' },
+      { id: 'a2', role: 'assistant', content: 'Seg two' },
+      { id: 'a3', role: 'assistant', content: 'Seg three' },
+    ],
+    'Seg four, so far',
+  );
+  try {
+    assert.equal(resume.readBacks(), 1, 'the replay reads the conversation back');
+    assert.deepEqual(thread(), ['u1', 'a1', 'a2', 'a3', 'live'], 'the closed segments, then the one being written');
+    assert.ok(answers()[3].includes('Seg four, so far'));
+    assert.equal(text().split('Seg two').length - 1, 1, 'the stale segment the replay wrote over is not left behind');
+    assert.deepEqual(resume.heard, ['running'], 'the turn runs on throughout');
+    assert.equal(stopShown(), true);
+    await act(async () => {
+      resume.subscriptions[1].send({ type: 'done', turn_id: 't1', content: 'Seg four, done', message_id: 'a4' });
+      await settle(10);
+    });
+    assert.deepEqual(resume.heard, ['running', 'answered']);
+    assert.deepEqual(thread(), ['u1', 'a1', 'a2', 'a3', 'a4'], 'one answer each');
+    assert.ok(answers()[3].includes('Seg four, done'));
+    await finish(...resume.subscriptions);
+  } finally {
+    resume.timers.restore();
+  }
+});
+
+test('a relayed turn resumed with no segment closed meanwhile shows each once', async () => {
+  const resume = await resumeRelayedTurn(
+    [
+      { id: 'u1', role: 'user', content: 'Question' },
+      { id: 'a1', role: 'assistant', content: 'Seg one' },
+    ],
+    'Seg two, and more',
+  );
+  try {
+    assert.equal(resume.readBacks(), 1);
+    assert.deepEqual(thread(), ['u1', 'a1', 'live']);
+    assert.equal(text().split('Seg one').length - 1, 1);
+    assert.equal(text().split('Seg two').length - 1, 1);
+    assert.deepEqual(resume.heard, ['running']);
+    await act(async () => {
+      resume.subscriptions[1].send({ type: 'done', turn_id: 't1', content: 'Seg two, and more', message_id: 'a2' });
+      await settle(10);
+    });
+    assert.deepEqual(resume.heard, ['running', 'answered']);
+    assert.deepEqual(thread(), ['u1', 'a1', 'a2']);
+    await finish(...resume.subscriptions);
+  } finally {
+    resume.timers.restore();
+  }
+});
+
 test('Stop lets go at once when no turn runs anywhere, and keeps a turn whose Stop the backend refuses', async () => {
   const streams = [sseStream(), sseStream()];
   let next = 0;

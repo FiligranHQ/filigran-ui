@@ -254,6 +254,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     isResumingAfterDecision,
     historyReloadNonce,
     reloadHistory,
+    mergeTurnHistory,
     historyLoadedRef,
     conversationIdRef,
     handleFileAdd,
@@ -883,6 +884,10 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
     ...(fontFamily ? { fontFamily } : {}),
   } as React.CSSProperties;
 
+  // The restore merges a replayed turn's read-back through this, outside its deps.
+  const mergeTurnHistoryRef = useRef(mergeTurnHistory);
+  mergeTurnHistoryRef.current = mergeTurnHistory;
+
   // Tracks whether this panel is still mounted. Flipped to false ONLY on a
   // real unmount (empty-deps cleanup) — never on the benign teardowns that an
   // inline `apiEndpoints` / `requestHeaders` prop churn or a StrictMode
@@ -1003,6 +1008,9 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
         // tell us. Both land on the selected-agent fallback, but only the
         // first is a deliberate answer.
         setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
+        // Read back for a relayed turn the reopened event stream replayed: the
+        // segments it closed meanwhile go into it, and it runs on.
+        if (mergeTurnHistoryRef.current(parseRestoredMessages(data.messages))) return;
         // A turn started meanwhile is on screen: the history waits for it to
         // end, and so does the event stream, which follows that history.
         if (isLoadingNowRef.current) {

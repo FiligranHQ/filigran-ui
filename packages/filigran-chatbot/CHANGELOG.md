@@ -236,7 +236,9 @@ This file starts at 3.10.0; earlier releases are on the
   it delivered a frame or lived 5 s; a relayed turn on screen then runs on
   only if the reopened stream replays it within 5 s (the segment being
   written; those an intermediate `done` closed stay), and otherwise ends and
-  the conversation is read back. Once the page has been hidden for 60 s the
+  the conversation is read back. A replayed turn reads the conversation back
+  too, while it runs on: the segments it closed while the stream was away
+  come back, in order, before the one being written, each shown once. Once the page has been hidden for 60 s the
   stream is closed, and the relayed turn it fed taken off screen; shown
   again, the stream reopens (its snapshot replays a turn still running) and
   the conversation is read back for what ended meanwhile. The stored end of a

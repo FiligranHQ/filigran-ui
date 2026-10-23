@@ -172,6 +172,57 @@ function withDone(message: ChatMessage, parsed: DoneAction, content: string, com
   };
 }
 
+/**
+ * *prev* with the conversation read back (*restored*) put into a turn on
+ * screen, *turnIds* its bubbles and *liveId* the one it writes to. The stored
+ * messages past those shown before the turn take the place of its bubbles
+ * they match - by server id, else by role and text, keeping the bubble's id -
+ * and what the turn shows that is not stored, its live bubble among it,
+ * follows them. *prev* as it is when nothing stored is missing.
+ */
+function mergeIntoTurn(
+  prev: ChatMessage[],
+  restored: ChatMessage[],
+  turnIds: ReadonlySet<string>,
+  liveId: string,
+  sentTextOf: (message: ChatMessage) => string,
+): ChatMessage[] {
+  const start = prev.findIndex((m) => turnIds.has(m.id));
+  if (start < 0) return prev;
+  const before = prev.slice(0, start);
+  const region = prev.slice(start);
+  const shownKey = (m: ChatMessage) => `${m.role}\u0000${m.role === 'user' ? sentTextOf(m) : m.content}`;
+  const storedKey = (m: ChatMessage) => `${m.role}\u0000${m.content}`;
+  // What the history holds past the last message shown before the turn,
+  // less what is on screen before it already, unsaved there.
+  const shownBefore = new Set(before.map((m) => m.serverId).filter(Boolean));
+  let anchor = -1;
+  restored.forEach((m, i) => {
+    if (m.serverId && shownBefore.has(m.serverId)) anchor = i;
+  });
+  const unsavedBefore = new Map<string, number>();
+  for (const m of before) if (!m.serverId) unsavedBefore.set(shownKey(m), (unsavedBefore.get(shownKey(m)) ?? 0) + 1);
+  const missing = restored.slice(anchor + 1).filter((m) => {
+    if (m.serverId && shownBefore.has(m.serverId)) return false;
+    const pending = unsavedBefore.get(storedKey(m)) ?? 0;
+    if (pending === 0) return true;
+    unsavedBefore.set(storedKey(m), pending - 1);
+    return false;
+  });
+  if (missing.length === 0) return prev;
+  // Each stored message takes the place of the turn's bubble it matches; the
+  // live one only by its server id, being still written.
+  const taken = new Set<string>();
+  const stored = missing.map((m) => {
+    const match =
+      region.find((r) => !taken.has(r.id) && !!m.serverId && r.serverId === m.serverId) ??
+      region.find((r) => !taken.has(r.id) && r.id !== liveId && !r.serverId && shownKey(r) === storedKey(m));
+    if (match) taken.add(match.id);
+    return { ...m, id: match?.id ?? (m.serverId ? `msg-${m.serverId}` : randomId()) };
+  });
+  return [...before, ...stored, ...region.filter((m) => !taken.has(m.id))];
+}
+
 /** *next* added to the message already held: one message, sent when the turn ends. */
 function mergeHeld(prev: HeldMessage | null, next: HeldMessage): HeldMessage {
   if (!prev) return next;
@@ -444,6 +495,12 @@ interface UseChatReturn {
   cancelHeldMessage: () => void;
   /** Read the conversation back from the server again. */
   reloadHistory: () => void;
+  /**
+   * Put the conversation read back (*restored*) into the relayed turn it was
+   * read back for, which runs on: true when one was (see `handleEventFrame`),
+   * false when the read-back is the panel's to apply.
+   */
+  mergeTurnHistory: (restored: ChatMessage[]) => boolean;
   /** The agents picked from the `@` menu whose `@key` the draft still holds. */
   agentMentions: AgentMention[];
   addAgentMention: (mention: AgentMention) => void;
@@ -700,6 +757,9 @@ export function useChat({
   // A relayed turn on screen whose event stream reopened: it waits for the
   // stream's snapshot to replay it, and is over when none does.
   const resumeWaitRef = useRef<{ turn: { turnId: string | null }; timer: number } | null>(null);
+  // The renderer of a relayed turn the reopened event stream replayed, whose
+  // conversation is read back for the segments it closed meanwhile.
+  const turnReadBackRef = useRef<ReturnType<typeof createTurnRenderer> | null>(null);
   // The text each user bubble showing other words was sent with, by bubble id.
   const sentTextRef = useRef(new Map<string, string>());
   const sentTextOf = useCallback((message: ChatMessage) => sentTextRef.current.get(message.id) ?? message.content, []);
@@ -2080,6 +2140,17 @@ export function useChat({
   const awaitRelayedResumeRef = useRef(awaitRelayedResume);
   awaitRelayedResumeRef.current = awaitRelayedResume;
 
+  const mergeTurnHistory = (restored: ChatMessage[]): boolean => {
+    const renderer = turnReadBackRef.current;
+    turnReadBackRef.current = null;
+    // The panel's own turn started since: the read-back waits for it, as any.
+    if (!renderer || ownTurnActiveRef.current) return false;
+    const turnIds = new Set(renderer.segmentIds());
+    const liveId = renderer.currentAssistantId();
+    setMessages((prev) => mergeIntoTurn(prev, restored, turnIds, liveId, sentTextOf));
+    return true;
+  };
+
   /** One frame of the conversation's event stream. */
   const handleEventFrame = (evt: Record<string, unknown>) => {
     askHost(onStreamEventRef.current, evt, { relayed: true });
@@ -2136,10 +2207,15 @@ export function useChat({
         endRelayedTurn();
         reloadHistory();
         relayedTurn = null;
+      } else if (relayedTurn && relayedTurn === awaited.turn) {
+        // Otherwise it is replayed (`thinking.resumed`), having run on all
+        // along: the snapshot brings back the segment being written, which
+        // the ack resets, never those an intermediate `done` closed. Those
+        // closed while the stream was away are only in the history, read
+        // back into the turn (`mergeTurnHistory`).
+        turnReadBackRef.current = relayedTurn.renderer;
+        reloadHistory();
       }
-      // Otherwise it is replayed (`thinking.resumed`), having run on all
-      // along: the snapshot brings back the segment being written, which the
-      // ack resets, never those an intermediate `done` closed, which stay.
     }
 
     const skip = skipUnnamedTurnRef.current;
@@ -2224,6 +2300,7 @@ export function useChat({
     relayedTurnRef.current?.renderer.deltas.close();
     relayedTurnRef.current = null;
     clearResumeWait();
+    turnReadBackRef.current = null;
     provisionalEndsRef.current.clear();
     unnamedProvisionalRef.current = null;
     // The abandoned chat's own stream, read on for a stored end, goes too.
@@ -2852,6 +2929,7 @@ export function useChat({
       setHeldMessage(null);
     },
     reloadHistory,
+    mergeTurnHistory,
     agentMentions,
     addAgentMention,
     handleNewChat,

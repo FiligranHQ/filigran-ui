@@ -959,6 +959,10 @@ within 15 s). A relayed turn uses the frames of `POST /chat/messages`, plus:
 - `{"type": "thinking", "resumed": true, "elapsed_s": 42}` — a turn re-attached
   mid-way: the segment being written follows, whole (XTM One's snapshot holds
   that one only); the segments an intermediate `done` closed stay on screen.
+  Replaying a relayed turn on a reopened event stream, the panel reads the
+  conversation back as the turn runs on: the segments closed while the stream
+  was away (stored by then) take their place before the one being written,
+  matched to those on screen by `message_id`, else by text, so none shows twice.
 - `{"type": "done", "intermediate": true, …}` — a segment closed, the turn goes on.
 - `{"type": "cancelled"}` — the turn was stopped.
 - A provisional end — an `error` or `cancelled` with neither `message_id` nor
