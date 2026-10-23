@@ -165,12 +165,12 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   ref,
 ) {
   // Hosts tend to build these inline, so each host render hands the panel new
-  // objects and functions with the same content. Held stable here, a host
-  // render no longer re-renders every memoized message row, re-runs the effects
+  // objects and functions with the same content. Held stable here, so a host
+  // render re-renders no memoized message row, re-runs none of the effects
   // keyed on them (agent list, prompts, quota, suggestions, conversation list)
-  // or refetches the images fetched with the headers. `t` passes through as is,
-  // since a new one means new translations, and so do ReactNode props, which
-  // cannot be compared.
+  // and refetches none of the images fetched with the headers. `t` passes
+  // through as is, since a new one means new translations, and so do
+  // ReactNode props, which cannot be compared.
   const apiEndpoints = useShallowStable(apiEndpointsProp);
   const requestHeaders = useShallowStable(requestHeadersProp);
   const pageContext = useShallowStable(pageContextProp);
@@ -270,6 +270,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     inputValue,
     setInputValue,
     isLoading,
+    turnRunning,
     turnEnd,
     agentStatus,
     attachedFiles,
@@ -453,16 +454,16 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     };
   }, [showConversationSidebar, refreshConversations, refreshWorkspaces]);
 
-  // The host hears when a turn starts or stops running on screen, once per
-  // change, with how it ended, and that it stopped when the panel goes away in
-  // the middle of one.
+  // The host hears when a turn starts or stops running, once per change, with
+  // how it ended, and that it stopped when the panel goes away in the middle
+  // of one.
   const reportedRunningRef = useRef(false);
   useEffect(() => {
-    if (reportedRunningRef.current === isLoading) return;
-    reportedRunningRef.current = isLoading;
-    if (isLoading) askHost(onTurnRunningChange, true);
+    if (reportedRunningRef.current === turnRunning) return;
+    reportedRunningRef.current = turnRunning;
+    if (turnRunning) askHost(onTurnRunningChange, true);
     else askHost(onTurnRunningChange, false, { ended: turnEnd ?? 'stopped' });
-  }, [isLoading, turnEnd, onTurnRunningChange]);
+  }, [turnRunning, turnEnd, onTurnRunningChange]);
   useEffect(
     () => () => {
       if (!reportedRunningRef.current) return;
@@ -475,7 +476,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // A finished turn has consumed allowance and may have retitled the chat.
   const wasLoadingRef = useRef(false);
   useEffect(() => {
-    if (wasLoadingRef.current && !isLoading) {
+    if (wasLoadingRef.current && !turnRunning) {
       refreshQuota();
       // The backend titles a conversation from its first message, so the row
       // stays "New conversation" until the turn is read back. A conversation
@@ -486,8 +487,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         void refreshWorkspaces();
       }
     }
-    wasLoadingRef.current = isLoading;
-  }, [isLoading, refreshQuota, showConversationSidebar, refreshConversations, refreshWorkspaces]);
+    wasLoadingRef.current = turnRunning;
+  }, [turnRunning, refreshQuota, showConversationSidebar, refreshConversations, refreshWorkspaces]);
 
   const handleHistoryMenuToggle = () => {
     // Computed from the committed state in the event handler — NOT inside the
@@ -734,11 +735,9 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   /**
    * The agent a *restored* conversation belongs to, as the backend reports it.
    *
-   * Sits between the live transfer and the menu selection on purpose. Reopening
-   * a past thread used to relabel it — and its new replies — with whichever
-   * agent was selected, while the backend went on routing the conversation to
-   * its own stored agent. The label named someone who had not spoken. This is
-   * the same agent that will answer, so the two now agree.
+   * Sits between the live transfer and the menu selection: the backend routes
+   * a reopened conversation, and its new replies, to its own stored agent
+   * whichever agent is selected, so that is the agent its label names.
    */
   const [conversationAgentName, setConversationAgentName] = useState<string | null>(null);
   const agentName = transferredAgent?.name || conversationAgentName || selectedAgent?.name || t('Assistant');
@@ -776,7 +775,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // on-screen panel in the focused tab counts as watching, so no toast fires
   // for an answer the user can already see.
   useAwayCompletionNotice({
-    isLoading,
+    isLoading: turnRunning,
     agentName,
     t,
     enabled: notifyOnComplete,
@@ -1098,9 +1097,14 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     call.run();
     if (queueRef.current.length > 0) setQueueTick((n) => n + 1);
   }, [ready, queueTick]);
+  // Let go of once the panel is gone for good: StrictMode's simulated
+  // unmount is followed at once by the remount, which runs them.
   useEffect(
     () => () => {
-      for (const call of queueRef.current.splice(0)) call.drop?.();
+      queueMicrotask(() => {
+        if (isMountedRef.current) return;
+        for (const call of queueRef.current.splice(0)) call.drop?.();
+      });
     },
     [],
   );

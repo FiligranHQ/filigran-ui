@@ -18,8 +18,8 @@ interface ChatInputProps {
   steerAttachments?: boolean;
   /** A message that cannot steer is held until the turn ends. */
   canHold?: boolean;
-  /** The message held, shown with a way to take it back. */
-  heldMessage?: { text: string } | null;
+  /** The message held, shown (in the words its bubble will show) with a way to take it back. */
+  heldMessage?: { text: string; displayText?: string } | null;
   /** What the backend said when it refused a steer or a Stop. */
   notice?: string | null;
   onCancelHeld?: () => void;
@@ -170,16 +170,11 @@ export const ChatInput = ({
   const waitsForTurn =
     (Boolean(conversationReferences) && referencedConversations(conversationReferences?.refs ?? NO_REFS, inputValue).length > 0) ||
     (Boolean(agentMentions) && mentionedAgentIds(agentMentions?.mentions ?? [], inputValue).length > 0);
-  // Show the accent Send button NEXT to Stop while generating: text-only
-  // sends can steer the running agent; attachments steer only with
-  // steerAttachments.
-  const showSteerSend =
-    isLoading &&
-    canSteer &&
-    !waitsForTurn &&
-    !hasFilesUploading &&
-    !hasFailedFiles &&
-    (hasAttachments ? steerAttachments : Boolean(inputValue.trim()));
+  // What the composer holds can steer the running agent: text, and
+  // attachments only with steerAttachments, once uploaded. The accent Send
+  // button shows NEXT to Stop while there is something to send.
+  const steerable = isLoading && canSteer && !waitsForTurn && !hasFilesUploading && !hasFailedFiles && (!hasAttachments || steerAttachments);
+  const showSteerSend = steerable && (hasAttachments || Boolean(inputValue.trim()));
   // What cannot steer waits for the turn to end, one message at a time.
   const showHoldSend = isLoading && canHold && !showSteerSend && !heldMessage && !hasFailedFiles && Boolean(canSend);
 
@@ -208,7 +203,7 @@ export const ChatInput = ({
 
   const footerText = showHoldSend
     ? t('Enter to send when the answer ends · Esc to stop')
-    : isLoading && canSteer && (!hasAttachments || steerAttachments) && !waitsForTurn
+    : steerable
       ? t('Enter to send now · Esc to stop')
       : isLoading && hasAttachments
         ? t('Attachments wait for the current response')
@@ -231,7 +226,9 @@ export const ChatInput = ({
       {heldMessage && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
           <span className="shrink-0 text-gray-500 dark:text-white/50">{t('Sends when the answer ends:')}</span>
-          <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-white/80">{heldMessage.text || t('Attached files')}</span>
+          <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-white/80">
+            {heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}
+          </span>
           {onCancelHeld && (
             <button type="button" onClick={onCancelHeld} className="shrink-0 text-gray-400 dark:text-white/40 hover:text-red-500">
               {t('Cancel')}

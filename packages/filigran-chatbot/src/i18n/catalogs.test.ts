@@ -5,19 +5,29 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { catalogFor, createTranslate, PANEL_LANGUAGES } from './index.ts';
+import { catalogFor, createTranslate } from './index.ts';
 import { panelKeys } from '../../test/i18nKeys.ts';
 
 const keys = panelKeys(fileURLToPath(new URL('..', import.meta.url)));
 const placeholders = (text: string) => (text.match(/\{\w+\}/g) ?? []).sort().join();
+// Every catalog of this directory (`fr.ts` holds the `fr` one).
+const languages = readdirSync(fileURLToPath(new URL('.', import.meta.url)))
+  .filter((file) => /^[a-z]{2,3}\.ts$/.test(file))
+  .map((file) => file.slice(0, -'.ts'.length));
 
 test('the source translates a known set of keys', () => {
   assert.ok(keys.length > 200, `found only ${keys.length} keys: the extraction patterns no longer match the source`);
 });
 
-for (const language of PANEL_LANGUAGES) {
+test('the panel speaks the language of every catalog', () => {
+  assert.ok(languages.includes('fr'), `found ${languages.join()}`);
+  for (const language of languages) assert.ok(catalogFor(language), language);
+});
+
+for (const language of languages) {
   test(`the ${language} catalog holds every key, and nothing else`, () => {
     const catalog = catalogFor(language)!;
     assert.deepEqual(

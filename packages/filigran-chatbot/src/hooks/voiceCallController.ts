@@ -41,9 +41,13 @@ export interface VoiceCallDeps {
   /**
    * Send a question as the user. `onAccepted` once the backend takes it as a
    * new turn (or the held message goes out); `onSteered` with the turn it
-   * joined (`null`: none, it waits for the next one).
+   * joined (`null`: none named), and whether the backend said no turn took it
+   * (it waits for the next one).
    */
-  send: (text: string, hooks: { onAccepted: () => void; onSteered: (turnId: string | null) => void }) => Promise<ChatSendOutcome>;
+  send: (
+    text: string,
+    hooks: { onAccepted: () => void; onSteered: (turnId: string | null, unanswered: boolean) => void },
+  ) => Promise<ChatSendOutcome>;
   /** Say *text* aloud; resolves once said, or as soon as *signal* aborts. */
   speak: (text: string, signal: AbortSignal) => Promise<void>;
   /** The words to say of an answer's markdown. */
@@ -67,9 +71,11 @@ export const VOICE_SILENCE_MS = 1000;
 export const VOICE_ANSWER_IDLE_MS = 120_000;
 /** How long a question that got no answer says so before listening resumes. */
 export const VOICE_RETRY_MS = 2000;
-/** Pause before reopening a recogniser that failed, and how many failures in a row mute it. */
+/** Pause before reopening a recogniser that failed, and how many refusals in a row mute it. */
 const RECOGNITION_RETRY_MS = 300;
-const RECOGNITION_MAX_FAILURES = 5;
+const RECOGNITION_MAX_REFUSALS = 5;
+/** The recogniser's errors no restart gets past: no microphone, or permission refused. */
+const RECOGNITION_REFUSALS: ReadonlySet<string> = new Set(['not-allowed', 'service-not-allowed', 'audio-capture']);
 
 export interface VoiceCallController {
   start: () => void;
@@ -111,7 +117,9 @@ export function createVoiceCall(deps: VoiceCallDeps): VoiceCallController {
   let retryTimer: unknown = null;
   let restartTimer: unknown = null;
   let recognitionRunning = false;
-  let recognitionFailures = 0;
+  // The recogniser's session ended on an error: it is reopened after a pause.
+  let recognitionFailed = false;
+  let recognitionRefusals = 0;
 
   const emit = () => deps.onChange({ phase, muted, heard, lines });
   const clear = (id: unknown) => {
@@ -244,11 +252,15 @@ export function createVoiceCall(deps: VoiceCallDeps): VoiceCallController {
         onAccepted: () => {
           if (current()) armed = true;
         },
-        onSteered: (turnId) => {
+        onSteered: (turnId, unanswered) => {
           if (!current()) return;
           armed = true;
+          // Stored with no turn named: none will answer it when the backend
+          // says so; otherwise one may, and the idle check settles the wait.
           handleFrame(
-            turnId ? { type: 'folded_into_active_turn', folded: true, turn_id: turnId } : { type: 'folded_into_active_turn', folded: false },
+            turnId
+              ? { type: 'folded_into_active_turn', folded: true, turn_id: turnId }
+              : { type: 'folded_into_active_turn', ...(unanswered ? { folded: false } : {}) },
           );
         },
       })
@@ -271,7 +283,7 @@ export function createVoiceCall(deps: VoiceCallDeps): VoiceCallController {
   recognition.interimResults = true;
   if (deps.lang) recognition.lang = deps.lang;
   recognition.onresult = (event) => {
-    recognitionFailures = 0;
+    recognitionRefusals = 0;
     if (muted || (phase !== 'listening' && phase !== 'speaking')) return;
     let finalText = '';
     let interim = '';
@@ -299,21 +311,24 @@ export function createVoiceCall(deps: VoiceCallDeps): VoiceCallController {
     }
     emit();
   };
-  recognition.onerror = () => {
-    recognitionFailures += 1;
+  recognition.onerror = (event) => {
+    recognitionFailed = true;
+    if (RECOGNITION_REFUSALS.has(event?.error ?? '')) recognitionRefusals += 1;
   };
   recognition.onend = () => {
     recognitionRunning = false;
+    const failed = recognitionFailed;
+    recognitionFailed = false;
     if (!wantsRecognition()) return;
-    if (recognitionFailures >= RECOGNITION_MAX_FAILURES) {
+    if (recognitionRefusals >= RECOGNITION_MAX_REFUSALS) {
       // No microphone, or permission refused: muted rather than retried in a
       // loop; unmuting tries again.
-      recognitionFailures = 0;
+      recognitionRefusals = 0;
       muted = true;
       emit();
       return;
     }
-    if (recognitionFailures === 0) {
+    if (!failed) {
       syncRecognition();
       return;
     }
@@ -366,7 +381,7 @@ export function createVoiceCall(deps: VoiceCallDeps): VoiceCallController {
     toggleMute: () => {
       if (phase === 'ended') return;
       muted = !muted;
-      recognitionFailures = 0;
+      recognitionRefusals = 0;
       if (muted) {
         silenceTimer = clear(silenceTimer);
         said = '';

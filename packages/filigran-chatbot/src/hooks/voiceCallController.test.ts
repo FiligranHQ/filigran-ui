@@ -10,7 +10,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { SpeechRecognitionEventLike, SpeechRecognitionLike } from './dictationController.ts';
+import type { SpeechRecognitionErrorEventLike, SpeechRecognitionEventLike, SpeechRecognitionLike } from './dictationController.ts';
 import type { ChatSendOutcome } from '../types.ts';
 import {
   createVoiceCall,
@@ -27,7 +27,7 @@ class FakeRecognition implements SpeechRecognitionLike {
   interimResults = false;
   lang = '';
   onresult: ((event: SpeechRecognitionEventLike) => void) | null = null;
-  onerror: (() => void) | null = null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null = null;
   onend: (() => void) | null = null;
   running = false;
   calls: string[] = [];
@@ -58,7 +58,7 @@ function setup(overrides: Partial<VoiceCallDeps> = {}) {
   const sent: string[] = [];
   const spoken: string[] = [];
   const speeches: { signal: AbortSignal; done: () => void }[] = [];
-  let hooks!: { onAccepted: () => void; onSteered: (turnId: string | null) => void };
+  let hooks!: { onAccepted: () => void; onSteered: (turnId: string | null, unanswered: boolean) => void };
   let settleSend!: (outcome: ChatSendOutcome) => void;
   // What the call last showed.
   let snapshot: VoiceCallSnapshot | null = null;
@@ -169,7 +169,7 @@ test('a question steered into a running turn is answered by that turn', () => {
   s.call.start();
   s.recognition.hear('And the other one?');
   s.elapse(VOICE_SILENCE_MS);
-  s.hooks().onSteered('running');
+  s.hooks().onSteered('running', false);
   s.call.frame({ type: 'done', content: 'Answer to what it was doing.', intermediate: true, turn_id: 'running' }, true);
   s.call.frame({ type: 'done', content: 'Answer to the spoken one.', turn_id: 'running' }, true);
   assert.deepEqual(s.spoken, ['Answer to the spoken one.']);
@@ -180,10 +180,23 @@ test('a steer the backend only stored, for want of a running turn, ends the wait
   s.call.start();
   s.recognition.hear('Hello there');
   s.elapse(VOICE_SILENCE_MS);
-  s.hooks().onSteered(null);
+  s.hooks().onSteered(null, true);
   assert.equal(s.snapshot().phase, 'error');
   s.elapse(VOICE_RETRY_MS);
   assert.equal(s.snapshot().phase, 'listening');
+});
+
+test('a steer stored with no word on whether a turn took it keeps the wait, which the idle check settles', async () => {
+  const s = setup();
+  s.call.start();
+  s.recognition.hear('Hello there');
+  s.elapse(VOICE_SILENCE_MS);
+  s.hooks().onSteered(null, false);
+  assert.equal(s.snapshot().phase, 'processing', 'a turn may still answer it');
+  s.setProbe('over');
+  s.elapse(VOICE_ANSWER_IDLE_MS);
+  await s.flush();
+  assert.equal(s.snapshot().phase, 'error');
 });
 
 test('other agents of the turn are shown with their name, never said', () => {
@@ -320,11 +333,23 @@ test('a recogniser that keeps failing is muted rather than restarted in a loop',
   const s = setup();
   s.call.start();
   for (let i = 0; i < 5; i++) {
-    s.recognition.onerror?.();
+    s.recognition.onerror?.({ error: 'not-allowed' });
     s.recognition.end();
     s.elapse(300);
   }
   assert.equal(s.snapshot().muted, true);
+});
+
+test('a user who says nothing for a while is listened to again, never muted', () => {
+  const s = setup();
+  s.call.start();
+  for (let i = 0; i < 8; i++) {
+    s.recognition.onerror?.({ error: 'no-speech' });
+    s.recognition.end();
+    s.elapse(300);
+  }
+  assert.equal(s.snapshot().muted, false);
+  assert.equal(s.recognition.running, true, 'still listening');
 });
 
 test('ending the call releases the recogniser, and a late answer is not said', () => {

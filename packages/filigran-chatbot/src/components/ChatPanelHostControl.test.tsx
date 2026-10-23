@@ -7,7 +7,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { act, createRef } from 'react';
+import { act, createRef, StrictMode, useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
 
 import { fakeBackend, json, settle, sseStream } from '../../test/dom.ts';
 import { AGENTS, agentsRoute, BASE_PROPS, container, finish, mountPanels, restoreRoute, text, type Handle } from '../../test/panel.tsx';
@@ -592,4 +593,41 @@ test('getDraft reads the composer as it stands, as set or as the panel left it, 
   });
   assert.deepEqual(seenOnHeld, ['typed since'], 'what the composer held as the hook took the message over');
   assert.equal(ref.current!.getDraft(), 'typed since\n\nset by the host', 'and the held text the panel gave back after it');
+});
+
+test('under StrictMode, a send from the host’s mount effect is not dropped by the simulated unmount', async () => {
+  const stream = sseStream();
+  const requests = fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const { ChatPanel } = await import('./ChatPanel.tsx');
+  const outcomes: Promise<unknown>[] = [];
+  function Host() {
+    const ref = useRef<Handle>(null);
+    const sentRef = useRef(false);
+    useEffect(() => {
+      if (sentRef.current) return;
+      sentRef.current = true;
+      outcomes.push(ref.current!.send('from the mount'));
+    }, []);
+    return <ChatPanel {...BASE_PROPS} ref={ref} />;
+  }
+  const strictContainer = document.createElement('div');
+  document.body.appendChild(strictContainer);
+  const root = createRoot(strictContainer);
+  try {
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <Host />
+        </StrictMode>,
+      );
+    });
+    await act(async () => settle(10));
+    assert.equal(outcomes.length, 1);
+    assert.equal(await outcomes[0], 'sent');
+    assert.equal(requests.filter((r) => r.url === '/api/chat/messages').length, 1);
+    await finish(stream);
+  } finally {
+    await act(async () => root.unmount());
+    strictContainer.remove();
+  }
 });

@@ -3,11 +3,11 @@
  * with none of the panel.
  *
  * A host that renders assistant prose through its OWN markdown component (its
- * design tokens, its icon set) still wants identical text handling. Importing
- * these from the package root would work, but the root entry is the whole
- * ~90 kB panel bundle: a host that renders chat prose on an eagerly-loaded
- * route would risk pulling the panel into its entry chunk. This subpath carries
- * only pure functions of strings — no React, no DOM, no CSS.
+ * design tokens, its icon set) still wants identical text handling. The
+ * package root does not export these: it is the whole ~90 kB panel bundle, and
+ * a host that renders chat prose on an eagerly-loaded route would risk pulling
+ * the panel into its entry chunk. This subpath carries only pure functions of
+ * strings — no React, no DOM, no CSS.
  *
  * `prepareMarkdown` applies them as the panel does, in this order — alt-text
  * is flattened before anything reads line structure, and the JSON wrap must

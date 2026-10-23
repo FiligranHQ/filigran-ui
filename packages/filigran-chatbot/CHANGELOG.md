@@ -18,12 +18,24 @@ This file starts at 3.10.0; earlier releases are on the
   the chat a page of its own.
 - A host can own the conversation on screen (`conversationId`,
   `onConversationChange`), pick the agent selected first (`initialAgent`,
-  `onAgentChange`) and drive the panel through its `ref` (`send`,
-  `newConversation`, `selectConversation`, `setDraft`, `focusComposer`,
-  `stop`). The handle is the same object for the panel's life, and `send`
-  resolves to what became of the message: `'sent'` once the backend takes
-  it, `'steered'`, `'held'`, `'dropped'` (empty, taken over, read-only, or
-  the panel unmounted first) or `'failed'` (the backend refused it).
+  `onAgentChange`) and drive the panel through its `ref`, a handle that is the
+  same object for the panel's life:
+  - `send(text, { extras, displayText })`: the backend receives *text* with
+    `extras` in its body, and the user's bubble shows `displayText` (as with
+    `onBeforeSend`'s, which wins when it gives one). It resolves to what
+    became of the message: `'sent'` once the backend takes it, `'steered'`,
+    `'held'`, `'dropped'` (empty, taken over, read-only, or the panel
+    unmounted first) or `'failed'` (the backend refused it).
+  - `newConversation`, `selectConversation`, `setDraft`, `focusComposer` and
+    `stop`.
+  - `getDraft()` reads the composer's text as it stands (typed, or set by
+    `setDraft`), e.g. for a host taking over a held message (`draft.held`)
+    to tell whether the composer still holds what was typed.
+  - `scrollToMessage` jumps to a message and highlights it.
+  - `reloadAgents()` reads the agent list again, keeping the agent picked
+    unless it is gone (none is picked once the list is empty). A failed
+    reload keeps the list it had, and only the latest reload lands.
+  - `startVoiceCall()` starts a voice call (below).
 - `onClose` and `onModeChange` are optional: the header shows the close
   button and the view switcher only when they are given.
 - `storageKeyPrefix` namespaces every key the panel keeps in browser storage,
@@ -34,14 +46,20 @@ This file starts at 3.10.0; earlier releases are on the
 - `getRequestExtras` adds the host's own fields to each message body (the
   panel's own fields, set by it or not, are never taken from there), and
   `onStreamEvent` hands the host every frame received, including those the
-  panel does not render.
+  panel does not render, with what the panel read in it: `end`
+  (`'provisional'` on an `error` or `cancelled` with neither `message_id` nor
+  `reason`, `'stored'` on an end naming the stored answer's `message_id`: a
+  `done` that is not intermediate, a `cancelled`, an `error`) and `replayed`
+  (the `thinking` frame of a turn replayed from its start, `resumed: true`).
 - The panel renders the frames of a backend whose turns outlive their stream:
   a turn re-attached mid-way (`thinking.resumed`), an announced wait
-  (`status: wait_start`, with a countdown), `cancelled`, an intermediate
-  `done` and the agent that `answered_by` a segment. A provisional end (an
-  `error` or `cancelled` with neither `message_id` nor `reason`) ends the turn
-  at once; the stored end that follows gives the answer its id and a `done`'s
-  content.
+  (`status: wait_start`, with a countdown, kept through what it reports
+  meanwhile: `wait_status`, `tool_heartbeat`, `tool_progress`,
+  `consult_progress`; streamed text or any other status ends it), `cancelled`,
+  an intermediate `done` and the agent that `answered_by` a segment. A
+  provisional end (an `error` or `cancelled` with neither `message_id` nor
+  `reason`) ends the turn at once; the stored end that follows gives the
+  answer its id and a `done`'s content.
 - History is restored with no agent list (`apiEndpoints.agents: null`).
 - A host can render its own cards for the `[[KIND:args]]` markers of an
   answer (`markerRenderers`), by marker name, and take over the built-in
@@ -60,13 +78,15 @@ This file starts at 3.10.0; earlier releases are on the
 - `onArtifactOpen` opens a deck, report or video in the host, in place of the
   link to XTM One.
 - Slots for the host's own content: `headerActions`, `banner`,
-  `composerHeader`, `transcriptFooter`, `welcome`, `renderMessageExtras`,
-  `messageFooterActions`, `sidebarRowActions`, `sidebarHeaderActions` and
-  `sidebarSections`.
+  `composerHeader`, `transcriptFooter`, `welcome`, `renderMessageExtras` and
+  `messageFooterActions` (given the message and `{ streaming }`,
+  `ChatMessageSlotContext`: the message is the answer still being written),
+  `sidebarRowActions`, `sidebarHeaderActions` and `sidebarSections`.
 - `statusLabel`, `waitingMessages` and `renderWaitingPanel` adapt the status
   line and the waiting panel; `fontFamily` sets the panel's font.
-- An agent's `icon` shows in the picker when it is an image URL or an emoji,
-  and agents carrying a `group` are listed under its heading.
+- An agent's `icon` shows in the picker when it is an `https:` or
+  `data:image/` URL, or emoji, and agents carrying a `group` are listed under
+  its heading.
 - `@` in the composer can mention agents (`agentMentions`): the agents of
   the agent list are offered above the conversations, and the message carries
   the ids of those it still mentions as `mentioned_agent_ids`, in mention
@@ -78,16 +98,13 @@ This file starts at 3.10.0; earlier releases are on the
   meanwhile. Messages held one after another go together, keeping their body
   fields, and Stop gives back to the composer what the user typed for them;
   a message sent once the stopped turn ended goes out as it winds down.
-- `scrollToMessage` on the panel's handle jumps to a message and highlights it.
-- `getDraft()` on the panel's handle reads the composer's text as it stands
-  (typed, or set by `setDraft`), e.g. for a host taking over a held message
-  (`draft.held`) to tell whether the composer still holds what was typed.
 - A voice call over the panel, started with `startVoiceCall()` on the handle
   (`voiceCallSupported()` tells a host whether to offer it): the browser's
   speech recognition listens, a phrase is sent after one second of silence
-  (`onBeforeSend` sees `source: 'voice'`), and the answer is said through
-  `apiEndpoints.tts` in pieces of about 200 characters, in the browser's voice
-  where the route fails or is not named. Only the final answer of the turn
+  (`onBeforeSend` sees `source: 'voice'`, a `ChatSendDraft.source` of its
+  own), and the answer is said through `apiEndpoints.tts` in pieces of about
+  200 characters, in the browser's voice where the route fails, the browser
+  cannot play a piece, or no route is named. Only the final answer of the turn
   that answers the question is said (the panel's own, or the one a fold or a
   steer names), and only the addressed agent's: the other agents' replies show
   by name, `Did not answer` beside a failed one. Speaking over the answer, a
@@ -107,30 +124,24 @@ This file starts at 3.10.0; earlier releases are on the
   return `displayText`: the backend receives `text`, and the user's bubble
   (live, steered or held) shows `displayText`, for a host that wraps what the
   user typed in context of its own. A message held while a turn ran is asked
-  about again as it leaves (`turnRunning: false`, `held: true`); taken over
-  then, what the user typed for it goes back to the composer, after what they
-  typed since, and it is settled `'returned'`.
+  about again as it leaves (`turnRunning: false`, `held: true`), each send
+  held with it on its own; taken over then, what the user typed for it goes
+  back to the composer, after what they typed since, and a message all of
+  whose sends are taken over is settled `'returned'`.
 - `hideConversationList` hides the conversation list of inline and fullscreen
   modes, for a rail or a task pane: the header, thread and composer hold from
   320 px wide, and the header's history menu stands in for the list (open,
   delete, Clear all), while a referenced conversation still opens in the panel.
-- `reloadAgents()` on the handle reads the agent list again, keeping the agent
-  picked unless it is gone (none is picked once the list is empty). A failed
-  reload keeps the list it had, and only the latest reload lands.
 - `onHeldSendSettled(text, outcome)` tells the host what became of a message
   held until the turn ended: `'sent'`, `'failed'`, `'dropped'`, `'returned'`
   (given back to the composer by Stop, or by `onBeforeSend` taking it over as
   it leaves; told once the composer shows it, so `getDraft()` reads it) or
   `'cancelled'`.
-- `ChatSendDraft.source` can be `'voice'`, for a question spoken in a voice call.
 - `onTurnRunningChange(running, info)` tells the host when a turn starts or
   stops running on screen, own or relayed, and with `false` how it ended
   (`info.ended`: `'answered'`, `'stopped'` or `'failed'`): see
   [Host extensions](README.md#host-extensions) and
   [Turns that outlive their stream](README.md#turns-that-outlive-their-stream).
-- `send(text, { displayText })` on the handle: the backend receives *text*
-  and the user's bubble shows `displayText`, as with `onBeforeSend`'s
-  `displayText` (which wins when it gives one).
 - `ChatMessage.answeredBy` (`{ agentId, agentName, agentIcon }`) and
   `ChatMessage.mentionFailed`, from the `answered_by` and `mention_failed` of
   each `done` frame (intermediate ones included) and of each restored entry,
@@ -143,20 +154,11 @@ This file starts at 3.10.0; earlier releases are on the
   `markerKinds` and the `AnswerPart` type (and `ChatArtifactKind`), still free
   of React and side effects, so a host renders, previews or strips markers
   exactly as the panel does.
-- `onStreamEvent`'s second argument says what the panel read in the frame:
-  `end` (`'provisional'` on an `error` or `cancelled` with neither
-  `message_id` nor `reason`, `'stored'` on an end naming the stored answer's
-  `message_id`: a `done` that is not intermediate, a `cancelled`, an
-  `error`) and `replayed` (the `thinking` frame of a turn replayed from its
-  start, `resumed: true`).
 - `onSessionEnded(reason)` tells the host the user's session ended: a
   `session_expired` frame on either stream, or a `401` whose body's
   `detail.code` is `session_expired` on any request the panel makes, with the
   frame's or the `detail`'s `reason`. It comes once per set of
   `requestHeaders`.
-- `renderMessageExtras` and `messageFooterActions` get a second argument,
-  `{ streaming }` (`ChatMessageSlotContext`): the message is the answer still
-  being written.
 - `ChatMessage.raw`: the backend's own object for the message, a plain copy
   (the restored, paged or relayed entry; the `done` frame of a live answer,
   or the stored end after a provisional one), for the fields the panel does
@@ -196,7 +198,6 @@ This file starts at 3.10.0; earlier releases are on the
   the drop does not reach the host's own drop zones.
 - A conversation being read back shows a skeleton rather than the welcome
   screen.
-- An agent icon shows only from an `https:` URL or a `data:image/` one.
 - A conversation whose restore fails because the backend is unreachable or
   answers 502, 503 or 504 keeps its id, rather than being dropped for a new
   chat, and is read back once the backend answers (retried with backoff, and
@@ -225,10 +226,6 @@ This file starts at 3.10.0; earlier releases are on the
   ended, an ordinary race) shows nothing. A steer stored that the backend
   says no turn will answer (`"answered": false`) stays, with a notice that it
   will be read with the next message, until that send.
-- An agent's wait (`status: wait_start`) keeps its label, countdown and
-  `Continue now` through what it reports meanwhile (`wait_status`,
-  `tool_heartbeat`, `tool_progress`, `consult_progress`); streamed text or any
-  other status ends it.
 - The composer's footer under a message that waits for the running turn
   (a reference, a mention) says `This message waits for the current response`,
   a new key, in place of `Referenced conversations wait for the current

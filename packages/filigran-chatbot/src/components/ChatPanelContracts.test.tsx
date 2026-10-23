@@ -182,6 +182,44 @@ test('Stop gives back what the user typed for a held message, and nothing a host
   await finish(stream);
 });
 
+test('a held message shows the words its bubble will show; one only a host sent goes nowhere on Stop', async () => {
+  const stream = sseStream();
+  const requests = fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  const settled: string[] = [];
+  await render(
+    {
+      conversationId: 'c1',
+      holdSendsDuringTurn: true,
+      apiEndpoints: { steer: null },
+      onHeldSendSettled: (held, outcome) => settled.push(`${held}:${outcome}`),
+    },
+    ref,
+  );
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle();
+    stream.send({ type: 'stream', content: 'Working' });
+    await settle();
+  });
+  let outcome!: Promise<unknown>;
+  await act(async () => {
+    outcome = ref.current!.send('Summarize report 42 for the analyst on duty', { displayText: 'Summarize the report' });
+    await settle(10);
+  });
+  assert.equal(await outcome, 'held');
+  assert.ok(text().includes('Sends when the answer ends:Summarize the report'), text());
+  assert.ok(!text().includes('analyst on duty'));
+  await act(async () => {
+    ref.current!.stop();
+    await settle(10);
+  });
+  assert.equal(messages(requests).length, 1);
+  assert.equal(container.querySelector('textarea')!.value, '');
+  assert.deepEqual(settled, ['Summarize report 42 for the analyst on duty:dropped'], 'nothing came back to the composer');
+  await finish(stream);
+});
+
 test('the event stream waits for the conversation’s own history, and a relayed turn stopped stays stopped', async () => {
   let releaseRestore!: () => void;
   const restored = new Promise<void>((resolve) => (releaseRestore = resolve));
@@ -599,7 +637,7 @@ test('the host is told what became of each held send', async () => {
     await settle(10);
   });
   assert.deepEqual(settled, ['next:sent'], 'told as the backend takes it, its answer still to come');
-  // Given back by Stop.
+  // A host's send, stopped: nothing comes back to the composer, and it goes nowhere.
   await act(async () => {
     void ref.current!.send('then this');
     await settle(10);
@@ -608,7 +646,7 @@ test('the host is told what became of each held send', async () => {
     ref.current!.stop();
     await settle(10);
   });
-  assert.deepEqual(settled, ['next:sent', 'then this:returned']);
+  assert.deepEqual(settled, ['next:sent', 'then this:dropped']);
   // Still held when the panel goes: cancelled.
   await act(async () => {
     void ref.current!.send('a third');
@@ -617,7 +655,7 @@ test('the host is told what became of each held send', async () => {
     await settle(10);
   });
   await unmount();
-  assert.deepEqual(settled, ['next:sent', 'then this:returned', 'left behind:cancelled']);
+  assert.deepEqual(settled, ['next:sent', 'then this:dropped', 'left behind:cancelled']);
   await finish(...streams);
 });
 
@@ -893,6 +931,7 @@ test('a file that failed to upload offers neither a steer nor a hold while the t
   });
   assert.equal(container.querySelector('button[aria-label="Send now"]'), null);
   assert.equal(container.querySelector('button[aria-label="Send when the answer ends"]'), null);
+  assert.ok(!text().includes('Enter to send now'), 'nor says Enter sends it');
   await finish(stream);
 });
 

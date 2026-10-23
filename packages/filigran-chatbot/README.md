@@ -70,6 +70,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onClose`           | `() => void`                              | —            | Called when the close button is clicked; the button shows only with it (never in inline mode) |
 | `onModeChange`      | `(mode: ChatMode) => void`                | —            | Called when the user switches display mode; the view switcher shows only with it (never in inline mode) |
 | `apiBaseUrl`        | `string`                                  | **required** | Base URL for chat API endpoints                                  |
+| `backendType`       | `'rest' \| 'legacy' \| 'ag-ui'`           | `'rest'`     | The backend's protocol: XTM One's Chat API, a single POST endpoint with Flowise-style SSE events, or [AG-UI](https://github.com/ag-ui-protocol/ag-ui) |
 | `user`              | `{ firstName: string }`                   | **required** | Current user info                                                |
 | `topOffset`         | `number`                                  | `0`          | Top offset in pixels (for sidebar/fullscreen with fixed headers) |
 | `agentDashboardUrl` | `string`                                  | —            | XTM One URL for the "Browse agents" / "Create agent" links and the waiting panel's "Play Space Invaders in XTM One" link (`{url}/chat?arcade=play`, http(s) only, unless `waitingGameUrl` says where) |
@@ -80,15 +81,23 @@ import { ChatPanel } from '@filigran/chatbot';
 | `accentColor`       | `string`                                  | `'#7b5cff'`  | Primary accent color (hex)                                       |
 | `logoIcon`          | `React.ReactNode`                         | default icon | Custom logo/icon for the assistant                               |
 | `promptSuggestions` | `string[]`                                | default list | Prompt suggestions shown on welcome screen                       |
+| `draftBorderColor`  | `string`                                  | —            | Color of the line above the composer (e.g. a draft context)      |
+| `draftLabel`        | `string`                                  | —            | Accepted, and not shown                                          |
 | `pageContext`       | `Record<string, unknown>`                 | —            | Arbitrary host page context (e.g. `{ url: '/dashboard/...' }`) sent as `context` on each `rest` message so the agent knows where the user is. Must be JSON-serializable (skipped if not). Read fresh at send time; omitted when empty. |
 | `resizable`         | `boolean`                                 | `false`      | Enable drag-to-resize for sidebar mode                           |
 | `onWidthChange`     | `(width: number) => void`                 | —            | Called when sidebar width changes during resize                  |
 | `onResizeStart`     | `() => void`                              | —            | Called when resize drag starts                                   |
 | `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
+| `pushContentSelector` | `string`                                | —            | CSS selector of the host's content, given a right padding of the sidebar's width while the panel is in sidebar mode (`--chatbot-sidebar-width` on `:root` holds it either way) |
+| `disableFileManagement` | `boolean`                             | `false`      | No attaching or pasting files in the composer                    |
+| `maxFileCount`      | `number`                                  | `10`         | Most files attached to one message                               |
+| `maxTotalSize`      | `number`                                  | 50 MB        | Most bytes the files attached to one message add up to           |
 | `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Receives each rating of an answer (`null` clears it); `id` is the message's persisted id when the backend reported one (`done.message_id`, a restored entry's `id`), else the panel's own. On its own it enables 👍/👎 and the panel stores nothing; with `apiEndpoints.feedback` set it is called once the backend has stored the rating. With neither, no thumbs. |
 | `locale`            | `string`                                  | browser's    | BCP 47 language tag of the platform's language (e.g. `'fr-FR'`): the language of the panel's catalog for what `t` does not translate, of its message times and of read-aloud. Unset, the browser's — except that a host passing `t` gets no catalog then |
 | `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
 | `contextUsageEnabled` | `boolean`                               | `true`       | Show how full the model's context window is for the current conversation (ring + percentage in the composer toolbar). Data-driven, so it stays absent until the backend reports occupancy — see [Context usage](#context-usage). |
+| `notifyOnComplete`  | `boolean`                                 | `true`       | Tell the user a long turn ended while they were not watching the chat: away (the tab hidden, another window), the page title flashes and a browser notification shows (when already granted); away or with the panel closed or hidden, `onTaskComplete` is called |
+| `onTaskComplete`    | `(title: string, body: string) => void`   | —            | The host's own toast for a long turn that ended while the user was not watching the chat, with the translated `title` and `body` |
 | `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
 | `storageKeyPrefix`  | `string`                                  | —            | Namespaces every key the panel keeps in browser storage (`<prefix>:filigranChatConversationId`, …), for a host mounting more than one panel |
 | `conversationId`    | `string \| null`                          | —            | The conversation on screen when the host owns it (a `?c=` URL); `null` is a new chat. Left `undefined`, the panel remembers its own, and a host-owned one is never written to storage |
@@ -220,8 +229,9 @@ backend receives, `displayText` is what the user's bubble shows, and `extras`
 adds body fields. The panel's own fields cannot be set this way, and a message
 with fields of its own never steers: it is held with `holdSendsDuringTurn`. A
 message held while a turn ran is asked about again as it leaves as a new turn
-(`turnRunning: false`, `held: true`); taken over then, what the user typed for
-it goes back to the composer, after what was typed since, and it is settled
+(`turnRunning: false`, `held: true`), each send held with it on its own; taken
+over then, what the user typed for it goes back to the composer, after what
+was typed since. A held message every send of which is taken over is settled
 `'returned'` (`'dropped'` when the user typed nothing for it).
 
 A host that wraps what the user typed in context of its own (the open document,
@@ -252,7 +262,9 @@ relays; `false` once that turn ends: its stream closes after the last `done`
 (an intermediate `done` goes on), an `error`, `cancelled` or `session_expired`
 frame comes, Stop lets go of it, a new conversation replaces it, or the panel
 unmounts in the middle of it. A turn handed over to the event stream stays
-running meanwhile. It is called on changes only.
+running meanwhile, and so does a relayed turn let go of while the page was
+hidden, until the reopened stream says it is over. It is called on changes
+only.
 
 With `false` comes how the turn ended, `info.ended` (`ChatTurnOutcome`), so a
 host running a sequence of turns goes on only while they are answered:
@@ -313,8 +325,8 @@ it: a `session_expired` frame on either stream, or a `401` whose body's
 "reason": "idle"}}`) on any request the panel makes. *reason* is the
 frame's or the `detail`'s `reason`, `undefined` when it gives none. It comes
 once, whichever request or stream said it first, and again only once
-`requestHeaders` change. The panel goes on as before (the turn on screen
-ends, a refused read-back offers Retry): signing the user out is the host's.
+`requestHeaders` change. Signing the user out is the host's: the panel ends
+the turn on screen, and a refused read-back offers Retry.
 
 `hideConversationList` gives the thread the panel's whole width in inline (or
 fullscreen) mode, for a rail beside the host's own content or an add-in's task
@@ -332,19 +344,23 @@ browser's speech recognition listens in `locale`, a phrase is sent after one
 second of silence (as the user, `onBeforeSend` seeing `source: 'voice'`), and
 the answer is said through `apiEndpoints.tts` in pieces of about 200
 characters, all requested at once and played in order, each piece the route
-fails (or every piece, without the route) in the browser's voice. Then it
-listens again. The thread under the call shows the conversation as usual.
+fails or the browser cannot play (or every piece, without the route) in the
+browser's voice. Then it listens again. The thread under the call shows the
+conversation as usual.
 
 - Only the answer to the question is said: the final `done` of the panel's own
   turn, or of the turn a `folded_into_active_turn` frame (or the steer
   route's `turn_id`) names, never a turn of another tab and never a mid-turn
-  segment on its own. Only the addressed agent (the conversation's, or the one
-  a `transfer_start` hands it to) speaks; replies the turn's other agents give
-  (`answered_by`) show by name, `Did not answer` beside one that carries
-  `mention_failed`.
+  segment on its own. A steer stored that the backend says no turn took
+  (`"answered": false`) gets no answer, and the call listens again. Only the
+  addressed agent (the conversation's, or the one a `transfer_start` hands it
+  to) speaks; replies the turn's other agents give (`answered_by`) show by
+  name, `Did not answer` beside one that carries `mention_failed`.
 - Speech over the answer (barge-in), a tap on the call or Skip stops it and
   listens; a tap while the answer is awaited cancels the question and stops
-  its turn, and so does the handle's `stop()`. The microphone can be muted.
+  its turn, and so does the handle's `stop()`. The microphone can be muted;
+  the call mutes it itself when the recogniser is refused it five times in a
+  row (`not-allowed`, `service-not-allowed`, `audio-capture`).
 - A turn silent for 120 s is checked through `apiEndpoints.pendingApprovals`
   (its `turn: 'running'`): still running, the call waits on; over (or with no
   such route), it gives up on that question and listens again.
@@ -991,15 +1007,18 @@ reconnected with backoff while the page is visible. Once the page has been
 hidden for 60 s it is closed (under HTTP/1.1 a background tab would otherwise
 hold one of the browser's six connections to the origin), and the relayed turn
 it fed is let go of: the segment it was writing goes, those it closed stay.
-Shown again, the stream reopens, the backend's snapshot replays a turn still
-running, and the conversation is read back for what ended meanwhile. The
-backend may end the event stream at any time; a stream it ends, or that drops,
-is reopened, from the shortest delay again once it had delivered a frame or
-lived 5 s (one that closes at once backs off); a relayed turn on screen then
-runs on only if the snapshot replays it within 5 s, and otherwise ends and the
-conversation is read back. A `404` or `405` stops it, and a `401` or `403`
-stops it until `requestHeaders` change, when it is tried once more (a
-refreshed token picks it up).
+That turn may run on: until the reopened stream replays it, shows another
+turn, or replays none within 5 s, sends wait for it (as while a turn winds
+down) and `onTurnRunningChange` says nothing. Shown again, the stream reopens,
+the backend's snapshot replays a turn still running, and the conversation is
+read back for what ended meanwhile. The backend may end the event stream at
+any time; a stream it ends, or that drops, is reopened, from the shortest
+delay again once it had delivered a frame or lived 5 s (one that closes at
+once backs off); a relayed turn on screen then runs on only if the snapshot
+replays it within 5 s, and otherwise ends and the conversation is read back.
+A `404` or `405` stops it, and a `401` or `403` stops it until
+`requestHeaders` change, when it is tried once more (a refreshed token picks
+it up).
 
 With `events` named, every message, steer, decision, page-action answer, Stop
 and "Continue now" carries the same id in `X-Chat-Client-Id` (the

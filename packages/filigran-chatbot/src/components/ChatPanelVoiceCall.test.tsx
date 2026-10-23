@@ -6,10 +6,11 @@
  */
 import { afterEach, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { act, createRef } from 'react';
+import { act, Activity, createRef } from 'react';
+import { createRoot } from 'react-dom/client';
 
 import { fakeBackend, json, settle, sseStream } from '../../test/dom.ts';
-import { agentsRoute, container, mountPanels, text, type Handle } from '../../test/panel.tsx';
+import { agentsRoute, BASE_PROPS, container, mountPanels, text, type Handle } from '../../test/panel.tsx';
 import type { SpeechRecognitionEventLike } from '../hooks/dictationController.ts';
 
 const { render, unmount } = mountPanels();
@@ -17,14 +18,16 @@ const { render, unmount } = mountPanels();
 /** The browser's recogniser, driven by the test. */
 class FakeRecognition {
   static last: FakeRecognition | null = null;
+  static created = 0;
   continuous = false;
   interimResults = false;
   lang = '';
   onresult: ((event: SpeechRecognitionEventLike) => void) | null = null;
-  onerror: (() => void) | null = null;
+  onerror: ((event: { error?: string }) => void) | null = null;
   onend: (() => void) | null = null;
   running = false;
   constructor() {
+    FakeRecognition.created += 1;
     FakeRecognition.last = this;
   }
   start() {
@@ -222,4 +225,105 @@ test('without speech recognition no call starts', async () => {
   });
   assert.equal(started, false);
   assert.equal(overlay(), null);
+});
+
+test('a piece of the answer the browser cannot play is said in the browser’s voice', async () => {
+  const stream = sseStream();
+  fakeBackend([
+    agentsRoute,
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url === '/api/chat/tts' ? new Response(new Blob(['mp3']), { status: 200 }) : undefined),
+  ]);
+  const page = window as unknown as Record<string, unknown>;
+  const global = globalThis as unknown as Record<string, unknown>;
+  const saved = { Audio: global.Audio, speechSynthesis: page.speechSynthesis, SpeechSynthesisUtterance: page.SpeechSynthesisUtterance };
+  // Playback the browser refuses (an autoplay policy, a format it cannot decode).
+  class RefusedAudio {
+    onended: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    play() {
+      return Promise.reject(new DOMException('play() failed', 'NotAllowedError'));
+    }
+    pause() {}
+  }
+  const said: string[] = [];
+  class Utterance {
+    lang = '';
+    onend: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor(public text: string) {}
+  }
+  const synthesis = {
+    speak: (utterance: Utterance) => {
+      said.push(utterance.text);
+      setTimeout(() => utterance.onend?.(), 0);
+    },
+    cancel: () => undefined,
+  };
+  for (const target of [page, global]) {
+    target.Audio = RefusedAudio;
+    target.speechSynthesis = synthesis;
+    target.SpeechSynthesisUtterance = Utterance;
+  }
+  try {
+    const ref = createRef<Handle>();
+    await render({ apiEndpoints: { tts: '/chat/tts' } }, ref);
+    await act(async () => {
+      ref.current!.startVoiceCall();
+      await settle();
+    });
+    await say('Who is APT28?');
+    await act(async () => {
+      stream.send({ type: 'thinking', turn_id: 't1' });
+      stream.send({ type: 'done', content: 'A threat group.', turn_id: 't1', conversation_id: 'c1' });
+      await settle(20);
+    });
+    assert.deepEqual(said, ['A threat group.']);
+    await act(async () => {
+      stream.close();
+      await settle();
+    });
+  } finally {
+    for (const target of [page, global]) Object.assign(target, saved);
+  }
+});
+
+test('a call ended by its panel being hidden starts anew once the panel shows again', async () => {
+  fakeBackend([agentsRoute]);
+  const { ChatPanel } = await import('./ChatPanel.tsx');
+  const ref = createRef<Handle>();
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const show = (mode: 'visible' | 'hidden') =>
+    act(async () => {
+      root.render(
+        <Activity mode={mode}>
+          <ChatPanel {...BASE_PROPS} ref={ref} />
+        </Activity>,
+      );
+      await settle(10);
+    });
+  try {
+    await show('visible');
+    await act(async () => {
+      ref.current!.startVoiceCall();
+      await settle();
+    });
+    await show('hidden');
+    await show('visible');
+    assert.ok(!host.querySelector('[data-testid="filigran-chat-voice-call"]'), 'the call ended with it');
+    const created = FakeRecognition.created;
+    let started = false;
+    await act(async () => {
+      started = ref.current!.startVoiceCall();
+      await settle();
+    });
+    assert.equal(started, true);
+    assert.equal(FakeRecognition.created, created + 1, 'a new call listens');
+    assert.ok(host.querySelector('[data-testid="filigran-chat-voice-call"]'));
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
 });

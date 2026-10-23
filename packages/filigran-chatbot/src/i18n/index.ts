@@ -9,9 +9,6 @@ export type Catalog = Readonly<Record<string, string>>;
 // Languages with a catalog; any other is translated through `t`.
 const CATALOGS: Readonly<Record<string, Catalog>> = { es, fr, ja };
 
-/** The languages the panel speaks besides English. */
-export const PANEL_LANGUAGES = Object.keys(CATALOGS);
-
 /** The catalog for *locale* (`fr-FR` reads `fr`), or none for English and languages the panel lacks. */
 export function catalogFor(locale: string | undefined): Catalog | undefined {
   const tag = locale ?? (typeof navigator !== 'undefined' ? navigator.language : undefined);

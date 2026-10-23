@@ -414,9 +414,9 @@ export interface ChatPanelProps {
   accentColor?: string;
   logoIcon?: React.ReactNode;
   promptSuggestions?: string[];
-  /** Optional text shown as a small chip in the chat header (e.g. draft context). */
+  /** Accepted, and not shown. */
   draftLabel?: string;
-  /** Optional color used for the chat header bottom border in draft context. */
+  /** Color of the line above the composer (e.g. a draft context). */
   draftBorderColor?: string;
   /** Enable resizable sidebar (drag to resize). Only applies when mode is 'sidebar'. */
   resizable?: boolean;
@@ -655,11 +655,12 @@ export interface ChatPanelProps {
   onBeforeSend?: (draft: ChatSendDraft) => ChatSendDecision;
   /**
    * What became of a message held until the turn ended (a send that resolved
-   * `'held'`): sent, refused, dropped, given back to the composer (held when
-   * Stop ended its turn, or taken over by `onBeforeSend` as it leaves; told
-   * once the composer shows it, so `getDraft` reads it), or cancelled (by the
-   * user, or a new conversation). A message sent after a stopped turn ended
-   * goes out once that turn winds down. Messages held together settle together.
+   * `'held'`): sent, refused, dropped (nothing of it the user typed: Stop ended
+   * its turn, or `onBeforeSend` took it over as it leaves), given back to the
+   * composer (the same, with what the user typed for it; told once the
+   * composer shows it, so `getDraft` reads it), or cancelled (by the user, or
+   * a new conversation). A message sent after a stopped turn ended goes out
+   * once that turn winds down. Messages held together settle together.
    */
   onHeldSendSettled?: (text: string, outcome: ChatHeldOutcome) => void;
   /**
@@ -669,13 +670,15 @@ export interface ChatPanelProps {
    * event stream relays; false once it ends - its stream closes after the last
    * `done` (an intermediate one goes on), an `error`, `cancelled` or
    * `session_expired` frame, a Stop, a new conversation - and when the panel
-   * unmounts during a turn. Called on changes only, never with the value it
-   * last gave. With `false` comes how the turn ended (`info.ended`): answered,
-   * stopped or failed (see `ChatTurnOutcome`). After a provisional end (an
-   * `error` or `cancelled` whose stored end is still to come, from a backend
-   * whose turns outlive their stream) `false` comes at once, while the panel
-   * still holds sends as the turn winds down: until its stored end or its
-   * stream's close, at most 5 s.
+   * unmounts during a turn. A relayed turn let go of with the event stream
+   * while the page was hidden runs on until the reopened stream says it is
+   * over. Called on changes only, never with the value it last gave. With
+   * `false` comes how the turn ended (`info.ended`): answered, stopped or
+   * failed (see `ChatTurnOutcome`). After a provisional end (an `error` or
+   * `cancelled` whose stored end is still to come, from a backend whose turns
+   * outlive their stream) `false` comes at once, while the panel still holds
+   * sends as the turn winds down: until its stored end or its stream's close,
+   * at most 5 s.
    */
   onTurnRunningChange?: (running: boolean, info?: ChatTurnEnd) => void;
   /**
@@ -801,11 +804,12 @@ export interface ChatSendDraft {
   turnRunning: boolean;
   /**
    * A message held while a turn ran, asked about again as it leaves, the turn
-   * over (`turnRunning: false`). `false` then gives what the user typed for it
-   * (its text, files, references and mentions) back to the composer, after
-   * what they typed since, and `onHeldSendSettled` says `'returned'`; a held
-   * message the user did not type (a host's or a voice call's) is settled
-   * `'dropped'`.
+   * over (`turnRunning: false`), each send held with it on its own. `false`
+   * then gives what the user typed for it (its text, files, references and
+   * mentions) back to the composer, after what they typed since. A held
+   * message every send of which is taken over is settled `'returned'` by
+   * `onHeldSendSettled`, or `'dropped'` when the user typed none of it (a
+   * host's or a voice call's).
    */
   held?: boolean;
 }

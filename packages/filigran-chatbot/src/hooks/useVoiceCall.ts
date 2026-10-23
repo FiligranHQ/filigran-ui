@@ -27,21 +27,22 @@ interface UseVoiceCallOptions {
   locale?: string;
 }
 
-/** Play *blob*; resolves once it ended, failed, or *signal* aborted it. */
-function playAudio(blob: Blob, signal: AbortSignal): Promise<void> {
-  return new Promise<void>((resolve) => {
+/** Play *blob*; resolves once it ended or *signal* aborted it (`true`), or the browser could not play it (`false`). */
+function playAudio(blob: Blob, signal: AbortSignal): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
-    const done = () => {
+    const done = (played: boolean) => {
       audio.pause();
       URL.revokeObjectURL(url);
-      signal.removeEventListener('abort', done);
-      resolve();
+      signal.removeEventListener('abort', aborted);
+      resolve(played);
     };
-    audio.onended = done;
-    audio.onerror = done;
-    signal.addEventListener('abort', done);
-    audio.play().catch(done);
+    const aborted = () => done(true);
+    audio.onended = () => done(true);
+    audio.onerror = () => done(false);
+    signal.addEventListener('abort', aborted);
+    audio.play().catch(() => done(false));
   });
 }
 
@@ -85,14 +86,15 @@ export function useVoiceCall(options: UseVoiceCallOptions) {
     const { tts, locale } = optionsRef.current;
     const lang = locale || (typeof navigator !== 'undefined' ? navigator.language : undefined);
     const chunks = chunkSpeech(text, VOICE_CHUNK_LENGTH);
-    // A piece the route fails is said in the browser's voice.
+    // A piece the route fails, or the browser cannot play, is said in the browser's voice.
     const audio = chunks.map((chunk) => (tts ? fetchSpeech(panelFetch, tts, chunk, signal).catch(() => null) : Promise.resolve(null)));
     for (let i = 0; i < chunks.length; i += 1) {
       if (signal.aborted) return;
       const blob = await audio[i];
       if (signal.aborted) return;
-      if (blob) await playAudio(blob, signal);
-      else await speakInBrowser(chunks[i], lang, signal);
+      if (blob && (await playAudio(blob, signal))) continue;
+      if (signal.aborted) return;
+      await speakInBrowser(chunks[i], lang, signal);
     }
   }, []);
 
@@ -131,7 +133,7 @@ export function useVoiceCall(options: UseVoiceCallOptions) {
     setSnapshot(null);
   }, []);
 
-  useEffect(() => () => callRef.current?.end(), []);
+  useEffect(() => end, [end]);
 
   return {
     /** The call on screen, or `null`. */
