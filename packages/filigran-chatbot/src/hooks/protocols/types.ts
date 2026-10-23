@@ -102,7 +102,7 @@ export type ParsedAction =
   /**
    * The turn was stopped (`cancelled`): terminal. *provisional*: an end with
    * neither `message_id` nor `reason`, which the backend follows with the
-   * stored end of the same turn (a `done` or `cancelled` carrying
+   * stored end of the same turn (a `done`, `cancelled` or `error` carrying
    * `message_id`); *messageId*: the stored answer's id, when it says, and
    * *raw* the frame then (see `ChatMessage.raw`).
    */

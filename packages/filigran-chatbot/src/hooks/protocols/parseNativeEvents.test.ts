@@ -66,7 +66,7 @@ test('a user message from another device is restored like a history entry', () =
   assert.equal(parsed.action, 'user_message');
   if (parsed.action !== 'user_message') return;
   assert.equal(parsed.message.serverId, 'm1');
-  assert.equal(parsed.message.id, 'relayed-m1');
+  assert.equal(parsed.message.id, 'msg-m1');
   assert.equal(parsed.message.content, 'hello');
   assert.equal(parseRestEvent({ type: 'user_message', message: { role: 'assistant', content: 'x' } }, ctx()).action, 'noop');
 });

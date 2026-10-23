@@ -1,3 +1,4 @@
+import type { ChatSendOutcome } from '../types';
 import type { SpeechRecognitionLike } from './dictationController';
 import {
   answerTranscriptLines,
@@ -16,13 +17,12 @@ import {
  * - `processing`: the question is out, its answer awaited.
  * - `speaking`: the answer is read out; speech over it (barge-in) takes the turn back.
  * - `error`: the question got no answer; listening resumes shortly.
- * - `unsupported`: the browser has no speech recognition.
  * - `ended`: the call is over.
  */
-export type VoiceCallPhase = 'listening' | 'processing' | 'speaking' | 'error' | 'unsupported' | 'ended';
+export type VoiceCallPhase = 'listening' | 'processing' | 'speaking' | 'error' | 'ended';
 
 /** One line of the call's transcript: what the user said, or an answer. */
-export interface VoiceCallLine extends VoiceTranscriptLine {
+interface VoiceCallLine extends VoiceTranscriptLine {
   role: 'user' | 'assistant';
 }
 
@@ -34,19 +34,16 @@ export interface VoiceCallSnapshot {
   lines: VoiceCallLine[];
 }
 
-/** What became of a question sent (see `ChatSendOutcome`). */
-export type VoiceSendOutcome = 'sent' | 'steered' | 'held' | 'dropped' | 'failed';
-
 export interface VoiceCallDeps {
-  /** The browser's recogniser; `null` without one. */
-  recognition: SpeechRecognitionLike | null;
+  /** The browser's recogniser. */
+  recognition: SpeechRecognitionLike;
   lang?: string;
   /**
    * Send a question as the user. `onAccepted` once the backend takes it as a
    * new turn (or the held message goes out); `onSteered` with the turn it
    * joined (`null`: none, it waits for the next one).
    */
-  send: (text: string, hooks: { onAccepted: () => void; onSteered: (turnId: string | null) => void }) => Promise<VoiceSendOutcome>;
+  send: (text: string, hooks: { onAccepted: () => void; onSteered: (turnId: string | null) => void }) => Promise<ChatSendOutcome>;
   /** Say *text* aloud; resolves once said, or as soon as *signal* aborts. */
   speak: (text: string, signal: AbortSignal) => Promise<void>;
   /** The words to say of an answer's markdown. */
@@ -84,7 +81,6 @@ export interface VoiceCallController {
   /** The turn was stopped from outside the call: drop the question, stop speaking, listen. */
   cancel: () => void;
   toggleMute: () => void;
-  readonly snapshot: VoiceCallSnapshot;
 }
 
 /**
@@ -117,17 +113,15 @@ export function createVoiceCall(deps: VoiceCallDeps): VoiceCallController {
   let recognitionRunning = false;
   let recognitionFailures = 0;
 
-  const snapshot = (): VoiceCallSnapshot => ({ phase, muted, heard, lines });
-  const emit = () => deps.onChange(snapshot());
+  const emit = () => deps.onChange({ phase, muted, heard, lines });
   const clear = (id: unknown) => {
     if (id !== null) clearTimer(id);
     return null;
   };
 
-  const wantsRecognition = () => !!recognition && !muted && (phase === 'listening' || phase === 'speaking');
+  const wantsRecognition = () => !muted && (phase === 'listening' || phase === 'speaking');
 
   const syncRecognition = () => {
-    if (!recognition) return;
     if (wantsRecognition()) {
       if (recognitionRunning || restartTimer !== null) return;
       try {
@@ -273,73 +267,64 @@ export function createVoiceCall(deps: VoiceCallDeps): VoiceCallController {
     settle();
   };
 
-  if (recognition) {
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    if (deps.lang) recognition.lang = deps.lang;
-    recognition.onresult = (event) => {
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  if (deps.lang) recognition.lang = deps.lang;
+  recognition.onresult = (event) => {
+    recognitionFailures = 0;
+    if (muted || (phase !== 'listening' && phase !== 'speaking')) return;
+    let finalText = '';
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      if (result.isFinal) finalText += result[0].transcript;
+      else interim += result[0].transcript;
+    }
+    if (phase === 'speaking') {
+      // The call's own voice comes back through the microphone; the user
+      // talking over it takes the turn back.
+      if (!isBargeIn(`${finalText} ${interim}`, speaking)) return;
+      stopSpeaking();
+      said = '';
+      phase = 'listening';
+    }
+    if (finalText.trim()) said = [said, finalText.trim()].filter(Boolean).join(' ');
+    heard = [said, interim.trim()].filter(Boolean).join(' ');
+    silenceTimer = clear(silenceTimer);
+    if (said) {
+      silenceTimer = setTimer(() => {
+        silenceTimer = null;
+        if (phase === 'listening' && !muted && said.trim()) ask(said.trim());
+      }, VOICE_SILENCE_MS);
+    }
+    emit();
+  };
+  recognition.onerror = () => {
+    recognitionFailures += 1;
+  };
+  recognition.onend = () => {
+    recognitionRunning = false;
+    if (!wantsRecognition()) return;
+    if (recognitionFailures >= RECOGNITION_MAX_FAILURES) {
+      // No microphone, or permission refused: muted rather than retried in a
+      // loop; unmuting tries again.
       recognitionFailures = 0;
-      if (muted || (phase !== 'listening' && phase !== 'speaking')) return;
-      let finalText = '';
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) finalText += result[0].transcript;
-        else interim += result[0].transcript;
-      }
-      if (phase === 'speaking') {
-        // The call's own voice comes back through the microphone; the user
-        // talking over it takes the turn back.
-        if (!isBargeIn(`${finalText} ${interim}`, speaking)) return;
-        stopSpeaking();
-        said = '';
-        phase = 'listening';
-      }
-      if (finalText.trim()) said = [said, finalText.trim()].filter(Boolean).join(' ');
-      heard = [said, interim.trim()].filter(Boolean).join(' ');
-      silenceTimer = clear(silenceTimer);
-      if (said) {
-        silenceTimer = setTimer(() => {
-          silenceTimer = null;
-          if (phase === 'listening' && !muted && said.trim()) ask(said.trim());
-        }, VOICE_SILENCE_MS);
-      }
+      muted = true;
       emit();
-    };
-    recognition.onerror = () => {
-      recognitionFailures += 1;
-    };
-    recognition.onend = () => {
-      recognitionRunning = false;
-      if (!wantsRecognition()) return;
-      if (recognitionFailures >= RECOGNITION_MAX_FAILURES) {
-        // No microphone, or permission refused: muted rather than retried in a
-        // loop; unmuting tries again.
-        recognitionFailures = 0;
-        muted = true;
-        emit();
-        return;
-      }
-      if (recognitionFailures === 0) {
-        syncRecognition();
-        return;
-      }
-      restartTimer = setTimer(() => {
-        restartTimer = null;
-        syncRecognition();
-      }, RECOGNITION_RETRY_MS);
-    };
-  }
+      return;
+    }
+    if (recognitionFailures === 0) {
+      syncRecognition();
+      return;
+    }
+    restartTimer = setTimer(() => {
+      restartTimer = null;
+      syncRecognition();
+    }, RECOGNITION_RETRY_MS);
+  };
 
   return {
-    start: () => {
-      if (!recognition) {
-        phase = 'unsupported';
-        emit();
-        return;
-      }
-      listen();
-    },
+    start: listen,
     end: () => {
       if (phase === 'ended') return;
       cancelQuestion();
@@ -348,19 +333,17 @@ export function createVoiceCall(deps: VoiceCallDeps): VoiceCallController {
       retryTimer = clear(retryTimer);
       restartTimer = clear(restartTimer);
       phase = 'ended';
-      if (recognition) {
-        recognition.onresult = null;
-        recognition.onerror = null;
-        recognition.onend = null;
-        if (recognitionRunning) {
-          try {
-            recognition.abort();
-          } catch {
-            // Already ended.
-          }
+      recognition.onresult = null;
+      recognition.onerror = null;
+      recognition.onend = null;
+      if (recognitionRunning) {
+        try {
+          recognition.abort();
+        } catch {
+          // Already ended.
         }
-        recognitionRunning = false;
       }
+      recognitionRunning = false;
       emit();
     },
     frame: (frame, relayed) => handleFrame({ ...frame, relayed: relayed || frame.relayed === true }),
@@ -381,7 +364,7 @@ export function createVoiceCall(deps: VoiceCallDeps): VoiceCallController {
       listen();
     },
     toggleMute: () => {
-      if (phase === 'ended' || phase === 'unsupported') return;
+      if (phase === 'ended') return;
       muted = !muted;
       recognitionFailures = 0;
       if (muted) {
@@ -396,9 +379,6 @@ export function createVoiceCall(deps: VoiceCallDeps): VoiceCallController {
       }
       syncRecognition();
       emit();
-    },
-    get snapshot() {
-      return snapshot();
     },
   };
 }

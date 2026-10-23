@@ -20,7 +20,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - 🎙️ **Dictation** — Speech-to-text via the browser's own Web Speech API; no endpoint, no key, hidden where unsupported
 - ✍️ **Draft Recovery** — Unsent composer text is kept per conversation and restored when the panel reopens
 - 🎨 **Customizable Theme** — Accent color and logo customization
-- 📱 **3 Display Modes** — Floating, sidebar (resizable), and fullscreen
+- 📱 **4 Display Modes** — Floating, sidebar (resizable), fullscreen and inline
 - 💾 **Persistence** — Conversation and sidebar width saved to localStorage
 - 🛠️ **Tool Tracking** — Visual indicators for AI tool usage
 
@@ -66,9 +66,9 @@ import { ChatPanel } from '@filigran/chatbot';
 
 | Prop                | Type                                      | Default      | Description                                                      |
 | ------------------- | ----------------------------------------- | ------------ | ---------------------------------------------------------------- |
-| `mode`              | `'floating' \| 'sidebar' \| 'fullscreen'` | **required** | Display mode                                                     |
-| `onClose`           | `() => void`                              | **required** | Called when close button is clicked                              |
-| `onModeChange`      | `(mode: ChatMode) => void`                | **required** | Called when user switches display mode                           |
+| `mode`              | `'floating' \| 'sidebar' \| 'fullscreen' \| 'inline'` | **required** | Display mode; `inline` fills the host's container — see [Inline mode and the handle](#inline-mode-and-the-handle) |
+| `onClose`           | `() => void`                              | —            | Called when the close button is clicked; the button shows only with it (never in inline mode) |
+| `onModeChange`      | `(mode: ChatMode) => void`                | —            | Called when the user switches display mode; the view switcher shows only with it (never in inline mode) |
 | `apiBaseUrl`        | `string`                                  | **required** | Base URL for chat API endpoints                                  |
 | `user`              | `{ firstName: string }`                   | **required** | Current user info                                                |
 | `topOffset`         | `number`                                  | `0`          | Top offset in pixels (for sidebar/fullscreen with fixed headers) |
@@ -117,7 +117,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onReady`           | `() => void`                              | —            | Called once, when the panel has chosen its agent and read back the conversation on screen; handle calls made earlier wait for it and then run in order |
 | `onHeldSendSettled` | `(text, outcome) => void`                 | —            | What became of a message held until the turn ended (`send` resolved `'held'`): `'sent'`, `'failed'`, `'dropped'`, `'returned'` (given back to the composer: held when Stop ended its turn, or taken over by `onBeforeSend` as it leaves; told once the composer shows it, so `getDraft()` reads it) or `'cancelled'`. A message sent after a stopped turn ended goes out once that turn winds down |
 | `onTurnRunningChange` | `(running: boolean, info?: ChatTurnEnd) => void` | —     | A turn started or stopped running on screen, own or relayed: the state of the Stop button and of `draft.turnRunning`; with `false` comes how it ended, `info.ended`: `'answered'`, `'stopped'` or `'failed'` — see [Host extensions](#host-extensions). After a provisional end (see [Turns that outlive their stream](#turns-that-outlive-their-stream)) `false` comes at once, while sends are still held as the turn winds down: until its stored end or its stream's close, at most 5 s |
-| `onBeforeSend`      | `(draft) => false \| { text?, displayText?, extras? } \| void` | — | Sees every non-empty send first, synchronously (`draft.source`: `'composer'`, `'host'` or `'voice'`; `draft.turnRunning`: a turn is running; a message held while one ran is asked about again, with `turnRunning: false` and `held: true`, before it leaves as a new turn): `false` takes it over (the composer keeps its draft; a held message taken over as it leaves goes back to the composer, after what was typed since, and is settled `'returned'`, or `'dropped'` when the user typed nothing for it), an object rewords it (`text`, what the backend receives), shows the user's bubble other words (`displayText`) or adds body fields (a message with fields of its own never steers: it is held). The panel's own fields cannot be set this way |
+| `onBeforeSend`      | `(draft) => false \| { text?, displayText?, extras? } \| void` | — | Sees every non-empty send first and takes it over (`false`), rewords it, shows the user's bubble other words or adds body fields (a message with fields of its own is held with `holdSendsDuringTurn`) — see [Host extensions](#host-extensions) |
 | `hideConversationList` | `boolean`                              | `false`      | Hides the conversation list of fullscreen and inline modes, for a rail or a task pane (usable from 320 px wide); the header's history menu stands in for it — see [Host extensions](#host-extensions) |
 | `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer. A turn winding down after a provisional end (until its stored end or its stream's close, at most 5 s) holds sends with or without it |
 
@@ -211,6 +211,18 @@ loaded.` and leaves the rest of the answer on screen. A marker's arguments come 
 treat them as untrusted input, never as markup or a URL to follow unchecked. Like `t`, the function props are used as given: keep
 them stable, and a new one re-renders every message, which is also how to
 refresh what they render.
+
+`onBeforeSend(draft)` sees every non-empty send first, synchronously:
+`draft.text`, `draft.source` (`'composer'`, `'host'` or `'voice'`) and
+`draft.turnRunning` (a turn is running). It returns `false` to take the send
+over (the composer keeps its draft), or an object: `text` rewords what the
+backend receives, `displayText` is what the user's bubble shows, and `extras`
+adds body fields. The panel's own fields cannot be set this way, and a message
+with fields of its own never steers: it is held with `holdSendsDuringTurn`. A
+message held while a turn ran is asked about again as it leaves as a new turn
+(`turnRunning: false`, `held: true`); taken over then, what the user typed for
+it goes back to the composer, after what was typed since, and it is settled
+`'returned'` (`'dropped'` when the user typed nothing for it).
 
 A host that wraps what the user typed in context of its own (the open document,
 the page) sends one text and shows another: `onBeforeSend` returns `text`, what
@@ -855,9 +867,8 @@ On a non-2xx the prompt stays on screen with the failure noted and the controls
 re-armed: the turn is still paused either way, so clearing the prompt would
 strand it with nothing able to answer. A `409` means nothing is waiting any more
 (the turn finished, was cancelled, or was answered elsewhere); the stream ending
-then clears the prompt on its own. Stopping the turn also dismisses it — the
-backend waits indefinitely by design, so abandoning the stream is the reviewer's
-only other way out.
+then clears the prompt on its own. Stopping the turn also dismisses it (and,
+with `cancel`, asks the backend to end it).
 
 **Proxied hosts:** the decision goes through the same fetch path as every other
 endpoint — relative to `apiBaseUrl` and honouring `requestHeaders` — so CSRF
@@ -982,23 +993,27 @@ hold one of the browser's six connections to the origin), and the relayed turn
 it fed is let go of: the segment it was writing goes, those it closed stay.
 Shown again, the stream reopens, the backend's snapshot replays a turn still
 running, and the conversation is read back for what ended meanwhile. The
-backend may end the event stream at any time; a stream it ends, or that
-drops, is reopened, from the shortest delay again once it had delivered a frame
-or lived 5 s (one that closes at once backs off); a relayed
-turn on screen then runs on only if the snapshot replays it within 5 s, and
-otherwise ends and the conversation is read back. A `404` or `405` stops it,
-and a `401` or `403` stops it until `requestHeaders` change, when it is tried
-once more (a refreshed token picks it up). With `events` named, every message, steer, decision,
-page-action answer, Stop and "Continue now" carries the same id in `X-Chat-Client-Id` (the
-pending-approval reads and the history do not), which the backend
-uses to never relay a panel's own turn back to it; frames naming the `turn_id`
-of the panel's own turn are dropped too. When the panel's own stream drops
-mid-turn, or ends without the turn's last frame (`done`, `error`, `session_expired` or
+backend may end the event stream at any time; a stream it ends, or that drops,
+is reopened, from the shortest delay again once it had delivered a frame or
+lived 5 s (one that closes at once backs off); a relayed turn on screen then
+runs on only if the snapshot replays it within 5 s, and otherwise ends and the
+conversation is read back. A `404` or `405` stops it, and a `401` or `403`
+stops it until `requestHeaders` change, when it is tried once more (a
+refreshed token picks it up).
+
+With `events` named, every message, steer, decision, page-action answer, Stop
+and "Continue now" carries the same id in `X-Chat-Client-Id` (the
+pending-approval reads and the history do not), which the backend uses to
+never relay a panel's own turn back to it; frames naming the `turn_id` of the
+panel's own turn are dropped too. When the panel's own stream drops mid-turn,
+or ends without the turn's last frame (`done`, `error`, `session_expired` or
 `cancelled`), it takes a new id and picks the turn up from the event stream,
 keeping the segments it closed (or reads the history back when nothing comes
 within 15 s). A read-back that waited for a turn to end joins the thread in
 place: each stored message missing from the screen goes after the one stored
-before it, so nothing lands above messages it follows. A relayed turn uses the frames of `POST /chat/messages`, plus:
+before it, so nothing lands above messages it follows.
+
+A relayed turn uses the frames of `POST /chat/messages`, plus:
 
 - `{"type": "thinking", "resumed": true, "elapsed_s": 42}` — a turn re-attached
   mid-way: the segment being written follows, whole (XTM One's snapshot holds
@@ -1013,11 +1028,10 @@ before it, so nothing lands above messages it follows. A relayed turn uses the f
   stored id. A replay naming another turn means the one on screen ended
   meanwhile: the answer it was writing goes, its stored copy read back.
 - `{"type": "done", "intermediate": true, …}` — a segment closed, the turn goes on.
-- `{"type": "cancelled"}` — the turn was stopped.
 - A provisional end — an `error` or `cancelled` with neither `message_id` nor
   `reason` (a Stop's acknowledgement, a failed loop) — ends the turn on screen
-  at once; the stored end of the same turn that follows it (a `done` or
-  `cancelled` carrying `message_id`, the next end on the stream for a turn
+  at once; the stored end of the same turn that follows it (a `done`,
+  `cancelled` or `error` carrying `message_id`, the next end on the stream for a turn
   naming no `turn_id`) only gives the answer its id, and a `done` its stored
   text and all a live `done` carries (attachments, reasoning, tool trace, the
   agent that answered, context usage, a transfer); also while the panel's own
@@ -1148,10 +1162,10 @@ import { MyLogo } from './icons';
 
 ### Internationalization
 
-The panel speaks English, French, Spanish and Japanese on its own, the
-languages of XTM One: it ships a catalog for each and picks one from `locale`
-(`fr-FR` reads French; English, or a language it lacks, is its own keys). A
-host in another language translates through `t`, as before. A host with nothing to add only passes `locale`:
+The panel speaks English, French, Spanish and Japanese on its own: it ships a
+catalog for each and picks one from `locale` (`fr-FR` reads French; English, or
+a language it lacks, is its own keys). A host in another language translates
+through `t`. A host with nothing to add only passes `locale`:
 
 ```tsx
 <ChatPanel locale={user.language} /* ... */ />

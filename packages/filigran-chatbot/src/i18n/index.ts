@@ -6,7 +6,7 @@ import ja from './ja';
 /** The panel's own translations of its keys, which are its English text. */
 export type Catalog = Readonly<Record<string, string>>;
 
-// The languages XTM One speaks; a host in another one translates through `t`.
+// Languages with a catalog; any other is translated through `t`.
 const CATALOGS: Readonly<Record<string, Catalog>> = { es, fr, ja };
 
 /** The languages the panel speaks besides English. */

@@ -22,11 +22,15 @@ The package is aliased to its **source**, so edits under
 
 ## What you can exercise
 
-- Floating / sidebar / fullscreen modes, dark and light
+- Floating / sidebar / fullscreen / inline modes, dark and light
 - Every host callback the panel exposes (`onMessageFeedback`, `onTaskComplete`,
-  `onDownloadError`, `onRelativeLinkClick`) — each one logs to the
-  **Host callbacks** card, which is the only way to see that the panel really
-  calls them
+  `onDownloadError`, `onRelativeLinkClick`, `onConversationChange`) — each one
+  logs to the **Host callbacks** card, which is the only way to see that the
+  panel really calls them
+- **Host extensions**: every slot a host can fill (header action, banner,
+  composer header, transcript footer, message extras, sidebar row action and
+  section), a marker card, `@agent` mentions and sends held until the answer
+  ends
 - The verification checklist on the page
 
 ## XTM One's web chat contract
@@ -149,6 +153,8 @@ Type one of these into the panel to pick a scenario:
 | `show me json`      | A whole message that is raw JSON — should render as a fenced `json` block            |
 | `nested fences`     | A ` ```markdown ` block containing its own fences, plus trailing prose that must survive |
 | `slow answer`       | A stalled turn: the elapsed counter ticks every second between heartbeats, then the waiting game takes over |
+| `wait a moment`     | An announced wait with its countdown; on the web chat contract, **Continue now** ends it early |
+| `fail please`       | A failed turn: the provisional error ends it at once, then its stored end gives the answer its id |
 | `long thread`       | 200 backfilled messages — reload after sending to hit the session-restore path and the render window |
 
 Anything else gets the `render everything` answer.

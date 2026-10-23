@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useInsertionEffect, useRef, useState } from 'react';
-import { chunkSpeech } from '../utils/speech';
+import { chunkSpeech, fetchSpeech, type TtsRoute } from '../utils/speech';
 import { getSpeechRecognition } from './useDictation';
-import type { TtsRoute } from './useSpeechReader';
 import { createVoiceCall, type VoiceCallController, type VoiceCallDeps, type VoiceCallSnapshot } from './voiceCallController';
 import { probeTurn } from './voiceTurn';
 import { usePanelFetch } from './usePanelRequests';
 
 /** Longest piece of an answer spoken at once: the first one plays while the next are made. */
-export const VOICE_CHUNK_LENGTH = 200;
+const VOICE_CHUNK_LENGTH = 200;
 
 /** Whether this browser can hold a voice call: it needs speech recognition. */
 export const voiceCallSupported = (): boolean => getSpeechRecognition() !== null;
@@ -26,21 +25,6 @@ interface UseVoiceCallOptions {
   tts?: TtsRoute;
   /** Language listened for and spoken in; the browser's own when unset. */
   locale?: string;
-}
-
-/** Fetch the backend's audio for *text*; `null` when the route fails. */
-async function fetchSpeech(fetchImpl: typeof fetch, route: TtsRoute, text: string, signal: AbortSignal): Promise<Blob | null> {
-  try {
-    const res = await fetchImpl(route.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(route.requestHeaders ?? {}) },
-      body: JSON.stringify({ text, format: 'mp3' }),
-      signal,
-    });
-    return res.ok ? await res.blob() : null;
-  } catch {
-    return null;
-  }
 }
 
 /** Play *blob*; resolves once it ended, failed, or *signal* aborted it. */
@@ -101,7 +85,8 @@ export function useVoiceCall(options: UseVoiceCallOptions) {
     const { tts, locale } = optionsRef.current;
     const lang = locale || (typeof navigator !== 'undefined' ? navigator.language : undefined);
     const chunks = chunkSpeech(text, VOICE_CHUNK_LENGTH);
-    const audio = chunks.map((chunk) => (tts ? fetchSpeech(panelFetch, tts, chunk, signal) : Promise.resolve(null)));
+    // A piece the route fails is said in the browser's voice.
+    const audio = chunks.map((chunk) => (tts ? fetchSpeech(panelFetch, tts, chunk, signal).catch(() => null) : Promise.resolve(null)));
     for (let i = 0; i < chunks.length; i += 1) {
       if (signal.aborted) return;
       const blob = await audio[i];

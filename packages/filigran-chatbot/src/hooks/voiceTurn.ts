@@ -16,9 +16,9 @@
  * spoken as the addressed agent's answer and never dropped. On such a turn the
  * addressed agent's own reply is attributed to it too, so the attribution is
  * compared with the addressed agent rather than read as "someone else".
- *
- * Kept free of local imports so `node --test` runs it as is.
  */
+
+import { parseAnsweredBy } from './protocols/parseRestEvent';
 
 /** A chat frame, as far as a voice call reads it. */
 export interface VoiceFrame {
@@ -85,7 +85,8 @@ export type VoiceVerdict =
   | { kind: 'progress' }
   /** `text` is the addressed agent's answer (empty when it said nothing after the question); `others` the rest of the turn. */
   | { kind: 'answer'; text: string; others: VoiceAgentReply[] }
-  | { kind: 'failed'; message: string };
+  /** The answering turn ended without an answer, or none will come. */
+  | { kind: 'failed' };
 
 const TURN_PROGRESS = new Set(['thinking', 'status', 'stream', 'turn_started']);
 
@@ -116,13 +117,10 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-/** The agent a reply of a multi-agent turn names (`answered_by`), when well-formed. */
+/** The agent a reply of a multi-agent turn names (`answered_by`), when it gives both its id and its name. */
 function attribution(frame: VoiceFrame): { agentId: string; agentName: string } | null {
-  const by = frame.answered_by;
-  if (typeof by !== 'object' || by === null) return null;
-  const { agent_id: agentId, agent_name: agentName } = by as Record<string, unknown>;
-  if (typeof agentId !== 'string' || typeof agentName !== 'string' || !agentName.trim()) return null;
-  return { agentId, agentName };
+  const by = parseAnsweredBy(frame.answered_by);
+  return by?.agentId && by.agentName?.trim() ? { agentId: by.agentId, agentName: by.agentName } : null;
 }
 
 /**
@@ -139,13 +137,13 @@ export function classifyVoiceFrame(pending: PendingVoiceAnswer, frame: VoiceFram
   } else if (frame.type === 'folded_into_active_turn') {
     // The question joined a turn that was already running: its frames follow
     // under this id. Queued for the next turn with no turn running
-    // (`folded: false`), nothing answers it now. Without an id otherwise (an
-    // older server) the idle check settles the wait.
+    // (`folded: false`), nothing answers it now. Without an id, the idle
+    // check settles the wait.
     if (turnId !== null) {
       pending.turnId = turnId;
       pending.folded = true;
     } else if (frame.folded === false) {
-      return { kind: 'failed', message: 'The message was queued for the next response.' };
+      return { kind: 'failed' };
     }
     return { kind: 'progress' };
   } else if (turnId !== null && pending.turnId === null) {
@@ -159,7 +157,7 @@ export function classifyVoiceFrame(pending: PendingVoiceAnswer, frame: VoiceFram
     typeof frame.agent_id === 'string' &&
     frame.agent_id &&
     // Only a transfer in the answering turn - named above - moves the
-    // addressed agent; a frame that names no turn comes from an older server.
+    // addressed agent; a frame naming no turn counts too.
     (turnId === null || turnId === pending.turnId)
   ) {
     // The conversation now belongs to the agent it was transferred to.
@@ -186,8 +184,7 @@ export function classifyVoiceFrame(pending: PendingVoiceAnswer, frame: VoiceFram
     const spoken = pending.folded ? [content] : [...pending.segments, content];
     return { kind: 'answer', text: spoken.filter(Boolean).join('\n\n'), others: pending.others };
   }
-  if (type === 'cancelled') return { kind: 'failed', message: 'The response was stopped.' };
-  if (type === 'error') return { kind: 'failed', message: text(frame.content) || 'Unknown error' };
+  if (type === 'cancelled' || type === 'error') return { kind: 'failed' };
   return { kind: 'ignore' };
 }
 

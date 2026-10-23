@@ -9,7 +9,7 @@ export interface AgentMention {
 }
 
 /** How many agents the `@` menu offers at once, above the conversations. */
-export const AGENT_MENU_LIMIT = 5;
+const AGENT_MENU_LIMIT = 5;
 
 /** What `@` inserts for *agent*: its slug when it reads back as one token, else its name hyphenated. */
 export function agentMentionKey(agent: Pick<XtmAgent, 'name' | 'slug'>): string | null {

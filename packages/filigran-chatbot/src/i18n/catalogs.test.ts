@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 
 import { catalogFor, createTranslate, PANEL_LANGUAGES } from './index.ts';
-import { panelKeys } from './keys.ts';
+import { panelKeys } from '../../test/i18nKeys.ts';
 
 const keys = panelKeys(fileURLToPath(new URL('..', import.meta.url)));
 const placeholders = (text: string) => (text.match(/\{\w+\}/g) ?? []).sort().join();

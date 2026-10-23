@@ -19,7 +19,7 @@ export interface FeedbackEntry {
 
 /**
  * The key an answer's rating is kept under. Not `id` alone: a restore renames
- * every row (`restored-<n>`), and one runs right after the first turn of a new
+ * the rows a turn wrote, and one runs right after the first turn of a new
  * conversation - the persisted id is what stays the same.
  */
 export const feedbackKeyOf = (msg: ChatMessage): string => msg.serverId ?? msg.id;

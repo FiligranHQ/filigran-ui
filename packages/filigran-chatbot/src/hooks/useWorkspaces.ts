@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatWorkspace } from '../types';
-import { isTransientListFailure, parseWorkspaces, refusalMessage } from '../utils/workspaces';
+import { readRefusalDetail } from '../utils/refusal';
+import { isTransientListFailure, parseWorkspaces } from '../utils/workspaces';
 import { usePanelFetch } from './usePanelRequests';
 
 interface UseWorkspacesOptions {
@@ -73,7 +74,7 @@ export function useWorkspaces({ apiBaseUrl, apiEndpoints, backendType = 'rest', 
           headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(requestHeaders ?? {}) },
           ...(body ? { body: JSON.stringify(body) } : {}),
         });
-        if (!res.ok) return { ok: false, error: await refusalMessage(res) };
+        if (!res.ok) return { ok: false, error: await readRefusalDetail(res) };
         const created = res.status === 204 ? [] : parseWorkspaces([await res.json().catch(() => null)]);
         await refreshWorkspaces();
         return { ok: true, workspace: created[0] };

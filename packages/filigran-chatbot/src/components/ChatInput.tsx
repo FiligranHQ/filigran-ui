@@ -2,11 +2,11 @@ import { useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
 import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
-import { useConversationReferenceMenu } from '../hooks/useConversationReferenceMenu';
+import { useMentionMenu } from '../hooks/useMentionMenu';
 import { useDictation } from '../hooks/useDictation';
 import { referencedConversations } from '../utils/conversationRefs';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
-import { ConversationReferenceMenu } from './ConversationReferenceMenu';
+import { MentionMenu } from './MentionMenu';
 import { PromptPicker } from './PromptPicker';
 import { QuotaIndicator } from './QuotaIndicator';
 import { Tooltip } from './Tooltip';
@@ -107,7 +107,7 @@ export const ChatInput = ({
     () => (mentionAgents && onPickMention ? { agents: mentionAgents, onPick: onPickMention } : undefined),
     [mentionAgents, onPickMention],
   );
-  const referenceMenu = useConversationReferenceMenu({
+  const mentionMenu = useMentionMenu({
     url: conversationReferences?.url ?? null,
     requestHeaders: conversationReferences?.requestHeaders,
     conversationId: conversationReferences?.conversationId,
@@ -167,16 +167,16 @@ export const ChatInput = ({
   // A steer reaches the running loop as text alone, so the agent would never
   // read a conversation it references: such a message waits, like a file.
   // A mention routes the message to another agent: it waits for the turn too.
-  const hasReferences =
+  const waitsForTurn =
     (Boolean(conversationReferences) && referencedConversations(conversationReferences?.refs ?? NO_REFS, inputValue).length > 0) ||
     (Boolean(agentMentions) && mentionedAgentIds(agentMentions?.mentions ?? [], inputValue).length > 0);
   // Show the accent Send button NEXT to Stop while generating: text-only
-  // sends can steer the running agent. With attachments selected the send
-  // must wait for the current response, so only Stop is shown.
+  // sends can steer the running agent; attachments steer only with
+  // steerAttachments.
   const showSteerSend =
     isLoading &&
     canSteer &&
-    !hasReferences &&
+    !waitsForTurn &&
     !hasFilesUploading &&
     !hasFailedFiles &&
     (hasAttachments ? steerAttachments : Boolean(inputValue.trim()));
@@ -195,7 +195,7 @@ export const ChatInput = ({
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // The menu's keys first (arrows, Enter / Tab, Escape) while it is open.
-    if (referenceMenu.onKeyDown(e)) return;
+    if (mentionMenu.onKeyDown(e)) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send();
@@ -208,12 +208,12 @@ export const ChatInput = ({
 
   const footerText = showHoldSend
     ? t('Enter to send when the answer ends · Esc to stop')
-    : isLoading && canSteer && (!hasAttachments || steerAttachments) && !hasReferences
+    : isLoading && canSteer && (!hasAttachments || steerAttachments) && !waitsForTurn
       ? t('Enter to send now · Esc to stop')
       : isLoading && hasAttachments
         ? t('Attachments wait for the current response')
-        : isLoading && hasReferences
-          ? t('Referenced conversations wait for the current response')
+        : isLoading && waitsForTurn
+          ? t('This message waits for the current response')
           : t('Uses AI. Verify results.');
 
   return (
@@ -307,24 +307,24 @@ export const ChatInput = ({
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
           // The caret moved without the text changing: the @ menu follows it.
-          onKeyUp={referenceMenu.sync}
-          onClick={referenceMenu.sync}
-          onFocus={referenceMenu.sync}
-          onBlur={referenceMenu.close}
-          {...referenceMenu.textareaAria}
+          onKeyUp={mentionMenu.sync}
+          onClick={mentionMenu.sync}
+          onFocus={mentionMenu.sync}
+          onBlur={mentionMenu.close}
+          {...mentionMenu.textareaAria}
           onPaste={onPaste}
           rows={1}
           className="flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 filigran-chat-scrollable"
           style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}
         />
-        <ConversationReferenceMenu
-          view={referenceMenu.view}
-          items={referenceMenu.items}
-          activeIndex={referenceMenu.activeIndex}
-          listboxId={referenceMenu.listboxId}
-          optionId={referenceMenu.optionId}
-          onHover={referenceMenu.setActiveIndex}
-          onPick={referenceMenu.pick}
+        <MentionMenu
+          view={mentionMenu.view}
+          items={mentionMenu.items}
+          activeIndex={mentionMenu.activeIndex}
+          listboxId={mentionMenu.listboxId}
+          optionId={mentionMenu.optionId}
+          onHover={mentionMenu.setActiveIndex}
+          onPick={mentionMenu.pick}
           t={t}
         />
         {dictation.supported && (

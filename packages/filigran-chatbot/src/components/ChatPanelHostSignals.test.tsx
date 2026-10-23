@@ -4,68 +4,19 @@
  * user's session, whether a message slot draws a streaming answer, the
  * backend's own fields of each message, and where the waiting game leads.
  */
-import { afterEach, beforeEach, test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, createRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 
-import { fakeBackend, installDom, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { fakeBackend, json, settle, sseStream } from '../../test/dom.ts';
+import { agentsRoute, container, eventsRoute, finish, mountPanels, restoreRoute, type Handle, type Props } from '../../test/panel.tsx';
 
-installDom();
-const { ChatPanel } = await import('./ChatPanel.tsx');
 const { waitingGameUrl } = await import('./ChatWaitingPanel.tsx');
-type Props = import('../types.ts').ChatPanelProps;
-type Handle = import('../types.ts').ChatPanelHandle;
 type Info = import('../types.ts').ChatStreamEventInfo;
 type Message = import('../types.ts').ChatMessage;
 
-const AGENTS = [{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null }];
-
-let container: HTMLElement;
-let root: Root;
-
-beforeEach(() => {
-  localStorage.clear();
-  sessionStorage.clear();
-  container = document.createElement('div');
-  document.body.appendChild(container);
-  root = createRoot(container);
-});
-
-afterEach(async () => {
-  await act(async () => root.unmount());
-  container.remove();
-});
-
-const baseProps: Props = { mode: 'inline', apiBaseUrl: '/api', user: { firstName: 'Ada' } };
-
-async function render(props: Partial<Props>, ref?: React.Ref<Handle>) {
-  await act(async () => {
-    root.render(<ChatPanel {...baseProps} {...props} ref={ref} />);
-  });
-  await act(async () => settle());
-}
-
-const agentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(AGENTS) : undefined);
-const restoreRoute =
-  (messages: unknown[] = [], extra: Record<string, unknown> = {}) =>
-  (req: RecordedRequest) =>
-    req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages, ...extra }) : undefined;
-const finish = (...streams: { close: () => void }[]) =>
-  act(async () => {
-    for (const stream of streams) stream.close();
-    await settle();
-  });
+const { render, unmount } = mountPanels();
 const sessionExpired = (reason?: string) => json({ detail: { code: 'session_expired', ...(reason ? { reason } : {}) } }, 401);
-
-function eventsRoute(subscriptions: ReturnType<typeof sseStream>[]) {
-  return (req: RecordedRequest) => {
-    if (!req.url.startsWith('/api/chat/conversations/c1/events')) return undefined;
-    const events = sseStream();
-    subscriptions.push(events);
-    return events.response();
-  };
-}
 
 test('onStreamEvent says which frame ends a turn, provisionally or stored, and which acknowledges a replay', async () => {
   const subscriptions: ReturnType<typeof sseStream>[] = [];
@@ -148,8 +99,7 @@ test('a 401 saying the session ended on a read-back reaches the host; another 40
   assert.deepEqual(heard, [undefined], 'no reason given, none made up');
   assert.ok(container.querySelector('button')?.textContent, 'the panel still shows itself');
 
-  await act(async () => root.unmount());
-  root = createRoot(container);
+  await unmount();
   const heardAgain: (string | undefined)[] = [];
   fakeBackend([
     agentsRoute,

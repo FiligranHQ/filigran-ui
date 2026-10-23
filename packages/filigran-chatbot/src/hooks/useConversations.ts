@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatConversationSummary } from '../types';
-import { refusalMessage, revertMove } from '../utils/workspaces';
+import { readRefusalDetail } from '../utils/refusal';
+import { revertMove } from '../utils/workspaces';
 import { usePanelFetch } from './usePanelRequests';
 
 interface UseConversationsOptions {
@@ -182,7 +183,7 @@ export function useConversations({
         });
         if (!res.ok) {
           revert();
-          return (await refusalMessage(res)) ?? '';
+          return (await readRefusalDetail(res)) ?? '';
         }
         return null;
       } catch {

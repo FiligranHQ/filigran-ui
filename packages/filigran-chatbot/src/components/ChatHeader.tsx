@@ -4,7 +4,6 @@ import { agentIconKind, groupAgents, timeAgo, translate } from '../utils';
 import {
   AlertTriangleIcon,
   ChevronDownIcon,
-  CheckIcon,
   CloseIcon,
   EditIcon,
   ExternalLinkIcon,
@@ -17,6 +16,7 @@ import {
   TrashIcon,
   UserPlusIcon,
 } from './icons';
+import { ClearAllConversations } from './ClearAllConversations';
 import { Dropdown } from './Dropdown';
 import { Spinner } from './Spinner';
 import { Tooltip } from './Tooltip';
@@ -113,10 +113,6 @@ export const ChatHeader = ({
   const agentAnchorRef = useRef<HTMLButtonElement>(null);
   const modeAnchorRef = useRef<HTMLButtonElement>(null);
   const historyAnchorRef = useRef<HTMLButtonElement>(null);
-  const [confirmingClear, setConfirmingClear] = useState(false);
-  useEffect(() => {
-    if (!historyMenuOpen) setConfirmingClear(false);
-  }, [historyMenuOpen]);
 
   // Agent filter, mirroring the XTM One web chat's picker. Reset whenever the
   // menu closes so re-opening never starts on a stale query with most agents
@@ -350,42 +346,15 @@ export const ChatHeader = ({
               <span className="text-[0.8125rem] text-gray-700 dark:text-white/70">{t('New conversation')}</span>
             </button>
             {onClearAll && conversations.length > 0 && (
-              <div className="flex items-center gap-1 px-4 pb-2">
-                {confirmingClear ? (
-                  <>
-                    <span className="flex-1 text-[0.7rem] text-red-600 dark:text-red-400">{t('Delete all conversations?')}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setConfirmingClear(false);
-                        onHistoryMenuClose?.();
-                        onClearAll();
-                      }}
-                      aria-label={t('Delete all conversations')}
-                      className="p-1 rounded-md text-gray-400 dark:text-white/40 hover:text-red-500 transition-colors"
-                    >
-                      <CheckIcon size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingClear(false)}
-                      aria-label={t('Cancel')}
-                      className="p-1 rounded-md text-gray-400 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
-                    >
-                      <CloseIcon size={13} />
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingClear(true)}
-                    className="flex items-center gap-1.5 rounded-md py-0.5 text-[0.7rem] text-gray-400 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                  >
-                    <TrashIcon size={12} />
-                    {t('Clear all conversations')}
-                  </button>
-                )}
-              </div>
+              <ClearAllConversations
+                onClear={() => {
+                  onHistoryMenuClose?.();
+                  onClearAll();
+                }}
+                className="px-3 pb-2"
+                iconButtonClass="p-1 rounded-md text-gray-400 dark:text-white/40 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                t={t}
+              />
             )}
           </Dropdown>
         </>

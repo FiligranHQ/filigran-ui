@@ -3,58 +3,17 @@
  * cards, the text transform, the layout slots, message and row extras, the
  * status line and in-host artifact opening.
  */
-import { afterEach, beforeEach, test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, createRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 
-import { fakeBackend, installDom, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { fakeBackend, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { agentsRoute, BASE_PROPS, container, mountPanels, restoreRoute, text, type Handle } from '../../test/panel.tsx';
 
-installDom();
-const { ChatPanel } = await import('./ChatPanel.tsx');
-type Props = import('../types.ts').ChatPanelProps;
-type Handle = import('../types.ts').ChatPanelHandle;
+const { render } = mountPanels({ ...BASE_PROPS, onClose: () => undefined, onModeChange: () => undefined });
 
-const AGENTS = [{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null }];
-
-let container: HTMLElement;
-let root: Root;
-
-beforeEach(() => {
-  localStorage.clear();
-  sessionStorage.clear();
-  container = document.createElement('div');
-  document.body.appendChild(container);
-  root = createRoot(container);
-});
-
-afterEach(async () => {
-  await act(async () => root.unmount());
-  container.remove();
-});
-
-const baseProps: Props = {
-  mode: 'inline',
-  onClose: () => undefined,
-  onModeChange: () => undefined,
-  apiBaseUrl: '/api',
-  user: { firstName: 'Ada' },
-};
-
-async function render(props: Partial<Props>, ref?: React.Ref<Handle>) {
-  await act(async () => {
-    root.render(<ChatPanel {...baseProps} {...props} ref={ref} />);
-  });
-  await act(async () => settle());
-}
-
-const agentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(AGENTS) : undefined);
-const restoreRoute = (messages: unknown[]) => (req: RecordedRequest) =>
-  req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages }) : undefined;
 const historyRoute = (req: RecordedRequest) =>
   req.url === '/api/chat/sessions' && req.method === 'GET' ? json([{ conversation_id: 'c1', title: 'Hunting APT28' }]) : undefined;
-
-const text = () => container.textContent ?? '';
 
 test("a host's marker renders its card in place, and one that throws takes only itself down", async () => {
   fakeBackend([
@@ -309,16 +268,7 @@ test("the status line says what the host's label says", async () => {
   const stream = sseStream();
   fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
   const ref = createRef<Handle>();
-  await act(async () => {
-    root.render(
-      <ChatPanel
-        {...baseProps}
-        ref={ref}
-        statusLabel={(s) => (s.status === 'tool_start' && s.tools?.[0] === 'run_command' ? 'Running on your machine…' : undefined)}
-      />,
-    );
-    await settle();
-  });
+  await render({ statusLabel: (s) => (s.status === 'tool_start' && s.tools?.[0] === 'run_command' ? 'Running on your machine…' : undefined) }, ref);
   await act(async () => {
     ref.current!.send('go');
     await settle();

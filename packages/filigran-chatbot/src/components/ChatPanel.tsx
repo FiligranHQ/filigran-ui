@@ -2,13 +2,13 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import type { ChatArtifact, ChatArtifactKind, ChatAttachment, ChatPanelHandle, ChatPanelProps, ChatSendOutcome, Translate } from '../types';
 import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
 import { speakableText } from '../utils/speech';
-import { randomId } from '../utils/randomId';
+import { optInRoute } from '../utils/routes';
 import { createTranslate } from '../i18n';
 import { feedbackBaseUrl } from '../utils/feedback';
 import { conversationReferencesUrl } from '../utils/conversationRefs';
 import { pendingWorkspaceStillFileable, returnRefreshDue } from '../utils/workspaces';
 import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
-import { parseArtifact, parseContextUsage, parseRestoredMessages } from '../hooks/protocols/parseRestEvent';
+import { parseArtifact, parseContextUsage, parseRestoredMessages, storedMessageId } from '../hooks/protocols/parseRestEvent';
 import { askHost, mergeReadBack, useChat } from '../hooks/useChat';
 import { findAgent, useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
@@ -234,8 +234,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     onAgentChange: onAgentChangeProp ? onAgentChange : undefined,
   });
 
-  // The conversation whose history is on screen: its event stream is followed
-  // only from then on, so a relayed turn lands after the restored transcript.
+  // The conversation whose restore settled (read back, failed or nothing to
+  // read): the skeleton and onReady wait for it.
   const [historySettledId, setHistorySettledId] = useState<string | null>(null);
   const restoringIdRef = useRef<string | null>(null);
   // The conversation whose history this panel actually holds: only its event
@@ -292,6 +292,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     handleSendMessage,
     sentTextOf,
     skipWait,
+    readPendingApprovals,
     heldMessage,
     notice,
     cancelHeldMessage,
@@ -521,11 +522,10 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   }, [threadReferencesConversations, historyEnabled, refreshConversations, conversationId]);
 
   // Older messages the backend holds beyond the restored ones (`messagesPage`).
-  const messagesPageBase =
-    backendType === 'rest' && !apiEndpoints?.singleEndpoint && apiEndpoints?.messagesPage ? `${apiBaseUrl}${apiEndpoints.messagesPage}` : null;
+  const messagesPageBase = optInRoute(apiBaseUrl, apiEndpoints, backendType, 'messagesPage');
   const [serverHasEarlier, setServerHasEarlier] = useState(false);
-  const ttsPath = backendType === 'rest' && !apiEndpoints?.singleEndpoint ? apiEndpoints?.tts : null;
-  const ttsRoute = useMemo(() => (ttsPath ? { url: `${apiBaseUrl}${ttsPath}`, requestHeaders } : undefined), [ttsPath, apiBaseUrl, requestHeaders]);
+  const ttsUrl = optInRoute(apiBaseUrl, apiEndpoints, backendType, 'tts');
+  const ttsRoute = useMemo(() => (ttsUrl ? { url: ttsUrl, requestHeaders } : undefined), [ttsUrl, requestHeaders]);
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
   useEffect(() => setServerHasEarlier(false), [conversationId]);
@@ -549,7 +549,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       const known = new Set(messagesRef.current.map((m) => m.serverId).filter(Boolean));
       const earlier = parseRestoredMessages(data?.messages)
         .filter((m) => !m.serverId || !known.has(m.serverId))
-        .map((m) => ({ ...m, id: m.serverId ? `msg-${m.serverId}` : randomId() }));
+        .map((m) => ({ ...m, id: storedMessageId(m.serverId) }));
       setMessages((prev) => [...earlier, ...prev]);
       setServerHasEarlier(data?.has_more === true && earlier.length > 0);
       return earlier.length;
@@ -1125,24 +1125,15 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     (conversationAgentName ? agents.find((a) => a.name === conversationAgentName)?.id : undefined) ??
     selectedAgent?.id ??
     null;
-  const pendingApprovalsBase =
-    backendType === 'rest' && !apiEndpoints?.singleEndpoint && apiEndpoints?.pendingApprovals
-      ? `${apiBaseUrl}${apiEndpoints.pendingApprovals}`
-      : null;
   const voice = useVoiceCall({
     send: (text, hooks) => handleSendMessageRef.current({ text, source: 'voice', onSent: hooks.onAccepted, onSteered: hooks.onSteered }),
     stopTurn: () => handleStopGeneratingRef.current(),
     // Whether the turn still runs, read where a paused turn is recovered from.
-    readTurnState: pendingApprovalsBase
+    readTurnState: readPendingApprovals
       ? async () => {
           const convId = conversationIdRef.current;
-          if (!convId) return null;
-          const res = await panelFetch(`${pendingApprovalsBase}/${encodeURIComponent(convId)}/pending-approvals`, {
-            headers: { ...(requestHeaders ?? {}) },
-          });
-          if (!res.ok) return null;
-          const data = await res.json();
-          return { running: data?.turn === 'running' };
+          const state = convId ? await readPendingApprovals(convId) : null;
+          return state && { running: state.turnRunning };
         }
       : undefined,
     addressedAgentId: () => addressedAgentId,

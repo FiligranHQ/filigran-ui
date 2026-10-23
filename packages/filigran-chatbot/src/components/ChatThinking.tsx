@@ -334,7 +334,7 @@ export const ChatThinking = ({
 }: ChatThinkingProps) => {
   const visual = resolveStatusVisual(agentStatus, t);
   const { StatusIcon, showDots } = visual;
-  const label = (agentStatus && statusLabel?.(agentStatus)) || visual.label;
+  const label = statusLineText(agentStatus, t, statusLabel);
   const thinkingContent = agentStatus?.thinkingContent;
 
   // Tick the elapsed counter every second. The backend only reports a fresh

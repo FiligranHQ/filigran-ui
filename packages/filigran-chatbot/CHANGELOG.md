@@ -40,10 +40,8 @@ This file starts at 3.10.0; earlier releases are on the
   (`status: wait_start`, with a countdown), `cancelled`, an intermediate
   `done` and the agent that `answered_by` a segment. A provisional end (an
   `error` or `cancelled` with neither `message_id` nor `reason`) ends the turn
-  on screen at once, and the stored end of the same turn that follows it gives
-  the answer its persisted id, and a `done` its text and all a live `done`
-  carries, opening no second answer (the panel's own stream is read on for
-  it).
+  at once; the stored end that follows gives the answer its id and a `done`'s
+  content.
 - History is restored with no agent list (`apiEndpoints.agents: null`).
 - A host can render its own cards for the `[[KIND:args]]` markers of an
   answer (`markerRenderers`), by marker name, and take over the built-in
@@ -125,18 +123,11 @@ This file starts at 3.10.0; earlier releases are on the
   it leaves; told once the composer shows it, so `getDraft()` reads it) or
   `'cancelled'`.
 - `ChatSendDraft.source` can be `'voice'`, for a question spoken in a voice call.
-- `onTurnRunningChange(running)` tells the host when a turn starts or stops
-  running on screen, own or relayed: the state of the Stop button, the status
-  line and `draft.turnRunning`. `false` comes once the turn's stream closes
-  after its last `done` (not an intermediate one), on `error`, `cancelled` or
-  `session_expired`, on Stop, a new conversation, or the panel unmounting
-  mid-turn; it is called on changes only. With `false` comes how the turn
-  ended, `onTurnRunningChange(false, { ended })` (`ChatTurnEnd`,
-  `ChatTurnOutcome`): `'answered'` (its last `done`), `'stopped'` (`cancelled`,
-  even after the last `done`, `session_expired`, Stop, a new conversation, the
-  panel unmounting, or a stream closed before its last `done` that nothing
-  carried on) or `'failed'` (an `error` frame, or a send refused or
-  unreachable). A host no longer re-derives either from `onStreamEvent`.
+- `onTurnRunningChange(running, info)` tells the host when a turn starts or
+  stops running on screen, own or relayed, and with `false` how it ended
+  (`info.ended`: `'answered'`, `'stopped'` or `'failed'`): see
+  [Host extensions](README.md#host-extensions) and
+  [Turns that outlive their stream](README.md#turns-that-outlive-their-stream).
 - `send(text, { displayText })` on the handle: the backend receives *text*
   and the user's bubble shows `displayText`, as with `onBeforeSend`'s
   `displayText` (which wins when it gives one).
@@ -146,8 +137,7 @@ This file starts at 3.10.0; earlier releases are on the
   for a host's own rendering of a turn several agents answer. The panel's own
   rendering is unchanged.
 - A `session_expired` frame on the message stream or the event stream ends
-  the turn on screen at once, keeping what it wrote, rather than handing an
-  own turn over to an event stream that cannot replay it.
+  the turn on screen at once, keeping what it wrote.
 - `@filigran/chatbot/markdown` also exports the answer-marker helpers the
   panel reads markers with: `splitAnswerMarkers`, `stripAnswerMarkers`,
   `markerKinds` and the `AnswerPart` type (and `ChatArtifactKind`), still free
@@ -185,9 +175,9 @@ This file starts at 3.10.0; earlier releases are on the
   `{agentDashboardUrl}/chat?arcade=play`.
 - New exported types: `ChatPanelHandle`, `ChatPanelMode`, `ChatSendOptions`,
   `ChatSendOutcome`, `ChatSendDraft`, `ChatSendDecision`, `ChatHeldOutcome`,
-  `ChatMarkerRenderer`, `ChatMarkerContext`, `ChatCodeBlockRenderer`,
-  `ChatCodeBlockContext`, `ChatStreamEventInfo`, `ChatMessageSlotContext`,
-  `ChatAnsweredBy` and `AgentStatusState`.
+  `ChatTurnEnd`, `ChatTurnOutcome`, `ChatMarkerRenderer`, `ChatMarkerContext`,
+  `ChatCodeBlockRenderer`, `ChatCodeBlockContext`, `ChatStreamEventInfo`,
+  `ChatMessageSlotContext`, `ChatAnsweredBy` and `AgentStatusState`.
 
 ### Changed
 
@@ -239,6 +229,10 @@ This file starts at 3.10.0; earlier releases are on the
   `Continue now` through what it reports meanwhile (`wait_status`,
   `tool_heartbeat`, `tool_progress`, `consult_progress`); streamed text or any
   other status ends it.
+- The composer's footer under a message that waits for the running turn
+  (a reference, a mention) says `This message waits for the current response`,
+  a new key, in place of `Referenced conversations wait for the current
+  response`.
 
 ### Fixed
 
@@ -257,46 +251,23 @@ This file starts at 3.10.0; earlier releases are on the
   conversation back, unless the Stop went before the panel's own send started
   its turn: it then carries `"awaiting_send": true`, and on `none` stays
   pending and is sent again, without the flag, as the turn starts; any other
-  answer reached a turn, and nothing goes again. A
-  refused Stop (e.g. `503`) keeps the turn running and says why above the
-  composer; the status line keeps what the turn reported since the click.
+  answer reached a turn, and nothing goes again. A refused Stop (e.g. `503`)
+  keeps the turn running and says why above the composer; the status line
+  keeps what the turn reported since the click.
 - `apiEndpoints.skipWait` (no default): `Continue now` on an agent's wait.
 - `apiEndpoints.events` (no default): the panel follows the conversation's
-  event stream, and renders turns started in another tab or before a reload,
-  user messages sent elsewhere, new titles and approvals answered elsewhere.
-  Refused with 401 or 403, the stream is tried once more each time
-  `requestHeaders` change, so a refreshed token picks it up.
-  Messages, steers, decisions, page-action answers, Stop, "Continue now" and
-  the event stream itself then carry `X-Chat-Client-Id`, so a panel's own
-  turns are never relayed back to it. A panel whose own stream drops
-  mid-turn, or ends without the turn's last frame, picks the turn up from the
-  event stream under a new id, keeping the segments it closed; Stop meanwhile
-  sticks. The stream is followed only once the conversation's history is on
-  screen, and a turn stopped here, named or not, stays stopped. A dropped or
-  ended stream is reopened with backoff, from the shortest delay again once
-  it delivered a frame or lived 5 s; a relayed turn on screen then runs on
-  only if the reopened stream replays it within 5 s (the segment being
-  written; those an intermediate `done` closed stay), and otherwise ends and
-  the conversation is read back, the answer it was writing giving way to its
-  stored copy when another turn is replayed instead. A replayed turn the
-  panel lost sight of (on a reopened stream, its own after its stream
-  dropped, or one let go of while the page was hidden) reads the conversation
-  back too, while it runs on: the segments it closed meanwhile come back, in
-  order, before the one being written, each shown once, a bubble matched
-  keeping what it shows and taking the stored id. Once the page has been
-  hidden for 60 s the stream is closed, and the relayed turn it fed let go
-  of: the segment it was writing goes, those it closed stay; shown again, the
-  stream reopens (its snapshot replays a turn still running) and the
-  conversation is read back for what ended meanwhile. The stored end of a
-  relayed turn ended provisionally lands on its answer also while the panel's
-  own turn runs, and one naming no turn too, leaving that turn's context
-  gauge and agent alone.
+  event stream and renders turns started in another tab or before a reload,
+  user messages sent elsewhere, new titles and approvals answered elsewhere;
+  a panel whose own stream drops mid-turn picks the turn up from it, keeping
+  the segments it closed. Stop during the handover ends the turn. See
+  [Turns that outlive their stream](README.md#turns-that-outlive-their-stream)
+  for reconnection, the client id and replays.
 - With `cancel`, `skipWait` or `events` named, a send made while a turn ended
   provisionally still winds down is held, as during a turn, until its stored
   end or its stream's close (the panel's own, for its own turn; another turn
-  starting ends it too), at most 5 s: the backend still holds the conversation, and the message
-  would join the ending turn unanswered. A relayed turn winds down across
-  the event stream's reopening.
+  starting ends it too), at most 5 s: the backend still holds the
+  conversation, and the message would join the ending turn unanswered. A
+  relayed turn winds down across the event stream's reopening.
 - With `cancel`, `skipWait` or `events` named, a new chat's conversation is
   created before its first message, so Stop, "Continue now" and steering
   reach the backend from the first turn.

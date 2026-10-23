@@ -4,76 +4,27 @@
  * turn across an event stream reopened, Stop refused or answered with no turn,
  * steers refused, and the host's fields and hook on a held message.
  */
-import { afterEach, beforeEach, test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, createRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 
-import { fakeBackend, installDom, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { fakeBackend, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { agentsRoute, container, eventsRoute, finish, mountPanels, restoreRoute, text, type Handle } from '../../test/panel.tsx';
 
-installDom();
-const { ChatPanel } = await import('./ChatPanel.tsx');
-type Props = import('../types.ts').ChatPanelProps;
-type Handle = import('../types.ts').ChatPanelHandle;
 type TurnEnd = import('../types.ts').ChatTurnEnd;
 
-const AGENTS = [{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null }];
+const { render } = mountPanels();
 
-let container: HTMLElement;
-let root: Root;
-
-beforeEach(() => {
-  localStorage.clear();
-  sessionStorage.clear();
-  container = document.createElement('div');
-  document.body.appendChild(container);
-  root = createRoot(container);
-});
-
-afterEach(async () => {
-  await act(async () => root.unmount());
-  container.remove();
-});
-
-const baseProps: Props = { mode: 'inline', apiBaseUrl: '/api', user: { firstName: 'Ada' } };
-
-async function render(props: Partial<Props>, ref?: React.Ref<Handle>) {
-  await act(async () => {
-    root.render(<ChatPanel {...baseProps} {...props} ref={ref} />);
-  });
-  await act(async () => settle());
-}
-
-const agentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(AGENTS) : undefined);
-const restoreRoute = (req: RecordedRequest) =>
-  req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages: [] }) : undefined;
 const sent = (requests: RecordedRequest[], url: string) => requests.filter((r) => r.url === url);
-const text = () => container.textContent ?? '';
 const answers = () => [...container.querySelectorAll('[data-testid="filigran-chat-assistant-message"]')].map((e) => e.textContent ?? '');
 const stopShown = () => !!container.querySelector('button[aria-label="Stop generating"]');
 const notice = () => container.querySelector('[data-testid="filigran-chat-composer-notice"]')?.textContent ?? null;
-/** Close what a test left open, inside `act`: the panel answers it with updates. */
-const finish = (...streams: { close: () => void }[]) =>
-  act(async () => {
-    for (const stream of streams) stream.close();
-    await settle();
-  });
 
 /** What the host heard: `running` as a turn starts, how it ended as it stops. */
 function turnLog() {
   const heard: string[] = [];
   const onTurnRunningChange = (running: boolean, info?: TurnEnd) => heard.push(running ? 'running' : (info?.ended ?? 'no outcome'));
   return { heard, onTurnRunningChange };
-}
-
-/** An event stream route that opens a fresh stream per subscription. */
-function eventsRoute(subscriptions: ReturnType<typeof sseStream>[]) {
-  return (req: RecordedRequest) => {
-    if (!req.url.startsWith('/api/chat/conversations/c1/events')) return undefined;
-    const events = sseStream();
-    subscriptions.push(events);
-    return events.response();
-  };
 }
 
 /**
@@ -114,7 +65,7 @@ function manualTimers(delays: number[]) {
 
 test('a relayed turn ended provisionally takes its stored end as its answer’s id, opening no second turn', async () => {
   const subscriptions: ReturnType<typeof sseStream>[] = [];
-  fakeBackend([agentsRoute, restoreRoute, eventsRoute(subscriptions)]);
+  fakeBackend([agentsRoute, restoreRoute(), eventsRoute(subscriptions)]);
   const { heard, onTurnRunningChange } = turnLog();
   await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange });
   const live = subscriptions[0];
@@ -174,7 +125,7 @@ test('a relayed turn ended provisionally takes its stored end as its answer’s 
 
 test('the own stream is read past a provisional end for the stored end’s id, the turn over at once', async () => {
   const stream = sseStream();
-  fakeBackend([agentsRoute, restoreRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
   const ref = createRef<Handle>();
   const { heard, onTurnRunningChange } = turnLog();
   await render({ conversationId: 'c1', onTurnRunningChange }, ref);
@@ -204,7 +155,7 @@ test('a relayed turn is over when the reopened event stream does not replay it, 
   const timers = manualTimers([1000, 2000, 4000, 5000]);
   try {
     const subscriptions: ReturnType<typeof sseStream>[] = [];
-    const requests = fakeBackend([agentsRoute, restoreRoute, eventsRoute(subscriptions)]);
+    const requests = fakeBackend([agentsRoute, restoreRoute(), eventsRoute(subscriptions)]);
     const { heard, onTurnRunningChange } = turnLog();
     await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange });
     const restores = () => requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST').length;
@@ -369,7 +320,7 @@ test('Stop lets go at once when no turn runs anywhere, and keeps a turn whose St
   let cancelAnswer = () => json({ status: 'cancelled', turn: 'none' }, 202);
   const requests = fakeBackend([
     agentsRoute,
-    restoreRoute,
+    restoreRoute(),
     (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
     (req) => (req.url === '/api/chat/messages/cancel' ? cancelAnswer() : undefined),
   ]);
@@ -426,7 +377,7 @@ test('a refused steer fails and says why; one refused because the turn just ende
   let releaseSteer!: () => void;
   const requests = fakeBackend([
     agentsRoute,
-    restoreRoute,
+    restoreRoute(),
     (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
     (req) => (req.url === '/api/chat/messages/steer' ? steers.shift()!() : undefined),
   ]);
@@ -474,7 +425,7 @@ test('a send with fields of its own is held, not steered, keeps them, and the se
   let next = 0;
   const requests = fakeBackend([
     agentsRoute,
-    restoreRoute,
+    restoreRoute(),
     (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
     (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'steered' }) : undefined),
   ]);
@@ -552,7 +503,7 @@ test('a send with fields of its own is held, not steered, keeps them, and the se
 
 test('a page served over plain http, without crypto.randomUUID, still sends', async () => {
   const stream = sseStream();
-  fakeBackend([agentsRoute, restoreRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
   Object.defineProperty(crypto, 'randomUUID', { value: undefined, configurable: true });
   try {
     const ref = createRef<Handle>();
@@ -581,7 +532,7 @@ test('a Stop pressed before the own turn starts is asked again once it does, and
   let startTurn!: () => void;
   const requests = fakeBackend([
     agentsRoute,
-    restoreRoute,
+    restoreRoute(),
     // XTM One answers a send only once its turn holds the conversation.
     (req) => (req.url === '/api/chat/messages' ? new Promise<Response>((resolve) => (startTurn = () => resolve(stream.response()))) : undefined),
     (req) => (req.url === '/api/chat/messages/cancel' ? cancelAnswers.shift()!() : undefined),
@@ -626,7 +577,7 @@ test('sends wait while the own turn winds down after a provisional end, until it
     let next = 0;
     const requests = fakeBackend([
       agentsRoute,
-      restoreRoute,
+      restoreRoute(),
       (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
       (req) => (req.url === '/api/chat/messages/cancel' ? json({ status: 'cancelled', turn: 'local' }, 202) : undefined),
     ]);
@@ -686,7 +637,7 @@ test('sends wait while the own turn winds down after a provisional end, until it
 
 test('a held message the send hook takes over as it leaves goes back to the composer', async () => {
   const stream = sseStream();
-  const requests = fakeBackend([agentsRoute, restoreRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const requests = fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
   const ref = createRef<Handle>();
   const settled: string[] = [];
   const drafts: string[] = [];
@@ -740,7 +691,7 @@ test('a relayed turn’s stored end gives its answer everything a live done woul
     const own = sseStream();
     const requests = fakeBackend([
       agentsRoute,
-      restoreRoute,
+      restoreRoute(),
       eventsRoute(subscriptions),
       (req) => (req.url === '/api/chat/messages' ? own.response() : undefined),
     ]);
@@ -791,7 +742,7 @@ test('a relayed turn’s stored end gives its answer everything a live done woul
 
 test('a relayed turn naming none takes its stored end after a provisional one', async () => {
   const subscriptions: ReturnType<typeof sseStream>[] = [];
-  fakeBackend([agentsRoute, restoreRoute, eventsRoute(subscriptions)]);
+  fakeBackend([agentsRoute, restoreRoute(), eventsRoute(subscriptions)]);
   const { heard, onTurnRunningChange } = turnLog();
   await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange });
   const live = subscriptions[0];
@@ -829,7 +780,7 @@ test('a steer refused because the turn just ended goes back to the composer, say
   const stream = sseStream();
   fakeBackend([
     agentsRoute,
-    restoreRoute,
+    restoreRoute(),
     (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
     (req) => (req.url === '/api/chat/messages/steer' ? json({ detail: 'No response is currently being generated' }, 409) : undefined),
   ]);
@@ -859,7 +810,7 @@ test('a refused Stop keeps what the turn reported since the click', async () => 
   let refuse!: () => void;
   fakeBackend([
     agentsRoute,
-    restoreRoute,
+    restoreRoute(),
     (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
     (req) =>
       req.url === '/api/chat/messages/cancel'
@@ -899,7 +850,7 @@ test('an event stream that lived a while retries from the shortest delay, even w
   Date.now = () => realNow() + offset;
   try {
     const subscriptions: ReturnType<typeof sseStream>[] = [];
-    fakeBackend([agentsRoute, restoreRoute, eventsRoute(subscriptions)]);
+    fakeBackend([agentsRoute, restoreRoute(), eventsRoute(subscriptions)]);
     await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } });
     await finish(subscriptions[0]);
     assert.deepEqual(timers.pending(), [1000]);
@@ -920,7 +871,7 @@ test('an event stream that lived a while retries from the shortest delay, even w
 
 test('a new conversation lets go of the own stream still read for a stored end', async () => {
   const stream = sseStream();
-  fakeBackend([agentsRoute, restoreRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
   const base = globalThis.fetch;
   let signal: AbortSignal | null | undefined;
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
@@ -965,7 +916,7 @@ test('a Stop before the own turn starts says it awaits the send, and goes again 
   let next = 0;
   const requests = fakeBackend([
     agentsRoute,
-    restoreRoute,
+    restoreRoute(),
     (req) => {
       if (req.url !== '/api/chat/messages') return undefined;
       const stream = streams[next++];
@@ -1056,7 +1007,7 @@ test('a Stop kept for a send that had not started stops that send only, never th
   };
   const requests = fakeBackend([
     agentsRoute,
-    restoreRoute,
+    restoreRoute(),
     (req) => {
       if (req.url !== '/api/chat/messages') return undefined;
       if (turns === 0) return new Promise<Response>((resolve) => (releaseFirst = () => resolve(startTurn())));
@@ -1116,7 +1067,7 @@ test('a message sent after a stopped turn ended goes out once it winds down; one
   let next = 0;
   const requests = fakeBackend([
     agentsRoute,
-    restoreRoute,
+    restoreRoute(),
     (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
     (req) => (req.url === '/api/chat/messages/cancel' ? cancelAnswer('local') : undefined),
   ]);
@@ -1403,7 +1354,7 @@ test('a relayed turn let go of while the page was hidden keeps its closed segmen
 
 test('a wait stays on screen through what it reports, and ends on any other status', async () => {
   const stream = sseStream();
-  fakeBackend([agentsRoute, restoreRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
   const ref = createRef<Handle>();
   await render({ conversationId: 'c1', apiEndpoints: { skipWait: '/chat/messages/skip-wait' } }, ref);
   const continueShown = () =>
@@ -1489,7 +1440,7 @@ test('a relayed turn winding down holds sends across its event stream’s reopen
     const own = sseStream();
     const requests = fakeBackend([
       agentsRoute,
-      restoreRoute,
+      restoreRoute(),
       eventsRoute(subscriptions),
       (req) => (req.url === '/api/chat/messages' ? own.response() : undefined),
     ]);
@@ -1530,7 +1481,7 @@ test('a steer no turn will answer stays, with a notice that the next message car
   let next = 0;
   fakeBackend([
     agentsRoute,
-    restoreRoute,
+    restoreRoute(),
     (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
     (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'stored', turn_id: null, answered: false }) : undefined),
   ]);
@@ -1569,7 +1520,7 @@ test('the stored end of a relayed turn naming none lands while the own turn runs
   try {
     const subscriptions: ReturnType<typeof sseStream>[] = [];
     const own = sseStream();
-    fakeBackend([agentsRoute, restoreRoute, eventsRoute(subscriptions), (req) => (req.url === '/api/chat/messages' ? own.response() : undefined)]);
+    fakeBackend([agentsRoute, restoreRoute(), eventsRoute(subscriptions), (req) => (req.url === '/api/chat/messages' ? own.response() : undefined)]);
     const ref = createRef<Handle>();
     await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
     await act(async () => {
@@ -1605,7 +1556,7 @@ test('a late stored end leaves the running turn’s context gauge and agent alon
   try {
     const subscriptions: ReturnType<typeof sseStream>[] = [];
     const own = sseStream();
-    fakeBackend([agentsRoute, restoreRoute, eventsRoute(subscriptions), (req) => (req.url === '/api/chat/messages' ? own.response() : undefined)]);
+    fakeBackend([agentsRoute, restoreRoute(), eventsRoute(subscriptions), (req) => (req.url === '/api/chat/messages' ? own.response() : undefined)]);
     const ref = createRef<Handle>();
     await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
     const gauge = () => container.querySelector('[aria-label$="%)"]')?.getAttribute('aria-label') ?? '';

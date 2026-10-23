@@ -1,62 +1,20 @@
 /**
  * Rendering tests of what the panel promises every host - `yarn test`: a plain
- * host sees the panel it always had, the panel's own fields stay its own, the
+ * host sees the default panel, the panel's own fields stay its own, the
  * handle and its outcomes, and turns that outlive their stream.
  */
-import { afterEach, beforeEach, test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, createRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 
-import { fakeBackend, installDom, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { fakeBackend, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { AGENTS, agentsRoute, container, finish, mountPanels, restoreRoute, text, type Handle } from '../../test/panel.tsx';
 
-installDom();
-const { ChatPanel } = await import('./ChatPanel.tsx');
-type Props = import('../types.ts').ChatPanelProps;
-type Handle = import('../types.ts').ChatPanelHandle;
+const { render, unmount } = mountPanels();
 
-const AGENTS = [{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null }];
-
-let container: HTMLElement;
-let root: Root;
-
-beforeEach(() => {
-  localStorage.clear();
-  sessionStorage.clear();
-  container = document.createElement('div');
-  document.body.appendChild(container);
-  root = createRoot(container);
-});
-
-afterEach(async () => {
-  await act(async () => root.unmount());
-  container.remove();
-});
-
-const baseProps: Props = { mode: 'inline', apiBaseUrl: '/api', user: { firstName: 'Ada' } };
-
-async function render(props: Partial<Props>, ref?: React.Ref<Handle>) {
-  await act(async () => {
-    root.render(<ChatPanel {...baseProps} {...props} ref={ref} />);
-  });
-  await act(async () => settle());
-}
-
-const agentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(AGENTS) : undefined);
-const restoreRoute =
-  (messages: unknown[] = []) =>
-  (req: RecordedRequest) =>
-    req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages }) : undefined;
 const messages = (requests: RecordedRequest[]) => requests.filter((r) => r.url === '/api/chat/messages');
-const text = () => container.textContent ?? '';
-/** Close what a test left open, inside `act`: the panel answers it with updates. */
-const finish = (...streams: { close: () => void }[]) =>
-  act(async () => {
-    for (const stream of streams) stream.close();
-    await settle();
-  });
 
-test('a plain host streams, fails and stops as it always did, naming no client', async () => {
+test('a plain host streams, fails and stops, naming no client', async () => {
   const streams = [sseStream(), sseStream(), sseStream()];
   let turns = 0;
   const requests = fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? streams[turns++].response() : undefined)]);
@@ -353,8 +311,7 @@ test('a remembered conversation with no agent to restore it in leaves the panel 
       await settle(10);
     });
     assert.equal(await outcome, 'sent', 'the handle does not hang');
-    await act(async () => root.unmount());
-    root = createRoot(container);
+    await unmount();
   }
 });
 
@@ -374,8 +331,7 @@ test('a backend that is down keeps the conversation; one that refuses the id res
     const changes: (string | null)[] = [];
     await render({ conversationId: 'c1', onConversationChange: (id) => changes.push(id) });
     assert.deepEqual(changes, expected);
-    await act(async () => root.unmount());
-    root = createRoot(container);
+    await unmount();
   }
 });
 
@@ -660,8 +616,7 @@ test('the host is told what became of each held send', async () => {
     void ref.current!.send('left behind');
     await settle(10);
   });
-  await act(async () => root.unmount());
-  root = createRoot(container);
+  await unmount();
   assert.deepEqual(settled, ['next:sent', 'then this:returned', 'left behind:cancelled']);
   await finish(...streams);
 });
@@ -997,8 +952,7 @@ test('a read-back refused for its credentials keeps the conversation, and is rea
   assert.deepEqual(changes, []);
 
   // A 403 with no detail, then the user retries once the backend lets them in.
-  await act(async () => root.unmount());
-  root = createRoot(container);
+  await unmount();
   allowed = 'none yet';
   await render({ ...props, requestHeaders: { Authorization: 'Bearer gone' } });
   assert.ok(text().includes('This conversation could not be loaded.'));

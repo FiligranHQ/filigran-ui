@@ -1,7 +1,7 @@
 /**
- * Browser-storage keys of the panel. A host mounting several panels (XTM One's
- * floating assistant beside its own chat page) namespaces them with
- * `storageKeyPrefix`; without one the keys are the historical ones.
+ * Browser-storage keys of the panel. A host mounting several panels
+ * namespaces them with `storageKeyPrefix`; without one the keys are
+ * unprefixed.
  */
 export const STORAGE_KEYS = {
   conversationId: 'filigranChatConversationId',

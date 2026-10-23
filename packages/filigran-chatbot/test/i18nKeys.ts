@@ -1,6 +1,6 @@
 /**
  * The keys the panel translates, read from its own source: what every catalog
- * must hold. Test and tooling only - never bundled.
+ * must hold.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';

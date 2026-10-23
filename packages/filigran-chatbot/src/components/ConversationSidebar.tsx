@@ -4,6 +4,7 @@ import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo } from '../utils';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
+import { ClearAllConversations } from './ClearAllConversations';
 import { Dropdown } from './Dropdown';
 import {
   BotIcon,
@@ -110,7 +111,6 @@ export const ConversationSidebar = ({
   onClearAll,
   t,
 }: ConversationSidebarProps) => {
-  const [confirmingClear, setConfirmingClear] = useState(false);
   const [query, setQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
@@ -362,36 +362,7 @@ export const ConversationSidebar = ({
         )}
         {sections}
         {onClearAll && conversations.length > 0 && !q && (
-          <div className="flex items-center gap-1 px-2 pt-3">
-            {confirmingClear ? (
-              <>
-                <span className="flex-1 text-[0.7rem] text-red-600 dark:text-red-400">{t('Delete all conversations?')}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setConfirmingClear(false);
-                    onClearAll();
-                  }}
-                  aria-label={t('Delete all conversations')}
-                  className={`${iconButton} hover:text-red-500`}
-                >
-                  <CheckIcon size={13} />
-                </button>
-                <button type="button" onClick={() => setConfirmingClear(false)} aria-label={t('Cancel')} className={iconButton}>
-                  <CloseIcon size={13} />
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmingClear(true)}
-                className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-[0.7rem] text-gray-400 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-              >
-                <TrashIcon size={12} />
-                {t('Clear all conversations')}
-              </button>
-            )}
-          </div>
+          <ClearAllConversations onClear={onClearAll} className="px-2 pt-3" iconButtonClass={iconButton} t={t} />
         )}
       </div>
 

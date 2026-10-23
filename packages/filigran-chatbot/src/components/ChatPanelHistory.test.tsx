@@ -1,66 +1,20 @@
 /**
  * Rendering tests of the history features a host opts into - `yarn test`:
- * older messages from the backend, clearing every conversation, a send held
- * until the turn ends, the backend's voice, jumping to a message, and the
- * skeleton of a conversation being read back.
+ * older messages from the backend, clearing every conversation, a refused
+ * steer held until the turn ends, reading aloud in the backend's voice,
+ * jumping to a message, the skeleton of a conversation being read back, and
+ * the conversation created before the first message of a turn that outlives
+ * its stream.
  */
-import { afterEach, beforeEach, test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, createRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 
-import { fakeBackend, installDom, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { fakeBackend, json, settle, sseStream } from '../../test/dom.ts';
+import { agentsRoute, BASE_PROPS, container, finish, mountPanels, restoreRoute, text, type Handle } from '../../test/panel.tsx';
 
-installDom();
-const { ChatPanel } = await import('./ChatPanel.tsx');
-type Props = import('../types.ts').ChatPanelProps;
-type Handle = import('../types.ts').ChatPanelHandle;
+const { render } = mountPanels({ ...BASE_PROPS, onClose: () => undefined, onModeChange: () => undefined });
 
-const AGENTS = [{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null }];
-
-let container: HTMLElement;
-let root: Root;
-
-beforeEach(() => {
-  localStorage.clear();
-  sessionStorage.clear();
-  container = document.createElement('div');
-  document.body.appendChild(container);
-  root = createRoot(container);
-});
-
-afterEach(async () => {
-  await act(async () => root.unmount());
-  container.remove();
-});
-
-const baseProps: Props = {
-  mode: 'inline',
-  onClose: () => undefined,
-  onModeChange: () => undefined,
-  apiBaseUrl: '/api',
-  user: { firstName: 'Ada' },
-};
-
-async function render(props: Partial<Props>, ref?: React.Ref<Handle>) {
-  await act(async () => {
-    root.render(<ChatPanel {...baseProps} {...props} ref={ref} />);
-  });
-  await act(async () => settle());
-}
-
-const agentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(AGENTS) : undefined);
-const restoreRoute =
-  (messages: unknown[], extra: Record<string, unknown> = {}) =>
-  (req: RecordedRequest) =>
-    req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages, ...extra }) : undefined;
-const text = () => container.textContent ?? '';
-/** Close what a test left open, inside `act`: the panel answers it with updates. */
-const finish = (...streams: { close: () => void }[]) =>
-  act(async () => {
-    for (const stream of streams) stream.close();
-    await settle();
-  });
 const button = (label: string) =>
   [...container.querySelectorAll('button')].find((b) => b.textContent?.trim() === label || b.getAttribute('aria-label') === label);
 

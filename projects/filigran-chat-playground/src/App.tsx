@@ -20,6 +20,8 @@ const SCENARIOS: { prompt: string; label: string; covers: string }[] = [
   { prompt: 'show me json', label: 'Bare JSON', covers: 'a whole message that is raw JSON' },
   { prompt: 'nested fences', label: 'Nested fences', covers: 'a ```markdown block containing its own fences' },
   { prompt: 'slow answer', label: 'Slow turn', covers: 'elapsed counter, stall, waiting game' },
+  { prompt: 'wait a moment', label: 'Announced wait', covers: 'wait countdown; Continue now on the web chat contract' },
+  { prompt: 'fail please', label: 'Failed turn', covers: 'a provisional error, then its stored end' },
   { prompt: 'long thread', label: 'Long thread', covers: '200 backfilled messages — render window' },
 ];
 
@@ -337,10 +339,10 @@ const App = () => {
       // XTM One's `/api/v1/platform/*` generically, so they need nothing
       // of their own. The mock stores feedback; approval paths it does
       // not know 404 and the panel degrades, which is the un-opted-in
-      // behaviour every current host has.
+      // behaviour every current host has. XTM One's web chat serves no
+      // feedback route.
       apiEndpoints={{
-        ...(webChat ? WEB_CHAT_ENDPOINTS : {}),
-        feedback: '/chat/conversations',
+        ...(webChat ? WEB_CHAT_ENDPOINTS : { feedback: '/chat/conversations' }),
         ...(supportsApproval ? { approve: '/chat/messages/approve', pendingApprovals: '/chat/conversations' } : {}),
         // Workspaces group the fullscreen history. The mock serves none,
         // so they are named against XTM One only.

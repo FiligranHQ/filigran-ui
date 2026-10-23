@@ -3,52 +3,15 @@
  * inline mode, a host-owned conversation, read-only, the handle, host extras,
  * Stop on a backend whose turns outlive their stream, and the event stream.
  */
-import { afterEach, beforeEach, test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, createRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 
-import { fakeBackend, installDom, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { fakeBackend, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { agentsRoute, BASE_PROPS, container, mountPanels, type Handle } from '../../test/panel.tsx';
 
-installDom();
-const { ChatPanel } = await import('./ChatPanel.tsx');
-type Props = import('../types.ts').ChatPanelProps;
-type Handle = import('../types.ts').ChatPanelHandle;
+const { render } = mountPanels({ ...BASE_PROPS, onClose: () => undefined, onModeChange: () => undefined });
 
-const AGENTS = [{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null }];
-
-let container: HTMLElement;
-let root: Root;
-
-beforeEach(() => {
-  localStorage.clear();
-  sessionStorage.clear();
-  container = document.createElement('div');
-  document.body.appendChild(container);
-  root = createRoot(container);
-});
-
-afterEach(async () => {
-  await act(async () => root.unmount());
-  container.remove();
-});
-
-const baseProps: Props = {
-  mode: 'inline',
-  onClose: () => undefined,
-  onModeChange: () => undefined,
-  apiBaseUrl: '/api',
-  user: { firstName: 'Ada' },
-};
-
-async function render(props: Partial<Props>, ref?: React.Ref<Handle>) {
-  await act(async () => {
-    root.render(<ChatPanel {...baseProps} {...props} ref={ref} />);
-  });
-  await act(async () => settle());
-}
-
-const agentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(AGENTS) : undefined);
 const restoreRoute =
   (messages: unknown[] = []) =>
   (req: RecordedRequest) =>
@@ -153,6 +116,32 @@ test('Stop asks a backend whose turns outlive their stream, and waits for its ca
     await settle();
   });
   assert.deepEqual(sent(requests, '/api/chat/messages/cancel')[0]?.body, { conversation_id: 'c1' });
+  assert.ok(container.textContent?.includes('Stopping…'));
+  await act(async () => {
+    stream.send({ type: 'cancelled' });
+    stream.close();
+    await settle();
+  });
+  assert.ok(!container.textContent?.includes('Stopping…'));
+});
+
+test('a Stop while the first message creates its conversation keeps the turn stopping as the message goes out', async () => {
+  const stream = sseStream();
+  const requests = fakeBackend([
+    agentsRoute,
+    (req) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c-new' }) : undefined),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/cancel' ? json({ status: 'cancelled' }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  // Stopped the moment the conversation exists, before the message leaves.
+  await render({ apiEndpoints: { cancel: '/chat/messages/cancel' }, onConversationChange: () => ref.current!.stop() }, ref);
+  await act(async () => {
+    ref.current!.send('long task');
+    await settle();
+  });
+  assert.deepEqual(sent(requests, '/api/chat/messages/cancel')[0]?.body, { conversation_id: 'c-new', awaiting_send: true });
+  assert.equal(sent(requests, '/api/chat/messages').length, 1);
   assert.ok(container.textContent?.includes('Stopping…'));
   await act(async () => {
     stream.send({ type: 'cancelled' });

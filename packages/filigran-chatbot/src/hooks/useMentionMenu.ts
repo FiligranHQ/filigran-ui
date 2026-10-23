@@ -14,7 +14,7 @@ import {
 } from '../utils/conversationRefs';
 import { useConversationReferenceSearch } from './useConversationReferenceSearch';
 
-interface UseConversationReferenceMenuOptions {
+interface UseMentionMenuOptions {
   /** `conversationReferencesUrl(...)`: null while the feature is off. */
   url: string | null;
   requestHeaders?: Record<string, string>;
@@ -47,7 +47,7 @@ const sameTrigger = (a: ReferenceTrigger | null, b: ReferenceTrigger | null) =>
  * focus throughout: the menu is driven from its keys, and a row is picked on
  * `mousedown`.
  */
-export function useConversationReferenceMenu({
+export function useMentionMenu({
   url,
   requestHeaders,
   conversationId,
@@ -57,7 +57,7 @@ export function useConversationReferenceMenu({
   refs,
   onPick,
   agentMentions,
-}: UseConversationReferenceMenuOptions) {
+}: UseMentionMenuOptions) {
   const enabled = url !== null || !!agentMentions;
   const [trigger, setTrigger] = useState<ReferenceTrigger | null>(null);
   // Escape closes the menu for the `@` it was open on; a new `@` opens it again.

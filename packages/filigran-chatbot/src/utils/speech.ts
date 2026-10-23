@@ -135,6 +135,24 @@ export function chunkSpeech(text: string, maxLength: number = SPEECH_CHUNK_MAX_L
   return chunks;
 }
 
+/** The host's speech route (`apiEndpoints.tts`), and the headers it is called with. */
+export interface TtsRoute {
+  url: string;
+  requestHeaders?: Record<string, string>;
+}
+
+/** The audio the host's speech route makes of *text*; throws when the route fails. */
+export async function fetchSpeech(fetchImpl: typeof fetch, route: TtsRoute, text: string, signal: AbortSignal): Promise<Blob> {
+  const res = await fetchImpl(route.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(route.requestHeaders ?? {}) },
+    body: JSON.stringify({ text, format: 'mp3' }),
+    signal,
+  });
+  if (!res.ok) throw new Error(`TTS failed: ${res.status}`);
+  return res.blob();
+}
+
 /** The part of `window.speechSynthesis` the controller uses. */
 export interface SpeechSynthesisLike<U> {
   speak(utterance: U): void;

@@ -1,18 +1,12 @@
 import { useCallback, useEffect, useInsertionEffect, useRef, useState } from 'react';
-import { chunkSpeech, createSpeechController, speakableText, type SpeechController } from '../utils/speech';
+import { chunkSpeech, createSpeechController, fetchSpeech, speakableText, type SpeechController, type TtsRoute } from '../utils/speech';
 import { usePanelFetch } from './usePanelRequests';
 
 const speechSupported = (): boolean =>
   typeof window !== 'undefined' && !!window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function';
 
 /** The most text one request to the host's speech route carries; a longer answer takes several. */
-export const TTS_MAX_LENGTH = 4096;
-
-/** The host's speech route (`apiEndpoints.tts`), and the headers it is called with. */
-export interface TtsRoute {
-  url: string;
-  requestHeaders?: Record<string, string>;
-}
+const TTS_MAX_LENGTH = 4096;
 
 /**
  * Reads answers aloud, one at a time: through the host's speech route when it
@@ -81,16 +75,7 @@ export function useSpeechReader(locale?: string, tts?: TtsRoute) {
       const chunks = chunkSpeech(text, TTS_MAX_LENGTH);
       const audio = new Audio();
       playback.audio = audio;
-      const fetchChunk = async (chunk: string): Promise<Blob> => {
-        const res = await panelFetch(route.url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(route.requestHeaders ?? {}) },
-          body: JSON.stringify({ text: chunk, format: 'mp3' }),
-          signal: abort.signal,
-        });
-        if (!res.ok) throw new Error(`TTS failed: ${res.status}`);
-        return res.blob();
-      };
+      const fetchChunk = (chunk: string) => fetchSpeech(panelFetch, route, chunk, abort.signal);
       let index = 0;
       let next: Promise<Blob> | null = chunks.length > 0 ? fetchChunk(chunks[0]) : null;
       try {

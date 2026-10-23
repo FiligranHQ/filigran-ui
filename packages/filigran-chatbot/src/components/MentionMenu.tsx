@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef } from 'react';
-import type { ReferenceMenuItem } from '../hooks/useConversationReferenceMenu';
+import type { ReferenceMenuItem } from '../hooks/useMentionMenu';
 import { translate } from '../utils';
 import { MAX_REFERENCED_CONVERSATIONS, type ReferenceMenuView } from '../utils/conversationRefs';
 import { BotIcon, MessageSquareIcon } from './icons';
 
-interface ConversationReferenceMenuProps {
+interface MentionMenuProps {
   view: ReferenceMenuView;
   /** The rows, agents first: what the arrows walk through. */
   items: ReferenceMenuItem[];
@@ -17,12 +17,12 @@ interface ConversationReferenceMenuProps {
 }
 
 /**
- * The composer's `@` menu, driven by `useConversationReferenceMenu`: the
- * conversations a message can reference, opened above the field. The field
+ * The composer's `@` menu, driven by `useMentionMenu`: the agents a message
+ * can mention and the conversations it can reference, opened above the field. The field
  * keeps the focus - the rows are options it points at, picked on `mousedown`
  * so a click never takes the focus away from the text being written.
  */
-export const ConversationReferenceMenu = ({ view, items, activeIndex, listboxId, optionId, onHover, onPick, t }: ConversationReferenceMenuProps) => {
+export const MentionMenu = ({ view, items, activeIndex, listboxId, optionId, onHover, onPick, t }: MentionMenuProps) => {
   const listRef = useRef<HTMLDivElement>(null);
 
   // The row the arrows reached stays in view in a list longer than the menu.

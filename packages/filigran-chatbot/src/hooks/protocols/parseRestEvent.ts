@@ -295,7 +295,7 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
   if (type === 'user_message') {
     const [message] = parseRestoredMessages([evt.message]);
     if (!message || message.role !== 'user') return { action: 'noop' };
-    return { action: 'user_message', message: { ...message, id: message.serverId ? `relayed-${message.serverId}` : randomId() } };
+    return { action: 'user_message', message: { ...message, id: storedMessageId(message.serverId) } };
   }
   // The native vocabulary acknowledges a turn with a top-level `thinking`
   // frame, which carries how long a resumed turn has run.
@@ -410,6 +410,15 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
   return { action: 'noop' };
 }
 
+/**
+ * The transcript id of a message the backend stored, however it reached the
+ * screen (restored, relayed, read back), so no two rows show it; *unsaved*
+ * (a fresh id by default) for one it did not.
+ */
+export function storedMessageId(serverId: string | undefined, unsaved: string = randomId()): string {
+  return serverId ? `msg-${serverId}` : unsaved;
+}
+
 /** The `feedback` of a restored entry, or undefined for anything that is not a stored rating. */
 export function parsePersistedFeedback(raw: unknown): ChatMessagePersistedFeedback | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
@@ -422,10 +431,9 @@ export function parsePersistedFeedback(raw: unknown): ChatMessagePersistedFeedba
  * The messages of a session restore (`POST {sessions}` with a known
  * `conversation_id`), in order.
  *
- * Rows are keyed `restored-<index>`: the key only has to be stable for the
- * life of the transcript, and a restore replaces the transcript whole. The
- * entry's own `id` is the message's persisted id, kept as `serverId` for what
- * is stored against it (feedback); its `created_at` is when it was sent, and
+ * Rows are keyed by the entry's own `id`, the message's persisted id (see
+ * `storedMessageId`), kept as `serverId` for what is stored against it
+ * (feedback); an entry without one by its index. Its `created_at` is when it was sent, and
  * a backend that sends neither still restores - with no time to show
  * (`timestampUnknown`) rather than the time of the restore.
  * Entries that are not a user or an assistant message are skipped.
@@ -440,9 +448,10 @@ export function parseRestoredMessages(raw: unknown): ChatMessage[] {
     const createdAt = typeof m.created_at === 'string' ? new Date(m.created_at) : null;
     const sentAt = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt : null;
     const answeredBy = m.role === 'assistant' ? parseAnsweredBy(m.answered_by) : undefined;
+    const serverId = typeof m.id === 'string' && m.id ? m.id : undefined;
     out.push({
-      id: `restored-${i}`,
-      serverId: typeof m.id === 'string' && m.id ? m.id : undefined,
+      id: storedMessageId(serverId, `restored-${i}`),
+      serverId,
       role: m.role,
       content: typeof m.content === 'string' ? m.content : '',
       timestamp: sentAt ?? new Date(),

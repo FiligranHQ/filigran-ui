@@ -199,14 +199,3 @@ export function unfiledEmptyNote(options: { total: number; unfiled: number; load
   if (unfiled > 0 || loading || searching) return null;
   return total === 0 ? 'none' : 'all-filed';
 }
-
-/** The message of a refused workspace request, from XTM One's `detail`. */
-export async function refusalMessage(res: Response): Promise<string | null> {
-  try {
-    const body: unknown = await res.json();
-    const detail = (body as Record<string, unknown> | null)?.detail;
-    return typeof detail === 'string' && detail ? detail : null;
-  } catch {
-    return null;
-  }
-}

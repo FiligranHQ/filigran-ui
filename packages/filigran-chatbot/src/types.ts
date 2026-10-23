@@ -202,7 +202,7 @@ export interface ApiEndpoints {
    * Path that stops the running turn on the backend, POSTed `{ conversation_id }`
    * by Stop. For a backend whose turns outlive their stream: the panel then waits
    * for the stream's `cancelled` frame rather than dropping the stream. Unset,
-   * Stop drops the stream, which is how the platform API cancels.
+   * Stop drops the stream.
    *
    * No default. REST backend only.
    */
@@ -592,7 +592,7 @@ export interface ChatPanelProps {
    * Cards for the `[[KIND:args]]` markers an answer embeds, by marker name
    * (`WORK_ITEM`, `INVESTIGATION`): rendered where the marker stands. Naming
    * `FILE`, `PRESENTATION`, `REPORT` or `VIDEO` replaces the built-in card. A
-   * marker no renderer names stays text, as it always was.
+   * marker no renderer names stays text.
    */
   markerRenderers?: Record<string, ChatMarkerRenderer>;
   /**
@@ -684,8 +684,9 @@ export interface ChatPanelProps {
    */
   steerAttachments?: boolean;
   /**
-   * A message that cannot steer the running turn (files, `@` references, a
-   * turn that just ended) is held and sent as the next turn once it ends,
+   * A message that cannot steer the running turn (files that cannot steer,
+   * references, mentions, fields of its own, a turn that just ended) is held
+   * and sent as the next turn once it ends,
    * rather than waiting in the composer. A turn winding down after a
    * provisional end (until its stored end or its stream's close, at most 5 s;
    * see `onTurnRunningChange`) holds sends with or without it.

@@ -7,17 +7,20 @@ import type { Plugin } from 'vite';
  *
  * It implements the contract documented in the package README — agents,
  * sessions (restore / list / delete), streaming messages, uploads, file
- * downloads and the `@` conversation references — and nothing more. Set `CHAT_API_PROXY=http://host:port` to talk to
- * a real backend instead; the plugin then stays out of the way.
+ * downloads and the `@` conversation references — under `/api/xtmone`, and
+ * XTM One's web-chat routes under `/api/xtmone-web`. Set
+ * `CHAT_API_PROXY=http://host:port` to talk to a real backend instead; the
+ * plugin then stays out of the way.
  *
  * The canned answer is deliberately hostile: it carries every markdown shape
  * that has broken the renderer at some point (multi-line image alt text, a
  * fence with no info string, a table whose delimiter row is a column short, a
  * `javascript:` link, a markdown block containing its own fences). Ask for
  * "json" to get a bare-JSON reply, "long" for a thread long enough to exercise
- * the render window, "slow" for a turn that stalls into the waiting game, or
- * "fail" for a turn that ends with a provisional error and then the
- * stored end, as XTM One's does.
+ * the render window, "slow" for a turn that stalls into the waiting game,
+ * "wait" for an announced pause that "Continue now" ends early, or "fail" for
+ * a turn that ends with a provisional error and then the stored end, as XTM
+ * One's does.
  */
 
 const PATH_PREFIX = '/api/xtmone';
@@ -29,6 +32,8 @@ const PATH_PREFIX = '/api/xtmone';
 const NATIVE_PREFIX = '/api/xtmone-web';
 /** How many messages a web restore returns; older ones are paged. */
 const RESTORE_WINDOW = 50;
+/** The most messages one page of older ones holds, as the backend caps it. */
+const MAX_MESSAGE_PAGE_SIZE = 500;
 /**
  * How long an event stream lives before the mock ends it: a backend may end
  * the stream at any time, and the panel reopens it, the snapshot resyncing it.
@@ -513,17 +518,8 @@ export function mockChatApi(): Plugin {
     quotaUsed += 17;
     const answer = `${text}\n\n[[FILE:file-${seq}]]`;
 
-    // The turn's metadata, built ONCE and both streamed and stored.
-    //
-    // Storing it is not optional detail: the panel re-fetches the session
-    // the moment the first turn hands it a conversation id, and replaces
-    // the live transcript with what comes back. A restore that returns
-    // only role+content therefore ERASES the reasoning-details button, the
-    // download cards and the tool trace seconds after they appear — which
-    // is a mock artefact, since the real backend re-surfaces these keys
-    // (``_restored_assistant_meta_keys`` in XTM One's platform.py). Kept
-    // as one object so the two paths cannot drift apart and re-introduce
-    // that phantom regression.
+    // The turn's metadata, streamed on `done` and stored with the answer.
+    // Kept as one object so the streamed and stored metadata match.
     const turnMeta: Record<string, unknown> = {
       tool_names: ['search_entities'],
       tool_call_count: 1,
@@ -621,7 +617,7 @@ export function mockChatApi(): Plugin {
             const conv = conversations.get(decodeURIComponent(page[1]));
             const index = conv?.messages.findIndex((m) => m.id === url.searchParams.get('before')) ?? -1;
             if (!conv || index < 0) return json(res, { detail: 'Message not found' }, 404);
-            const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 50, 1), 100);
+            const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 50, 1), MAX_MESSAGE_PAGE_SIZE);
             const from = Math.max(0, index - limit);
             return json(res, { messages: conv.messages.slice(from, index).map(restoredEntry), has_more: from > 0 });
           }

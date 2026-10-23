@@ -1,6 +1,5 @@
 /**
- * Unit tests for a voice call's answer matching - `yarn test`, ported from the
- * XTM One voice overlay's.
+ * Unit tests for a voice call's answer matching - `yarn test`.
  *
  * The panel also reads the turns it did not start (relayed by the event
  * stream): only the turn that answers the spoken question may resolve it, and
@@ -93,7 +92,7 @@ test("a folded turn's earlier segments answer what it was already doing, not the
 test('a question queued for the next turn with no turn running ends the wait', () => {
   assert.deepEqual(run([{ type: 'thinking' }, { type: 'folded_into_active_turn', folded: false }]).verdicts, [
     { kind: 'progress' },
-    { kind: 'failed', message: 'The message was queued for the next response.' },
+    { kind: 'failed' },
   ]);
   // Queued while a turn runs: that turn consumes it live, so it answers it.
   const queued = run([
@@ -248,7 +247,7 @@ test('an answer adds its lines to the voice transcript, never an empty one', () 
   assert.deepEqual(answerTranscriptLines({ text: '', others: [] }), []);
 });
 
-test("an attribution without a name, or the addressed agent's own, is spoken as before", () => {
+test("an attribution without a name, or the addressed agent's own, is spoken as the addressed agent's answer", () => {
   const { verdicts } = run(
     [
       { type: 'done', content: 'One.', intermediate: true, answered_by: { agent_id: 'x' }, turn_id: 'own' },
@@ -260,14 +259,14 @@ test("an attribution without a name, or the addressed agent's own, is spoken as 
 });
 
 test("the panel's own turn ending without an answer fails the wait instead of hanging it", () => {
-  assert.deepEqual(run([{ type: 'cancelled', turn_id: 'own' }]).verdicts, [{ kind: 'failed', message: 'The response was stopped.' }]);
-  assert.deepEqual(run([{ type: 'error', content: 'Too many messages' }]).verdicts, [{ kind: 'failed', message: 'Too many messages' }]);
+  assert.deepEqual(run([{ type: 'cancelled', turn_id: 'own' }]).verdicts, [{ kind: 'failed' }]);
+  assert.deepEqual(run([{ type: 'error', content: 'Too many messages' }]).verdicts, [{ kind: 'failed' }]);
   // The turn it was folded into, closed by the relay because its end was lost.
   const folded = run([
     { type: 'folded_into_active_turn', turn_id: 'running' },
     { type: 'error', content: 'lost', reason: 'lost', relayed: true, turn_id: 'running' },
   ]);
-  assert.deepEqual(last(folded.verdicts), { kind: 'failed', message: 'lost' });
+  assert.deepEqual(last(folded.verdicts), { kind: 'failed' });
 });
 
 test('the idle check tells a turn that is over from a read that failed', async () => {

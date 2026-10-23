@@ -14,7 +14,8 @@ import type {
   ToolApprovalProposal,
 } from '../types';
 import { feedbackKeyOf, useMessageFeedback, type FeedbackEntry } from '../hooks/useMessageFeedback';
-import { useSpeechReader, type TtsRoute } from '../hooks/useSpeechReader';
+import { useSpeechReader } from '../hooks/useSpeechReader';
+import type { TtsRoute } from '../utils/speech';
 import { answerMarkdownSources, artifactKey, splitAnswerMarkers, stripAnswerMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
 import { formatMessageTime } from '../utils/messageTime';

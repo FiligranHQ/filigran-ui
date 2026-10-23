@@ -1,9 +1,10 @@
 import type { ApiEndpoints, BackendType, ChatConversationRef, ChatConversationReferenceCandidate } from '../types';
+import { optInRoute } from './routes';
 
 /**
  * The composer's `@` grammar, as in the XTM One web chat: only a pick from the
- * menu makes `@key` mean a conversation. No regex lookbehind (the bundle ships
- * untranspiled) and no local runtime imports (`node --test` runs it as is).
+ * menu makes `@key` mean a conversation. No regex lookbehind: the bundle ships
+ * untranspiled.
  */
 
 /** What one message references at most - the backend's own bound. */
@@ -136,9 +137,7 @@ export function parseReferenceCandidates(data: unknown): ChatConversationReferen
  * not name the route, or the backend has no per-path routing.
  */
 export function conversationReferencesUrl(apiBaseUrl: string, apiEndpoints: ApiEndpoints | undefined, backendType: BackendType): string | null {
-  const path = apiEndpoints?.conversationReferences;
-  if (backendType !== 'rest' || apiEndpoints?.singleEndpoint || typeof path !== 'string' || !path) return null;
-  return `${apiBaseUrl}${path}`;
+  return optInRoute(apiBaseUrl, apiEndpoints, backendType, 'conversationReferences');
 }
 
 /** *url* with the menu's query: the typed text, the page size and the conversation written in. */

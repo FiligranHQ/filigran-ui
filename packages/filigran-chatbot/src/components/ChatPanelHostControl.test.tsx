@@ -1,63 +1,18 @@
 /**
  * Rendering tests of what a host relies on when it drives the panel - `yarn
  * test`: steering named to the backend, host cards replacing built-in ones,
- * readiness, the send hook, and the trace a stopped answer leaves.
+ * readiness, the send hook and the words a bubble shows, the trace a stopped
+ * answer leaves, reloading the agents, `onTurnRunningChange` for own,
+ * relayed and handed-over turns, and `getDraft`.
  */
-import { afterEach, beforeEach, test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, createRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 
-import { fakeBackend, installDom, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { fakeBackend, json, settle, sseStream } from '../../test/dom.ts';
+import { AGENTS, agentsRoute, BASE_PROPS, container, finish, mountPanels, restoreRoute, text, type Handle } from '../../test/panel.tsx';
 
-installDom();
-const { ChatPanel } = await import('./ChatPanel.tsx');
-type Props = import('../types.ts').ChatPanelProps;
-type Handle = import('../types.ts').ChatPanelHandle;
-
-const AGENTS = [{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null }];
-
-let container: HTMLElement;
-let root: Root;
-
-beforeEach(() => {
-  localStorage.clear();
-  sessionStorage.clear();
-  container = document.createElement('div');
-  document.body.appendChild(container);
-  root = createRoot(container);
-});
-
-afterEach(async () => {
-  await act(async () => root.unmount());
-  container.remove();
-});
-
-const baseProps: Props = {
-  mode: 'inline',
-  onClose: () => undefined,
-  onModeChange: () => undefined,
-  apiBaseUrl: '/api',
-  user: { firstName: 'Ada' },
-};
-
-async function render(props: Partial<Props>, ref?: React.Ref<Handle>) {
-  await act(async () => {
-    root.render(<ChatPanel {...baseProps} {...props} ref={ref} />);
-  });
-  await act(async () => settle());
-}
-
-const agentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(AGENTS) : undefined);
-const restoreRoute = (messages: unknown[]) => (req: RecordedRequest) =>
-  req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages }) : undefined;
-const text = () => container.textContent ?? '';
-/** Close what a test left open, inside `act`: the panel answers it with updates. */
-const finish = (...streams: { close: () => void }[]) =>
-  act(async () => {
-    for (const stream of streams) stream.close();
-    await settle();
-  });
+const { render, unmount } = mountPanels({ ...BASE_PROPS, onClose: () => undefined, onModeChange: () => undefined });
 
 test('a steer names its tab, and its echo on the event stream is not shown twice', async () => {
   const turn = sseStream();
@@ -392,7 +347,7 @@ test('the host hears when a turn runs on screen, own or relayed, and when it end
     await settle(10);
   });
   assert.deepEqual(seen.slice(12), [true]);
-  await act(async () => root.render(<div />));
+  await unmount();
   assert.deepEqual(seen.slice(12), [true, false], 'unmounted mid-turn, it is over for the host');
   events.close();
 });
@@ -584,7 +539,7 @@ test('Stop, a new conversation and unmounting stop the turn, as the host hears i
   assert.deepEqual(heard.slice(2), ['running', 'stopped'], 'a new conversation');
 
   await start(turns[2]);
-  await act(async () => root.render(<div />));
+  await unmount();
   assert.deepEqual(heard.slice(4), ['running', 'stopped'], 'unmounted mid-turn');
   await finish(...turns);
 });

@@ -7,17 +7,12 @@
 import { afterEach, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, createRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 
-import { fakeBackend, installDom, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
+import { fakeBackend, json, settle, sseStream } from '../../test/dom.ts';
+import { agentsRoute, container, mountPanels, text, type Handle } from '../../test/panel.tsx';
 import type { SpeechRecognitionEventLike } from '../hooks/dictationController.ts';
 
-installDom();
-const { ChatPanel } = await import('./ChatPanel.tsx');
-type Props = import('../types.ts').ChatPanelProps;
-type Handle = import('../types.ts').ChatPanelHandle;
-
-const AGENTS = [{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null }];
+const { render, unmount } = mountPanels();
 
 /** The browser's recogniser, driven by the test. */
 class FakeRecognition {
@@ -46,18 +41,11 @@ class FakeRecognition {
   }
 }
 
-let container: HTMLElement;
-let root: Root;
 const realSetTimeout = window.setTimeout;
 // The second of silence that sends a phrase runs by hand.
 let silenceTimers: (() => void)[] = [];
 
 beforeEach(() => {
-  localStorage.clear();
-  sessionStorage.clear();
-  container = document.createElement('div');
-  document.body.appendChild(container);
-  root = createRoot(container);
   (window as unknown as Record<string, unknown>).SpeechRecognition = FakeRecognition;
   silenceTimers = [];
   window.setTimeout = ((fn: () => void, ms?: number, ...args: unknown[]) => {
@@ -69,25 +57,12 @@ beforeEach(() => {
   }) as typeof window.setTimeout;
 });
 
-afterEach(async () => {
-  await act(async () => root.unmount());
-  container.remove();
+afterEach(() => {
   delete (window as unknown as Record<string, unknown>).SpeechRecognition;
   window.setTimeout = realSetTimeout;
 });
 
-const baseProps: Props = { mode: 'inline', apiBaseUrl: '/api', user: { firstName: 'Ada' } };
-
-async function render(props: Partial<Props>, ref?: React.Ref<Handle>) {
-  await act(async () => {
-    root.render(<ChatPanel {...baseProps} {...props} ref={ref} />);
-  });
-  await act(async () => settle());
-}
-
-const agentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(AGENTS) : undefined);
 const overlay = () => container.querySelector('[data-testid="filigran-chat-voice-call"]');
-const text = () => container.textContent ?? '';
 
 /** Say *text*, then let the second of silence send it. */
 const say = (text: string) =>
@@ -183,8 +158,7 @@ test('the handle’s stop cancels the question a call awaits, and a read-only pa
   assert.ok(overlay()!.textContent?.includes('Listening...'), 'back to listening');
   assert.ok(text().includes('Stopped'), 'and the turn stopped');
 
-  await act(async () => root.unmount());
-  root = createRoot(container);
+  await unmount();
   await render({ readOnly: true }, ref);
   let started = true;
   await act(async () => {

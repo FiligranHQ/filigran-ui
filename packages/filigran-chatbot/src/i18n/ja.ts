@@ -127,7 +127,6 @@ const ja: Catalog = {
   'Reasoning details': '推論の詳細',
   'Reasoning details — turn limit reached': '推論の詳細 — ターン制限に達しました',
   'Reference a conversation': '会話を参照',
-  'Referenced conversations wait for the current response': '参照された会話は、現在の応答を待機します',
   'Remove from workspace': 'ワークスペースから外す',
   'Rename conversation': '会話の名前を変更',
   'Rename workspace': 'ワークスペースの名前を変更',
@@ -179,6 +178,7 @@ const ja: Catalog = {
   'This conversation could not be loaded.': 'この会話を読み込めませんでした。',
   'This decision could not be sent. Reload the chat and try again.':
     'この決定を送信できませんでした。チャットを再読み込みして、もう一度お試しください。',
+  'This message waits for the current response': 'このメッセージは、現在の応答を待機します',
   'This message will be read with your next one.': 'このメッセージは次のメッセージと一緒に読まれます。',
   'This item could not be loaded.': 'この項目を読み込めませんでした。',
   'The response could not be stopped. Try again.': '応答を停止できませんでした。もう一度お試しください。',

@@ -23,13 +23,13 @@ test('a restored entry keeps its persisted id, its time and its rating', () => {
       is_truncated: true,
     },
   ]);
-  assert.equal(user.id, 'restored-0');
+  assert.equal(user.id, 'msg-m-1');
   assert.equal(user.serverId, 'm-1');
   assert.equal(user.role, 'user');
   assert.equal(user.timestamp.toISOString(), '2026-09-29T08:15:00.000Z');
   assert.equal(user.feedback, undefined);
 
-  assert.equal(answer.id, 'restored-1');
+  assert.equal(answer.id, 'msg-m-2');
   assert.equal(answer.serverId, 'm-2');
   assert.equal(answer.content, 'APT28.');
   assert.equal(answer.timestamp.toISOString(), '2026-09-29T08:15:04.000Z');
