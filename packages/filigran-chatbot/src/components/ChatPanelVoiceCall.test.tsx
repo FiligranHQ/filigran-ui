@@ -198,7 +198,7 @@ test('a question asked after cancelling the last one goes out once the stopped t
     await settle(10);
   });
   await act(async () => {
-    streams[0].send({ type: 'cancelled', turn_id: 't1' });
+    streams[0].send({ type: 'cancelled', turn_id: 't1', provisional: true });
     await settle(10);
   });
   await say('Second question');
@@ -384,4 +384,77 @@ test('a call ended by its panel being hidden starts anew once the panel shows ag
     await act(async () => root.unmount());
     host.remove();
   }
+});
+
+test('a long spoken answer asks the speech route one piece ahead, never all at once', async () => {
+  const stream = sseStream();
+  const requests = fakeBackend([
+    agentsRoute,
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    // The route answers nothing yet: what was asked meanwhile is what is in flight.
+    (req) => (req.url === '/api/chat/tts' ? new Promise<Response>(() => undefined) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ apiEndpoints: { tts: '/chat/tts' } }, ref);
+  await act(async () => {
+    ref.current!.startVoiceCall();
+    await settle();
+  });
+  await say('What is APT28');
+  const answer = 'APT28 is a threat group attributed to Russian military intelligence. '.repeat(6).trim();
+  await act(async () => {
+    stream.send({ type: 'done', content: answer, conversation_id: 'c1' });
+    stream.close();
+    await settle(10);
+  });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/tts').length, 1);
+  await act(async () => {
+    (overlay()!.querySelector('button[aria-label="End voice call"]') as HTMLButtonElement).click();
+    await settle();
+  });
+});
+
+test('a host transform that throws on the answer neither hides its frame from the host nor stalls the call', async () => {
+  const stream = sseStream();
+  fakeBackend([
+    agentsRoute,
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url === '/api/chat/tts' ? new Response(new Blob(['mp3']), { status: 200 }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  const frames: string[] = [];
+  const original = console.error;
+  console.error = () => undefined;
+  try {
+    await render(
+      {
+        apiEndpoints: { tts: '/chat/tts' },
+        transformMessageText: () => {
+          throw new Error('host bug');
+        },
+        onStreamEvent: (frame) => {
+          frames.push(String(frame.type));
+        },
+      },
+      ref,
+    );
+    await act(async () => {
+      ref.current!.startVoiceCall();
+      await settle();
+    });
+    await say('What is APT28');
+    await act(async () => {
+      stream.send({ type: 'done', content: 'A threat group.', conversation_id: 'c1' });
+      stream.close();
+      await settle(10);
+    });
+  } finally {
+    console.error = original;
+  }
+  assert.ok(frames.includes('done'), 'the host still sees the answer');
+  assert.ok(!overlay()!.textContent?.includes('Thinking'), 'the call moved on from the question');
+  await act(async () => {
+    (overlay()!.querySelector('button[aria-label="End voice call"]') as HTMLButtonElement).click();
+    await settle();
+  });
 });

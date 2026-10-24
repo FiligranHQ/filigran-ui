@@ -100,8 +100,8 @@ export type ParsedAction =
    */
   | { action: 'error'; content: string; messageId?: string; provisional?: true; raw?: Record<string, unknown> }
   /**
-   * The turn was stopped (`cancelled`): terminal. *provisional*: an end with
-   * neither `message_id` nor `reason`, which the backend follows with the
+   * The turn was stopped (`cancelled`): terminal. *provisional*: an end marked
+   * `provisional: true`, which the backend follows with the
    * stored end of the same turn (a `done`, `cancelled` or `error` carrying
    * `message_id`); *messageId*: the stored answer's id, when it says, and
    * *raw* the frame then (see `ChatMessage.raw`).

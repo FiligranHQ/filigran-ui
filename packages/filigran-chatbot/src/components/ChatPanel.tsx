@@ -9,7 +9,8 @@ import { conversationReferencesUrl } from '../utils/conversationRefs';
 import { pendingWorkspaceStillFileable, returnRefreshDue } from '../utils/workspaces';
 import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
 import { parseArtifact, parseContextUsage, parseRestoredMessages, storedMessageId } from '../hooks/protocols/parseRestEvent';
-import { askHost, mergeReadBack, useChat } from '../hooks/useChat';
+import { mergeReadBack, useChat } from '../hooks/useChat';
+import { askHost } from '../utils/askHost';
 import { findAgent, useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
 import { useWorkspaces } from '../hooks/useWorkspaces';
@@ -255,12 +256,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const [restoreRefused, setRestoreRefused] = useState<{ conversationId: string; detail: string | null; headersKey: string } | null>(null);
   // Retitled elsewhere, or by the backend after the first answer.
   const refreshConversationsRef = useRef<() => Promise<unknown>>(async () => undefined);
-  // Every frame of both streams goes to the voice call first, then to the host.
+  // Every frame of both streams goes to the voice call first, then to the
+  // host: each on its own, so neither throwing keeps the frame from the other.
   const voiceFrameRef = useRef<(frame: Record<string, unknown>, relayed: boolean) => void>(() => undefined);
   const handleStreamFrame = useCallback(
     (frame: Record<string, unknown>, info: { relayed: boolean }) => {
-      voiceFrameRef.current(frame, info.relayed);
-      onStreamEvent?.(frame, info);
+      askHost(voiceFrameRef.current, frame, info.relayed);
+      askHost(onStreamEvent, frame, info);
     },
     [onStreamEvent],
   );
@@ -271,6 +273,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     setInputValue,
     isLoading,
     turnRunning,
+    sendsHeld,
     turnEnd,
     agentStatus,
     attachedFiles,
@@ -1441,6 +1444,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           ) : (
             <ChatInput
               header={composerHeader}
+              sendsHeld={sendsHeld}
               steerAttachments={steerAttachments}
               canHold={holdSendsDuringTurn}
               heldMessage={heldMessage}

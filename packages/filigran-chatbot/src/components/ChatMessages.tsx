@@ -52,6 +52,7 @@ import { HostRenderBoundary, HostRenderFallback, HostRendered } from './HostRend
 import { MarkdownMessage } from './MarkdownMessage';
 import { ReasoningDetailsDialog } from './ReasoningDetailsDialog';
 import { Tooltip } from './Tooltip';
+import { askHost } from '../utils/askHost';
 
 /**
  * Windowed thread rendering: only the most recent slice of the thread is
@@ -481,7 +482,8 @@ const MessageRow = memo(
     const [showReasoning, setShowReasoning] = useState(false);
     const isAssistant = msg.role === 'assistant';
     // What the host shows of the text: also what is copied and read aloud.
-    const content = useMemo(() => (transformMessageText ? transformMessageText(msg.content, msg) : msg.content), [transformMessageText, msg]);
+    // A transform that throws shows the text as it came, never takes the thread down.
+    const content = useMemo(() => askHost(transformMessageText, msg.content, msg) ?? msg.content, [transformMessageText, msg]);
     const isEmpty = !content;
     const downRef = useRef<HTMLButtonElement>(null);
 

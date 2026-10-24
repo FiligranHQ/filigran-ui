@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { answerMarkdownSources } from './index.ts';
-import { chunkSpeech, createSpeechController, hasSpeakableWords, speakableText } from './speech.ts';
+import { chunkSpeech, createSpeechController, hasSpeakableWords, speakableText, speechAhead } from './speech.ts';
 
 // What the transcript does with an answer: the button reads these documents, and so does the voice.
 const read = (answer: string): string => speakableText(answerMarkdownSources(answer));
@@ -200,4 +200,45 @@ test('nothing to read reads nothing', () => {
   assert.equal(controller.speakingId, null);
   assert.deepEqual(changes, []);
   assert.deepEqual(synth.spoken, []);
+});
+
+test('the speech route is asked one chunk ahead of what plays, in order, a failed chunk null', async () => {
+  const pending: { text: string; resolve: (res: Response) => void }[] = [];
+  let inFlight = 0;
+  let mostInFlight = 0;
+  const fakeFetch = ((_url: string, init: { body: string }) => {
+    inFlight += 1;
+    mostInFlight = Math.max(mostInFlight, inFlight);
+    return new Promise<Response>((resolve) =>
+      pending.push({
+        text: (JSON.parse(init.body) as { text: string }).text,
+        resolve: (res) => {
+          inFlight -= 1;
+          resolve(res);
+        },
+      }),
+    );
+  }) as unknown as typeof fetch;
+  const chunks = ['one', 'two', 'three', 'four'];
+  const audio = speechAhead(fakeFetch, { url: '/tts' }, chunks, new AbortController().signal);
+  const heard: (string | null)[] = [];
+  const take = async () => {
+    const next = audio.next();
+    // Each request is answered once made; the third fails.
+    await new Promise((r) => setTimeout(r, 0));
+    const request = pending.at(-1)!;
+    request.resolve(request.text === 'three' ? new Response('', { status: 429 }) : new Response(request.text));
+    const { value } = await next;
+    heard.push(value ? await value.text() : null);
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal(pending.length, Math.min(heard.length + 1, chunks.length), 'the next chunk only is asked for meanwhile');
+  };
+  for (let i = 0; i < chunks.length; i += 1) await take();
+  assert.deepEqual(heard, ['one', 'two', null, 'four']);
+  assert.deepEqual(
+    pending.map((p) => p.text),
+    chunks,
+  );
+  assert.ok(mostInFlight <= 2, `at most two requests at once, saw ${mostInFlight}`);
+  assert.equal((await audio.next()).done, true);
 });

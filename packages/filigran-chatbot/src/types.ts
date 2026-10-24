@@ -607,7 +607,8 @@ export interface ChatPanelProps {
   codeBlockRenderers?: Record<string, ChatCodeBlockRenderer>;
   /**
    * Rewrites a message's text before it is shown, copied or read aloud: the
-   * host's own markup (masking secrets, converting a channel's syntax).
+   * host's own markup (masking secrets, converting a channel's syntax). One
+   * that throws leaves the text as it came.
    */
   transformMessageText?: (text: string, message: ChatMessage) => string;
   /** Opens a deck, report or video in the host itself, in place of the link to XTM One. */
@@ -751,8 +752,8 @@ export interface ChatStreamEventInfo {
   /** True for a turn this panel did not start, relayed by the event stream. */
   relayed: boolean;
   /**
-   * The frame ends a turn: `'provisional'` for an `error` or `cancelled` with
-   * neither `message_id` nor `reason` (its stored end follows), `'stored'` for
+   * The frame ends a turn: `'provisional'` for an `error` or `cancelled` marked
+   * `provisional: true` (its stored end follows), `'stored'` for
    * an end carrying the stored answer's `message_id` (a `done` that is not
    * intermediate, a `cancelled` or an `error`). Absent on any other frame.
    */

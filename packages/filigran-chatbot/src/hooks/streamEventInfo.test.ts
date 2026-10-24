@@ -11,9 +11,11 @@ import { streamEventInfo } from './useChat.ts';
 const info = (frame: Record<string, unknown>, relayed = false) =>
   streamEventInfo(relayed, parseRestEvent(frame, { hasUsedTools: false, activeNodeId: '' }));
 
-test('an error or cancelled with neither message_id nor reason ends a turn provisionally', () => {
-  assert.deepEqual(info({ type: 'cancelled' }), { relayed: false, end: 'provisional' });
-  assert.deepEqual(info({ type: 'error', content: 'Boom' }, true), { relayed: true, end: 'provisional' });
+test('an error or cancelled marked provisional ends a turn provisionally; a bare one is no stored end', () => {
+  assert.deepEqual(info({ type: 'cancelled', provisional: true }), { relayed: false, end: 'provisional' });
+  assert.deepEqual(info({ type: 'error', content: 'Boom', provisional: true }, true), { relayed: true, end: 'provisional' });
+  assert.deepEqual(info({ type: 'cancelled' }), { relayed: false });
+  assert.deepEqual(info({ type: 'error', content: 'Boom' }, true), { relayed: true });
 });
 
 test('an end naming the stored answer is the stored end; an intermediate done is no end', () => {

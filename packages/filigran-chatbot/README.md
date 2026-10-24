@@ -111,7 +111,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onSessionEnded`    | `(reason: string \| undefined) => void`   | —            | The user's session ended: a `session_expired` frame on either stream, or a `401` whose `detail.code` is `session_expired` on any request the panel makes; *reason* is the frame's or the `detail`'s `reason`. Called once per set of `requestHeaders` |
 | `markerRenderers`   | `Record<string, ChatMarkerRenderer>`      | —            | The host's cards for answer markers, by name — see [Host extensions](#host-extensions) |
 | `codeBlockRenderers` | `Record<string, ChatCodeBlockRenderer>`  | —            | The host's rendering of fenced code blocks, by language: `(code, { streaming }) => React.ReactNode` — see [Host extensions](#host-extensions) |
-| `transformMessageText` | `(text, message) => string`            | —            | Rewrites a message's text before it is shown, copied or read aloud |
+| `transformMessageText` | `(text, message) => string`            | —            | Rewrites a message's text before it is shown, copied or read aloud; one that throws leaves the text as it came |
 | `onArtifactOpen`    | `(artifact: ChatArtifact) => void`        | —            | Opens a deck, report or video in the host, in place of the `Open in XTM One` link |
 | `headerActions` / `banner` / `composerHeader` / `transcriptFooter` / `welcome` | `React.ReactNode` | — | The host's content in the header, above the thread, above the composer, after the last message, or in place of the welcome screen |
 | `renderMessageExtras` / `messageFooterActions` | `(message, { streaming }) => React.ReactNode` | — | The host's content under a message, and controls in a finished answer's footer; `streaming` while the message is the answer still being written. `message.raw` holds the backend's own fields — see [Host extensions](#host-extensions) |
@@ -320,7 +320,7 @@ message sent from this panel) has none.
 `onStreamEvent(frame, info)` gives every frame as received, with what the
 panel read in it, so a host never re-derives either: `info.relayed` (a turn
 the event stream relays), `info.end` - `'provisional'` on an `error` or
-`cancelled` with neither `message_id` nor `reason` (its stored end follows),
+`cancelled` marked `provisional: true` (its stored end follows),
 `'stored'` on an end naming the stored answer's `message_id` (a `done` that is
 not intermediate, a `cancelled`, an `error`) - and `info.replayed` on the
 `thinking` frame (`resumed: true`) of a turn replayed from its start, whose
@@ -350,10 +350,11 @@ button (`voiceCallSupported()` says whether the browser can hold one): the
 browser's speech recognition listens in `locale`, a phrase is sent after one
 second of silence (as the user, `onBeforeSend` seeing `source: 'voice'`), and
 the answer is said through `apiEndpoints.tts` in pieces of about 200
-characters, all requested at once and played in order, each piece the route
-fails or the browser cannot play (or every piece, without the route) in the
-browser's voice. Then it listens again. The thread under the call shows the
-conversation as usual.
+characters, played in order, the next one requested while one plays, each
+piece the route fails or the browser cannot play (or every piece, without the
+route) in the browser's voice. Then it listens again. The thread under the
+call shows the conversation as usual; a `transformMessageText` that throws
+leaves the answer said and shown as it came.
 
 - Only the answer to the question is said: the final `done` of the panel's own
   turn, or of the turn a `folded_into_active_turn` frame (or the steer
@@ -756,6 +757,10 @@ Download failures (403/404/5xx/network) are reported through the optional `onDow
 data: {"type": "error", "content": "Something went wrong"}
 ```
 
+An `error` ends the turn for good, and so does a `cancelled`, unless marked
+`provisional: true` (see
+[Turns that outlive their stream](#turns-that-outlive-their-stream)).
+
 ### `POST {apiBaseUrl}/chat/messages/steer`
 
 Steers the agent mid-run: while a response is still streaming, Enter / the
@@ -799,7 +804,11 @@ on `done`). A message with attachments steers only with `steerAttachments`
 mentions or body fields of its own (`send`'s `extras`, `onBeforeSend`'s
 `extras`) never steers, since a steer reaches the agent as text alone: it waits
 for the turn to end (`holdSendsDuringTurn`), and `onBeforeSend` is asked again,
-with `turnRunning: false`, before it goes out. Esc stops generating.
+with `turnRunning: false`, before it goes out. A file that failed to upload
+neither steers nor waits: while a turn runs, winds down or is let go of with
+the event stream, the composer offers no send and says why, and once no turn
+holds the conversation the message goes without that file. `send` and a voice
+call attach no files, so this never holds them. Esc stops generating.
 
 #### Multi-segment responses
 
@@ -1007,7 +1016,7 @@ chat) opts into six more routes, none with a default:
 | --- | --- | --- |
 | `cancel` | `POST {cancel}` with `{ conversation_id }` | Stop asks the backend to end the turn; the panel keeps reading until the stream's `cancelled` frame (or lets go after 10 s, or at once on a network error or an answer of `{ "turn": "none" }`, reading the conversation back for an end it had not read yet). A Stop pressed before the panel's own send started its turn (its stream delivered nothing yet) carries `"awaiting_send": true`, and its `none` says nothing of that turn: the Stop stays pending and is sent again, without the flag, as the turn starts (or as the answer comes, the turn started meanwhile); any other answer reached a turn, and nothing goes again. A backend may keep a Stop with that flag for the send's turn, and must then take a second cancel of one turn; a Stop without it says nothing of a later send. A refusal (non-2xx) keeps the turn running and shows its `detail` above the composer |
 | `skipWait` | `POST {skipWait}` with `{ conversation_id }` | `Continue now` on `status: wait_start` (`{ seconds, reason }`), for as long as the pause lasts (see the status values) |
-| `events` | `GET {events}/{conversation_id}/events?client_id=<id>` → SSE | Turns this panel did not start (another tab, a reload mid-turn), `user_message`, `conversation_title`, `approval_resolved` |
+| `events` | `GET {events}/{conversation_id}/events?client_id=<id>` → SSE | Turns this panel did not start (another tab, a reload mid-turn), `user_message`, `conversation_title`, `approval_resolved`; every frame of a turn names it (`turn_id`, below) |
 | `messagesPage` | `GET {messagesPage}/{conversation_id}/messages?before=<message id>&limit=50&supports_artifacts=true` → `{ messages, has_more }` | "Load earlier messages" past the restored ones, offered when the restore answers `has_more: true` |
 | `clearAll` | `DELETE {clearAll}` | "Clear all conversations" in the conversation list and the header's history menu, confirmed first |
 | `tts` | `POST {tts}` with `{ text, format: 'mp3' }` → audio | Read aloud in the backend's voice; the browser's when it fails |
@@ -1033,6 +1042,14 @@ says.
 A `404` or `405` stops it, and a `401` or `403` stops it until
 `requestHeaders` change, when it is tried once more (a refreshed token picks
 it up).
+
+With `events` named, every frame of a turn names it with the same `turn_id`
+wherever it goes: each turn frame of the event stream (`thinking`, `status`,
+`stream`, `done`, `error`, `cancelled`, `approval_required`, and the replay of
+a turn), and each frame of the message stream from its `turn_started` (or
+`folded_into_active_turn`) on. A turn frame of the event stream naming none is
+not read. A backend without `events` need name no turn: each turn is then the
+one its own stream carries.
 
 With `events` named, every message, steer, decision, page-action answer, Stop
 and "Continue now" carries the same id in `X-Chat-Client-Id` (the
@@ -1061,11 +1078,11 @@ A relayed turn uses the frames of `POST /chat/messages`, plus:
   stored id. A replay naming another turn means the one on screen ended
   meanwhile: the answer it was writing goes, its stored copy read back.
 - `{"type": "done", "intermediate": true, …}` — a segment closed, the turn goes on.
-- A provisional end — an `error` or `cancelled` with neither `message_id` nor
-  `reason` (a Stop's acknowledgement, a failed loop) — ends the turn on screen
-  at once; the stored end of the same turn that follows it (a `done`,
-  `cancelled` or `error` carrying `message_id`, the next end on the stream for a turn
-  naming no `turn_id`) only gives the answer its id, and a `done` its stored
+- A provisional end — an `error` or `cancelled` marked `provisional: true` (a
+  Stop's acknowledgement, a failed loop; any other is final, and nothing of
+  its turn is awaited after it) — ends the turn on screen at once; the stored
+  end of the same turn that follows it (a `done`, `cancelled` or `error`
+  carrying `message_id`) only gives the answer its id, and a `done` its stored
   text and all a live `done` carries (attachments, reasoning, tool trace, the
   agent that answered, context usage, a transfer); also while the panel's own
   turn runs, whose context usage and agent then stay. The panel's own stream

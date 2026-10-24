@@ -32,7 +32,7 @@ test('onStreamEvent says which frame ends a turn, provisionally or stored, and w
   await act(async () => {
     live.send({ type: 'thinking', turn_id: 't1', resumed: true, elapsed_s: 3, relayed: true });
     live.send({ type: 'stream', turn_id: 't1', content: 'Partial', relayed: true });
-    live.send({ type: 'error', turn_id: 't1', content: 'Boom', relayed: true });
+    live.send({ type: 'error', turn_id: 't1', content: 'Boom', relayed: true, provisional: true });
     await settle(10);
   });
   await act(async () => {
@@ -191,7 +191,7 @@ test('each message carries the backend’s own fields: restored, paged, live, an
   await act(async () => {
     subscriptions[0].send({ type: 'thinking', turn_id: 't9', relayed: true });
     subscriptions[0].send({ type: 'stream', turn_id: 't9', content: 'Stopped', relayed: true });
-    subscriptions[0].send({ type: 'cancelled', turn_id: 't9', relayed: true });
+    subscriptions[0].send({ type: 'cancelled', turn_id: 't9', relayed: true, provisional: true });
     await settle(10);
   });
   await act(async () => {

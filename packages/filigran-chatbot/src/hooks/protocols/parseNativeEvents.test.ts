@@ -38,9 +38,15 @@ test('cancelled, approval_resolved and folded turns are their own actions', () =
   assert.deepEqual(parseRestEvent({ type: 'folded_into_active_turn', turn_id: 't1' }, ctx()), { action: 'folded', turnId: 't1' });
 });
 
-test('an end with neither message_id nor reason is provisional: the stored end follows it', () => {
-  assert.deepEqual(parseRestEvent({ type: 'cancelled' }, ctx()), { action: 'cancelled', provisional: true });
-  assert.deepEqual(parseRestEvent({ type: 'error', content: 'Boom' }, ctx()), { action: 'error', content: 'Boom', provisional: true });
+test('an end is provisional only when it says so: the stored end follows it; a bare one is final', () => {
+  assert.deepEqual(parseRestEvent({ type: 'cancelled', provisional: true }, ctx()), { action: 'cancelled', provisional: true });
+  assert.deepEqual(parseRestEvent({ type: 'error', content: 'Boom', provisional: true }, ctx()), {
+    action: 'error',
+    content: 'Boom',
+    provisional: true,
+  });
+  assert.deepEqual(parseRestEvent({ type: 'cancelled' }, ctx()), { action: 'cancelled' });
+  assert.deepEqual(parseRestEvent({ type: 'error', content: 'Boom' }, ctx()), { action: 'error', content: 'Boom' });
   assert.deepEqual(parseRestEvent({ type: 'error', content: 'Lost', reason: 'lost' }, ctx()), { action: 'error', content: 'Lost' });
   assert.deepEqual(parseRestEvent({ type: 'cancelled', message_id: 'm2' }, ctx()), {
     action: 'cancelled',

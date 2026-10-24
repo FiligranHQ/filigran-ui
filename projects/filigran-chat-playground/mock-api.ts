@@ -468,10 +468,10 @@ export function mockChatApi(): Plugin {
     const { text, stall, fail } = scriptFor(prompt);
     const waitTurn = prompt.toLowerCase().includes('wait');
     // A stopped turn, as XTM One ends one: the Stop's acknowledgement (a
-    // provisional end, no `message_id`), then the stored end once the cut
-    // answer is persisted.
+    // provisional end, marked so), then the stored end once the cut answer is
+    // persisted.
     async function* stopped(): AsyncGenerator<Record<string, unknown>, void> {
-      yield { type: 'cancelled' };
+      yield { type: 'cancelled', provisional: true };
       await sleep(150);
       const messageId = `msg-${++seq}`;
       conv.messages.push({ id: messageId, role: 'assistant', content: 'The request was cancelled.', createdAt: new Date().toISOString() });
@@ -501,7 +501,7 @@ export function mockChatApi(): Plugin {
     if (stall) yield { type: 'status', status: 'tool_heartbeat', tools: ['search_entities'], elapsed_s: 25 };
     if (fail) {
       // A failed loop: the provisional error, then the stored `done` carrying it.
-      yield { type: 'error', content: text };
+      yield { type: 'error', content: text, provisional: true };
       await sleep(150);
       const messageId = `msg-${++seq}`;
       conv.messages.push({ id: messageId, role: 'assistant', content: text, createdAt: new Date().toISOString() });

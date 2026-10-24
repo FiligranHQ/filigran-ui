@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { ChatMessage } from '../types.ts';
-import { mergeReadBack, unseenTurnOutcome } from './useChat.ts';
+import { createSentTexts, mergeReadBack, unseenTurnOutcome } from './useChat.ts';
 
 const at = new Date(0);
 const msg = (id: string, role: ChatMessage['role'], content: string, serverId?: string): ChatMessage => ({
@@ -64,4 +64,19 @@ test('a turn that ended out of sight answered when the read-back holds an answer
   assert.equal(unseenTurnOutcome([question], 'u1'), 'stopped');
   assert.equal(unseenTurnOutcome([question, answer], null), 'answered', 'nothing stored was shown');
   assert.equal(unseenTurnOutcome([segment, answer], 'u0'), 'stopped', 'what was shown is no longer read');
+});
+
+test('the text a bubble was sent with is kept while the bubble shows, and forgotten with it', () => {
+  const sent = createSentTexts();
+  const shown = (id: string, content: string): ChatMessage => ({ id, role: 'user', content, timestamp: new Date() });
+  sent.remember('u1', 'wrapped one');
+  sent.remember('u2', 'wrapped two');
+  sent.keepOnly([shown('u1', 'one'), shown('u2', 'two')]);
+  assert.equal(sent.of(shown('u2', 'two')), 'wrapped two');
+  sent.keepOnly([shown('u2', 'two')]);
+  assert.equal(sent.size, 1);
+  assert.equal(sent.of(shown('u1', 'one')), 'one');
+  // A new conversation empties the thread, and with it what was kept.
+  sent.keepOnly([]);
+  assert.equal(sent.size, 0);
 });

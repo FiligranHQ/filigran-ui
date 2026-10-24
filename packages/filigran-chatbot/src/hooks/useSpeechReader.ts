@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useInsertionEffect, useRef, useState } from 'react';
-import { chunkSpeech, createSpeechController, fetchSpeech, speakableText, type SpeechController, type TtsRoute } from '../utils/speech';
+import { chunkSpeech, createSpeechController, speakableText, speechAhead, type SpeechController, type TtsRoute } from '../utils/speech';
 import { usePanelFetch } from './usePanelRequests';
 
 const speechSupported = (): boolean =>
@@ -75,16 +75,11 @@ export function useSpeechReader(locale?: string, tts?: TtsRoute) {
       const chunks = chunkSpeech(text, TTS_MAX_LENGTH);
       const audio = new Audio();
       playback.audio = audio;
-      const fetchChunk = (chunk: string) => fetchSpeech(panelFetch, route, chunk, abort.signal);
       let index = 0;
-      let next: Promise<Blob> | null = chunks.length > 0 ? fetchChunk(chunks[0]) : null;
       try {
-        for (; next; index += 1) {
-          const blob = await next;
+        for await (const blob of speechAhead(panelFetch, route, chunks, abort.signal)) {
           if (playbackRef.current !== playback) return;
-          next = index + 1 < chunks.length ? fetchChunk(chunks[index + 1]) : null;
-          // Its failure is met when its turn comes.
-          next?.catch(() => undefined);
+          if (!blob) throw new Error('TTS failed');
           if (playback.url) URL.revokeObjectURL(playback.url);
           playback.url = URL.createObjectURL(blob);
           const ended = new Promise<boolean>((resolve) => {
@@ -95,6 +90,7 @@ export function useSpeechReader(locale?: string, tts?: TtsRoute) {
           await audio.play();
           if (!(await ended)) throw new Error('TTS playback failed');
           if (playbackRef.current !== playback) return;
+          index += 1;
         }
         stopPlayback();
       } catch (err) {

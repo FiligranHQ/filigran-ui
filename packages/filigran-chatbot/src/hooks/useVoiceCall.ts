@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useInsertionEffect, useRef, useState } from 'react';
-import { chunkSpeech, fetchSpeech, type TtsRoute } from '../utils/speech';
+import { chunkSpeech, speechAhead, type TtsRoute } from '../utils/speech';
 import { getSpeechRecognition } from './useDictation';
 import { createVoiceCall, type VoiceCallController, type VoiceCallDeps, type VoiceCallSnapshot } from './voiceCallController';
 import { probeTurn } from './voiceTurn';
 import { usePanelFetch } from './usePanelRequests';
+import { askHost } from '../utils/askHost';
 
-/** Longest piece of an answer spoken at once: the first one plays while the next are made. */
+/** Longest piece of an answer spoken at once: one plays while the next is made. */
 const VOICE_CHUNK_LENGTH = 200;
 
 /** Whether this browser can hold a voice call: it needs speech recognition. */
@@ -69,9 +70,10 @@ function speakInBrowser(text: string, lang: string | undefined, signal: AbortSig
 
 /**
  * A voice call over the panel: the browser listens, the panel sends, the
- * answer is spoken through the host's speech route in sentence-sized pieces
- * (all requested at once, played in order), each piece the route fails in the
- * browser's voice. `onFrame` must see every frame of both streams.
+ * answer is spoken through the host's speech route in sentence-sized pieces,
+ * played in order, the next one requested while one plays (`speechAhead`),
+ * each piece the route fails in the browser's voice. `onFrame` must see every
+ * frame of both streams.
  */
 export function useVoiceCall(options: UseVoiceCallOptions) {
   const panelFetch = usePanelFetch();
@@ -86,15 +88,15 @@ export function useVoiceCall(options: UseVoiceCallOptions) {
     const { tts, locale } = optionsRef.current;
     const lang = locale || (typeof navigator !== 'undefined' ? navigator.language : undefined);
     const chunks = chunkSpeech(text, VOICE_CHUNK_LENGTH);
-    // A piece the route fails, or the browser cannot play, is said in the browser's voice.
-    const audio = chunks.map((chunk) => (tts ? fetchSpeech(panelFetch, tts, chunk, signal).catch(() => null) : Promise.resolve(null)));
-    for (let i = 0; i < chunks.length; i += 1) {
+    const audio = tts ? speechAhead(panelFetch, tts, chunks, signal) : null;
+    for (const chunk of chunks) {
       if (signal.aborted) return;
-      const blob = await audio[i];
+      const blob = audio ? ((await audio.next()).value ?? null) : null;
       if (signal.aborted) return;
+      // A piece the route fails, or the browser cannot play, is said in the browser's voice.
       if (blob && (await playAudio(blob, signal))) continue;
       if (signal.aborted) return;
-      await speakInBrowser(chunks[i], lang, signal);
+      await speakInBrowser(chunk, lang, signal);
     }
   }, []);
 
@@ -107,8 +109,10 @@ export function useVoiceCall(options: UseVoiceCallOptions) {
       lang: optionsRef.current.locale || (typeof navigator !== 'undefined' ? navigator.language : undefined),
       send: (text, hooks) => optionsRef.current.send(text, hooks),
       speak,
-      speakable: (text) => optionsRef.current.speakable(text),
-      present: (text) => optionsRef.current.present(text),
+      // The host's rewriting that throws leaves the text as it is: the answer is
+      // still shown and spoken, and the call goes on.
+      speakable: (text) => askHost(optionsRef.current.speakable, text) ?? text,
+      present: (text) => askHost(optionsRef.current.present, text) ?? text,
       // Without a way to read the turn, a turn silent for two minutes is taken as over.
       probe: () => {
         const read = optionsRef.current.readTurnState;

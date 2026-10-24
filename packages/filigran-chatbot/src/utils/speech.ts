@@ -153,6 +153,27 @@ export async function fetchSpeech(fetchImpl: typeof fetch, route: TtsRoute, text
   return res.blob();
 }
 
+/**
+ * The audio the host's speech route makes of each of *chunks*, in order, each
+ * requested once the one before it is handed over: one request ahead of what
+ * plays, never the whole answer at once (a rate-limited route would refuse the
+ * later ones). `null` for a chunk the route failed.
+ */
+export async function* speechAhead(
+  fetchImpl: typeof fetch,
+  route: TtsRoute,
+  chunks: readonly string[],
+  signal: AbortSignal,
+): AsyncGenerator<Blob | null, void, undefined> {
+  const request = (i: number) => fetchSpeech(fetchImpl, route, chunks[i], signal).catch(() => null);
+  let next = chunks.length > 0 ? request(0) : null;
+  for (let i = 0; next; i += 1) {
+    const blob = await next;
+    next = i + 1 < chunks.length && !signal.aborted ? request(i + 1) : null;
+    yield blob;
+  }
+}
+
 /** The part of `window.speechSynthesis` the controller uses. */
 export interface SpeechSynthesisLike<U> {
   speak(utterance: U): void;

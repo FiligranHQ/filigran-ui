@@ -274,11 +274,10 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
   const type = evt.type as string | undefined;
 
   if (type === 'error' || type === 'cancelled') {
-    // A provisional end (a Stop's acknowledgement, a failed loop's error)
-    // carries neither the stored answer's id nor a reason: the stored end of
-    // the same turn follows it.
+    // A provisional end (a Stop's acknowledgement, a failed loop's error) says
+    // so: the stored end of the same turn follows it. Any other is final.
     const messageId = optionalString(evt.message_id);
-    const provisional = !messageId && !evt.reason ? (true as const) : undefined;
+    const provisional = evt.provisional === true ? (true as const) : undefined;
     // A stored end describes the stored answer: the host reads it as it came.
     const end = { ...(messageId ? { messageId, raw: { ...evt } } : {}), ...(provisional ? { provisional } : {}) };
     return type === 'error' ? { action: 'error', content: (evt.content as string) || '', ...end } : { action: 'cancelled', ...end };

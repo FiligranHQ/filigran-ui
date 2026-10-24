@@ -47,8 +47,8 @@ This file starts at 3.10.0; earlier releases are on the
   panel's own fields, set by it or not, are never taken from there), and
   `onStreamEvent` hands the host every frame received, including those the
   panel does not render, with what the panel read in it: `end`
-  (`'provisional'` on an `error` or `cancelled` with neither `message_id` nor
-  `reason`, `'stored'` on an end naming the stored answer's `message_id`: a
+  (`'provisional'` on an `error` or `cancelled` marked `provisional: true`,
+  `'stored'` on an end naming the stored answer's `message_id`: a
   `done` that is not intermediate, a `cancelled`, an `error`) and `replayed`
   (the `thinking` frame of a turn replayed from its start, `resumed: true`).
 - The panel renders the frames of a backend whose turns outlive their stream:
@@ -57,8 +57,8 @@ This file starts at 3.10.0; earlier releases are on the
   meanwhile: `wait_status`, `tool_heartbeat`, `tool_progress`,
   `consult_progress`; streamed text or any other status ends it), `cancelled`,
   an intermediate `done` and the agent that `answered_by` a segment. A
-  provisional end (an `error` or `cancelled` with neither `message_id` nor
-  `reason`) ends the turn at once; the stored end that follows gives the
+  provisional end (an `error` or `cancelled` marked `provisional: true`; any
+  other is final) ends the turn at once; the stored end that follows gives the
   answer its id and a `done`'s content.
 - History is restored with no agent list (`apiEndpoints.agents: null`).
 - A host can render its own cards for the `[[KIND:args]]` markers of an
@@ -68,7 +68,8 @@ This file starts at 3.10.0; earlier releases are on the
   shows `This item could not be loaded.` and leaves the rest of the answer
   alone. A marker no renderer names stays text, as before.
 - `transformMessageText` rewrites a message's text before it is shown, copied
-  or read aloud (masking secrets, converting a channel's syntax).
+  or read aloud (masking secrets, converting a channel's syntax); one that
+  throws leaves the text as it came.
 - `codeBlockRenderers` renders a fenced code block of a language the host
   names (`(code, { streaming }) => ReactNode`, matched case-insensitively) in
   place of the code block, e.g. a chart drawn from the block's data. A
@@ -103,13 +104,13 @@ This file starts at 3.10.0; earlier releases are on the
   speech recognition listens, a phrase is sent after one second of silence
   (`onBeforeSend` sees `source: 'voice'`, a `ChatSendDraft.source` of its
   own), and the answer is said through `apiEndpoints.tts` in pieces of about
-  200 characters, in the browser's voice where the route fails, the browser
-  cannot play a piece, or no route is named. Only the final answer of the turn
-  that answers the question is said (the panel's own, or the one a fold or a
-  steer names), and only the addressed agent's: the other agents' replies show
-  by name, `Did not answer` beside a failed one. Speaking over the answer, a
-  tap or Skip stops it; a tap while it is awaited cancels the question and its
-  turn, as `stop()` does; a turn silent for 120 s is checked through
+  200 characters, each requested while the one before plays, in the browser's
+  voice where the route fails, the browser cannot play a piece, or no route is
+  named. Only the final answer of the turn that answers the question is said
+  (the panel's own, or the one a fold or a steer names), and only the
+  addressed agent's: the other agents' replies show by name, `Did not answer`
+  beside a failed one. Speaking over the answer, a tap or Skip stops it; a tap
+  while it is awaited cancels the question and its turn, as `stop()` does; a turn silent for 120 s is checked through
   `apiEndpoints.pendingApprovals` and given up on once over.
 - Stable `data-testid`s for host tests: `filigran-chat-panel`,
   `filigran-chat-transcript`, `filigran-chat-user-message`,
@@ -260,7 +261,10 @@ This file starts at 3.10.0; earlier releases are on the
   turn the stream let go of while the page was hidden holds sends, and runs
   on for `onTurnRunningChange`, until the reopened stream replays it, or, 5 s
   after the page shows again or at once on a refused stream, until the
-  conversation read back says how it ended. See
+  conversation read back says how it ended. Every frame of a turn names it
+  (`turn_id`): on the event stream, and on the message stream from its
+  `turn_started` on; an event stream frame of a turn naming none is not read.
+  See
   [Turns that outlive their stream](README.md#turns-that-outlive-their-stream)
   for reconnection, the client id and replays.
 - With `cancel`, `skipWait` or `events` named, a send made while a turn ended

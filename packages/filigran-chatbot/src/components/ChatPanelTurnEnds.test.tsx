@@ -77,7 +77,7 @@ test('a relayed turn ended provisionally takes its stored end as its answer’s 
     await settle(10);
   });
   await act(async () => {
-    live.send({ type: 'error', turn_id: 't1', content: 'I encountered an error: boom', relayed: true });
+    live.send({ type: 'error', turn_id: 't1', content: 'I encountered an error: boom', relayed: true, provisional: true });
     await settle(10);
   });
   assert.deepEqual(heard, ['running', 'failed']);
@@ -96,7 +96,7 @@ test('a relayed turn ended provisionally takes its stored end as its answer’s 
     await settle(10);
   });
   await act(async () => {
-    live.send({ type: 'cancelled', turn_id: 't2', relayed: true });
+    live.send({ type: 'cancelled', turn_id: 't2', relayed: true, provisional: true });
     await settle(10);
   });
   await act(async () => {
@@ -134,7 +134,7 @@ test('the own stream is read past a provisional end for the stored end’s id, t
     await settle();
     stream.send({ type: 'turn_started', turn_id: 't1' });
     stream.send({ type: 'stream', turn_id: 't1', content: 'Some' });
-    stream.send({ type: 'error', turn_id: 't1', content: 'I encountered an error: boom' });
+    stream.send({ type: 'error', turn_id: 't1', content: 'I encountered an error: boom', provisional: true });
     await settle(10);
   });
   assert.deepEqual(heard, ['running', 'failed'], 'over when the provisional end comes');
@@ -598,7 +598,7 @@ test('sends wait while the own turn winds down after a provisional end, until it
       void ref.current!.send('first');
       await settle();
       streams[0].send({ type: 'turn_started', turn_id: 't1' });
-      streams[0].send({ type: 'error', turn_id: 't1', content: 'boom' });
+      streams[0].send({ type: 'error', turn_id: 't1', content: 'boom', provisional: true });
       await settle(10);
     });
     assert.deepEqual(heard, ['running', 'failed'], 'over on screen');
@@ -619,7 +619,7 @@ test('sends wait while the own turn winds down after a provisional end, until it
     // A stored end that never comes: sent after a while all the same.
     await act(async () => {
       streams[1].send({ type: 'turn_started', turn_id: 't2' });
-      streams[1].send({ type: 'cancelled', turn_id: 't2' });
+      streams[1].send({ type: 'cancelled', turn_id: 't2', provisional: true });
       await settle(10);
     });
     await act(async () => {
@@ -701,7 +701,7 @@ test('a relayed turn’s stored end gives its answer everything a live done woul
     await act(async () => {
       live.send({ type: 'thinking', turn_id: 't1', relayed: true });
       live.send({ type: 'stream', turn_id: 't1', content: 'Partial', relayed: true });
-      live.send({ type: 'error', turn_id: 't1', content: 'boom', relayed: true });
+      live.send({ type: 'error', turn_id: 't1', content: 'boom', relayed: true, provisional: true });
       await settle(10);
     });
     // Sent while that turn winds down: held, then sent after a while.
@@ -738,42 +738,6 @@ test('a relayed turn’s stored end gives its answer everything a live done woul
   } finally {
     timers.restore();
   }
-});
-
-test('a relayed turn naming none takes its stored end after a provisional one', async () => {
-  const subscriptions: ReturnType<typeof sseStream>[] = [];
-  fakeBackend([agentsRoute, restoreRoute(), eventsRoute(subscriptions)]);
-  const { heard, onTurnRunningChange } = turnLog();
-  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange });
-  const live = subscriptions[0];
-  await act(async () => {
-    live.send({ type: 'thinking' });
-    live.send({ type: 'stream', content: 'Halfway' });
-    await settle(10);
-  });
-  await act(async () => {
-    live.send({ type: 'cancelled' });
-    await settle(10);
-  });
-  await act(async () => {
-    live.send({ type: 'stream', content: 'Halfway, then more' });
-    live.send({ type: 'cancelled', message_id: 'm4' });
-    await settle(10);
-  });
-  assert.deepEqual(heard, ['running', 'stopped'], 'no second turn');
-  assert.equal(answers().length, 1);
-  assert.ok(container.querySelector('[data-message-id="m4"]'));
-  assert.ok(!text().includes('then more'));
-  await act(async () => {
-    live.send({ type: 'thinking' });
-    await settle(10);
-  });
-  await act(async () => {
-    live.send({ type: 'done', content: 'Next turn' });
-    await settle(10);
-  });
-  assert.deepEqual(heard, ['running', 'stopped', 'running', 'answered']);
-  await finish(...subscriptions);
 });
 
 test('a steer refused because the turn just ended goes back to the composer, saying nothing, without held sends', async () => {
@@ -884,7 +848,7 @@ test('a new conversation lets go of the own stream still read for a stored end',
     void ref.current!.send('go');
     await settle();
     stream.send({ type: 'turn_started', turn_id: 't1' });
-    stream.send({ type: 'error', turn_id: 't1', content: 'boom' });
+    stream.send({ type: 'error', turn_id: 't1', content: 'boom', provisional: true });
     await settle(10);
   });
   assert.equal(signal?.aborted, false, 'read on for its stored end');
@@ -1104,7 +1068,7 @@ test('a message sent after a stopped turn ended goes out once it winds down; one
     await settle(10);
   });
   await act(async () => {
-    streams[0].send({ type: 'cancelled', turn_id: 't1' });
+    streams[0].send({ type: 'cancelled', turn_id: 't1', provisional: true });
     await settle(10);
   });
   assert.deepEqual(settled, ['typed during:returned:typed during'], 'held before the Stop: given back');
@@ -1449,7 +1413,7 @@ test('a relayed turn winding down holds sends across its event stream’s reopen
     await act(async () => {
       subscriptions[0].send({ type: 'thinking', turn_id: 't1' });
       subscriptions[0].send({ type: 'stream', turn_id: 't1', content: 'Partial' });
-      subscriptions[0].send({ type: 'cancelled', turn_id: 't1' });
+      subscriptions[0].send({ type: 'cancelled', turn_id: 't1', provisional: true });
       await settle(10);
     });
     await finish(subscriptions[0]);
@@ -1515,42 +1479,6 @@ test('a steer no turn will answer stays, with a notice that the next message car
   await finish(...streams);
 });
 
-test('the stored end of a relayed turn naming none lands while the own turn runs', async () => {
-  const timers = manualTimers([5000]);
-  try {
-    const subscriptions: ReturnType<typeof sseStream>[] = [];
-    const own = sseStream();
-    fakeBackend([agentsRoute, restoreRoute(), eventsRoute(subscriptions), (req) => (req.url === '/api/chat/messages' ? own.response() : undefined)]);
-    const ref = createRef<Handle>();
-    await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
-    await act(async () => {
-      subscriptions[0].send({ type: 'thinking' });
-      subscriptions[0].send({ type: 'stream', content: 'Halfway' });
-      subscriptions[0].send({ type: 'cancelled' });
-      await settle(10);
-    });
-    await act(async () => {
-      void ref.current!.send('mine');
-      await settle(10);
-    });
-    await timers.run(5000);
-    await act(async () => {
-      own.send({ type: 'turn_started', turn_id: 't2' });
-      own.send({ type: 'stream', turn_id: 't2', content: 'Own answer' });
-      await settle(10);
-    });
-    await act(async () => {
-      subscriptions[0].send({ type: 'cancelled', message_id: 'm4' });
-      await settle(10);
-    });
-    assert.ok(container.querySelector('[data-message-id="m4"]'), 'the stopped answer takes its stored id');
-    assert.ok(text().includes('Own answer'));
-    await finish(own, ...subscriptions);
-  } finally {
-    timers.restore();
-  }
-});
-
 test('a late stored end leaves the running turn’s context gauge and agent alone', async () => {
   const timers = manualTimers([5000]);
   try {
@@ -1562,7 +1490,7 @@ test('a late stored end leaves the running turn’s context gauge and agent alon
     const gauge = () => container.querySelector('[aria-label$="%)"]')?.getAttribute('aria-label') ?? '';
     await act(async () => {
       subscriptions[0].send({ type: 'thinking', turn_id: 't1' });
-      subscriptions[0].send({ type: 'error', turn_id: 't1', content: 'boom' });
+      subscriptions[0].send({ type: 'error', turn_id: 't1', content: 'boom', provisional: true });
       await settle(10);
     });
     await act(async () => {
@@ -1929,7 +1857,7 @@ test('messages held across a turn and its wind-down go out together, each as the
   });
   // A provisional end: the turn is over, and winds down.
   await act(async () => {
-    streams[0].send({ type: 'cancelled', turn_id: 't1' });
+    streams[0].send({ type: 'cancelled', turn_id: 't1', provisional: true });
     await settle(10);
   });
   await act(async () => {
@@ -1971,4 +1899,109 @@ test('a steer refused from the composer gives back what the user typed, not what
   assert.equal(notice(), 'Too long to steer');
   assert.equal(container.querySelector('textarea')!.value, 'hello');
   await finish(stream);
+});
+
+test('while a relayed turn let go of with the page hidden may run on, a failed upload keeps Send off and says why', async () => {
+  let visibility = 'visible';
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility });
+  const timers = manualTimers([60000, 5000]);
+  const setVisibility = (state: string) =>
+    act(async () => {
+      visibility = state;
+      document.dispatchEvent(new Event('visibilitychange'));
+      await settle(10);
+    });
+  try {
+    const subscriptions: ReturnType<typeof sseStream>[] = [];
+    fakeBackend([
+      agentsRoute,
+      restoreRoute(),
+      eventsRoute(subscriptions),
+      (req) => (req.url === '/api/chat/upload' ? json({ detail: 'too large' }, 500) : undefined),
+    ]);
+    const ref = createRef<Handle>();
+    await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
+    await act(async () => {
+      subscriptions[0].send({ type: 'thinking', turn_id: 't1' });
+      subscriptions[0].send({ type: 'stream', turn_id: 't1', content: 'Working' });
+      await settle(10);
+    });
+    await setVisibility('hidden');
+    await timers.run(60000);
+    await setVisibility('visible');
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await act(async () => {
+      Object.defineProperty(input, 'files', { value: [new File(['x'], 'report.pdf', { type: 'application/pdf' })], configurable: true });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      await settle(10);
+    });
+    await act(async () => {
+      ref.current!.setDraft('with this file');
+      await settle();
+    });
+    const send = container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!;
+    assert.equal(send.disabled, true);
+    assert.ok(text().includes('A file failed to upload'));
+    await finish(...subscriptions);
+  } finally {
+    timers.restore();
+    delete (document as unknown as Record<string, unknown>).visibilityState;
+  }
+});
+
+test('the event stream reads only the turn frames that name their turn', async () => {
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  fakeBackend([agentsRoute, restoreRoute(), eventsRoute(subscriptions)]);
+  const { heard, onTurnRunningChange } = turnLog();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange });
+  await act(async () => {
+    subscriptions[0].send({ type: 'thinking', relayed: true });
+    subscriptions[0].send({ type: 'stream', content: 'Unnamed', relayed: true });
+    subscriptions[0].send({ type: 'done', content: 'Unnamed', relayed: true });
+    await settle(10);
+  });
+  assert.deepEqual(heard, []);
+  assert.ok(!text().includes('Unnamed'));
+  await act(async () => {
+    subscriptions[0].send({ type: 'thinking', turn_id: 't1', relayed: true });
+    await settle(10);
+  });
+  await act(async () => {
+    subscriptions[0].send({ type: 'done', turn_id: 't1', content: 'Named', message_id: 'm1', relayed: true });
+    await settle(10);
+  });
+  assert.deepEqual(heard, ['running', 'answered']);
+  assert.ok(text().includes('Named'));
+  await finish(...subscriptions);
+});
+
+test('a backend with no event stream or Stop route names no turn: each turn is the one its own stream carries', async () => {
+  const streams = [sseStream(), sseStream(), sseStream(), sseStream()];
+  let turns = 0;
+  const requests = fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? streams[turns++].response() : undefined)]);
+  const ref = createRef<Handle>();
+  const { heard, onTurnRunningChange } = turnLog();
+  await render({ conversationId: 'c1', onTurnRunningChange }, ref);
+  const turn = async (text: string, frames: Record<string, unknown>[]) => {
+    await act(async () => {
+      void ref.current!.send(text);
+      await settle(10);
+    });
+    await act(async () => {
+      for (const frame of frames) streams[turns - 1].send(frame);
+      await settle(10);
+    });
+  };
+  await turn('first', [{ type: 'thinking' }, { type: 'stream', content: 'Hello' }, { type: 'done', content: 'Hello there', message_id: 'm1' }]);
+  await finish(streams[0]);
+  // Over at once, the stream still open: the next send goes out as a new turn.
+  await turn('second', [{ type: 'thinking' }, { type: 'stream', content: 'Partial' }, { type: 'cancelled' }]);
+  await turn('third', [{ type: 'thinking' }, { type: 'error', content: 'Boom' }]);
+  await turn('fourth', [{ type: 'done', content: 'Last' }]);
+  await finish(streams[3]);
+  assert.deepEqual(heard, ['running', 'answered', 'running', 'stopped', 'running', 'failed', 'running', 'answered']);
+  assert.equal(sent(requests, '/api/chat/messages').length, 4);
+  assert.ok(text().includes('Hello there'));
+  assert.ok(text().includes('Last'));
+  await finish(...streams);
 });

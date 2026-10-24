@@ -537,37 +537,6 @@ test('the event stream waits for a history actually read back, not one skipped f
   await finish(events);
 });
 
-test('a stopped relayed turn that names no turn stays stopped, its stored end too, and the next turn shows', async () => {
-  const events = sseStream();
-  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined)]);
-  const ref = createRef<Handle>();
-  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
-  await act(async () => {
-    events.send({ type: 'thinking' });
-    events.send({ type: 'stream', content: 'unnamed' });
-    await settle(10);
-  });
-  await act(async () => {
-    ref.current!.stop();
-    await settle(10);
-  });
-  await act(async () => {
-    events.send({ type: 'stream', content: 'unnamed, still going' });
-    events.send({ type: 'cancelled' });
-    events.send({ type: 'done', content: 'unnamed, stored', message_id: 'm7' });
-    await settle(10);
-  });
-  assert.ok(!text().includes('still going'));
-  assert.ok(!text().includes('unnamed, stored'));
-  await act(async () => {
-    events.send({ type: 'thinking' });
-    events.send({ type: 'stream', content: 'a later turn' });
-    await settle(10);
-  });
-  assert.ok(text().includes('a later turn'));
-  await finish(events);
-});
-
 test('a steered turn whose stream drops keeps its closed segments; the replay brings back the one being written', async () => {
   const stream = sseStream();
   const subscriptions: ReturnType<typeof sseStream>[] = [];
@@ -1202,5 +1171,91 @@ test('each answer says which agent wrote it and whether it is a note for one tha
     'Live reply|a2|Analyst|answered',
     'Live note|a1|Hunter|failed',
   ]);
+  await finish(stream);
+});
+
+test('an error or cancelled not marked provisional ends the turn for good: the next send goes out at once', async () => {
+  const streams = [sseStream(), sseStream(), sseStream()];
+  const events = sseStream();
+  let turns = 0;
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    (req) => (req.url === '/api/chat/messages' ? streams[turns++].response() : undefined),
+    (req) => (req.url === '/api/chat/messages/cancel' ? json({ status: 'cancelled' }) : undefined),
+    (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { cancel: '/chat/messages/cancel', events: '/chat/conversations' } }, ref);
+  const outcomes: Promise<unknown>[] = [];
+  const sendNow = (text: string) =>
+    act(async () => {
+      outcomes.push(ref.current!.send(text));
+      await settle(10);
+    });
+  await sendNow('first');
+  await act(async () => {
+    // No stored end follows a final end: nothing winds down, though the
+    // stream is not closed yet.
+    streams[0].send({ type: 'turn_started', turn_id: 't1' });
+    streams[0].send({ type: 'cancelled', turn_id: 't1' });
+    await settle(10);
+  });
+  await sendNow('second');
+  assert.equal(messages(requests).length, 2, 'after a cancelled');
+  await act(async () => {
+    streams[1].send({ type: 'turn_started', turn_id: 't2' });
+    streams[1].send({ type: 'error', turn_id: 't2', content: 'Boom' });
+    await settle(10);
+  });
+  // A turn of another tab ends the same way.
+  await act(async () => {
+    events.send({ type: 'thinking', turn_id: 't3', relayed: true });
+    events.send({ type: 'cancelled', turn_id: 't3', relayed: true });
+    await settle(10);
+  });
+  await sendNow('third');
+  assert.equal(messages(requests).length, 3, 'after an error, then a relayed cancelled');
+  await act(async () => {
+    streams[2].send({ type: 'turn_started', turn_id: 't4' });
+    await settle(10);
+  });
+  assert.deepEqual(await Promise.all(outcomes), ['sent', 'sent', 'sent']);
+  await finish(...streams, events);
+});
+
+test('while a stopped turn winds down, a failed upload keeps Send off and says why', async () => {
+  const stream = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/cancel' ? json({ status: 'cancelled' }) : undefined),
+    (req) => (req.url === '/api/chat/upload' ? json({ detail: 'too large' }, 500) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { cancel: '/chat/messages/cancel' } }, ref);
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle(10);
+  });
+  await act(async () => {
+    // Over on screen, its stored end still to come: sends are held.
+    stream.send({ type: 'cancelled', provisional: true });
+    await settle(10);
+  });
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+  await act(async () => {
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'report.pdf', { type: 'application/pdf' })], configurable: true });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.setDraft('with this file');
+    await settle();
+  });
+  const send = container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!;
+  assert.equal(send.disabled, true);
+  assert.ok(text().includes('A file failed to upload'));
   await finish(stream);
 });

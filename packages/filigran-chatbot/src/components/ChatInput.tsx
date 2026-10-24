@@ -5,6 +5,7 @@ import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon
 import { useMentionMenu } from '../hooks/useMentionMenu';
 import { useDictation } from '../hooks/useDictation';
 import { referencedConversations } from '../utils/conversationRefs';
+import { hasFailedUpload } from '../utils/failedUpload';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
 import { MentionMenu } from './MentionMenu';
 import { PromptPicker } from './PromptPicker';
@@ -28,6 +29,8 @@ interface ChatInputProps {
   onSend: () => void;
   onStop: () => void;
   isLoading: boolean;
+  /** No turn on screen, yet one holds the conversation (winding down, or let go of with the event stream): a send now is held. */
+  sendsHeld?: boolean;
   /**
    * Mid-run steering availability: while the agent is generating, the typed
    * text can be dispatched immediately (Enter / accent Send button) and is
@@ -83,6 +86,7 @@ export const ChatInput = ({
   onSend,
   onStop,
   isLoading,
+  sendsHeld = false,
   canSteer = false,
   attachedFiles = [],
   onFileAdd,
@@ -159,11 +163,11 @@ export const ChatInput = ({
   const isFileManagementEnabled = Boolean(onFileAdd && onFileRemove && onPaste);
   const hasContent = inputValue.trim() || (isFileManagementEnabled && attachedFiles.length > 0);
   const hasFilesUploading = isFileManagementEnabled && attachedFiles.some((f) => f.uploadStatus === 'pending');
-  const canSend = hasContent && !hasFilesUploading;
   const hasAttachments = isFileManagementEnabled && attachedFiles.length > 0;
-  // A file that failed to upload can neither steer nor wait: the user removes
-  // it, or sends once the turn has ended.
-  const hasFailedFiles = isFileManagementEnabled && attachedFiles.some((f) => f.uploadStatus === 'error');
+  // A file that failed to upload keeps the message from going while a turn
+  // holds the conversation: the user removes it, or sends once the turn ends.
+  const failedFileWaits = isFileManagementEnabled && (isLoading || sendsHeld) && hasFailedUpload(attachedFiles);
+  const canSend = hasContent && !hasFilesUploading && !failedFileWaits;
   // A steer reaches the running loop as text alone, so the agent would never
   // read a conversation it references: such a message waits, like a file.
   // A mention routes the message to another agent: it waits for the turn too.
@@ -174,9 +178,9 @@ export const ChatInput = ({
   // attachments only with steerAttachments. The accent Send button shows NEXT
   // to Stop while there is something to send, its files uploaded.
   const steerable = isLoading && canSteer && !waitsForTurn && (!hasAttachments || steerAttachments);
-  const showSteerSend = steerable && !hasFilesUploading && !hasFailedFiles && (hasAttachments || Boolean(inputValue.trim()));
+  const showSteerSend = steerable && !hasFilesUploading && !failedFileWaits && (hasAttachments || Boolean(inputValue.trim()));
   // What cannot steer waits for the turn to end, one message at a time.
-  const showHoldSend = isLoading && canHold && !showSteerSend && !heldMessage && !hasFailedFiles && Boolean(canSend);
+  const showHoldSend = isLoading && canHold && !showSteerSend && !heldMessage && Boolean(canSend);
 
   // Every way of sending goes through here, and only when the matching button
   // would be enabled: Enter must not send while files upload, nor end a
@@ -203,7 +207,7 @@ export const ChatInput = ({
 
   const footerText = showHoldSend
     ? t('Enter to send when the answer ends · Esc to stop')
-    : isLoading && hasFailedFiles
+    : failedFileWaits
       ? t('A file failed to upload: remove it, or send once the answer ends')
       : steerable
         ? t('Enter to send now · Esc to stop')
