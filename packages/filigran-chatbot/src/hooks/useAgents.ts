@@ -1,13 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ApiEndpoints, BackendType, XtmAgent } from '../types';
-
-const STORAGE_AGENT_KEY = 'filigranChatAgentSlug';
+import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
+import { usePanelFetch } from './usePanelRequests';
 
 interface UseAgentsOptions {
   apiBaseUrl: string;
   apiEndpoints?: ApiEndpoints;
   backendType?: BackendType;
   requestHeaders?: Record<string, string>;
+  /** Namespace of the browser-storage keys (see `storageKeyPrefix` on the panel). */
+  storageKeyPrefix?: string;
+  /** Agent selected once the list loads, by id or slug; wins over the remembered one. */
+  initialAgent?: string;
+  /** Called when the user (or the host, through the panel handle) picks another agent. */
+  onAgentChange?: (agent: XtmAgent) => void;
 }
 
 interface UseAgentsReturn {
@@ -20,11 +26,17 @@ interface UseAgentsReturn {
    * "there is nothing to load", which an empty array alone cannot.
    */
   agentsError: boolean;
+  /** True once the list is known (loaded, failed, or not fetched at all). */
+  agentsSettled: boolean;
+  /** True when the host serves no agent list: conversations go without one. */
+  agentsDisabled: boolean;
   selectedAgent: XtmAgent | null;
   setSelectedAgent: React.Dispatch<React.SetStateAction<XtmAgent | null>>;
   agentMenuOpen: boolean;
   setAgentMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleSwitchAgent: (agent: XtmAgent, onSwitch?: () => void) => void;
+  /** Read the agent list again: agents created or changed since. */
+  reloadAgents: () => void;
 }
 
 /**
@@ -44,22 +56,47 @@ function parseAgents(data: unknown): XtmAgent[] {
   return rawList.filter((raw): raw is XtmAgent => !!raw && typeof raw === 'object' && typeof (raw as XtmAgent).id === 'string');
 }
 
-export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requestHeaders }: UseAgentsOptions): UseAgentsReturn {
+/** The agent named by *key*, matched on id first, then slug. */
+export function findAgent(agents: XtmAgent[], key: string | null | undefined): XtmAgent | undefined {
+  if (!key) return undefined;
+  return agents.find((a) => a.id === key) ?? agents.find((a) => a.slug === key);
+}
+
+export function useAgents({
+  apiBaseUrl,
+  apiEndpoints,
+  backendType = 'rest',
+  requestHeaders,
+  storageKeyPrefix,
+  initialAgent,
+  onAgentChange,
+}: UseAgentsOptions): UseAgentsReturn {
+  const panelFetch = usePanelFetch();
+  const agentsDisabled = apiEndpoints?.agents === null || !!apiEndpoints?.singleEndpoint || backendType === 'legacy';
+  const agentStorageKey = storageKey(storageKeyPrefix, STORAGE_KEYS.agentSlug);
   const [agents, setAgents] = useState<XtmAgent[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [agentsError, setAgentsError] = useState(false);
+  const [agentsSettled, setAgentsSettled] = useState(agentsDisabled);
+  // Bumped to read the list again (`reloadAgents` on the panel handle).
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const reloadAgents = useCallback(() => setReloadNonce((n) => n + 1), []);
   const [selectedAgent, setSelectedAgent] = useState<XtmAgent | null>(null);
   const [agentMenuOpen, setAgentMenuOpen] = useState(false);
+  // Only the latest read lands: a slow earlier one cannot overwrite it.
+  const requestSeqRef = useRef(0);
 
   useEffect(() => {
     // Skip agents fetch if disabled, using single endpoint mode, or legacy backend
-    if (apiEndpoints?.agents === null || apiEndpoints?.singleEndpoint || backendType === 'legacy') {
+    if (agentsDisabled) {
+      setAgentsSettled(true);
       return;
     }
     const agentsUrl = `${apiBaseUrl}${apiEndpoints?.agents ?? '/chat/agents'}`;
+    const seq = ++requestSeqRef.current;
+    const isLatest = () => seq === requestSeqRef.current;
     setAgentsLoading(true);
-    setAgentsError(false);
-    fetch(agentsUrl, { headers: requestHeaders })
+    panelFetch(agentsUrl, { headers: requestHeaders })
       .then((res) => {
         // A non-2xx is a failure, not an empty catalogue. Mapping it to `[]`
         // was why an unreachable backend left the menu spinning forever with
@@ -68,20 +105,35 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
         return res.json();
       })
       .then((data: unknown) => {
+        if (!isLatest()) return;
         const list = parseAgents(data);
         setAgents(list);
-        if (list.length > 0 && !selectedAgent) {
-          const savedSlug = localStorage.getItem(STORAGE_AGENT_KEY);
-          const match = savedSlug ? list.find((a) => a.slug === savedSlug) : null;
-          setSelectedAgent(match || list[0]);
+        setAgentsError(false);
+        // No agent left: none is picked, so nothing is sent in a removed one's name.
+        if (list.length === 0) {
+          setSelectedAgent(null);
+          return;
         }
+        const pickStarting = () => {
+          const savedSlug = readStorage('local', agentStorageKey);
+          return findAgent(list, initialAgent) ?? (savedSlug ? list.find((a) => a.slug === savedSlug) : undefined) ?? list[0];
+        };
+        // A reload keeps the agent picked, as the list now describes it,
+        // unless it is gone from the list.
+        setSelectedAgent((prev) => (prev ? (list.find((a) => a.id === prev.id) ?? pickStarting()) : pickStarting()));
       })
       .catch(() => {
-        setAgents([]);
+        if (!isLatest()) return;
         setAgentsError(true);
+        // A failed reload keeps the list it had.
+        if (reloadNonce === 0) setAgents([]);
       })
-      .finally(() => setAgentsLoading(false));
-  }, [apiBaseUrl, apiEndpoints, backendType, requestHeaders]);
+      .finally(() => {
+        if (!isLatest()) return;
+        setAgentsLoading(false);
+        setAgentsSettled(true);
+      });
+  }, [apiBaseUrl, apiEndpoints, backendType, requestHeaders, agentsDisabled, reloadNonce]);
 
   const handleSwitchAgent = (agent: XtmAgent, onSwitch?: () => void) => {
     if (agent.id === selectedAgent?.id) {
@@ -89,8 +141,9 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
       return;
     }
     setSelectedAgent(agent);
-    if (agent.slug) localStorage.setItem(STORAGE_AGENT_KEY, agent.slug);
+    if (agent.slug) writeStorage('local', agentStorageKey, agent.slug);
     setAgentMenuOpen(false);
+    onAgentChange?.(agent);
     onSwitch?.();
   };
 
@@ -98,10 +151,13 @@ export function useAgents({ apiBaseUrl, apiEndpoints, backendType = 'rest', requ
     agents,
     agentsLoading,
     agentsError,
+    agentsSettled,
+    agentsDisabled,
     selectedAgent,
     setSelectedAgent,
     agentMenuOpen,
     setAgentMenuOpen,
     handleSwitchAgent,
+    reloadAgents,
   };
 }

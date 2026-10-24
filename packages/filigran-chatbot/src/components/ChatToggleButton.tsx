@@ -1,6 +1,8 @@
 import type { FunctionComponent } from 'react';
 import type { ChatToggleButtonProps } from '../types';
-import { hexAlpha, identity } from '../utils';
+import { useMemo } from 'react';
+import { hexAlpha } from '../utils';
+import { createTranslate } from '../i18n';
 import { DefaultLogoIcon } from './icons';
 
 export const ChatToggleButton: FunctionComponent<ChatToggleButtonProps> = ({
@@ -9,8 +11,10 @@ export const ChatToggleButton: FunctionComponent<ChatToggleButtonProps> = ({
   label,
   accentColor = '#7b5cff',
   icon,
-  t = identity,
+  t: hostT,
+  locale,
 }) => {
+  const t = useMemo(() => createTranslate(hostT, locale), [hostT, locale]);
   const resolvedIcon = icon ?? <DefaultLogoIcon size={16} />;
 
   return (

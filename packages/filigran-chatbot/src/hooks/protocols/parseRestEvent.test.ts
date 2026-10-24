@@ -23,13 +23,13 @@ test('a restored entry keeps its persisted id, its time and its rating', () => {
       is_truncated: true,
     },
   ]);
-  assert.equal(user.id, 'restored-0');
+  assert.equal(user.id, 'msg-m-1');
   assert.equal(user.serverId, 'm-1');
   assert.equal(user.role, 'user');
   assert.equal(user.timestamp.toISOString(), '2026-09-29T08:15:00.000Z');
   assert.equal(user.feedback, undefined);
 
-  assert.equal(answer.id, 'restored-1');
+  assert.equal(answer.id, 'msg-m-2');
   assert.equal(answer.serverId, 'm-2');
   assert.equal(answer.content, 'APT28.');
   assert.equal(answer.timestamp.toISOString(), '2026-09-29T08:15:04.000Z');
@@ -46,6 +46,41 @@ test('a restore from a backend without ids or times still restores', () => {
   // A Date still, for whoever reads it; but the footer is told not to show it.
   assert.ok(entry.timestamp.getTime() >= before);
   assert.equal(entry.timestampUnknown, true);
+});
+
+test('a restored answer of a multi-agent turn names its agent, and says when it is a note for one that failed', () => {
+  const [user, reply, note, plain] = parseRestoredMessages([
+    { role: 'user', content: '@Analyst @Hunter go', answered_by: { agent_id: 'x', agent_name: 'X' }, mention_failed: true },
+    { role: 'assistant', content: 'On it.', answered_by: { agent_id: 'a2', agent_name: 'Analyst', agent_icon: '🛰️' } },
+    { role: 'assistant', content: 'Hunter did not answer.', answered_by: { agent_id: 'a1', agent_name: 'Hunter' }, mention_failed: true },
+    { role: 'assistant', content: 'Plain.' },
+  ]);
+  assert.equal(user.answeredBy, undefined, 'a user message names no answering agent');
+  assert.equal(user.mentionFailed, undefined);
+  assert.deepEqual(reply.answeredBy, { agentId: 'a2', agentName: 'Analyst', agentIcon: '🛰️' });
+  assert.equal(reply.mentionFailed, undefined);
+  assert.deepEqual(note.answeredBy, { agentId: 'a1', agentName: 'Hunter' });
+  assert.equal(note.mentionFailed, true);
+  assert.equal(plain.answeredBy, undefined);
+  assert.equal(plain.mentionFailed, undefined);
+  assert.equal(reply.agentName, 'Analyst', 'a restored answer is named after the agent that wrote it, as a live one is');
+  assert.equal(note.agentName, 'Hunter');
+  assert.equal(plain.agentName, undefined);
+  assert.equal(user.agentName, undefined);
+});
+
+test('a restored entry keeps a copy of all the backend sent, for the host', () => {
+  const entry = {
+    id: 'm-9',
+    role: 'assistant',
+    content: 'Done.',
+    llm_trace_id: 'tr-9',
+    runner_activity: [{ command: 'ls' }],
+    content_format: 'html',
+  };
+  const [answer] = parseRestoredMessages([entry]);
+  assert.deepEqual(answer.raw, entry);
+  assert.notEqual(answer.raw, entry);
 });
 
 test('entries that are not a user or an assistant message are skipped', () => {

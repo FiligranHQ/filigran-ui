@@ -16,7 +16,6 @@ import {
   pendingWorkspaceStillFileable,
   RETURN_REFRESH_MIN_GAP_MS,
   returnRefreshDue,
-  refusalMessage,
   revertMove,
   unfiledEmptyNote,
 } from './workspaces.ts';
@@ -100,14 +99,6 @@ test('a search hides the groups it empties and opens the rest', () => {
   assert.equal(groupIsOpen('w-a', collapsed, groups[0], null, false), false);
   assert.equal(groupIsOpen('w-a', collapsed, groups[0], 'acme', false), true);
   assert.equal(groupIsOpen('w-a', collapsed, groups[0], null, true), true);
-});
-
-test("a refusal says XTM One's own words", async () => {
-  assert.equal(
-    await refusalMessage(new Response(JSON.stringify({ detail: 'That workspace is archived.' }), { status: 400 })),
-    'That workspace is archived.',
-  );
-  assert.equal(await refusalMessage(new Response('not json', { status: 502 })), null);
 });
 
 test('the move menu offers what the caller can file into, in the order the list shows', () => {

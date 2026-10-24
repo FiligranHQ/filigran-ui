@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } 
 import type { ChatConversationSummary, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo } from '../utils';
+import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
+import { ClearAllConversations } from './ClearAllConversations';
 import { Dropdown } from './Dropdown';
 import {
   BotIcon,
@@ -50,6 +52,16 @@ interface ConversationSidebarProps {
   onRename?: (id: string, title: string) => void;
   onNewChat: () => void;
   workspaces?: SidebarWorkspaces;
+  /** Namespace of the browser-storage keys (see `storageKeyPrefix` on the panel). */
+  storageKeyPrefix?: string;
+  /** The host's controls on a row, before rename and delete. */
+  rowActions?: (conversation: ChatConversationSummary) => ReactNode;
+  /** The host's controls beside New conversation. */
+  headerActions?: ReactNode;
+  /** The host's sections under the list. */
+  sections?: ReactNode;
+  /** Deletes every conversation, after a confirmation; omitted when the host offers no route. */
+  onClearAll?: () => void;
   t: (key: string) => string;
 }
 
@@ -57,12 +69,9 @@ interface ConversationSidebarProps {
 const SEARCH_THRESHOLD = 7;
 /** What a dragged conversation row carries. */
 const DRAG_TYPE = 'application/x-filigran-conversation';
-/** Where the collapsed workspace groups are remembered, per browser. */
-const COLLAPSED_KEY = 'filigran-chat-collapsed-workspaces';
-
-function readCollapsed(): Set<string> {
+function readCollapsed(key: string): Set<string> {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]');
+    const parsed: unknown = JSON.parse(readStorage('local', key) ?? '[]');
     return new Set(Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : []);
   } catch {
     return new Set();
@@ -95,6 +104,11 @@ export const ConversationSidebar = ({
   onRename,
   onNewChat,
   workspaces,
+  storageKeyPrefix,
+  rowActions,
+  headerActions,
+  sections,
+  onClearAll,
   t,
 }: ConversationSidebarProps) => {
   const [query, setQuery] = useState('');
@@ -103,7 +117,9 @@ export const ConversationSidebar = ({
   // Guards the input's onBlur: committing and then blurring would fire the
   // commit twice, and cancelling via Escape blurs too.
   const settledRef = useRef(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(readCollapsed);
+  // Where the collapsed workspace groups are remembered, per browser.
+  const collapsedKey = storageKey(storageKeyPrefix, STORAGE_KEYS.collapsedWorkspaces);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => readCollapsed(collapsedKey));
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -141,11 +157,7 @@ export const ConversationSidebar = ({
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
-      try {
-        localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...next]));
-      } catch {
-        // Blocked storage: the groups simply open next time.
-      }
+      writeStorage('local', collapsedKey, JSON.stringify([...next]));
       return next;
     });
   };
@@ -213,6 +225,7 @@ export const ConversationSidebar = ({
       onDelete={onDelete}
       fileable={workspaces ? fileable : undefined}
       onMove={move}
+      actions={rowActions}
       t={t}
     />
   );
@@ -228,6 +241,7 @@ export const ConversationSidebar = ({
           <EditIcon size={15} />
           {t('New conversation')}
         </button>
+        {headerActions}
         <Tooltip title={t('Hide conversations')}>
           <button
             type="button"
@@ -345,6 +359,10 @@ export const ConversationSidebar = ({
             )}
             {filtered.map(renderRow)}
           </>
+        )}
+        {sections}
+        {onClearAll && conversations.length > 0 && !q && (
+          <ClearAllConversations onClear={onClearAll} className="px-2 pt-3" iconButtonClass={iconButton} t={t} />
         )}
       </div>
 
@@ -605,6 +623,7 @@ const ConversationRow = ({
   onDelete,
   fileable,
   onMove,
+  actions,
   t,
 }: {
   conversation: ChatConversationSummary;
@@ -620,6 +639,7 @@ const ConversationRow = ({
   /** Workspaces the row can be moved into; omitted when there are no workspaces. */
   fileable?: ChatWorkspace[];
   onMove: (conversationId: string, workspaceId: string | null) => void;
+  actions?: (conversation: ChatConversationSummary) => ReactNode;
   t: (key: string) => string;
 }) => {
   const [moveOpen, setMoveOpen] = useState(false);
@@ -700,6 +720,12 @@ const ConversationRow = ({
       </span>
       {!isEditing && (
         <span className="flex shrink-0 self-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          {actions && (
+            // The row selects on click and on Enter/Space: the host's controls keep theirs.
+            <span className="flex" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+              {actions(c)}
+            </span>
+          )}
           {movable && (
             <>
               <button

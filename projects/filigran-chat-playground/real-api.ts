@@ -206,7 +206,9 @@ export function realChatApi(config: RealApiConfig): Plugin {
         }
 
         // ── Everything else the panel calls ────────────────────────────────
-        if (!rawUrl.startsWith(PATH_PREFIX)) return next();
+        // The web chat's routes take an XTM One login, which the playground
+        // never keeps: they are the mock's (`mock-api.ts`, `/api/xtmone-web`).
+        if (!rawUrl.startsWith(`${PATH_PREFIX}/`)) return next();
 
         // A cookie that survived a server restart still names a verified
         // account, so re-registering off it is safe — and is what keeps an

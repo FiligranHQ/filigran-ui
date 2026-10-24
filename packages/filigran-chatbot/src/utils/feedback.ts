@@ -1,11 +1,10 @@
 import type { ApiEndpoints, BackendType, ChatMessagePersistedFeedback, MessageFeedback } from '../types';
+import { optInRoute } from './routes';
 
 /**
  * Persisted feedback on an assistant answer: the requests the thumbs send.
  * A stored rating is read back by `parsePersistedFeedback` with the rest of a
  * session restore (`hooks/protocols/parseRestEvent.ts`).
- *
- * Kept free of local runtime imports so `node --test` runs it as is.
  */
 
 /** Longest comment the feedback endpoint stores. */
@@ -60,8 +59,7 @@ export function normalizeFeedbackComment(comment: string | null | undefined): st
  * backend is not the REST one, or every request goes to one endpoint.
  */
 export function feedbackBaseUrl(apiBaseUrl: string, apiEndpoints: ApiEndpoints | undefined, backendType: BackendType): string | null {
-  if (backendType !== 'rest' || apiEndpoints?.singleEndpoint || !apiEndpoints?.feedback) return null;
-  return `${apiBaseUrl}${apiEndpoints.feedback}`;
+  return optInRoute(apiBaseUrl, apiEndpoints, backendType, 'feedback');
 }
 
 /**

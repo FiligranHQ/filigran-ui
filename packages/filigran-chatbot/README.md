@@ -20,7 +20,7 @@ Filigran chat panel — a standalone React + Tailwind chatbot component with SSE
 - 🎙️ **Dictation** — Speech-to-text via the browser's own Web Speech API; no endpoint, no key, hidden where unsupported
 - ✍️ **Draft Recovery** — Unsent composer text is kept per conversation and restored when the panel reopens
 - 🎨 **Customizable Theme** — Accent color and logo customization
-- 📱 **3 Display Modes** — Floating, sidebar (resizable), and fullscreen
+- 📱 **4 Display Modes** — Floating, sidebar (resizable), fullscreen and inline
 - 💾 **Persistence** — Conversation and sidebar width saved to localStorage
 - 🛠️ **Tool Tracking** — Visual indicators for AI tool usage
 
@@ -66,33 +66,316 @@ import { ChatPanel } from '@filigran/chatbot';
 
 | Prop                | Type                                      | Default      | Description                                                      |
 | ------------------- | ----------------------------------------- | ------------ | ---------------------------------------------------------------- |
-| `mode`              | `'floating' \| 'sidebar' \| 'fullscreen'` | **required** | Display mode                                                     |
-| `onClose`           | `() => void`                              | **required** | Called when close button is clicked                              |
-| `onModeChange`      | `(mode: ChatMode) => void`                | **required** | Called when user switches display mode                           |
+| `mode`              | `'floating' \| 'sidebar' \| 'fullscreen' \| 'inline'` | **required** | Display mode; `inline` fills the host's container — see [Inline mode and the handle](#inline-mode-and-the-handle) |
+| `onClose`           | `() => void`                              | —            | Called when the close button is clicked; the button shows only with it (never in inline mode) |
+| `onModeChange`      | `(mode: ChatMode) => void`                | —            | Called when the user switches display mode; the view switcher shows only with it (never in inline mode) |
 | `apiBaseUrl`        | `string`                                  | **required** | Base URL for chat API endpoints                                  |
+| `backendType`       | `'rest' \| 'legacy' \| 'ag-ui'`           | `'rest'`     | The backend's protocol: XTM One's Chat API, a single POST endpoint with Flowise-style SSE events, or [AG-UI](https://github.com/ag-ui-protocol/ag-ui) |
 | `user`              | `{ firstName: string }`                   | **required** | Current user info                                                |
 | `topOffset`         | `number`                                  | `0`          | Top offset in pixels (for sidebar/fullscreen with fixed headers) |
-| `agentDashboardUrl` | `string`                                  | —            | XTM One URL for the "Browse agents" / "Create agent" links and the waiting panel's "Play Space Invaders in XTM One" link (`{url}/chat?arcade=play`, http(s) only) |
+| `agentDashboardUrl` | `string`                                  | —            | XTM One URL for the "Browse agents" / "Create agent" links and the waiting panel's "Play Space Invaders in XTM One" link (`{url}/chat?arcade=play`, http(s) only, unless `waitingGameUrl` says where) |
+| `waitingGameUrl`    | `string`                                  | —            | Where the waiting panel's invitation to play leads, over `{agentDashboardUrl}/chat?arcade=play`: an http(s) URL or a path of the host's origin (`/…`); anything else links nothing |
 | `miniGameEnabled`   | `boolean`                                 | `true`       | Show the waiting panel during longer waits: rotating messages and the invitation to play XTM One's arcade (the package ships no game of its own) |
 | `onPlayWaitingGame` | `() => void`                              | —            | Open the arcade in place instead of linking to XTM One, for a host that runs it itself (the XTM One floating assistant) |
-| `t`                 | `(key: string) => string`                 | identity     | Translation function for i18n                                    |
+| `t`                 | `(key: string) => string`                 | —            | The host's translations; a key it returns unchanged falls back to the panel's catalog in `locale` (none without `locale`) — see [Internationalization](#internationalization) |
 | `accentColor`       | `string`                                  | `'#7b5cff'`  | Primary accent color (hex)                                       |
 | `logoIcon`          | `React.ReactNode`                         | default icon | Custom logo/icon for the assistant                               |
 | `promptSuggestions` | `string[]`                                | default list | Prompt suggestions shown on welcome screen                       |
+| `draftBorderColor`  | `string`                                  | —            | Color of the line above the composer (e.g. a draft context)      |
+| `draftLabel`        | `string`                                  | —            | Accepted, and not shown                                          |
 | `pageContext`       | `Record<string, unknown>`                 | —            | Arbitrary host page context (e.g. `{ url: '/dashboard/...' }`) sent as `context` on each `rest` message so the agent knows where the user is. Must be JSON-serializable (skipped if not). Read fresh at send time; omitted when empty. |
 | `resizable`         | `boolean`                                 | `false`      | Enable drag-to-resize for sidebar mode                           |
 | `onWidthChange`     | `(width: number) => void`                 | —            | Called when sidebar width changes during resize                  |
 | `onResizeStart`     | `() => void`                              | —            | Called when resize drag starts                                   |
 | `onResizeEnd`       | `() => void`                              | —            | Called when resize drag ends                                     |
+| `pushContentSelector` | `string`                                | —            | CSS selector of the host's content, given a right padding of the sidebar's width while the panel is in sidebar mode (`--chatbot-sidebar-width` on `:root` holds it either way) |
+| `disableFileManagement` | `boolean`                             | `false`      | No attaching or pasting files in the composer                    |
+| `maxFileCount`      | `number`                                  | `10`         | Most files attached to one message                               |
+| `maxTotalSize`      | `number`                                  | 50 MB        | Most bytes the files attached to one message add up to           |
 | `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Receives each rating of an answer (`null` clears it); `id` is the message's persisted id when the backend reported one (`done.message_id`, a restored entry's `id`), else the panel's own. On its own it enables 👍/👎 and the panel stores nothing; with `apiEndpoints.feedback` set it is called once the backend has stored the rating. With neither, no thumbs. |
-| `locale`            | `string`                                  | browser's    | BCP 47 language tag the message times are written in and answers are read aloud in (the platform's language, e.g. `'fr-FR'`) |
+| `locale`            | `string`                                  | browser's    | BCP 47 language tag of the platform's language (e.g. `'fr-FR'`): the language of the panel's catalog for what `t` does not translate, of its message times and of read-aloud. Unset, the browser's — except that a host passing `t` gets no catalog then |
 | `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
 | `contextUsageEnabled` | `boolean`                               | `true`       | Show how full the model's context window is for the current conversation (ring + percentage in the composer toolbar). Data-driven, so it stays absent until the backend reports occupancy — see [Context usage](#context-usage). |
+| `notifyOnComplete`  | `boolean`                                 | `true`       | Tell the user a long turn ended while they were not watching the chat: away (the tab hidden, another window), the page title flashes and a browser notification shows (when already granted); away or with the panel closed or hidden, `onTaskComplete` is called |
+| `onTaskComplete`    | `(title: string, body: string) => void`   | —            | The host's own toast for a long turn that ended while the user was not watching the chat, with the translated `title` and `body` |
 | `composerToolbar`   | `React.ReactNode`                         | —            | Extra controls appended to the composer toolbar. The escape hatch for host-specific affordances (XTM One's session-tool picker) — the package never learns what they are. Pass nothing and the toolbar simply has none. |
+| `storageKeyPrefix`  | `string`                                  | —            | Namespaces every key the panel keeps in browser storage (`<prefix>:filigranChatConversationId`, …), for a host mounting more than one panel |
+| `conversationId`    | `string \| null`                          | —            | The conversation on screen when the host owns it (a `?c=` URL); `null` is a new chat. Left `undefined`, the panel remembers its own, and a host-owned one is never written to storage |
+| `onConversationChange` | `(id: string \| null) => void`         | —            | Called whenever the conversation on screen changes, whoever changed it (a first answer, New chat, the history) |
+| `initialAgent`      | `string`                                  | —            | Agent selected once the list loads, by id or slug, over the remembered one |
+| `onAgentChange`     | `(agent: XtmAgent) => void`               | —            | Called when another agent is picked |
+| `readOnly`          | `boolean`                                 | `false`      | Hides the composer: a conversation the user may read but not write to |
+| `readOnlyNotice`    | `React.ReactNode`                         | —            | Shown in place of the composer while `readOnly` |
+| `getRequestExtras`  | `() => Record<string, unknown>`           | —            | Fields merged into every message body, read at send time (the host's own per-message options). They never override the panel's fields |
+| `onStreamEvent`     | `(event, { relayed, end?, replayed? }) => void` | —      | Every frame received, on the message stream or the [event stream](#turns-that-outlive-their-stream) (`relayed: true`), including those the panel does not render, with what the panel read in it (`end`: `'provisional'` or `'stored'`; `replayed`) — see [Host extensions](#host-extensions) |
+| `onSessionEnded`    | `(reason: string \| undefined) => void`   | —            | The user's session ended: a `session_expired` frame on either stream, or a `401` whose `detail.code` is `session_expired` on any request the panel makes; *reason* is the frame's or the `detail`'s `reason`. Called once per set of `requestHeaders` |
+| `markerRenderers`   | `Record<string, ChatMarkerRenderer>`      | —            | The host's cards for answer markers, by name — see [Host extensions](#host-extensions) |
+| `codeBlockRenderers` | `Record<string, ChatCodeBlockRenderer>`  | —            | The host's rendering of fenced code blocks, by language: `(code, { streaming }) => React.ReactNode` — see [Host extensions](#host-extensions) |
+| `transformMessageText` | `(text, message) => string`            | —            | Rewrites a message's text before it is shown, copied or read aloud; one that throws leaves the text as it came |
+| `onArtifactOpen`    | `(artifact: ChatArtifact) => void`        | —            | Opens a deck, report or video in the host, in place of the `Open in XTM One` link |
+| `headerActions` / `banner` / `composerHeader` / `transcriptFooter` / `welcome` | `React.ReactNode` | — | The host's content in the header, above the thread, above the composer, after the last message, or in place of the welcome screen |
+| `renderMessageExtras` / `messageFooterActions` | `(message, { streaming }) => React.ReactNode` | — | The host's content under a message, and controls in a finished answer's footer; `streaming` while the message is the answer still being written. `message.raw` holds the backend's own fields — see [Host extensions](#host-extensions) |
+| `sidebarRowActions` | `(conversation) => React.ReactNode`       | —            | The host's controls on a row of the conversation list |
+| `sidebarHeaderActions` / `sidebarSections` | `React.ReactNode`  | —            | The host's controls beside New conversation, and sections under the list |
+| `statusLabel`       | `(status: AgentStatusState) => string \| undefined` | — | The status line's text for a status, over the built-in one |
+| `waitingMessages`   | `string[]`                                | built-in     | The waiting panel's rotating messages, already translated |
+| `renderWaitingPanel` | `() => React.ReactNode`                  | —            | Replaces the waiting panel's content (its messages and the invitation to play) |
+| `fontFamily`        | `string`                                  | —            | Font of the panel's text |
+| `agentMentions`     | `boolean`                                 | `false`      | `@` also mentions agents of the agent list; the message carries their ids as `mentioned_agent_ids` |
+| `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
+| `onReady`           | `() => void`                              | —            | Called once, when the panel has chosen its agent and read back the conversation on screen; handle calls made earlier wait for it and then run in order |
+| `onHeldSendSettled` | `(text, outcome) => void`                 | —            | What became of a message held until the turn ended (`send` resolved `'held'`): `'sent'`, `'failed'`, `'dropped'`, `'returned'` (given back to the composer: held when Stop ended its turn, or taken over by `onBeforeSend` as it leaves; told once the composer shows it, so `getDraft()` reads it) or `'cancelled'`. A message sent after a stopped turn ended goes out once that turn winds down |
+| `onTurnRunningChange` | `(running: boolean, info?: ChatTurnEnd) => void` | —     | A turn started or stopped running on screen, own or relayed: the state of the Stop button and of `draft.turnRunning`; with `false` comes how it ended, `info.ended`: `'answered'`, `'stopped'` or `'failed'` — see [Host extensions](#host-extensions). After a provisional end (see [Turns that outlive their stream](#turns-that-outlive-their-stream)) `false` comes at once, while sends are still held as the turn winds down: until its stored end or its stream's close, at most 5 s |
+| `onBeforeSend`      | `(draft) => false \| { text?, displayText?, extras? } \| void` | — | Sees every non-empty send first and takes it over (`false`), rewords it, shows the user's bubble other words or adds body fields (a message with fields of its own is held with `holdSendsDuringTurn`) — see [Host extensions](#host-extensions) |
+| `hideConversationList` | `boolean`                              | `false`      | Hides the conversation list of fullscreen and inline modes, for a rail or a task pane (usable from 320 px wide); the header's history menu stands in for it — see [Host extensions](#host-extensions) |
+| `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer. A turn winding down after a provisional end (until its stored end or its stream's close, at most 5 s) holds sends with or without it |
 
 Plain-data props (`requestHeaders`, `apiEndpoints`, `pageContext`, `promptSuggestions`) are compared by content and callback props are called
 through a stable wrapper, so building them inline is fine. `t` and `logoIcon` are used as given: keep them stable (`useCallback` / `useMemo`),
 or every render of the host re-renders every message in the thread.
+
+#### Inline mode and the handle
+
+`mode="inline"` fills the host's container: the conversation list sits beside
+the thread as in fullscreen, and there is no view switcher or close button.
+With a `ref`, the host drives it:
+
+```tsx
+const chat = useRef<ChatPanelHandle>(null);
+
+<div style={{ height: '100%' }}>
+  <ChatPanel
+    ref={chat}
+    mode="inline"
+    conversationId={searchParams.get('c')}
+    onConversationChange={(id) => setSearchParams(id ? { c: id } : {})}
+    storageKeyPrefix="chat-page"
+    // ...
+  />
+</div>;
+
+chat.current?.newConversation({ agent: 'threat-hunter' });
+chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigation' } });
+```
+
+| Method | What it does |
+| --- | --- |
+| `send(text, { extras, displayText })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body, and the user's bubble shows `displayText` in place of *text* (as `onBeforeSend`'s `displayText`, which wins when it gives one). Resolves to `'sent'` (once the backend takes it), `'steered'` (joined the running turn), `'held'` (sent when the turn ends - also, with or without `holdSendsDuringTurn`, while a turn ended provisionally winds down, after `onTurnRunningChange(false)`), `'dropped'` (empty, taken over by `onBeforeSend`, `readOnly`, or the panel unmounted first) or `'failed'` (the backend refused it) |
+| `newConversation({ workspaceId, agent })` | Starts a new chat, in a workspace and with an agent (id or slug) if given |
+| `selectConversation(id)` | Opens a conversation |
+| `setDraft(text)` / `focusComposer()` | Fills / focuses the composer |
+| `getDraft()` | The composer's text as it stands (typed by the user, or set by `setDraft`), e.g. for `onBeforeSend` taking over a held message (`draft.held`) to tell whether the composer still holds what was typed for it |
+| `stop()` | Same as the Stop button; during a voice call it also drops the question awaited and stops speaking |
+| `startVoiceCall()` | Starts a [voice call](#voice-call) over the panel; `false` when this browser has no speech recognition or the panel is `readOnly` |
+| `reloadAgents()` | Reads the agent list again, keeping the agent picked unless it is gone |
+| `scrollToMessage(id)` | Scrolls to a message by its server id and highlights it; `false` when it is not on screen |
+
+#### Host extensions
+
+A host adds what is its own without the package learning about it. An answer
+marker `[[KIND:args]]` renders the host's card where it stands, once the answer
+is done (`renderWhileStreaming` to show it earlier); a renderer named `FILE`,
+`PRESENTATION`, `REPORT` or `VIDEO` replaces the built-in card, and a marker no
+renderer names stays text:
+
+```tsx
+const markers = useMemo(
+  () => ({
+    WORK_ITEM: { render: (id) => <WorkItemCard id={id} /> },
+    INVESTIGATION: { render: (id) => <InvestigationBlock id={id} />, fullWidth: true },
+  }),
+  [],
+);
+
+<ChatPanel
+  markerRenderers={markers}
+  transformMessageText={maskSecrets}
+  banner={<ChannelContinuityBanner />}
+  composerHeader={<DesktopMachineBar />}
+  renderMessageExtras={(m) => <RunnerActivity message={m} />}
+  // ...
+/>;
+```
+
+A fenced code block whose language a host renderer names (`codeBlockRenderers`,
+matched case-insensitively) renders that node in place of the code block -
+a chart drawn from the block's data, for instance. The renderer gets the
+block's text and `streaming`, true while the answer is still coming (the block
+may then be incomplete); a language no renderer names, or a renderer that
+returns `null` (a block it cannot read), stays a code block:
+
+```tsx
+const codeBlocks = useMemo(
+  () => ({
+    chart: (code: string, { streaming }: { streaming: boolean }) => (streaming ? <ChartSkeleton /> : <Chart spec={code} />),
+  }),
+  [],
+);
+
+<ChatPanel codeBlockRenderers={codeBlocks} />;
+```
+
+A card or a code block renderer that throws shows `This item could not be
+loaded.` and leaves the rest of the answer on screen. A marker's arguments come from the model's answer:
+treat them as untrusted input, never as markup or a URL to follow unchecked. Like `t`, the function props are used as given: keep
+them stable, and a new one re-renders every message, which is also how to
+refresh what they render.
+
+`onBeforeSend(draft)` sees every non-empty send first, synchronously:
+`draft.text`, `draft.source` (`'composer'`, `'host'` or `'voice'`) and
+`draft.turnRunning` (a turn is running). It returns `false` to take the send
+over (the composer keeps its draft), or an object: `text` rewords what the
+backend receives, `displayText` is what the user's bubble shows, and `extras`
+adds body fields. The panel's own fields cannot be set this way, and a message
+with fields of its own never steers: it is held with `holdSendsDuringTurn`. A
+message held while a turn ran is asked about again as it leaves as a new turn
+(`turnRunning: false`, `held: true`), each send held with it on its own; taken
+over then, what the user typed for it goes back to the composer, after what
+was typed since. A held message every send of which is taken over is settled
+`'returned'` (`'dropped'` when the user typed nothing for it).
+
+A host that wraps what the user typed in context of its own (the open document,
+the page) sends one text and shows another: `onBeforeSend` returns `text`, what
+the backend receives, and `displayText`, what the user's bubble shows. A held
+message keeps both, and a conversation read back shows what the backend stored:
+
+```tsx
+<ChatPanel
+  onBeforeSend={({ text }) => ({ text: `${documentContext()}\n\n${text}`, displayText: text })}
+  // ...
+/>;
+```
+
+A host's own send does the same through the handle (the send hook's
+`displayText` wins when it gives one):
+
+```tsx
+chat.current?.send(`${documentContext()}\n\n${typed}`, { displayText: typed });
+```
+
+`onTurnRunningChange(running)` tells the host when a turn starts or stops
+running - on screen, where it shows the Stop button, the status line and the
+waiting panel, or a relayed turn let go of while the page was hidden; the
+state `onBeforeSend` reports as `draft.turnRunning` - so it never re-derives
+it from `onStreamEvent`. `true` comes with the panel's
+own send and with a turn the [event stream](#turns-that-outlive-their-stream)
+relays; `false` once that turn ends: its stream closes after the last `done`
+(an intermediate `done` goes on), an `error`, `cancelled` or `session_expired`
+frame comes, Stop lets go of it, a new conversation replaces it, or the panel
+unmounts in the middle of it. A turn handed over to the event stream stays
+running meanwhile, and so does a relayed turn let go of while the page was
+hidden, until the reopened stream replays it or the conversation read back
+says how it ended. It is called on changes only.
+
+With `false` comes how the turn ended, `info.ended` (`ChatTurnOutcome`), so a
+host running a sequence of turns goes on only while they are answered:
+
+- `'answered'`: its last `done` came, with nothing after it saying otherwise;
+  for a relayed turn that ended out of sight (nothing replayed it, or the event
+  stream could not reopen), the conversation read back holds an answer stored
+  after what was shown (an `error` or a `cancelled` the backend stores as an
+  answer reads the same);
+- `'stopped'`: a `cancelled` frame (even after the last `done`), a
+  `session_expired` frame, Stop, a new conversation, the panel unmounting, a
+  stream that closed before its last `done` with no event stream to carry the
+  turn to its end (a turn the event stream does carry ends as its replay does),
+  or a relayed turn that ended out of sight with no answer read back (none
+  stored, or the conversation could not be read back);
+- `'failed'`: an `error` frame, or a send the backend refused or could not be
+  reached for.
+
+```tsx
+<ChatPanel
+  onTurnRunningChange={(running, info) => {
+    setAgentWorking(running);
+    if (!running && info?.ended !== 'answered') cancelSequence();
+  }}
+/>
+```
+
+Each answer says which agent wrote it, for a host's own rendering
+(`renderMessageExtras`, `messageFooterActions`): `message.answeredBy`
+(`{ agentId, agentName, agentIcon }`, from `answered_by`) and
+`message.mentionFailed` (`mention_failed`: a note written in place of a
+mentioned agent that could not answer), read from every `done` frame,
+intermediate ones included, and from each restored entry.
+
+Both slots get the message and `{ streaming }`, true while it is the answer
+still being written (`messageFooterActions` shows on a finished answer only,
+so it is always false there). `message.raw` is the backend's own object for
+the message, a plain copy the panel reads nothing from: the restored entry
+(paged or relayed ones too), or the `done` frame that closed a live answer
+(intermediate ones included) and, after a provisional end, the stored end. A
+host reads its backend's fields there (a trace id, a channel, a format)
+without fetching the conversation again; their shape is the backend's to
+define. A message no backend object describes yet (one being written, a user
+message sent from this panel) has none.
+
+```tsx
+<ChatPanel
+  renderMessageExtras={(m, { streaming }) => (streaming ? null : <TraceLink id={m.raw?.llm_trace_id as string | undefined} />)}
+/>
+```
+
+`onStreamEvent(frame, info)` gives every frame as received, with what the
+panel read in it, so a host never re-derives either: `info.relayed` (a turn
+the event stream relays), `info.end` - `'provisional'` on an `error` or
+`cancelled` marked `provisional: true` (its stored end follows),
+`'stored'` on an end naming the stored answer's `message_id` (a `done` that is
+not intermediate, a `cancelled`, an `error`) - and `info.replayed` on the
+`thinking` frame (`resumed: true`) of a turn replayed from its start, whose
+frames then restate it so far.
+
+`onSessionEnded(reason)` says the user's session ended, as the backend tells
+it: a `session_expired` frame on either stream, or a `401` whose body's
+`detail.code` is `session_expired` (`{"detail": {"code": "session_expired",
+"reason": "idle"}}`) on any request the panel makes. *reason* is the
+frame's or the `detail`'s `reason`, `undefined` when it gives none. It comes
+once, whichever request or stream said it first, and again only once
+`requestHeaders` change. Signing the user out is the host's: the panel ends
+the turn on screen, and a refused read-back offers Retry.
+
+`hideConversationList` gives the thread the panel's whole width in inline (or
+fullscreen) mode, for a rail beside the host's own content or an add-in's task
+pane: the header, thread and composer hold from 320 px wide. The history is
+still there, in the header's history menu (open, delete, Clear all), and a
+referenced conversation's chip still opens it; the `sidebar*` slots render
+nothing meanwhile. To drop the history altogether, set `apiEndpoints.history`
+to `null` instead.
+
+#### Voice call
+
+`startVoiceCall()` on the handle opens a call over the panel, for a host's own
+button (`voiceCallSupported()` says whether the browser can hold one): the
+browser's speech recognition listens in `locale`, a phrase is sent after one
+second of silence (as the user, `onBeforeSend` seeing `source: 'voice'`), and
+the answer is said through `apiEndpoints.tts` in pieces of about 200
+characters, played in order, the next one requested while one plays, each
+piece the route fails or the browser cannot play (or every piece, without the
+route) in the browser's voice. Then it listens again. The thread under the
+call shows the conversation as usual; a `transformMessageText` that throws
+leaves the answer said and shown as it came.
+
+- Only the answer to the question is said: the final `done` of the panel's own
+  turn, or of the turn a `folded_into_active_turn` frame (or the steer
+  route's `turn_id`) names, never a turn of another tab and never a mid-turn
+  segment on its own. A steer stored that the backend says no turn took
+  (`"answered": false`) gets no answer, and the call listens again. Only the
+  addressed agent (the conversation's, or the one a `transfer_start` hands it
+  to) speaks; replies the turn's other agents give (`answered_by`) show by
+  name, `Did not answer` beside one that carries `mention_failed`.
+- Speech over the answer (barge-in), a tap on the call or Skip stops it and
+  listens; a tap while the answer is awaited cancels the question and stops
+  its turn, and so does the handle's `stop()`. The microphone can be muted;
+  the call mutes it itself when the recogniser fails five times in a row with
+  nothing heard between (a refused or missing microphone, no network, a
+  language it lacks), silence (`no-speech`) and an aborted session aside.
+- A question held while a turn runs (`holdSendsDuringTurn`) is awaited once
+  it goes out; one that never does (`onBeforeSend` takes it over as it
+  leaves, Stop, a failed send) gets no answer, and the call listens again.
+- A turn silent for 120 s is checked through `apiEndpoints.pendingApprovals`
+  (its `turn: 'running'`): still running, the call waits on; over (or with no
+  such route), it gives up on that question and listens again.
 
 #### Resizable Sidebar Example
 
@@ -117,7 +400,7 @@ function App() {
 }
 ```
 
-The sidebar width is persisted to `localStorage` under the key `filigranChatSidebarWidth`.
+The sidebar width is persisted to `localStorage` under the key `filigranChatSidebarWidth` (`<storageKeyPrefix>:filigranChatSidebarWidth` with a prefix).
 
 ### `ChatToggleButton`
 
@@ -134,7 +417,8 @@ import { ChatToggleButton } from '@filigran/chatbot';
 | `isOpen`      | `boolean`                 | **required** | Whether the chat panel is open                                             |
 | `onToggle`    | `() => void`              | **required** | Called when button is clicked                                              |
 | `label`       | `string`                  | built-in     | Button text, already translated by the host; omit for `t('Ask Assistant')` |
-| `t`           | `(key: string) => string` | identity     | Translation function, used for the default label                           |
+| `t`           | `(key: string) => string` | —            | The host's translations; the panel's catalog in `locale` answers the rest  |
+| `locale`      | `string`                  | browser's    | The default label's language, by the panel's rule (see Internationalization) |
 | `accentColor` | `string`                  | `'#7b5cff'`  | Button background color                                                    |
 | `icon`        | `React.ReactNode`         | default icon | Custom icon                                                                |
 
@@ -189,7 +473,11 @@ Restores conversation history (and, implicitly, resolves the session).
 }
 ```
 
-`id`, `created_at` and `feedback` are optional. `id` is the message's
+`id`, `created_at` and `feedback` are optional, and so are `answered_by`
+(`{ agent_id, agent_name, agent_icon }`, the agent that wrote an answer of a
+turn several agents answered) and `mention_failed` (`true` on a note written
+in place of an agent that could not answer), handed to the host as
+`message.answeredBy` and `message.mentionFailed`. `id` is the message's
 persisted id, what its rating is stored against (see
 [Message feedback](#message-feedback));
 `created_at` (ISO 8601) is when it was sent, shown in its footer - a message
@@ -206,7 +494,12 @@ empty `messages` array. The component adopts whatever id the response returns
 against a dead conversation — which would otherwise fail with a
 "conversation does not exist" error and force the user to manually start a new
 conversation. If the endpoint responds with a non-2xx status, the component
-silently resets the stored id and starts fresh on the next message.
+silently resets the stored id and starts fresh on the next message, except
+when it says nothing of the conversation: a `502`, `503` or `504` (or no
+answer at all) keeps the id and reads it back once the backend answers, and a
+`401` or `403` (expired credentials) keeps it, shows the response's `detail`
+(or "This conversation could not be loaded.") with a Retry button, and reads
+it back as soon as `requestHeaders` change.
 
 Assistant history messages **should echo the same `attachments[]` array** that
 was sent on the original `done` event (see [Agent-generated file attachments](#agent-generated-file-attachments)),
@@ -362,6 +655,12 @@ host and can be extended later (page title, selected entity, user role, etc.).
 It must be JSON-serializable — a non-serializable value (circular reference,
 `BigInt`, …) is skipped rather than breaking the request.
 
+A refusal before the stream (a non-2xx answer: a rate limit, a refused
+option, an unknown conversation) shows the response's `detail` in place of the
+answer - a string, or the `message` (or `detail`) of an object - and
+"Unable to connect. Please check the configuration." when it has none; the
+handle's `send` resolves `'failed'`.
+
 **Response:** Server-Sent Events stream with these event types:
 
 ```
@@ -373,6 +672,11 @@ data: {"type": "stream", "content": "The weather "}
 data: {"type": "stream", "content": "today is sunny."}
 data: {"type": "done", "content": "The weather today is sunny.", "conversation_id": "new-uuid", "message_id": "msg-2", "tool_names": ["search_web"], "tool_call_count": 1, "iterations": 1, "reasoning": "Let me check the weather data first.", "tool_call_trace": [{"name": "search_web", "input": "{\"query\": \"weather\"}", "output": "Sunny, 24C", "success": true}], "transfer_chain": [{"agent_id": "uuid", "agent_name": "General"}], "is_truncated": false}
 ```
+
+A `done` may carry `answered_by` and `mention_failed`, as a restored entry
+does, and a `{"type": "session_expired", "reason": "idle"}` frame (the user's
+session ended, the stream ends with it) ends the turn on screen there and
+then, keeping what it wrote; it does the same on the event stream.
 
 The optional `message_id` on `done` is the answer's persisted id: without it
 (and without a restore naming the message) the answer cannot be rated through
@@ -441,6 +745,7 @@ Download failures (403/404/5xx/network) are reported through the optional `onDow
 - `thinking` — Agent is processing
 - `tool_start` — Agent is using tools (with `tools` array)
 - `tool_heartbeat` — Liveness signal during a long tool execution (with `tools` and `elapsed_s`). The widget keeps the current status label and renders a live elapsed-time indicator next to it once the execution exceeds ~15 s, so long operations (background tasks, agent consults) never look stuck
+- `wait_start` — The agent pauses (with `seconds` and `reason`): the reason and a countdown show, with `Continue now` when the host names `skipWait`. The pause stays on screen through `wait_status` (what it watches changed state), `tool_heartbeat`, `tool_progress` and `consult_progress`; streamed text or any other status ends it
 - `analyzing` — Agent is analyzing tool results
 - `composing` — Agent is composing the response
 - `streaming` — Content is being streamed
@@ -452,6 +757,10 @@ Download failures (403/404/5xx/network) are reported through the optional `onDow
 data: {"type": "error", "content": "Something went wrong"}
 ```
 
+An `error` ends the turn for good, and so does a `cancelled`, unless marked
+`provisional: true` (see
+[Turns that outlive their stream](#turns-that-outlive-their-stream)).
+
 ### `POST {apiBaseUrl}/chat/messages/steer`
 
 Steers the agent mid-run: while a response is still streaming, Enter / the
@@ -462,22 +771,44 @@ until the turn finishes. The widget POSTs:
 {
   "conversation_id": "uuid-here",
   "content": "Actually, filter by subregion instead",
-  "agent_slug": "general"
+  "agent_slug": "general",
+  "file_ids": ["file-uuid"]
 }
 ```
 
-A 2xx response means the message was persisted and will be injected into the
-running agentic loop at the next iteration boundary. On a non-2xx response or
-a network error the optimistic user bubble is rolled back and the text is
-restored into the composer (prepended on its own line if the user already
-typed something new) — so a backend without steering support degrades
-gracefully and the message is never silently lost. Set `apiEndpoints.steer`
-to `null` to disable the steering affordances entirely.
+`file_ids` is sent only with `steerAttachments` set, for files already
+uploaded: by default a message with attachments does not steer.
 
-Steering only applies to text-only sends on the `rest` backend with a known
+A 2xx response means the message was persisted and will be injected into the
+running agentic loop at the next iteration boundary (`turn_id`, when the body
+names it, is the turn it joined), whatever else the body says: XTM One's
+`{"status": "stored", "turn_id": null}` (stored in the thread, handed to no turn
+it can name) keeps the bubble and resolves `'steered'` too. With
+`"answered": false` the backend knows no turn took it: the bubble stays and a
+notice above the composer says the message will be read with the next one,
+until the next send. On a non-2xx
+response or a network error nothing was stored: the optimistic user bubble is
+rolled back, the text is restored into the composer (prepended on its own line
+if the user already typed something new), the send resolves `'failed'` and the
+refusal's `detail`, when there is one, shows above the composer — so a backend
+without steering support degrades gracefully and the message is never silently
+lost. A `409` means no turn is running any more, an ordinary race: no notice
+shows, and with `holdSendsDuringTurn` the message is held and sent as the next
+turn instead of going back to the composer. Set `apiEndpoints.steer` to `null`
+to disable the steering affordances entirely.
+
+Steering only applies to sends on the `rest` backend with a known
 `conversation_id` (the first turn of a fresh conversation only receives its id
-on `done`). Sends with attachments keep the legacy wait behavior. Esc stops
-generating.
+on `done`). A message with attachments steers only with `steerAttachments`
+(once every file is uploaded); one carrying conversation references, agent
+mentions or body fields of its own (`send`'s `extras`, `onBeforeSend`'s
+`extras`) never steers, since a steer reaches the agent as text alone: it waits
+for the turn to end (`holdSendsDuringTurn`), and `onBeforeSend` is asked again,
+with `turnRunning: false`, before it goes out. A file that failed to upload
+neither steers nor waits: while a turn runs, winds down or is let go of with
+the event stream, the composer offers no send and says why, and once no turn
+holds the conversation the message goes without that file. `send` and a voice
+call attach no files, so this never holds them. Esc stops generating.
 
 #### Multi-segment responses
 
@@ -572,9 +903,8 @@ On a non-2xx the prompt stays on screen with the failure noted and the controls
 re-armed: the turn is still paused either way, so clearing the prompt would
 strand it with nothing able to answer. A `409` means nothing is waiting any more
 (the turn finished, was cancelled, or was answered elsewhere); the stream ending
-then clears the prompt on its own. Stopping the turn also dismisses it — the
-backend waits indefinitely by design, so abandoning the stream is the reviewer's
-only other way out.
+then clears the prompt on its own. Stopping the turn also dismisses it (and,
+with `cancel`, asks the backend to end it).
 
 **Proxied hosts:** the decision goes through the same fetch path as every other
 endpoint — relative to `apiBaseUrl` and honouring `requestHeaders` — so CSRF
@@ -677,6 +1007,94 @@ abandonment, never the person deciding.
 
 REST backend only: `legacy` and `ag-ui` never meet this gate.
 
+### Turns that outlive their stream
+
+A backend whose turns keep running when their stream drops (XTM One's own web
+chat) opts into six more routes, none with a default:
+
+| `apiEndpoints` key | Request | What it does |
+| --- | --- | --- |
+| `cancel` | `POST {cancel}` with `{ conversation_id }` | Stop asks the backend to end the turn; the panel keeps reading until the stream's `cancelled` frame (or lets go after 10 s, or at once on a network error or an answer of `{ "turn": "none" }`, reading the conversation back for an end it had not read yet). A Stop pressed before the panel's own send started its turn (its stream delivered nothing yet) carries `"awaiting_send": true`, and its `none` says nothing of that turn: the Stop stays pending and is sent again, without the flag, as the turn starts (or as the answer comes, the turn started meanwhile); any other answer reached a turn, and nothing goes again. A backend may keep a Stop with that flag for the send's turn, and must then take a second cancel of one turn; a Stop without it says nothing of a later send. A refusal (non-2xx) keeps the turn running and shows its `detail` above the composer |
+| `skipWait` | `POST {skipWait}` with `{ conversation_id }` | `Continue now` on `status: wait_start` (`{ seconds, reason }`), for as long as the pause lasts (see the status values) |
+| `events` | `GET {events}/{conversation_id}/events?client_id=<id>` → SSE | Turns this panel did not start (another tab, a reload mid-turn), `user_message`, `conversation_title`, `approval_resolved`; every frame of a turn names it (`turn_id`, below) |
+| `messagesPage` | `GET {messagesPage}/{conversation_id}/messages?before=<message id>&limit=50&supports_artifacts=true` → `{ messages, has_more }` | "Load earlier messages" past the restored ones, offered when the restore answers `has_more: true` |
+| `clearAll` | `DELETE {clearAll}` | "Clear all conversations" in the conversation list and the header's history menu, confirmed first |
+| `tts` | `POST {tts}` with `{ text, format: 'mp3' }` → audio | Read aloud in the backend's voice; the browser's when it fails |
+
+The event stream is opened once the conversation's history is read back (not
+while it could not be, for want of an agent or a reachable backend) and
+reconnected with backoff while the page is visible. Once the page has been
+hidden for 60 s it is closed (under HTTP/1.1 a background tab would otherwise
+hold one of the browser's six connections to the origin), and the relayed turn
+it fed is let go of: the segment it was writing goes, those it closed stay.
+Shown again, the stream reopens, the backend's snapshot replays a turn still
+running, and the conversation is read back for what ended meanwhile. The turn
+let go of may run on: sends wait for it (as while a turn winds down) and
+`onTurnRunningChange` says nothing until the reopened stream replays it or
+shows another turn. Not replayed within 5 s of the page showing again, or
+with the stream refused, it ended: the conversation is read back, and the
+turn ends as it says (`info.ended`), 10 s at most after. The backend may end
+the event stream at any time; a stream it ends, or that drops, is reopened,
+from the shortest delay again once it had delivered a frame or lived 5 s (one
+that closes at once backs off); a relayed turn on screen then runs on only if
+the snapshot replays it within 5 s, or ends as the conversation read back
+says.
+A `404` or `405` stops it, and a `401` or `403` stops it until
+`requestHeaders` change, when it is tried once more (a refreshed token picks
+it up).
+
+With `events` named, every frame of a turn names it with the same `turn_id`
+wherever it goes: each turn frame of the event stream (`thinking`, `status`,
+`stream`, `done`, `error`, `cancelled`, `approval_required`, and the replay of
+a turn), and each frame of the message stream from its `turn_started` (or
+`folded_into_active_turn`) on. A turn frame of the event stream naming none is
+not read. A backend without `events` need name no turn: each turn is then the
+one its own stream carries.
+
+With `events` named, every message, steer, decision, page-action answer, Stop
+and "Continue now" carries the same id in `X-Chat-Client-Id` (the
+pending-approval reads and the history do not), which the backend uses to
+never relay a panel's own turn back to it; frames naming the `turn_id` of the
+panel's own turn are dropped too. When the panel's own stream drops mid-turn,
+or ends without the turn's last frame (`done`, `error`, `session_expired` or
+`cancelled`), it takes a new id and picks the turn up from the event stream,
+keeping the segments it closed (or reads the history back when nothing comes
+within 15 s). A read-back that waited for a turn to end joins the thread in
+place: each stored message missing from the screen goes after the one stored
+before it, so nothing lands above messages it follows.
+
+A relayed turn uses the frames of `POST /chat/messages`, plus:
+
+- `{"type": "thinking", "resumed": true, "elapsed_s": 42}` — a turn re-attached
+  mid-way: the segment being written follows, whole (XTM One's snapshot holds
+  that one only); the segments an intermediate `done` closed stay on screen.
+  Replaying a turn it lost sight of (a relayed turn on a reopened event
+  stream, its own turn after its stream dropped, a relayed turn let go of
+  while the page was hidden), the panel reads the conversation back as the
+  turn runs on: the segments closed meanwhile (stored by then) take their
+  place before the one being written, matched to those on screen by
+  `message_id`, else by text, so none shows twice; a bubble matched keeps
+  what it shows (a user bubble's `displayText`, its files) and takes the
+  stored id. A replay naming another turn means the one on screen ended
+  meanwhile: the answer it was writing goes, its stored copy read back.
+- `{"type": "done", "intermediate": true, …}` — a segment closed, the turn goes on.
+- A provisional end — an `error` or `cancelled` marked `provisional: true` (a
+  Stop's acknowledgement, a failed loop; any other is final, and nothing of
+  its turn is awaited after it) — ends the turn on screen at once; the stored
+  end of the same turn that follows it (a `done`, `cancelled` or `error`
+  carrying `message_id`) only gives the answer its id, and a `done` its stored
+  text and all a live `done` carries (attachments, reasoning, tool trace, the
+  agent that answered, context usage, a transfer); also while the panel's own
+  turn runs, whose context usage and agent then stay. The panel's own stream
+  is read on for it. The backend still holds the conversation until then, so
+  the panel holds sends meanwhile, as during a turn (with or without
+  `holdSendsDuringTurn`): until that stored end or the stream's close (of
+  the panel's own stream, for its own turn; another turn starting ends it
+  too), at most 5 s. A relayed turn winds down across the event stream's
+  reopening, whose replay of it holds sends too.
+- `{"type": "folded_into_active_turn", "turn_id": "…"}` (message stream) — the
+  message joined a turn already running, whose frames follow.
+
 ### Decks, reports and videos
 
 An answer that made a deck, a report or a video carries a marker where it shows
@@ -755,8 +1173,8 @@ persisted id — the `done` event's `message_id`, or the restored entry's
 REST backend only, and not in `singleEndpoint` mode (there is no per-path
 routing to name a feedback route with).
 
-**Read aloud** uses the browser's own speech synthesis — no endpoint, hidden
-where unsupported, and absent on an answer with nothing to say (code only). It
+**Read aloud** uses the browser's own speech synthesis — or the backend's
+voice when the host names `apiEndpoints.tts` — hidden where neither exists, and absent on an answer with nothing to say (code only). It
 reads the answer's text without its markdown or file markers, in the `locale`
 prop's language, one answer at a time; switching conversation, sending a
 message or leaving the panel stops it.
@@ -794,25 +1212,39 @@ import { MyLogo } from './icons';
 
 ### Internationalization
 
+The panel speaks English, French, Spanish and Japanese on its own: it ships a
+catalog for each and picks one from `locale` (`fr-FR` reads French; English, or
+a language it lacks, is its own keys). A host in another language translates
+through `t`. A host with nothing to add only passes `locale`:
+
+```tsx
+<ChatPanel locale={user.language} /* ... */ />
+```
+
+`t` is an optional override, asked first for every key — key in, translated
+string out, so any i18n library works. Where it returns something other than
+the key, its wording wins; where it returns the key (a host catalog that does
+not have it), the panel's own catalog answers, in `locale`'s language:
+
 ```tsx
 import { useTranslation } from 'react-i18next';
 
 function App() {
-  const { t } = useTranslation();
-
-  return (
-    <ChatPanel
-      t={t}
-      // ...
-    />
-  );
+  const { t, i18n } = useTranslation();
+  return <ChatPanel t={t} locale={i18n.language} /* ... */ />;
 }
 ```
 
-`t` is only ever asked for a lookup — key in, translated string out — so any
-i18n library works and the package never carries a dictionary of its own.
-Untranslated hosts can omit it: the default is the identity function, so every
-key is its own English text.
+Which catalog answers, by what the host passes:
+
+| `t` | `locale` | A key `t` does not translate shows in |
+| --- | --- | --- |
+| — | given | the panel's catalog for `locale` (English for a language it lacks) |
+| — | — | the panel's catalog for the browser's language |
+| given | given | the panel's catalog for `locale` |
+| given | — | English: the panel's catalog is not used |
+
+`ChatToggleButton` takes the same `t` and `locale` for its default label, by the same rule.
 
 #### Values inside sentences
 
@@ -827,7 +1259,7 @@ value, and a translator sees the sentence rather than a fragment of one:
 | `'{percent}% full'` | 84% full |
 | `'How can {agent} help you, {name}?'` | How can **Threat Analyst** help you, John? |
 
-Two consequences worth knowing when writing the locale files:
+Two consequences worth knowing when writing a translation:
 
 - **Plurals are separate keys** — `'1 tool call'` and `'{count} tool calls'`,
   `'Delegating one task…'` and `'Delegating {count} tasks…'`. A lookup cannot
@@ -843,236 +1275,12 @@ Two consequences worth knowing when writing the locale files:
 `promptSuggestions` (and any suggestions the backend serves) also go through
 `t`, so a host may pass either keys or final text.
 
-#### Translation keys used
+#### Translation keys
 
-Every key the package can ask for, grouped by where it appears:
-
-**Toggle button**
-
-- `'Ask Assistant'`
-
-**Header, agent menu and history**
-
-- `'Agent switching is not available here'`
-- `'Browse agents'`
-- `'Close'`
-- `'Conversation history'`
-- `'Could not reach the assistant service. Check the connection and try again.'`
-- `'Create agent'`
-- `'Delete conversation'`
-- `'Floating'`
-- `'Full screen'`
-- `'New chat'`
-- `'New conversation'`
-- `'No agent matches'`
-- `'No conversations yet'`
-- `'Search agents...'`
-- `'Sidebar'`
-- `'Switch to'`
-- `'Switch to another agent'`
-- `'Switch view'`
-- `'Transferred from {agent}'`
-- `'Untitled conversation'`
-
-**Conversation sidebar**
-
-- `'Conversation title'`
-- `'Hide conversations'`
-- `'No conversation matches'`
-- `'Rename conversation'`
-- `'Search conversations...'`
-- `'Show conversations'`
-
-**Welcome screen**
-
-- `'Assistant'`
-- `'Help me create a new simulation scenario'`
-- `'How can I help you, {name}?'`
-- `'How can {agent} help you, {name}?'`
-- `'How do I configure detection rules?'`
-- `'Suggestions'`
-- `'Summarize my recent findings'`
-- `'What are the latest attack patterns?'`
-
-**Composer**
-
-- `'A message references at most {count} conversations'`
-- `'Ask a question...'`
-- `'Attachments wait for the current response'`
-- `'Dictate a message'`
-- `'Enter to send now · Esc to stop'`
-- `'Files uploading...'`
-- `'Insert prompt template'`
-- `'Listening...'`
-- `'No conversation matches'`
-- `'No prompt matches'`
-- `'Reference a conversation'`
-- `'Referenced conversations wait for the current response'`
-- `'Search prompts...'`
-- `'Send now'`
-- `'Shared with you'`
-- `'Stop dictation'`
-- `'Stop generating'`
-- `'Untitled conversation'`
-- `'Uses AI. Verify results.'`
-
-**Messages, markdown and files**
-
-- `'Bad response'`
-- `'Conversation transcript'`
-- `'Copied'`
-- `'Copied!'`
-- `'Copy code'`
-- `'Copy message'`
-- `'Copy response'`
-- `'Could not retract feedback.'`
-- `'Could not submit feedback.'`
-- `'Download'`
-- `'Expand image'`
-- `'Feedback already submitted'`
-- `'Good response'`
-- `'Image could not be loaded'`
-- `'Image preview'`
-- `'Load earlier messages'`
-- `'Loading image…'`
-- `'Open conversation'`
-- `'Read aloud'`
-- `'Reasoning details'`
-- `'Reasoning details — turn limit reached'`
-- `'Save'`
-- `'Skip'`
-- `'Stop reading'`
-- `'Tell us what went wrong (optional)'`
-- `'What could be improved?'`
-
-**Decks, reports and videos**
-
-- `'Download {format}'`
-- `'Not rendered yet'`
-- `'Open in XTM One'`
-- `'PowerPoint'`
-- `'PowerPoint (editable)'`
-- `'Presentation'`
-- `'Rendering {progress}%'`
-- `'Report'`
-- `'The render did not finish'`
-- `'Video'`
-- `'Waiting to render'`
-- `'{count} scenes'`
-- `'{count} sections'`
-- `'{count} slides'`
-
-**Agent status**
-
-- `'Analyzing results…'`
-- `'Collecting results from one task…'`
-- `'Collecting results from {count} tasks…'`
-- `'Composing answer…'`
-- `'Consulting {agent}…'`
-- `'Delegating one task…'`
-- `'Delegating {count} tasks…'`
-- `'Incorporating your message…'`
-- `'Thinking...'`
-- `'Transferring to {agent}…'`
-- `'Using tools…'`
-- `'Waiting for one background task…'`
-- `'Waiting for your approval…'`
-- `'Waiting for {count} background tasks…'`
-- `'the agent'`
-- `'{tool} (+{count} more)…'`
-
-**Waiting panel**
-
-- `'Almost there'`
-- `'Analyzing the details'`
-- `'Connecting the dots'`
-- `'Consulting the sources'`
-- `'Crunching the data'`
-- `'Play Space Invaders'`
-- `'Play Space Invaders in XTM One'`
-- `'Polishing the answer'`
-- `'Putting it together'`
-- `'Reticulating splines'`
-- `'Thinking it through'`
-- `'Wrapping things up'`
-
-**Reasoning details**
-
-- `'(no output)'`
-- `'1 tool call'`
-- `'1 transfer'`
-- `'Input'`
-- `'Model reasoning'`
-- `'Output'`
-- `"The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far."`
-- `'Transfer chain'`
-- `'Turn limit reached.'`
-- `'{count} iterations'`
-- `'{count} tool calls'`
-- `'{count} transfers'`
-
-**Tool approval**
-
-- `'Also applies to your scheduled runs, until you revoke it'`
-- `'Always allowed'`
-- `'Approved'`
-- `'Back'`
-- `'Confirm'`
-- `'Decline this call'`
-- `'Declined'`
-- `'No'`
-- `'Sending…'`
-- `'The agent needs your approval to run a tool:'`
-- `'The agent needs your approval to run these tools:'`
-- `'Why not? The agent sees this and can adapt (optional)'`
-- `'Yes'`
-- `'Yes, always'`
-- `'e.g. wrong environment — use staging instead'`
-- `'unknown tool'`
-- `'{decided}/{total} decided'`
-- `'“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.'`
-
-**Context gauge**
-
-- `'Context full — older turns are being dropped'`
-- `'Context nearly full — older turns are being summarized'`
-- `'Context used'`
-- `'Conversation'`
-- `'MCP & dynamic tools'`
-- `'Summarized conversation'`
-- `'System prompt'`
-- `'Tool definitions'`
-- `'Tool results'`
-- `'{counts} tokens'`
-- `'{percent}% full'`
-- `'{summary} — click for details'`
-
-**Quota**
-
-- `'Quota'`
-- `'Quota reached'`
-- `'Usage'`
-- `'Usage · {period}'`
-- `'this month'`
-- `'this year'`
-- `'today'`
-- `'{quota} (shared across all users)'`
-
-**Notices, errors and timestamps**
-
-- `'Could not send your decision. Please try again.'`
-- `'No response.'`
-- `'Response ready'`
-- `'Sorry, an error occurred. Please try again.'`
-- `'This decision could not be sent. Reload the chat and try again.'`
-- `'This turn is no longer waiting for a decision.'`
-- `'Unable to connect. Please check the configuration.'`
-- `'Your answer is ready'`
-- `'just now'`
-- `'{agent} has finished'`
-- `'{count}d ago'`
-- `'{count}h ago'`
-- `'{count}m ago'`
+The catalogs are `src/i18n/<language>.ts`, one entry per key: the list of
+everything a host may override. `yarn test` fails when a key the source uses
+is missing from a catalog, or a translation drops one of its placeholders, so
+a new string ships translated with the feature that adds it.
 
 ## Styling
 
@@ -1087,11 +1295,15 @@ The component uses Tailwind CSS classes and CSS custom properties for theming. T
 The stylesheet is isolated from the host page in both directions. Every utility
 is scoped to the panel (`.filigran-chatbot` and its descendants) and declared
 outside any cascade layer, and the theme variables (`--radius-*`, `--spacing`,
-...) are declared on the panel root. The host's own utilities and `:root`
-tokens - a Tailwind build shipped without layers, such as the Filigran design
-system's - therefore never restyle the panel, and the panel's utilities never
-style the host page. Panel overlays (menus, dialogs, tooltips) render inside
-the panel root, so they keep its styles.
+`--color-*`, ...) are declared on the panel root only, never on `:root` or
+`:host`. The host's own utilities and `:root` tokens - a Tailwind build shipped
+without layers, such as the Filigran design system's - therefore never restyle
+the panel, and loading the stylesheet neither styles the host page nor
+redeclares the host's own variables. Panel overlays (menus, dialogs, tooltips,
+the image viewer) render inside the panel root, so they keep its styles; so
+does `ChatToggleButton`, which carries the `filigran-chatbot` class itself. A
+host element rendered outside the panel does not get the panel's variables:
+declare its own.
 
 ### Composer toolbar
 
@@ -1201,31 +1413,28 @@ Anything host-specific goes through `composerToolbar`:
 A host that renders assistant prose with its **own** markdown component (its
 design tokens, its icon set) should still normalise the text the same way the
 panel does, rather than maintaining a divergent copy. These pure
-`string → string` helpers ship from the dedicated **`@filigran/chatbot/markdown`**
-entry point — ~2 kB, no React, no CSS. Import them from there and never from the
+`string → string` helpers ship, with the answer-marker helpers below, from the dedicated **`@filigran/chatbot/markdown`**
+entry point — ~5 kB, no React, no CSS. Import them from there and never from the
 package root, which is the full panel bundle:
 
 ```tsx
-import {
-  hardenNestedCodeFences,
-  markdownUrlTransform,
-  normalizeImageMarkdown,
-  normalizeMarkdownTables,
-  wrapBareJson,
-} from '@filigran/chatbot/markdown';
+import { markdownUrlTransform, prepareMarkdown } from '@filigran/chatbot/markdown';
 
-const processed = hardenNestedCodeFences(
-  normalizeMarkdownTables(wrapBareJson(normalizeImageMarkdown(content))),
-);
+// After the host's own rewriting, if any (its API's URLs).
+const processed = prepareMarkdown(rewriteOwnUrls(content));
 
 <ReactMarkdown urlTransform={markdownUrlTransform}>{processed}</ReactMarkdown>;
 ```
 
+`prepareMarkdown` is the panel's own pipeline, in its order:
+`hardenNestedCodeFences(normalizeMarkdownTables(wrapBareJson(normalizeImageMarkdown(content))))`.
 Order matters: alt-text is flattened before anything reads line structure, and
-the JSON wrap must see the raw payload before fences are hardened.
+the JSON wrap must see the raw payload before fences are hardened. Each step
+is exported too.
 
 | Helper                    | Fixes                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `prepareMarkdown`         | All four below, in the panel's order                                                                            |
 | `normalizeImageMarkdown`  | Multi-line `![alt](url)` alt text, which breaks the image into literal paragraphs plus a stray link             |
 | `wrapBareJson`            | A whole message that is raw JSON — fenced as ```json so it stays readable and copyable                          |
 | `normalizeMarkdownTables` | A delimiter row whose column count doesn't match the header, including tables nested in blockquotes / list items |
@@ -1234,6 +1443,49 @@ the JSON wrap must see the raw payload before fences are hardened.
 
 None of them touch content they don't apply to — an already-valid document is
 returned byte-identical.
+
+The same entry point reads the `[[KIND:args]]` markers of an answer exactly as
+the panel does, for a host that renders answers, previews or notifications of
+its own:
+
+```ts
+import { markerKinds, splitAnswerMarkers, stripAnswerMarkers, type AnswerPart } from '@filigran/chatbot/markdown';
+
+const kinds = markerKinds(['WORK_ITEM', 'INVESTIGATION']); // the host's own kinds
+const parts: AnswerPart[] = splitAnswerMarkers(content, isStreaming, kinds);
+const preview = stripAnswerMarkers(content, kinds);
+```
+
+| Helper | What it does |
+| --- | --- |
+| `markerKinds(names)` | The host's marker names upper-cased, deduplicated and sorted, invalid ones (anything but `A-Z`, `0-9`, `_`, starting with a letter) dropped: the `kinds` the two others take |
+| `splitAnswerMarkers(content, streaming?, kinds?)` | The answer as ordered parts: `{ type: 'text', value }`, `{ type: 'file', fileId }`, `{ type: 'artifact', kind, id, slideRef? }` (`PRESENTATION`, `REPORT`, `VIDEO`, the id lower-cased, a deck's `#/<slide>`), and `{ type: 'marker', kind, args }` for a kind in `kinds` (a built-in one named there included, its arguments as written). A marker cut off at the end is dropped, and so, while `streaming`, is a chunk that stopped inside a marker's name (`[[PRES`). A marker of a kind no one names stays text |
+| `stripAnswerMarkers(content, kinds?)` | The answer with its markers removed (copy, a preview, a notification); prose with none is returned untouched |
+
+## Workspace Helpers
+
+A host listing conversations in a sidebar of its own groups them by workspace
+exactly as the panel's list does, from the dedicated **`@filigran/chatbot/workspaces`**
+entry point — pure functions, no React, no CSS:
+
+```ts
+import { ELSEWHERE_GROUP, groupConversations, groupIsOpen, parseWorkspaces } from '@filigran/chatbot/workspaces';
+
+const workspaces = parseWorkspaces(workspaceList, { userId: me.id });
+const { groups, unfiled } = groupConversations(
+  conversations.map((c) => ({ ...c, conversationId: c.id, workspaceId: c.workspace_id })),
+  workspaces,
+  { matches: search ? (c) => c.title.toLowerCase().includes(search) : undefined },
+);
+```
+
+| Helper | What it does |
+| --- | --- |
+| `parseWorkspaces(data, { userId? })` | The backend's list (a bare array or `{ workspaces }`) as `ChatWorkspace`s; entries without an id or a name, and archived ones, are left out. A workspace is the caller's own (`isOwn`) by its `is_own`, else, where the backend sends none, by its `user_id` being `userId` |
+| `sortWorkspaces(workspaces)` | The caller's own default first, then by name |
+| `groupConversations(conversations, workspaces, { matches? })` | `{ groups, unfiled }`: a group (`{ workspace, key, conversations }`) per workspace the caller may file into, empty or not, and per one they may only read while it holds one of their conversations; those filed in a workspace not listed go to one group keyed `ELSEWHERE_GROUP` (`workspace: null`). With `matches` only the matching conversations stay, and groups left empty go. Each conversation needs `conversationId` and `workspaceId`; the host's own type passes through whole |
+| `fileableWorkspaces(workspaces)` | The workspaces a conversation can be moved into (`canManage`), in list order |
+| `groupIsOpen(key, collapsed, group, activeConversationId, searching)` / `groupCanToggle(group, activeConversationId, searching)` | Whether a group shows its conversations (collapsed, unless it holds the conversation on screen; always while searching), and whether its toggle may fold it |
 
 ## Peer Dependencies
 
@@ -1265,7 +1517,7 @@ To build:
 yarn build
 ```
 
-To run the unit tests (Node's built-in test runner, which runs TypeScript natively from Node 22.18 / 23.6):
+To run the unit tests (Node's built-in test runner, with an esbuild loader for JSX and Node's own type stripping for TypeScript; Node 22.18 / 23.6 or later):
 
 ```bash
 yarn test

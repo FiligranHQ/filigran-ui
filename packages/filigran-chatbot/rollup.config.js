@@ -2,14 +2,13 @@ import resolve from '@rollup/plugin-node-resolve';
 import terser from '@rollup/plugin-terser';
 import json from '@rollup/plugin-json';
 import postcss from 'rollup-plugin-postcss';
-import tailwindcssPostcss from '@tailwindcss/postcss';
 import typescript from '@rollup/plugin-typescript';
 import commonjs from '@rollup/plugin-commonjs';
 import dts from 'rollup-plugin-dts';
 import { typescriptPaths } from 'rollup-plugin-typescript-paths';
 import serve from 'rollup-plugin-serve';
 import livereload from 'rollup-plugin-livereload';
-import isolateFromHost from './postcss/isolate-from-host.js';
+import { stylesheetPlugins } from './postcss/pipeline.js';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -25,7 +24,7 @@ const typescriptOptions = {
   declaration: false,
   declarationMap: false,
   allowImportingTsExtensions: false,
-  exclude: ['**/*.test.ts'],
+  exclude: ['**/*.test.ts', '**/*.test.tsx', 'test/**'],
 };
 
 const indexConfig = {
@@ -36,7 +35,7 @@ const indexConfig = {
     json(),
     typescript(typescriptOptions),
     postcss({
-      plugins: [tailwindcssPostcss(), isolateFromHost()],
+      plugins: stylesheetPlugins(),
       extract: 'styles.css',
       modules: false,
       autoModules: false,
@@ -84,33 +83,35 @@ const configs = [
       dts(),
     ],
   },
-  // `@filigran/chatbot/markdown` — pure string helpers only. Deliberately a
-  // separate entry (no CSS pipeline, no React) so a host can share the panel's
-  // markdown normalisation without its bundler having to tree-shake the whole
-  // panel out of an eagerly-loaded chunk.
-  {
-    external,
-    input: './src/markdown.ts',
-    output: {
-      file: 'dist/markdown.js',
-      format: 'es',
-      sourcemap: true,
+  // `@filigran/chatbot/markdown` and `/workspaces` — pure helpers only.
+  // Deliberately separate entries (no CSS pipeline, no React) so a host can
+  // share the panel's rules without its bundler having to tree-shake the
+  // whole panel out of an eagerly-loaded chunk.
+  ...['markdown', 'workspaces'].flatMap((name) => [
+    {
+      external,
+      input: `./src/${name}.ts`,
+      output: {
+        file: `dist/${name}.js`,
+        format: 'es',
+        sourcemap: true,
+      },
+      plugins: [
+        resolve({ extensions, browser: true }),
+        commonjs(),
+        json(),
+        typescript(typescriptOptions),
+        typescriptPaths({ preserveExtensions: true }),
+        terser({ output: { comments: false } }),
+      ],
     },
-    plugins: [
-      resolve({ extensions, browser: true }),
-      commonjs(),
-      json(),
-      typescript(typescriptOptions),
-      typescriptPaths({ preserveExtensions: true }),
-      terser({ output: { comments: false } }),
-    ],
-  },
-  {
-    input: 'src/markdown.ts',
-    external,
-    output: [{ file: 'dist/markdown.d.ts', format: 'es' }],
-    plugins: [dts()],
-  },
+    {
+      input: `src/${name}.ts`,
+      external,
+      output: [{ file: `dist/${name}.d.ts`, format: 'es' }],
+      plugins: [dts()],
+    },
+  ]),
 ];
 
 export default configs;

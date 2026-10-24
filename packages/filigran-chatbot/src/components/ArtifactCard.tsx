@@ -25,6 +25,8 @@ interface ArtifactCardProps {
   onDownload?: (artifact: ChatArtifact, format: string) => Promise<void>;
   /** Describes it again; a video still rendering is followed with it. */
   onRefresh?: (kind: ChatArtifactKind, id: string) => Promise<ChatArtifact | undefined>;
+  /** Opens it in the host itself, in place of the link to XTM One. */
+  onOpen?: (artifact: ChatArtifact) => void;
 }
 
 /**
@@ -32,7 +34,7 @@ interface ArtifactCardProps {
  * its downloads when the host proxies them. The panel cannot draw the deck or
  * play the film itself; XTM One's page does.
  */
-export const ArtifactCard = ({ artifact, t, onDownload, onRefresh }: ArtifactCardProps) => {
+export const ArtifactCard = ({ artifact, t, onDownload, onRefresh, onOpen }: ArtifactCardProps) => {
   const [current, setCurrent] = useState(artifact);
   const [busyFormat, setBusyFormat] = useState<string | null>(null);
   const [gaveUp, setGaveUp] = useState(false);
@@ -60,7 +62,7 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh }: ArtifactCar
   const title = current.title || kindLabel;
   const facts = artifactFacts(current, t);
   const renderLabel = videoRenderLabel(current, t);
-  const link = artifactLink(current);
+  const link = onOpen ? null : artifactLink(current);
   const downloads = onDownload ? current.downloads : [];
 
   const download = async (format: string) => {
@@ -94,8 +96,13 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh }: ArtifactCar
           )}
         </span>
       </div>
-      {(link || downloads.length > 0) && (
+      {(link || onOpen || downloads.length > 0) && (
         <div className="flex flex-wrap items-center gap-1.5 pl-[28px]">
+          {onOpen && (
+            <button type="button" className={ACTION} onClick={() => onOpen(current)}>
+              {t('Open')}
+            </button>
+          )}
           {link && (
             <a href={link} target="_blank" rel="noopener noreferrer" className={ACTION}>
               {t('Open in XTM One')}

@@ -1,0 +1,79 @@
+/**
+ * The stylesheet the package ships, compiled as the build compiles it, must
+ * restyle nothing of the page that loads it: every rule is scoped to the panel
+ * (`.filigran-chatbot`, its `filigran-chat-*` classes), and no variable is
+ * declared on the host document.
+ */
+import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import postcss from 'postcss';
+import { stylesheetPlugins } from './pipeline.js';
+
+const SOURCE = fileURLToPath(new URL('../src/assets/index.css', import.meta.url));
+const PANEL_SCOPE = ':is(.filigran-chatbot, .filigran-chatbot *)';
+
+// `optimize` as the production build has it (flattened nesting), unminified so
+// a failure names a readable selector.
+const { root } = await postcss(stylesheetPlugins({ optimize: { minify: false } })).process(readFileSync(SOURCE, 'utf8'), { from: SOURCE });
+
+function inKeyframes(rule) {
+  for (let node = rule.parent; node; node = node.parent) if (node.type === 'atrule' && /keyframes$/i.test(node.name)) return true;
+  return false;
+}
+
+const rules = [];
+root.walkRules((rule) => {
+  if (!inKeyframes(rule)) rules.push(rule);
+});
+const declaresVariables = (rule) => rule.nodes.some((node) => node.type === 'decl' && node.prop.startsWith('--'));
+const hasClass = (selector, name) => new RegExp(`\\.${name}(?![\\w\\\\-])`).test(selector);
+
+test('the stylesheet compiles to rules', () => {
+  assert.ok(rules.length > 100, `only ${rules.length} rules`);
+});
+
+test('every rule of the stylesheet is scoped to the panel', () => {
+  const unscoped = rules.flatMap((rule) => rule.selectors.filter((selector) => !selector.includes('.filigran-chat')));
+  assert.deepEqual(unscoped, []);
+});
+
+test('the utilities a host also defines (.flex, .hidden, .grid) apply inside the panel only', () => {
+  for (const name of ['flex', 'hidden', 'grid']) {
+    const selectors = rules.flatMap((rule) => rule.selectors.filter((selector) => hasClass(selector, name)));
+    if (name !== 'grid') assert.ok(selectors.length > 0, `.${name} is compiled`);
+    for (const selector of selectors) assert.ok(selector.includes(PANEL_SCOPE), `unscoped .${name}: ${selector}`);
+  }
+});
+
+test('no variable is declared on the host document, and the theme is declared on the panel root', () => {
+  const documentRules = rules.filter((rule) => rule.selectors.some((selector) => /:root|:host|^\s*(html|body|\*)\b/.test(selector)));
+  assert.deepEqual(
+    documentRules.map((rule) => rule.selector),
+    [],
+  );
+  const variableRules = rules.filter(declaresVariables);
+  for (const rule of variableRules) {
+    for (const selector of rule.selectors) assert.ok(selector.includes('.filigran-chatbot'), `variables declared outside the panel: ${selector}`);
+  }
+  const theme = variableRules.find((rule) => rule.selector === '.filigran-chatbot');
+  assert.ok(theme, 'the theme rule');
+  for (const variable of ['--font-sans', '--spacing', '--radius-lg']) {
+    assert.ok(
+      theme.nodes.some((node) => node.prop === variable),
+      `${variable} on the panel root`,
+    );
+  }
+});
+
+test('every overlay the panel portals is mounted inside the panel root, where the theme is declared', () => {
+  const srcDir = fileURLToPath(new URL('../src/', import.meta.url));
+  const files = readdirSync(srcDir, { recursive: true }).filter((path) => /\.tsx?$/.test(path) && !/\.test\.tsx?$/.test(path));
+  const portalling = files.filter((path) => readFileSync(join(srcDir, path), 'utf8').includes('createPortal('));
+  assert.ok(portalling.length > 0, 'the panel portals its overlays');
+  for (const path of portalling) {
+    assert.ok(readFileSync(join(srcDir, path), 'utf8').includes('findChatbotRoot('), `${path} portals outside the panel root`);
+  }
+});

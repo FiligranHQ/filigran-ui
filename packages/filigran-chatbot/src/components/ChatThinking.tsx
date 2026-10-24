@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AgentStatusState, IconProps, Translate } from '../types';
+
+/** What a host can change of the status line and the waiting panel. */
+export interface ThinkingOverrides {
+  /** The status line's text, over the built-in one; `undefined` keeps it. */
+  statusLabel?: (status: AgentStatusState) => string | undefined;
+  /** The waiting panel's rotating messages, already translated. */
+  waitingMessages?: string[];
+  /** Replaces the waiting panel's content. */
+  renderWaitingPanel?: () => React.ReactNode;
+}
 import {
   AlertTriangleIcon,
   BrainIcon,
@@ -16,7 +26,7 @@ import {
 import { translate } from '../utils';
 import { ChatWaitingPanel } from './ChatWaitingPanel';
 
-interface ChatThinkingProps {
+interface ChatThinkingProps extends ThinkingOverrides {
   agentStatus: AgentStatusState | null;
   logoIcon?: React.ReactNode;
   t: Translate;
@@ -28,6 +38,8 @@ interface ChatThinkingProps {
   waitingGameUrl?: string | null;
   /** The thread's follower: keeps its end in view while the reader is there. */
   keepEndInView: () => void;
+  /** Ends an agent's announced wait early; offered while it waits. */
+  onSkipWait?: () => void;
 }
 
 type IconComponent = (props: IconProps) => React.JSX.Element;
@@ -106,6 +118,10 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
       // host wiring `ChatMessages` without a decision handler) — otherwise the
       // prompt replaces this bubble entirely.
       return { label: t('Waiting for your approval…'), StatusIcon: AlertTriangleIcon, showDots: false };
+    case 'cancelling':
+      return { label: t('Stopping…'), StatusIcon: BrainIcon, showDots: true };
+    case 'wait_start':
+      return { label: agentStatus.waitReason || t('Waiting before continuing…'), StatusIcon: SparklesIcon, showDots: false };
     case 'acting_on_page':
       return { label: t('Acting on the page…'), StatusIcon: SparklesIcon, showDots: true };
     case 'analyzing':
@@ -138,6 +154,11 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
     default:
       return { label: t('Thinking...'), StatusIcon: BrainIcon, showDots: false };
   }
+}
+
+/** The status line's text for *agentStatus*: the host's (`statusLabel`), else the built-in one. */
+export function statusLineText(agentStatus: AgentStatusState | null, t: Translate, statusLabel?: ThinkingOverrides['statusLabel']): string {
+  return (agentStatus && statusLabel?.(agentStatus)) || resolveStatusVisual(agentStatus, t).label;
 }
 
 /**
@@ -306,8 +327,14 @@ export const ChatThinking = ({
   onPlayWaitingGame,
   waitingGameUrl,
   keepEndInView,
+  onSkipWait,
+  statusLabel,
+  waitingMessages,
+  renderWaitingPanel,
 }: ChatThinkingProps) => {
-  const { label, StatusIcon, showDots } = resolveStatusVisual(agentStatus, t);
+  const visual = resolveStatusVisual(agentStatus, t);
+  const { StatusIcon, showDots } = visual;
+  const label = statusLineText(agentStatus, t, statusLabel);
   const thinkingContent = agentStatus?.thinkingContent;
 
   // Tick the elapsed counter every second. The backend only reports a fresh
@@ -319,13 +346,18 @@ export const ChatThinking = ({
   // only runs while an anchor is present, and this state is local to the
   // indicator so the tick never re-renders the surrounding message list.
   const elapsedStartMs = agentStatus?.elapsedStartMs;
+  const waitStartMs = agentStatus?.status === 'wait_start' ? agentStatus.waitStartMs : undefined;
+  const tickAnchor = elapsedStartMs ?? waitStartMs;
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    if (elapsedStartMs == null) return;
+    if (tickAnchor == null) return;
     setNowMs(Date.now());
     const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [elapsedStartMs]);
+  }, [tickAnchor]);
+  // An announced wait counts down to the moment the agent resumes.
+  const waitSeconds = agentStatus?.waitSeconds;
+  const waitLeftS = waitStartMs != null && waitSeconds != null ? Math.max(0, waitSeconds - (nowMs - waitStartMs) / 1000) : undefined;
 
   // Fall back to the raw heartbeat value for backends/protocols that report
   // `elapsedS` without an anchor.
@@ -364,12 +396,33 @@ export const ChatThinking = ({
               <StatusIcon size={14} className="text-[var(--chat-accent)] animate-pulse transition-all duration-300" />
             )}
             <span className="text-sm text-gray-500 dark:text-white/50 transition-all duration-300">{label}</span>
-            {showElapsed && <span className="text-xs text-gray-400 dark:text-white/30 tabular-nums shrink-0">{formatElapsed(elapsedS)}</span>}
+            {waitLeftS !== undefined ? (
+              <span className="text-xs text-gray-400 dark:text-white/30 tabular-nums shrink-0">{formatElapsed(Math.ceil(waitLeftS))}</span>
+            ) : (
+              showElapsed && <span className="text-xs text-gray-400 dark:text-white/30 tabular-nums shrink-0">{formatElapsed(elapsedS)}</span>
+            )}
+            {agentStatus?.status === 'wait_start' && onSkipWait && (
+              <button
+                type="button"
+                onClick={onSkipWait}
+                className="ml-1 shrink-0 rounded-md border border-[var(--chat-accent)]/40 px-2 py-0.5 text-xs text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors"
+              >
+                {t('Continue now')}
+              </button>
+            )}
           </div>
         </div>
       </div>
       {showWaiting ? (
-        <ChatWaitingPanel t={t} enabled={miniGameEnabled} onPlay={onPlayWaitingGame} playUrl={waitingGameUrl} keepEndInView={keepEndInView} />
+        <ChatWaitingPanel
+          t={t}
+          enabled={miniGameEnabled}
+          onPlay={onPlayWaitingGame}
+          playUrl={waitingGameUrl}
+          keepEndInView={keepEndInView}
+          messages={waitingMessages}
+          content={renderWaitingPanel?.()}
+        />
       ) : showReasoning ? (
         <ThinkingTextBubble text={reasoningText} />
       ) : null}

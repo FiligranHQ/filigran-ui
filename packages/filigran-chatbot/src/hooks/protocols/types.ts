@@ -1,4 +1,13 @@
-import type { ChatArtifact, ChatAttachment, ChatContextUsage, ToolApprovalProposal, ToolCallTraceEntry, TransferChainEntry } from '../../types';
+import type {
+  ChatAnsweredBy,
+  ChatArtifact,
+  ChatAttachment,
+  ChatContextUsage,
+  ChatMessage,
+  ToolApprovalProposal,
+  ToolCallTraceEntry,
+  TransferChainEntry,
+} from '../../types';
 import type { PageAction } from '../../utils/pageActions';
 
 /**
@@ -19,6 +28,11 @@ export type ParsedAction =
        * status label independently.
        */
       contextUsage?: ChatContextUsage;
+      /** A turn re-attached mid-way (`thinking.resumed`): `elapsedS` is how long it has run. */
+      resumed?: boolean;
+      /** `wait_start`: how long the agent pauses, and why. */
+      waitSeconds?: number;
+      waitReason?: string;
     }
   | { action: 'stream'; content: string }
   | {
@@ -45,6 +59,14 @@ export type ParsedAction =
       contextUsage?: ChatContextUsage;
       /** Persisted id of the answer (`message_id`), what its feedback is stored against. */
       messageId?: string;
+      /** A segment closed mid-turn: the turn goes on after it. */
+      intermediate?: boolean;
+      /** The agent that wrote this segment, when it is not the conversation's own. */
+      answeredBy?: ChatAnsweredBy;
+      /** The segment is a note written in place of a mentioned agent that could not answer. */
+      mentionFailed?: boolean;
+      /** The frame as the backend sent it (see `ChatMessage.raw`). */
+      raw?: Record<string, unknown>;
     }
   | {
       /**
@@ -72,7 +94,28 @@ export type ParsedAction =
       pageAction: PageAction;
       conversationId?: string;
     }
-  | { action: 'error'; content: string }
+  /**
+   * The turn failed: terminal. *provisional*: an end its backend follows with
+   * the stored one (see `cancelled`).
+   */
+  | { action: 'error'; content: string; messageId?: string; provisional?: true; raw?: Record<string, unknown> }
+  /**
+   * The turn was stopped (`cancelled`): terminal. *provisional*: an end marked
+   * `provisional: true`, which the backend follows with the
+   * stored end of the same turn (a `done`, `cancelled` or `error` carrying
+   * `message_id`); *messageId*: the stored answer's id, when it says, and
+   * *raw* the frame then (see `ChatMessage.raw`).
+   */
+  | { action: 'cancelled'; messageId?: string; provisional?: true; raw?: Record<string, unknown> }
+  /** The user's session ended (`session_expired`): terminal, the stream that said so ends with it. */
+  | { action: 'session_ended'; reason?: string }
+  /** Nothing is waiting on a decision any more: another device answered it. */
+  | { action: 'approval_resolved' }
+  /** A user message sent from another device or tab. */
+  | { action: 'user_message'; message: ChatMessage }
+  | { action: 'conversation_title'; conversationId?: string; title: string }
+  /** The message sent joined a turn already running, whose frames follow. */
+  | { action: 'folded'; turnId?: string }
   | { action: 'set_chat_id'; chatId: string }
   | { action: 'noop' };
 

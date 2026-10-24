@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatConversationSummary } from '../types';
-import { refusalMessage, revertMove } from '../utils/workspaces';
+import { readRefusalDetail } from '../utils/refusal';
+import { revertMove } from '../utils/workspaces';
+import { usePanelFetch } from './usePanelRequests';
 
 interface UseConversationsOptions {
   apiBaseUrl: string;
@@ -26,6 +28,8 @@ interface UseConversationsReturn {
    * reason (an empty string when it gave none).
    */
   moveConversation: (id: string, workspaceId: string | null) => Promise<string | null>;
+  /** Delete every conversation (`apiEndpoints.clearAll`); `null` when the host offers no route. */
+  clearConversations: (() => Promise<boolean>) | null;
 }
 
 /**
@@ -66,6 +70,7 @@ export function useConversations({
   backendType = 'rest',
   requestHeaders,
 }: UseConversationsOptions): UseConversationsReturn {
+  const panelFetch = usePanelFetch();
   const [conversations, setConversations] = useState<ChatConversationSummary[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(false);
 
@@ -77,7 +82,7 @@ export function useConversations({
     if (!historyEnabled) return;
     setConversationsLoading(true);
     try {
-      const res = await fetch(sessionsUrl, {
+      const res = await panelFetch(sessionsUrl, {
         method: 'GET',
         headers: { ...(requestHeaders ?? {}) },
       });
@@ -103,7 +108,7 @@ export function useConversations({
     async (id: string): Promise<boolean> => {
       if (!historyEnabled) return false;
       try {
-        const res = await fetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
+        const res = await panelFetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
           method: 'DELETE',
           headers: { ...(requestHeaders ?? {}) },
         });
@@ -117,6 +122,19 @@ export function useConversations({
     [historyEnabled, sessionsUrl, requestHeaders],
   );
 
+  const clearAllUrl = historyEnabled && apiEndpoints?.clearAll ? `${apiBaseUrl}${apiEndpoints.clearAll}` : null;
+  const clearConversations = useCallback(async (): Promise<boolean> => {
+    if (!clearAllUrl) return false;
+    try {
+      const res = await panelFetch(clearAllUrl, { method: 'DELETE', headers: { ...(requestHeaders ?? {}) } });
+      if (!res.ok) return false;
+      setConversations([]);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [clearAllUrl, requestHeaders]);
+
   const renameConversation = useCallback(
     async (id: string, title: string): Promise<boolean> => {
       const trimmed = title.trim();
@@ -129,7 +147,7 @@ export function useConversations({
       const previous = conversations;
       setConversations((prev) => prev.map((c) => (c.conversationId === id ? { ...c, title: trimmed } : c)));
       try {
-        const res = await fetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
+        const res = await panelFetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
           body: JSON.stringify({ title: trimmed }),
@@ -158,14 +176,14 @@ export function useConversations({
       const revert = () => setConversations((prev) => revertMove(prev, id, workspaceId, previous));
       setConversations((prev) => prev.map((c) => (c.conversationId === id ? { ...c, workspaceId } : c)));
       try {
-        const res = await fetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
+        const res = await panelFetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', ...(requestHeaders ?? {}) },
           body: JSON.stringify({ workspace_id: workspaceId }),
         });
         if (!res.ok) {
           revert();
-          return (await refusalMessage(res)) ?? '';
+          return (await readRefusalDetail(res)) ?? '';
         }
         return null;
       } catch {
@@ -176,5 +194,14 @@ export function useConversations({
     [historyEnabled, sessionsUrl, requestHeaders, conversations],
   );
 
-  return { historyEnabled, conversations, conversationsLoading, refreshConversations, deleteConversation, renameConversation, moveConversation };
+  return {
+    historyEnabled,
+    conversations,
+    conversationsLoading,
+    refreshConversations,
+    deleteConversation,
+    renameConversation,
+    moveConversation,
+    clearConversations: clearAllUrl ? clearConversations : null,
+  };
 }

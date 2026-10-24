@@ -401,40 +401,88 @@ export function timeAgo(iso: string | undefined, t: Translate): string {
  * slide as `#/<slide id>`, `[[REPORT:<id>]]`, `[[VIDEO:<id>]]`). The backend
  * matches the names case-insensitively, and so does this.
  */
-const ANSWER_MARKER_RE = /\[\[(FILE|PRESENTATION|REPORT|VIDEO):([^\]#]+)(?:#\/([A-Za-z0-9_-]{1,64}))?\]\]/gi;
+const BUILT_IN_MARKERS = ['FILE', 'PRESENTATION', 'REPORT', 'VIDEO'] as const;
+const BUILT_IN_MARKER_SOURCE = `(${BUILT_IN_MARKERS.join('|')}):([^\\]#]+)(?:#\\/([A-Za-z0-9_-]{1,64}))?`;
+
+/** A host marker name: upper-case letters, digits and underscores. */
+const MARKER_NAME = /^[A-Z][A-Z0-9_]*$/;
+
+/** The host's marker names, upper-cased, valid and deduplicated. */
+export function markerKinds(names: Iterable<string> | undefined): string[] {
+  const out = new Set<string>();
+  for (const name of names ?? []) {
+    const upper = name.toUpperCase();
+    if (MARKER_NAME.test(upper)) out.add(upper);
+  }
+  return [...out].sort();
+}
+
+const escapeRe = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+interface MarkerGrammar {
+  complete: RegExp;
+  partial: RegExp;
+  heads: string[];
+  longestHead: number;
+}
+
+const grammars = new Map<string, MarkerGrammar>();
+/** Grammars kept, one per set of host kinds. */
+const MAX_GRAMMARS = 32;
 
 /**
- * Matches an INCOMPLETE marker at the very end of the string. SSE streams can
- * split a marker before the closing `]]` arrives, so the tail may be `[[FILE`,
- * `[[VIDEO:`, `[[REPORT:abc` or `[[FILE:abc]` mid-stream. We anchor on a whole
- * marker name (vanishingly unlikely to end real prose) so it never clips real
- * content.
+ * The marker grammar for the built-in names plus *hostKinds*. A host name
+ * takes everything up to `]]` as its arguments; one that is also built in is
+ * read with the built-in grammar and handed over whole.
+ *
+ * The partial pattern matches an INCOMPLETE marker at the very end of the
+ * string: SSE streams can split a marker before the closing `]]` arrives, so
+ * the tail may be `[[FILE`, `[[VIDEO:`, `[[REPORT:abc` or `[[FILE:abc]`. It is
+ * anchored on a whole marker name, vanishingly unlikely to end real prose, so
+ * it never clips real content.
  */
-const PARTIAL_ANSWER_MARKER_RE = /\[\[(?:FILE|PRESENTATION|REPORT|VIDEO)(?::[^\]]*)?\]?$/i;
-
-const ANSWER_MARKER_HEADS = ['[[FILE:', '[[PRESENTATION:', '[[REPORT:', '[[VIDEO:'];
-const LONGEST_MARKER_HEAD = Math.max(...ANSWER_MARKER_HEADS.map((head) => head.length));
+function markerGrammar(hostKinds: readonly string[]): MarkerGrammar {
+  const extra = hostKinds.filter((k) => !(BUILT_IN_MARKERS as readonly string[]).includes(k));
+  const key = extra.join(',');
+  const cached = grammars.get(key);
+  if (cached) return cached;
+  const names = [...BUILT_IN_MARKERS, ...extra].map(escapeRe).join('|');
+  const hostSource = extra.length > 0 ? `|(${extra.map(escapeRe).join('|')}):([^\\]]+)` : '';
+  const heads = [...BUILT_IN_MARKERS, ...extra].map((name) => `[[${name}:`);
+  const grammar = {
+    complete: new RegExp(`\\[\\[(?:${BUILT_IN_MARKER_SOURCE}${hostSource})\\]\\]`, 'gi'),
+    partial: new RegExp(`\\[\\[(?:${names})(?::[^\\]]*)?\\]?$`, 'i'),
+    heads,
+    longestHead: Math.max(...heads.map((head) => head.length)),
+  };
+  // A host whose kinds keep changing would grow the cache without bound: the
+  // oldest grammar goes first.
+  if (grammars.size >= MAX_GRAMMARS) grammars.delete(grammars.keys().next().value as string);
+  grammars.set(key, grammar);
+  return grammar;
+}
 
 /**
  * *text* without a trailing start of a marker name (`[`, `[[`, `[[PRES`). Only
  * for an answer still streaming, where the next chunk may complete it: once
  * the answer is done, the same text is prose.
  */
-function withoutMarkerHead(text: string): string {
-  for (let i = Math.max(0, text.length - LONGEST_MARKER_HEAD); i < text.length; i++) {
+function withoutMarkerHead(text: string, grammar: MarkerGrammar): string {
+  for (let i = Math.max(0, text.length - grammar.longestHead); i < text.length; i++) {
     if (text[i] !== '[') continue;
     const tail = text.slice(i).toUpperCase();
-    if (ANSWER_MARKER_HEADS.some((head) => head.startsWith(tail))) return text.slice(0, i);
+    if (grammar.heads.some((head) => head.startsWith(tail))) return text.slice(0, i);
   }
   return text;
 }
 
 /**
  * Strip the markers an agent embeds in its reply to point at the files, decks,
- * reports and videos it made. They render as cards of their own, so the raw
- * markers must be removed from the prose. Complete markers are removed
- * anywhere; an incomplete marker at the end is also removed so a partially
- * streamed token never flickers as raw `[[FILE:...` text.
+ * reports and videos it made (and the host's own, *hostKinds*). They render as
+ * cards of their own, so the raw markers must be removed from the prose.
+ * Complete markers are removed anywhere; an incomplete marker at the end is
+ * also removed so a partially streamed token never flickers as raw
+ * `[[FILE:...` text.
  *
  * When no marker is present the content is returned **untouched** — we must
  * not trim or collapse blank lines on ordinary prose, which would clobber
@@ -444,9 +492,11 @@ function withoutMarkerHead(text: string): string {
  * Applied to assistant content only — user-typed text is never touched, so a
  * user who literally types `[[FILE:x]]` still sees their own text.
  */
-export function stripAnswerMarkers(content: string): string {
+export function stripAnswerMarkers(content: string, hostKinds: readonly string[] = []): string {
   if (!content) return content;
-  const stripped = content.replace(ANSWER_MARKER_RE, '').replace(PARTIAL_ANSWER_MARKER_RE, '');
+  const grammar = markerGrammar(hostKinds);
+  // `replace` with a global pattern starts from the beginning, whatever `lastIndex` holds.
+  const stripped = content.replace(grammar.complete, '').replace(grammar.partial, '');
   if (stripped === content) return content;
   return stripped
     .replace(/[ \t]+\n/g, '\n')
@@ -454,42 +504,49 @@ export function stripAnswerMarkers(content: string): string {
     .trim();
 }
 
-/** An ordered piece of assistant content: prose text, a file marker or an artifact marker. */
+/** An ordered piece of assistant content: prose, a file marker, an artifact marker or a host marker. */
 export type AnswerPart =
   | { type: 'text'; value: string }
   | { type: 'file'; fileId: string }
-  | { type: 'artifact'; kind: ChatArtifactKind; id: string; slideRef?: string };
+  | { type: 'artifact'; kind: ChatArtifactKind; id: string; slideRef?: string }
+  | { type: 'marker'; kind: string; args: string };
 
 /**
  * Split assistant content into ordered parts around complete markers, so the
- * renderer can place each file or artifact card at its marker's source
- * position (preserving interleaved order). An artifact id is lowercased, the
- * form the backend describes it in. A trailing incomplete marker (an SSE token
- * split mid-stream) is removed from the final text part so it never shows as
- * raw `[[FILE:...` text, and so is, while *streaming*, a chunk that stopped
- * inside a marker's name (`[[PRES`).
+ * renderer can place each card at its marker's source position (preserving
+ * interleaved order). An artifact id is lowercased, the form the backend
+ * describes it in. A marker named in *hostKinds* is a `marker` part with its
+ * arguments as written, a built-in one included. A trailing incomplete marker
+ * (an SSE token split mid-stream) is removed from the final text part so it
+ * never shows as raw `[[FILE:...` text, and so is, while *streaming*, a chunk
+ * that stopped inside a marker's name (`[[PRES`).
  */
-export function splitAnswerMarkers(content: string, streaming = false): AnswerPart[] {
+export function splitAnswerMarkers(content: string, streaming = false, hostKinds: readonly string[] = []): AnswerPart[] {
   if (!content) return [];
+  const grammar = markerGrammar(hostKinds);
   const parts: AnswerPart[] = [];
-  const re = new RegExp(ANSWER_MARKER_RE.source, 'gi');
   let lastIndex = 0;
-  let match: RegExpExecArray | null = re.exec(content);
-  while (match !== null) {
+  // `matchAll` walks a copy of the cached pattern: no state of its own to reset.
+  for (const match of content.matchAll(grammar.complete)) {
     if (match.index > lastIndex) {
       parts.push({ type: 'text', value: content.slice(lastIndex, match.index) });
     }
-    const name = match[1].toLowerCase();
-    if (name === 'file') {
-      parts.push({ type: 'file', fileId: match[2] });
+    if (match[1]) {
+      const kind = match[1].toUpperCase();
+      if (hostKinds.includes(kind)) {
+        parts.push({ type: 'marker', kind, args: match[3] ? `${match[2]}#/${match[3]}` : match[2] });
+      } else if (kind === 'FILE') {
+        parts.push({ type: 'file', fileId: match[2] });
+      } else {
+        parts.push({ type: 'artifact', kind: kind.toLowerCase() as ChatArtifactKind, id: match[2].toLowerCase(), slideRef: match[3] || undefined });
+      }
     } else {
-      parts.push({ type: 'artifact', kind: name as ChatArtifactKind, id: match[2].toLowerCase(), slideRef: match[3] || undefined });
+      parts.push({ type: 'marker', kind: match[4].toUpperCase(), args: match[5] });
     }
-    lastIndex = re.lastIndex;
-    match = re.exec(content);
+    lastIndex = match.index + match[0].length;
   }
-  const rest = content.slice(lastIndex).replace(PARTIAL_ANSWER_MARKER_RE, '');
-  const tail = streaming ? withoutMarkerHead(rest) : rest;
+  const rest = content.slice(lastIndex).replace(grammar.partial, '');
+  const tail = streaming ? withoutMarkerHead(rest, grammar) : rest;
   if (tail) parts.push({ type: 'text', value: tail });
   return parts;
 }
@@ -501,9 +558,9 @@ export function splitAnswerMarkers(content: string, streaming = false): AnswerPa
  * one as a document of its own, and so must anything that reads the answer
  * (read aloud) to read what the screen shows.
  */
-export function answerMarkdownSources(content: string): string[] {
+export function answerMarkdownSources(content: string, hostKinds: readonly string[] = []): string[] {
   const sources: string[] = [];
-  for (const part of splitAnswerMarkers(content)) {
+  for (const part of splitAnswerMarkers(content, false, hostKinds)) {
     if (part.type === 'text' && part.value.trim()) sources.push(prepareMarkdown(part.value));
   }
   return sources;
@@ -601,4 +658,29 @@ export function filenameFromContentDisposition(header: string | null | undefined
   const plain = /filename\s*=\s*("([^"]*)"|[^;]+)/.exec(header);
   const name = plain ? (plain[2] ?? plain[1]).trim() : '';
   return name || undefined;
+}
+
+/**
+ * How an agent's `icon` shows: an image URL as an image, an emoji as text, and
+ * anything else (an icon library's name the panel cannot draw) not at all.
+ */
+export function agentIconKind(icon: string | null | undefined): 'image' | 'emoji' | null {
+  const value = icon?.trim();
+  if (!value) return null;
+  if (/^(https:\/\/|data:image\/)/i.test(value)) return 'image';
+  if (value.length <= 8 && !/[\p{L}\p{N}]/u.test(value)) return 'emoji';
+  return null;
+}
+
+/** Agents under their `group` heading, in first-seen order; the ungrouped first, under none. */
+export function groupAgents<T extends { group?: string }>(agents: readonly T[]): { group: string | null; agents: T[] }[] {
+  const groups = new Map<string | null, T[]>();
+  for (const agent of agents) {
+    const key = agent.group?.trim() || null;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(agent);
+  }
+  const ungrouped = groups.get(null);
+  groups.delete(null);
+  return [...(ungrouped ? [{ group: null, agents: ungrouped }] : []), ...[...groups].map(([group, list]) => ({ group, agents: list }))];
 }

@@ -135,6 +135,45 @@ export function chunkSpeech(text: string, maxLength: number = SPEECH_CHUNK_MAX_L
   return chunks;
 }
 
+/** The host's speech route (`apiEndpoints.tts`), and the headers it is called with. */
+export interface TtsRoute {
+  url: string;
+  requestHeaders?: Record<string, string>;
+}
+
+/** The audio the host's speech route makes of *text*; throws when the route fails. */
+export async function fetchSpeech(fetchImpl: typeof fetch, route: TtsRoute, text: string, signal: AbortSignal): Promise<Blob> {
+  const res = await fetchImpl(route.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(route.requestHeaders ?? {}) },
+    body: JSON.stringify({ text, format: 'mp3' }),
+    signal,
+  });
+  if (!res.ok) throw new Error(`TTS failed: ${res.status}`);
+  return res.blob();
+}
+
+/**
+ * The audio the host's speech route makes of each of *chunks*, in order, each
+ * requested once the one before it is handed over: one request ahead of what
+ * plays, never the whole answer at once (a rate-limited route would refuse the
+ * later ones). `null` for a chunk the route failed.
+ */
+export async function* speechAhead(
+  fetchImpl: typeof fetch,
+  route: TtsRoute,
+  chunks: readonly string[],
+  signal: AbortSignal,
+): AsyncGenerator<Blob | null, void, undefined> {
+  const request = (i: number) => fetchSpeech(fetchImpl, route, chunks[i], signal).catch(() => null);
+  let next = chunks.length > 0 ? request(0) : null;
+  for (let i = 0; next; i += 1) {
+    const blob = await next;
+    next = i + 1 < chunks.length && !signal.aborted ? request(i + 1) : null;
+    yield blob;
+  }
+}
+
 /** The part of `window.speechSynthesis` the controller uses. */
 export interface SpeechSynthesisLike<U> {
   speak(utterance: U): void;
