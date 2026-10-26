@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatConversationSummary, ChatMode, Translate, XtmAgent } from '../types';
-import { timeAgo, translate } from '../utils';
+import type { ChatConversationSummary, ChatMode, ChatPanelMode, Translate, XtmAgent } from '../types';
+import { agentIconKind, groupAgents, timeAgo, translate } from '../utils';
 import {
   AlertTriangleIcon,
   ChevronDownIcon,
@@ -16,12 +16,14 @@ import {
   TrashIcon,
   UserPlusIcon,
 } from './icons';
+import { ClearAllConversations } from './ClearAllConversations';
 import { Dropdown } from './Dropdown';
 import { Spinner } from './Spinner';
 import { Tooltip } from './Tooltip';
 
 interface ChatHeaderProps {
-  mode: ChatMode;
+  /** Inline mode has neither the view switcher nor the close button. */
+  mode: ChatPanelMode;
   agentName: string;
   agents: XtmAgent[];
   agentsLoading?: boolean;
@@ -35,9 +37,9 @@ interface ChatHeaderProps {
   modeMenuOpen: boolean;
   onModeMenuToggle: () => void;
   onModeMenuClose: () => void;
-  onModeChange: (mode: ChatMode) => void;
+  onModeChange?: (mode: ChatMode) => void;
   onNewChat: () => void;
-  onClose: () => void;
+  onClose?: () => void;
   logoIcon: React.ReactNode;
   agentDashboardUrl?: string;
   /** Multi-conversation history menu (REST backend). Hidden when false. */
@@ -50,8 +52,20 @@ interface ChatHeaderProps {
   activeConversationId?: string | null;
   onSelectConversation?: (id: string) => void;
   onDeleteConversation?: (id: string) => void;
+  /** Offers "Clear all conversations" under the history menu, confirmed first. */
+  onClearAll?: () => void;
+  /** The host's controls, before New chat. */
+  actions?: React.ReactNode;
   t: Translate;
 }
+
+/** An agent's own icon when it has one the panel can draw, the panel's logo otherwise. */
+const AgentIcon = ({ icon, fallback }: { icon: string | null | undefined; fallback: React.ReactNode }) => {
+  const kind = agentIconKind(icon);
+  if (kind === 'image') return <img src={icon!.trim()} alt="" className="w-4 h-4 rounded-sm object-cover" />;
+  if (kind === 'emoji') return <span className="text-sm leading-none">{icon!.trim()}</span>;
+  return <span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{fallback}</span>;
+};
 
 // Labels are thunks rather than bare strings so each key stays a literal call
 // on the host's translator in the source: a table of plain keys resolved later
@@ -92,6 +106,8 @@ export const ChatHeader = ({
   activeConversationId = null,
   onSelectConversation,
   onDeleteConversation,
+  onClearAll,
+  actions,
   t,
 }: ChatHeaderProps) => {
   const agentAnchorRef = useRef<HTMLButtonElement>(null);
@@ -128,11 +144,11 @@ export const ChatHeader = ({
           ref={agentAnchorRef}
           type="button"
           onClick={onAgentMenuToggle}
-          className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+          className="flex max-w-full items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
         >
-          <span className="flex items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
-          <span>{agentName}</span>
-          <ChevronDownIcon size={16} className="text-gray-400 dark:text-white/30" />
+          <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
+          <span className="min-w-0 truncate">{agentName}</span>
+          <ChevronDownIcon size={16} className="shrink-0 text-gray-400 dark:text-white/30" />
         </button>
         {transferredFrom && (
           <div className="pl-10 pr-2 text-[0.6rem] font-normal text-gray-400 dark:text-white/30">
@@ -163,7 +179,9 @@ export const ChatHeader = ({
         {agents.length === 0 && !agentsLoading && agentsError && (
           <div className="px-4 py-3 flex items-start gap-2">
             <AlertTriangleIcon size={14} className="mt-0.5 shrink-0 text-amber-500 dark:text-amber-400" />
-            <span className="text-[0.75rem] leading-5 text-gray-600 dark:text-white/60">{t('Could not reach the assistant service. Check the connection and try again.')}</span>
+            <span className="text-[0.75rem] leading-5 text-gray-600 dark:text-white/60">
+              {t('Could not reach the assistant service. Check the connection and try again.')}
+            </span>
           </div>
         )}
         {agents.length === 0 && !agentsLoading && !agentsError && (
@@ -194,23 +212,32 @@ export const ChatHeader = ({
           {agents.length > 0 && filteredAgents.length === 0 && (
             <div className="px-4 py-3 text-[0.75rem] text-gray-400 dark:text-white/40">{t('No agent matches')}</div>
           )}
-          {filteredAgents.map((agent) => (
-            <button
-              key={agent.id}
-              type="button"
-              onClick={() => onSwitchAgent(agent)}
-              className={`w-full flex items-center gap-2 px-4 py-1.5 text-left hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${
-                agent.id === selectedAgent?.id ? 'bg-[var(--chat-accent)]/10' : ''
-              }`}
-            >
-              <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
-                <span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{logoIcon}</span>
-              </div>
-              <div className="min-w-0">
-                <div className="text-[0.8125rem] font-medium text-gray-900 dark:text-white truncate">{agent.name}</div>
-                {agent.description && <div className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">{agent.description}</div>}
-              </div>
-            </button>
+          {groupAgents(filteredAgents).map(({ group, agents: groupMembers }) => (
+            <div key={group ?? ''} role="group" aria-label={group ?? undefined}>
+              {group && (
+                <span className="block px-4 pt-2 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-gray-400 dark:text-white/40">
+                  {group}
+                </span>
+              )}
+              {groupMembers.map((agent) => (
+                <button
+                  key={agent.id}
+                  type="button"
+                  onClick={() => onSwitchAgent(agent)}
+                  className={`w-full flex items-center gap-2 px-4 py-1.5 text-left hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${
+                    agent.id === selectedAgent?.id ? 'bg-[var(--chat-accent)]/10' : ''
+                  }`}
+                >
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
+                    <AgentIcon icon={agent.icon} fallback={logoIcon} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[0.8125rem] font-medium text-gray-900 dark:text-white truncate">{agent.name}</div>
+                    {agent.description && <div className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">{agent.description}</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
           ))}
         </div>
         <div className="h-px bg-gray-200 dark:bg-white/10 mx-2" />
@@ -318,9 +345,22 @@ export const ChatHeader = ({
               <EditIcon size={16} className="text-gray-400 dark:text-white/40 shrink-0" />
               <span className="text-[0.8125rem] text-gray-700 dark:text-white/70">{t('New conversation')}</span>
             </button>
+            {onClearAll && conversations.length > 0 && (
+              <ClearAllConversations
+                onClear={() => {
+                  onHistoryMenuClose?.();
+                  onClearAll();
+                }}
+                className="px-3 pb-2"
+                iconButtonClass="p-1 rounded-md text-gray-400 dark:text-white/40 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                t={t}
+              />
+            )}
           </Dropdown>
         </>
       )}
+
+      {actions}
 
       <Tooltip title={t('New chat')}>
         <button
@@ -332,48 +372,57 @@ export const ChatHeader = ({
         </button>
       </Tooltip>
 
-      <Tooltip title={t('Switch view')}>
-        <button
-          ref={modeAnchorRef}
-          type="button"
-          onClick={onModeMenuToggle}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
-        >
-          <CurrentModeIcon size={18} />
-        </button>
-      </Tooltip>
-
-      <Dropdown open={modeMenuOpen} onClose={onModeMenuClose} anchorRef={modeAnchorRef} placement="bottom-end" width={180}>
-        <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase text-gray-400 dark:text-white/40">{t('Switch to')}</span>
-        <div className="pb-1">
-          {modeOptions.map((opt) => (
+      {mode !== 'inline' && onModeChange && (
+        <>
+          <Tooltip title={t('Switch view')}>
             <button
-              key={opt.mode}
+              ref={modeAnchorRef}
               type="button"
-              onClick={() => {
-                onModeChange(opt.mode);
-                onModeMenuClose();
-              }}
-              className={`w-full flex items-center gap-3 px-4 py-1 text-left hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${
-                mode === opt.mode ? 'bg-[var(--chat-accent)]/10' : ''
-              }`}
+              aria-label={t('Switch view')}
+              onClick={onModeMenuToggle}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
             >
-              {opt.getIcon({ size: 18, className: 'text-gray-400 dark:text-white/40' })}
-              <span className="text-[0.8125rem] text-gray-700 dark:text-white/70">{opt.label(t)}</span>
+              <CurrentModeIcon size={18} />
             </button>
-          ))}
-        </div>
-      </Dropdown>
+          </Tooltip>
 
-      <Tooltip title={t('Close')}>
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
-        >
-          <CloseIcon size={18} />
-        </button>
-      </Tooltip>
+          <Dropdown open={modeMenuOpen} onClose={onModeMenuClose} anchorRef={modeAnchorRef} placement="bottom-end" width={180}>
+            <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase text-gray-400 dark:text-white/40">{t('Switch to')}</span>
+            <div className="pb-1">
+              {modeOptions.map((opt) => (
+                <button
+                  key={opt.mode}
+                  type="button"
+                  onClick={() => {
+                    onModeChange(opt.mode);
+                    onModeMenuClose();
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-1 text-left hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${
+                    mode === opt.mode ? 'bg-[var(--chat-accent)]/10' : ''
+                  }`}
+                >
+                  {opt.getIcon({ size: 18, className: 'text-gray-400 dark:text-white/40' })}
+                  <span className="text-[0.8125rem] text-gray-700 dark:text-white/70">{opt.label(t)}</span>
+                </button>
+              ))}
+            </div>
+          </Dropdown>
+        </>
+      )}
+      {mode !== 'inline' && onClose && (
+        <>
+          <Tooltip title={t('Close')}>
+            <button
+              type="button"
+              aria-label={t('Close')}
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
+            >
+              <CloseIcon size={18} />
+            </button>
+          </Tooltip>
+        </>
+      )}
     </div>
   );
 };

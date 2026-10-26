@@ -3,11 +3,28 @@ import './assets/index.css';
 export { ChatPanel, ChatToggleButton } from './components';
 export type {
   ChatMode,
+  ChatPanelMode,
+  ChatPanelHandle,
+  ChatSendOptions,
+  ChatSendDraft,
+  ChatSendDecision,
+  ChatSendOutcome,
+  ChatHeldOutcome,
+  ChatTurnEnd,
+  ChatTurnOutcome,
+  ChatStreamEventInfo,
+  ChatMessageSlotContext,
+  ChatMarkerContext,
+  ChatMarkerRenderer,
+  ChatCodeBlockContext,
+  ChatCodeBlockRenderer,
+  AgentStatusState,
   BackendType,
   ChatPanelProps,
   ChatToggleButtonProps,
   ChatMessage,
   ChatMessagePersistedFeedback,
+  ChatAnsweredBy,
   ChatAttachment,
   ChatArtifact,
   ChatArtifactKind,
@@ -29,6 +46,7 @@ export type {
   ApiEndpoints,
 } from './types';
 export type { TransferredAgent } from './hooks/useChat';
+export { voiceCallSupported } from './hooks/useVoiceCall';
 
 // The markdown normalisation helpers are NOT re-exported here on purpose: they
 // live at `@filigran/chatbot/markdown`, a React-free entry point, so a host can

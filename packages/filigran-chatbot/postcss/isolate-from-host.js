@@ -11,13 +11,26 @@
  *
  * Run after Tailwind, this takes the utilities out of their layer, each
  * selector scoped to the panel, and declares the theme variables on the panel
- * root, where no host `:root` rule reaches.
+ * root only, where no host `:root` rule reaches and from where they reach no
+ * host element: Tailwind's `:root, :host` would redeclare the host's own
+ * `--color-*`, `--radius-*` or `--shadow-*` once the stylesheet loads. The
+ * `@property` fallbacks for browsers without it (`*, ::before, ::after,
+ * ::backdrop` in `@layer properties`) are kept to the panel's elements too.
+ *
+ * Every overlay the panel portals (tooltips, menus, dialogs, the image viewer)
+ * is mounted inside the panel root (`findChatbotRoot`), so it inherits them.
  */
 
 export const PANEL_ROOT = '.filigran-chatbot';
 
 /** One class of specificity, added to every utility alike: their order among themselves is unchanged. */
 const PANEL_SCOPE = `:is(${PANEL_ROOT}, ${PANEL_ROOT} *)`;
+
+/** The panel root and everything in it, with no specificity: what `*` becomes. */
+const PANEL_ELEMENTS = `:where(${PANEL_ROOT}, ${PANEL_ROOT} *)`;
+
+/** The selectors Tailwind declares its theme variables on, for the whole page. */
+const DOCUMENT_ROOTS = new Set([':root', ':host']);
 
 const LEGACY_PSEUDO_ELEMENTS = new Set([':before', ':after', ':first-line', ':first-letter']);
 
@@ -53,6 +66,21 @@ export function scopeToPanel(selector) {
   return `${selector.slice(0, at)}${PANEL_SCOPE}${selector.slice(at)}`;
 }
 
+/** `*` -> the panel's elements; `::before`, `*::after` -> theirs. */
+export function scopeUniversal(selector) {
+  const trimmed = selector.trim();
+  if (trimmed.startsWith(PANEL_ELEMENTS)) return trimmed;
+  if (trimmed === '*') return PANEL_ELEMENTS;
+  if (trimmed.startsWith('*:')) return `${PANEL_ELEMENTS}${trimmed.slice(1)}`;
+  if (trimmed.startsWith(':')) return `${PANEL_ELEMENTS}${trimmed}`;
+  return trimmed;
+}
+
+/** `:root, :host` -> the panel root, once. */
+export function themeSelectors(selectors) {
+  return [...new Set(selectors.map((s) => (DOCUMENT_ROOTS.has(s.trim()) ? PANEL_ROOT : s)))];
+}
+
 /** A rule nested in another (unflattened output) is scoped through its parent. */
 function isNested(rule) {
   for (let node = rule.parent; node; node = node.parent) {
@@ -68,12 +96,20 @@ function isolateFromHost() {
     OnceExit(root) {
       const layers = [];
       root.walkAtRules('layer', (layer) => {
-        if (layer.nodes && (layer.params === 'theme' || layer.params === 'utilities')) layers.push(layer);
+        if (layer.nodes && ['theme', 'properties', 'utilities'].includes(layer.params)) layers.push(layer);
       });
       for (const layer of layers) {
         if (layer.params === 'theme') {
           layer.walkRules((rule) => {
-            if (rule.selectors.includes(':root') && !rule.selectors.includes(PANEL_ROOT)) rule.selectors = [...rule.selectors, PANEL_ROOT];
+            if (rule.selectors.some((s) => DOCUMENT_ROOTS.has(s.trim()))) rule.selectors = themeSelectors(rule.selectors);
+          });
+          continue;
+        }
+        if (layer.params === 'properties') {
+          layer.walkRules((rule) => {
+            if (isNested(rule)) return;
+            const scoped = rule.selectors.map(scopeUniversal);
+            if (scoped.some((selector, i) => selector !== rule.selectors[i])) rule.selectors = scoped;
           });
           continue;
         }

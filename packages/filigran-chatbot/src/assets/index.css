@@ -191,3 +191,10 @@
     transform: translateY(0);
   }
 }
+
+/* A message the host jumped to (`scrollToMessage`): a short accent wash. */
+.filigran-chat-highlight {
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--chat-accent) 12%, transparent);
+  transition: background-color 600ms ease-out;
+}

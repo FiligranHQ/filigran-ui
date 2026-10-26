@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Translate } from '../types';
 import { ExternalLinkIcon, GamepadIcon } from './icons';
 
@@ -24,11 +24,16 @@ const defaultMessages = (t: Translate) => [
 const ROTATE_MS = 2600;
 
 /**
- * Where the waiting game is played: XTM One's arcade, which `?arcade=play`
- * opens on any XTM One page, the chat being where it lives. `xtmOneUrl` is
- * host input that ends up in an href, so only an http(s) base is linked.
+ * Where the waiting game is played: the host's own *gameUrl* when it names
+ * one, else XTM One's arcade, which `?arcade=play` opens on any XTM One page,
+ * the chat being where it lives. Both are host input that ends up in an href,
+ * so only an http(s) URL is linked, or (*gameUrl*) a path of the host's origin.
  */
-export function waitingGameUrl(xtmOneUrl: string | undefined): string | null {
+export function waitingGameUrl(xtmOneUrl: string | undefined, gameUrl?: string): string | null {
+  if (gameUrl !== undefined) {
+    const url = gameUrl.trim();
+    return /^https?:\/\//i.test(url) || /^\/(?![/\\])/.test(url) ? url : null;
+  }
   const base = xtmOneUrl?.trim().replace(/\/+$/, '');
   if (!base || !/^https?:\/\//i.test(base)) return null;
   return `${base}/chat?arcade=play`;
@@ -64,6 +69,10 @@ interface ChatWaitingPanelProps {
   playUrl?: string | null;
   /** The thread's follower: keeps its end in view while the reader is there. */
   keepEndInView: () => void;
+  /** The host's rotating messages, already translated; the package's otherwise. */
+  messages?: string[];
+  /** The host's own waiting content, in place of the messages and the invitation to play. */
+  content?: ReactNode;
 }
 
 const PLAY_CLASS =
@@ -75,8 +84,8 @@ const PLAY_CLASS =
  * while the agent works. The package ships no game of its own; without a way
  * to reach the arcade the messages stand alone.
  */
-export const ChatWaitingPanel = ({ t, enabled = true, onPlay, playUrl, keepEndInView }: ChatWaitingPanelProps) => {
-  const messages = useMemo(() => defaultMessages(t), [t]);
+export const ChatWaitingPanel = ({ t, enabled = true, onPlay, playUrl, keepEndInView, messages: hostMessages, content }: ChatWaitingPanelProps) => {
+  const messages = useMemo(() => (hostMessages && hostMessages.length > 0 ? hostMessages : defaultMessages(t)), [hostMessages, t]);
   const reducedMotion = usePrefersReducedMotion();
   const [msgIndex, setMsgIndex] = useState(0);
 
@@ -91,12 +100,13 @@ export const ChatWaitingPanel = ({ t, enabled = true, onPlay, playUrl, keepEndIn
 
   // A disabled host arms no timer; `enabled` is a dep so toggling it cleans up.
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || content) return;
     const id = window.setInterval(() => setMsgIndex((i) => (i + 1) % messages.length), ROTATE_MS);
     return () => window.clearInterval(id);
-  }, [enabled, messages.length]);
+  }, [enabled, messages.length, !!content]);
 
   if (!enabled) return null;
+  if (content) return <div className="ml-11 mt-2.5 max-w-[78%]">{content}</div>;
 
   const current = messages[msgIndex % messages.length];
 

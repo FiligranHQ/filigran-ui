@@ -4,6 +4,8 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { CheckIcon, CopyIcon } from './icons';
 import { ChatImage } from './ChatImage';
+import { HostRenderBoundary, HostRenderFallback } from './HostRenderBoundary';
+import type { ChatCodeBlockRenderer } from '../types';
 import { identity, markdownUrlTransform, prepareMarkdown } from '../utils';
 import { MarkdownBlockSplitter } from '../utils/markdownBlocks';
 import { isRelativeHref, toInternalHref } from '../utils/pageActions';
@@ -20,9 +22,10 @@ interface MarkdownMessageProps {
   onRelativeLinkClick?: (href: string) => void;
   /** Auth headers used to fetch host-relative images (see `ChatImage`). */
   requestHeaders?: Record<string, string>;
+  /** The host's renderers for fenced code blocks, by lower-cased language. */
+  codeBlockRenderers?: Record<string, ChatCodeBlockRenderer>;
   t?: (key: string) => string;
 }
-
 
 /**
  * What the element renderers need from the message they render.
@@ -39,20 +42,35 @@ interface MarkdownRenderContextValue {
   onCopyCode: (code: string) => void;
   onRelativeLinkClick?: (href: string) => void;
   requestHeaders?: Record<string, string>;
+  codeBlockRenderers?: Record<string, ChatCodeBlockRenderer>;
+  streaming: boolean;
   t: (key: string) => string;
 }
 
-const MarkdownRenderContext = createContext<MarkdownRenderContextValue>({ copiedBlock: null, onCopyCode: () => undefined, t: identity });
+const MarkdownRenderContext = createContext<MarkdownRenderContextValue>({
+  copiedBlock: null,
+  onCopyCode: () => undefined,
+  streaming: false,
+  t: identity,
+});
+
+/** A host's code block, called inside its boundary; nothing drawn keeps the block as code. */
+function HostCodeBlock({ draw, block }: { draw: () => React.ReactNode; block: React.ReactNode }) {
+  const node = draw();
+  return node === null || node === undefined || node === false ? <>{block}</> : <div className="my-3">{node}</div>;
+}
 
 const MarkdownCode = ({ className, children }: { className?: string; children?: React.ReactNode }) => {
-  const { copiedBlock, onCopyCode, t } = useContext(MarkdownRenderContext);
-  const match = /language-(\w+)/.exec(className || '');
+  const { copiedBlock, onCopyCode, codeBlockRenderers, streaming, t } = useContext(MarkdownRenderContext);
+  // The whole info string's first word: `vega-lite`, `c++`, `objective-c`.
+  const match = /(?:^|\s)language-(\S+)/.exec(className || '');
   const codeStr = String(children).replace(/\n$/, '');
+  const hostRenderer = match ? codeBlockRenderers?.[match[1].toLowerCase()] : undefined;
   // A fence with no info string (```\n…\n```) carries no `language-*`
   // class. Falling back to the multi-line test keeps it a block instead
   // of collapsing it into a single run of inline code.
   if (match || codeStr.includes('\n')) {
-    return (
+    const block = (
       <div className="my-3 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden bg-gray-50 dark:bg-white/[0.03]">
         <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/[0.03]">
           <span className="text-[0.7rem] text-gray-500 dark:text-white/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
@@ -73,6 +91,12 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
           <code className="font-mono text-xs leading-[1.7] text-gray-800 dark:text-white/90 whitespace-pre">{codeStr}</code>
         </pre>
       </div>
+    );
+    if (!hostRenderer) return block;
+    return (
+      <HostRenderBoundary label="A chat code block renderer" resetKey={`${codeStr}\u0000${streaming}`} fallback={<HostRenderFallback t={t} />}>
+        <HostCodeBlock draw={() => hostRenderer(codeStr, { streaming })} block={block} />
+      </HostRenderBoundary>
     );
   }
   return <code className="bg-gray-100 dark:bg-white/[0.08] px-1.5 py-0.5 rounded-sm font-mono text-xs text-[var(--chat-accent)]">{children}</code>;
@@ -200,7 +224,8 @@ const StreamedMarkdownBody = ({ source }: { source: string }) => {
  * With it, only the live bubble re-parses — and only the blocks of it that can
  * still change.
  */
-export const MarkdownMessage = memo(({ content, streaming = false, onRelativeLinkClick, requestHeaders, t = identity }: MarkdownMessageProps) => {
+export const MarkdownMessage = memo(({ codeBlockRenderers, ...props }: MarkdownMessageProps) => {
+  const { content, streaming = false, onRelativeLinkClick, requestHeaders, t = identity } = props;
   const [copiedBlock, setCopiedBlock] = useState<string | null>(null);
 
   // Rendered by blocks once it has streamed: switching to one parse when the
@@ -222,8 +247,8 @@ export const MarkdownMessage = memo(({ content, streaming = false, onRelativeLin
   }, []);
 
   const renderContext = useMemo(
-    () => ({ copiedBlock, onCopyCode, onRelativeLinkClick, requestHeaders, t }),
-    [copiedBlock, onCopyCode, onRelativeLinkClick, requestHeaders, t],
+    () => ({ copiedBlock, onCopyCode, onRelativeLinkClick, requestHeaders, codeBlockRenderers, streaming, t }),
+    [copiedBlock, onCopyCode, onRelativeLinkClick, requestHeaders, codeBlockRenderers, streaming, t],
   );
 
   return (

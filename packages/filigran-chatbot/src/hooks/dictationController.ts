@@ -14,6 +14,10 @@ export interface SpeechRecognitionEventLike {
   resultIndex: number;
   results: { length: number; [index: number]: SpeechRecognitionResultLike };
 }
+/** What a recognition error says: its code (`no-speech`, `not-allowed`, ...). */
+export interface SpeechRecognitionErrorEventLike {
+  error?: string;
+}
 export interface SpeechRecognitionLike {
   continuous: boolean;
   interimResults: boolean;
@@ -22,7 +26,7 @@ export interface SpeechRecognitionLike {
   stop: () => void;
   abort: () => void;
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
   onend: (() => void) | null;
 }
 

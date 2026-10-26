@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import postcss from 'postcss';
-import isolateFromHost, { scopeToPanel } from './isolate-from-host.js';
+import isolateFromHost, { scopeToPanel, scopeUniversal } from './isolate-from-host.js';
 
 const SCOPE = ':is(.filigran-chatbot, .filigran-chatbot *)';
 
@@ -45,9 +45,26 @@ test('a nested rule is scoped through its parent only', () => {
   assert.ok(out.includes(`.hover\\:x${SCOPE}{&:hover{opacity:1}}`), out);
 });
 
-test('the theme variables are declared on the panel root too, out of reach of a host :root', () => {
-  const out = run('@layer theme{:root,:host{--radius-lg:.5rem}}');
-  assert.ok(out.includes('@layer theme{:root,:host,.filigran-chatbot{--radius-lg:.5rem}}'), out);
+test('the theme variables are declared on the panel root only, never on the host document', () => {
+  const out = run('@layer theme{:root,:host{--radius-lg:.5rem}@supports (color:lab(0% 0 0)){:root,:host{--color-red-500:lab(55% 75 50)}}}');
+  assert.ok(out.includes('@layer theme{.filigran-chatbot{--radius-lg:.5rem}'), out);
+  assert.ok(out.includes('@supports (color:lab(0% 0 0)){.filigran-chatbot{--color-red-500:lab(55% 75 50)}}'), out);
+  assert.ok(!out.includes(':root') && !out.includes(':host'), out);
+  assert.equal(run(out), out);
+  // An output that already named the panel root beside the document's.
+  assert.equal(run('@layer theme{:root,:host,.filigran-chatbot{--x:1}}'), '@layer theme{.filigran-chatbot{--x:1}}');
+});
+
+test("the @property fallbacks stay on the panel's elements, in their layer", () => {
+  const WHERE = ':where(.filigran-chatbot, .filigran-chatbot *)';
+  assert.equal(scopeUniversal('*'), WHERE);
+  assert.equal(scopeUniversal('::before'), `${WHERE}::before`);
+  assert.equal(scopeUniversal(':after'), `${WHERE}:after`);
+  assert.equal(scopeUniversal('*::backdrop'), `${WHERE}::backdrop`);
+  assert.equal(scopeUniversal(`${WHERE}::backdrop`), `${WHERE}::backdrop`);
+  const out = run('@layer properties{@supports (-moz-orient:inline){*,::before,::after,::backdrop{--tw-border-style:solid}}}');
+  assert.ok(out.startsWith('@layer properties{@supports (-moz-orient:inline){'), out);
+  assert.ok(out.includes(`${WHERE},${WHERE}::before,${WHERE}::after,${WHERE}::backdrop{--tw-border-style:solid}`), out);
   assert.equal(run(out), out);
 });
 

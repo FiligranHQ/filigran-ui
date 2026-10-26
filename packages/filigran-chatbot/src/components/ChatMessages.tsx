@@ -1,17 +1,21 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type {
   AgentStatusState,
+  ChatMarkerRenderer,
+  ChatCodeBlockRenderer,
   ChatArtifact,
   ChatArtifactKind,
   ChatAttachment,
   ChatConversationRef,
   ChatMessage,
+  ChatMessageSlotContext,
   MessageFeedback,
   ToolApprovalDecision,
   ToolApprovalProposal,
 } from '../types';
 import { feedbackKeyOf, useMessageFeedback, type FeedbackEntry } from '../hooks/useMessageFeedback';
 import { useSpeechReader } from '../hooks/useSpeechReader';
+import type { TtsRoute } from '../utils/speech';
 import { answerMarkdownSources, artifactKey, splitAnswerMarkers, stripAnswerMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
 import { formatMessageTime } from '../utils/messageTime';
@@ -43,10 +47,12 @@ import {
 import { ArtifactCard } from './ArtifactCard';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
-import { ChatThinking } from './ChatThinking';
+import { ChatThinking, type ThinkingOverrides } from './ChatThinking';
+import { HostRenderBoundary, HostRenderFallback, HostRendered } from './HostRenderBoundary';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ReasoningDetailsDialog } from './ReasoningDetailsDialog';
 import { Tooltip } from './Tooltip';
+import { askHost } from '../utils/askHost';
 
 /**
  * Windowed thread rendering: only the most recent slice of the thread is
@@ -120,6 +126,8 @@ interface ChatMessagesProps {
    * broken button.
    */
   isResumingAfterDecision?: boolean;
+  /** Ends an agent's announced wait early ("Continue now"). */
+  onSkipWait?: () => void;
   /**
    * Tool calls the running turn has paused on, awaiting a decision. Rendered
    * below the transcript, since the pause belongs to the turn rather than to
@@ -136,6 +144,22 @@ interface ChatMessagesProps {
    */
   openableConversationIds?: ReadonlySet<string>;
   onOpenConversation?: (conversationId: string) => void;
+  markerRenderers?: Record<string, ChatMarkerRenderer>;
+  markerKindList?: readonly string[];
+  /** The host's code block renderers by lower-cased language (see `ChatPanelProps.codeBlockRenderers`). */
+  codeBlockRenderers?: Record<string, ChatCodeBlockRenderer>;
+  transformMessageText?: (text: string, message: ChatMessage) => string;
+  onArtifactOpen?: (artifact: ChatArtifact) => void;
+  renderMessageExtras?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
+  messageFooterActions?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
+  /** Shown after the last message. */
+  transcriptFooter?: React.ReactNode;
+  /** The backend's voice for read aloud (`apiEndpoints.tts`). */
+  ttsRoute?: TtsRoute;
+  /** Fetches older messages from the backend; resolves to how many arrived. Omitted when there are none. */
+  onLoadEarlier?: () => Promise<number>;
+  /** The host's overrides of the status line and the waiting panel. */
+  thinking?: ThinkingOverrides;
   t: (key: string) => string;
 }
 
@@ -401,8 +425,20 @@ interface MessageRowProps {
   /** Given only to a message referencing conversations (see `ChatMessagesProps`). */
   openableConversationIds?: ReadonlySet<string>;
   onOpenConversation?: (conversationId: string) => void;
+  /** The host's marker cards by upper-cased name (see `ChatPanelProps.markerRenderers`). */
+  markerRenderers?: Record<string, ChatMarkerRenderer>;
+  /** Their names, as `markerKinds` normalizes them. */
+  markerKindList?: readonly string[];
+  codeBlockRenderers?: Record<string, ChatCodeBlockRenderer>;
+  transformMessageText?: (text: string, message: ChatMessage) => string;
+  onArtifactOpen?: (artifact: ChatArtifact) => void;
+  renderMessageExtras?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
+  messageFooterActions?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   t: (key: string) => string;
 }
+
+const NO_KINDS: readonly string[] = [];
+const BUILT_IN_ARTIFACT_KINDS: ReadonlySet<string> = new Set(['PRESENTATION', 'REPORT', 'VIDEO']);
 
 /**
  * One message in the thread.
@@ -434,11 +470,21 @@ const MessageRow = memo(
     onToggleSpeech,
     openableConversationIds,
     onOpenConversation,
+    markerRenderers,
+    markerKindList = NO_KINDS,
+    codeBlockRenderers,
+    transformMessageText,
+    onArtifactOpen,
+    renderMessageExtras,
+    messageFooterActions,
     t,
   }: MessageRowProps) => {
     const [showReasoning, setShowReasoning] = useState(false);
     const isAssistant = msg.role === 'assistant';
-    const isEmpty = !msg.content;
+    // What the host shows of the text: also what is copied and read aloud.
+    // A transform that throws shows the text as it came, never takes the thread down.
+    const content = useMemo(() => askHost(transformMessageText, msg.content, msg) ?? msg.content, [transformMessageText, msg]);
+    const isEmpty = !content;
     const downRef = useRef<HTMLButtonElement>(null);
 
     // The comment question takes the focus when it opens; when it closes with
@@ -503,8 +549,20 @@ const MessageRow = memo(
     );
 
     const renderArtifactCard = (artifact: ChatArtifact, key: string) => (
-      <ArtifactCard key={key} artifact={artifact} t={t} onDownload={onDownloadArtifact} onRefresh={onRefreshArtifact} />
+      <ArtifactCard key={key} artifact={artifact} t={t} onDownload={onDownloadArtifact} onRefresh={onRefreshArtifact} onOpen={onArtifactOpen} />
     );
+
+    const renderHostMarker = (kind: string, args: string, key: string) => {
+      const renderer = markerRenderers?.[kind];
+      if (!renderer || (isStreaming && !renderer.renderWhileStreaming)) return null;
+      return (
+        <div key={key} className={renderer.fullWidth ? 'w-full' : 'w-full max-w-[90%]'}>
+          <HostRenderBoundary label="A chat marker card" resetKey={`${args}\u0000${isStreaming}`} fallback={<HostRenderFallback t={t} />}>
+            <HostRendered draw={() => renderer.render(args, { message: msg, streaming: isStreaming })} />
+          </HostRenderBoundary>
+        </div>
+      );
+    };
 
     // Render assistant content as an ordered interleave of prose segments and
     // cards, so a reply with markers like
@@ -516,7 +574,7 @@ const MessageRow = memo(
     // nothing. During streaming neither is hydrated yet, so only prose (markers
     // stripped) renders.
     const buildAssistantBlocks = (): React.ReactNode[] => {
-      const parts = splitAnswerMarkers(msg.content, isStreaming);
+      const parts = splitAnswerMarkers(content, isStreaming, markerKindList);
       const attByFileId = new Map((msg.attachments ?? []).map((a) => [a.fileId, a] as const));
       const artifactsByKey = new Map((msg.artifacts ?? []).map((a) => [artifactKey(a.kind, a.id), a] as const));
       const used = new Set<string>();
@@ -533,11 +591,18 @@ const MessageRow = memo(
                   streaming={isStreaming}
                   onRelativeLinkClick={onRelativeLinkClick}
                   requestHeaders={requestHeaders}
+                  codeBlockRenderers={codeBlockRenderers}
                   t={t}
                 />
               </div>,
             );
           }
+        } else if (part.type === 'marker') {
+          // A built-in kind the host draws itself is drawn once, by the host.
+          if (part.kind === 'FILE') used.add(part.args);
+          else if (BUILT_IN_ARTIFACT_KINDS.has(part.kind)) usedArtifacts.add(artifactKey(part.kind.toLowerCase(), part.args.split('#/')[0]));
+          const card = renderHostMarker(part.kind, part.args, `m-${part.kind}-${i}`);
+          if (card) blocks.push(card);
         } else if (part.type === 'artifact') {
           const key = artifactKey(part.kind, part.id);
           const artifact = artifactsByKey.get(key);
@@ -558,22 +623,30 @@ const MessageRow = memo(
         const key = artifactKey(artifact.kind, artifact.id);
         if (!usedArtifacts.has(key)) {
           usedArtifacts.add(key);
-          blocks.push(renderArtifactCard(artifact, `orphan-a-${key}`));
+          const kind = artifact.kind.toUpperCase();
+          if (markerRenderers?.[kind]) {
+            const card = renderHostMarker(kind, artifact.slideRef ? `${artifact.id}#/${artifact.slideRef}` : artifact.id, `orphan-a-${key}`);
+            if (card) blocks.push(card);
+          } else {
+            blocks.push(renderArtifactCard(artifact, `orphan-a-${key}`));
+          }
         }
       });
 
-      if (onDownloadFile) {
-        (msg.attachments ?? []).forEach((att) => {
-          if (!used.has(att.fileId)) {
-            blocks.push(renderAttachmentCard(att, `orphan-${att.fileId}`));
-          }
-        });
-      }
+      (msg.attachments ?? []).forEach((att) => {
+        if (used.has(att.fileId)) return;
+        if (markerRenderers?.FILE) {
+          const card = renderHostMarker('FILE', att.fileId, `orphan-${att.fileId}`);
+          if (card) blocks.push(card);
+        } else if (onDownloadFile) {
+          blocks.push(renderAttachmentCard(att, `orphan-${att.fileId}`));
+        }
+      });
 
       // An assistant reply that is *only* a file marker leaves no prose; show a
       // subtle ellipsis (not an empty padded bubble) when nothing else rendered
       // and we're not still streaming.
-      if (blocks.length === 0 && !isStreaming) {
+      if (blocks.length === 0 && !isStreaming && !msg.stopped) {
         blocks.push(
           <span key="empty" className="pl-1 text-[0.8125rem] text-gray-400 dark:text-white/40 italic">
             ...
@@ -661,16 +734,16 @@ const MessageRow = memo(
     // Actions only make sense on a finished answer, so they stay hidden while
     // the message is still streaming.
     const showActions = isAssistant && !isEmpty && !isStreaming;
-    const plainText = stripAnswerMarkers(msg.content);
+    const plainText = stripAnswerMarkers(content, markerKindList);
     const speechDocuments = useMemo(
-      () => (showActions && canSpeak ? answerMarkdownSources(msg.content) : null),
-      [showActions, canSpeak, msg.content],
+      () => (showActions && canSpeak ? answerMarkdownSources(content, markerKindList) : null),
+      [showActions, canSpeak, content, markerKindList],
     );
     const shown = shownFeedback(feedback, msg.feedback);
     const speechKey = feedbackKeyOf(msg);
 
     return (
-      <div className={`group/msg flex flex-col ${isAssistant ? 'items-start' : 'items-end'}`}>
+      <div data-message-id={msg.serverId ?? msg.id} className={`group/msg flex flex-col ${isAssistant ? 'items-start' : 'items-end'}`}>
         {isAssistant && (
           <div className="flex items-center gap-1.5 mb-1">
             <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
@@ -695,20 +768,28 @@ const MessageRow = memo(
         )}
 
         {isAssistant ? (
-          <div className="flex flex-col gap-1.5 w-full items-start">
+          <div data-testid="filigran-chat-assistant-message" className="flex flex-col gap-1.5 w-full items-start">
             {buildAssistantBlocks()}
+            {msg.stopped && !isStreaming && <p className="pl-1 text-[0.75rem] italic text-gray-400 dark:text-white/40">{t('Stopped')}</p>}
             {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-xs ml-1 animate-pulse" />}
           </div>
         ) : (
-          <div className="max-w-[90%] px-3.5 py-2 rounded-[14px_14px_4px_14px] bg-[var(--chat-accent-dark)] text-white text-[0.8125rem] leading-6">
-            {msg.content}
+          <div
+            data-testid="filigran-chat-user-message"
+            className="max-w-[90%] px-3.5 py-2 rounded-[14px_14px_4px_14px] bg-[var(--chat-accent-dark)] text-white text-[0.8125rem] leading-6"
+          >
+            {content}
           </div>
+        )}
+
+        {renderMessageExtras && (
+          <div className={`w-full ${isAssistant ? '' : 'flex justify-end'}`}>{renderMessageExtras(msg, { streaming: isStreaming })}</div>
         )}
 
         {/* The user's side mirrors the answer's: the time hugs the bubble's edge. */}
         {!isAssistant && (
           <div className="mt-0.5 flex items-center justify-end gap-0.5 text-gray-400 dark:text-white/40">
-            {!!msg.content.trim() && <MessageCopyButton text={msg.content} label={t('Copy message')} t={t} />}
+            {!!content.trim() && <MessageCopyButton text={content} label={t('Copy message')} t={t} />}
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
           </div>
         )}
@@ -751,6 +832,7 @@ const MessageRow = memo(
             {speechDocuments && hasSpeakableWords(speechDocuments) && (
               <ReadAloudButton speaking={isSpeaking} onToggle={() => onToggleSpeech(speechKey, speechDocuments)} t={t} />
             )}
+            {messageFooterActions?.(msg, { streaming: isStreaming })}
           </div>
         )}
         {showActions && feedback?.commentOpen && (
@@ -791,6 +873,7 @@ export const ChatMessages = ({
   waitingGameUrl,
   onMessageFeedback,
   isResumingAfterDecision,
+  onSkipWait,
   pendingApprovals,
   onSubmitApprovalDecisions,
   isSubmittingApproval,
@@ -800,6 +883,17 @@ export const ChatMessages = ({
   locale,
   openableConversationIds,
   onOpenConversation,
+  markerRenderers,
+  markerKindList,
+  codeBlockRenderers,
+  transformMessageText,
+  onArtifactOpen,
+  renderMessageExtras,
+  messageFooterActions,
+  transcriptFooter,
+  onLoadEarlier,
+  ttsRoute,
+  thinking,
   t,
 }: ChatMessagesProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -816,7 +910,7 @@ export const ChatMessages = ({
     onMessageFeedback,
     t,
   });
-  const speech = useSpeechReader(locale);
+  const speech = useSpeechReader(locale, ttsRoute);
 
   // Keeps the end of the conversation in view while the reader is at the
   // bottom (see `createScrollFollower`). It holds no React state: its timer
@@ -874,9 +968,56 @@ export const ChatMessages = ({
   // Switching conversation (restore / new chat) replaces the whole array, so
   // the window must snap back to the tail instead of keeping a widened one.
   const firstMessageId = messages[0]?.id;
-  useEffect(() => {
+  // Older messages fetched from the backend land above the thread: they widen
+  // the window and leave the reader where they were, unlike a switch. Both
+  // happen before paint, so the thread never shows a jump.
+  const prependedRef = useRef<{
+    firstId: string | undefined;
+    visible: number;
+    count: number;
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
+  useLayoutEffect(() => {
+    const prepended = prependedRef.current;
+    // Counted from where the old first message landed: one appended meanwhile is no older one.
+    const landed = prepended ? messages.findIndex((m) => m.id === prepended.firstId) : -1;
+    if (prepended && landed > 0) {
+      prepended.count = landed;
+      setRenderWindow(prepended.visible + prepended.count);
+      return;
+    }
     setRenderWindow(INITIAL_RENDER_WINDOW);
   }, [firstMessageId]);
+  useLayoutEffect(() => {
+    const prepended = prependedRef.current;
+    if (!prepended?.count || renderWindow !== prepended.visible + prepended.count) return;
+    prependedRef.current = null;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = prepended.scrollTop + (el.scrollHeight - prepended.scrollHeight);
+  });
+  const showEarlier = async () => {
+    if (messages.length > renderWindow) {
+      setRenderWindow((w) => w + RENDER_WINDOW_STEP);
+      return;
+    }
+    if (!onLoadEarlier || loadingEarlier) return;
+    const el = scrollRef.current;
+    setLoadingEarlier(true);
+    prependedRef.current = {
+      firstId: messages[0]?.id,
+      visible: Math.min(messages.length, renderWindow),
+      count: 0,
+      scrollHeight: el?.scrollHeight ?? 0,
+      scrollTop: el?.scrollTop ?? 0,
+    };
+    try {
+      if ((await onLoadEarlier()) === 0) prependedRef.current = null;
+    } finally {
+      setLoadingEarlier(false);
+    }
+  };
 
   // A message the user just sent (a steer included) and a conversation just
   // opened are scrolled into view smoothly, and the view follows again.
@@ -889,6 +1030,8 @@ export const ChatMessages = ({
   useLayoutEffect(() => {
     const seen = seenRef.current;
     seenRef.current = { firstMessageId, userMessageCount };
+    // Older messages are not a switch: the reader stays where they were (above).
+    if (prependedRef.current?.count) return;
     if (!seen || seen.firstMessageId !== firstMessageId || userMessageCount > seen.userMessageCount) {
       follower.reveal();
     } else {
@@ -955,13 +1098,15 @@ export const ChatMessages = ({
       onPointerDown={handlePointerDown}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
+      data-testid="filigran-chat-transcript"
       className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent-50)]"
     >
-      {hasEarlierMessages && (
+      {(hasEarlierMessages || onLoadEarlier) && (
         <div className="flex justify-center">
           <button
             type="button"
-            onClick={() => setRenderWindow((w) => w + RENDER_WINDOW_STEP)}
+            disabled={loadingEarlier}
+            onClick={() => void showEarlier()}
             className="flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-white/10 px-3 py-1 text-[0.7rem] text-gray-500 dark:text-white/50 transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)]"
           >
             <ChevronDownIcon size={13} className="rotate-180" />
@@ -989,6 +1134,8 @@ export const ChatMessages = ({
                 onPlayWaitingGame={onPlayWaitingGame}
                 waitingGameUrl={waitingGameUrl}
                 keepEndInView={follower.keepUp}
+                onSkipWait={onSkipWait}
+                {...thinking}
               />
             </div>
           );
@@ -1020,6 +1167,13 @@ export const ChatMessages = ({
             // conversations must not re-render every row of the thread.
             openableConversationIds={msg.conversationRefs?.length ? openableConversationIds : undefined}
             onOpenConversation={msg.conversationRefs?.length ? onOpenConversation : undefined}
+            markerRenderers={markerRenderers}
+            markerKindList={markerKindList}
+            codeBlockRenderers={codeBlockRenderers}
+            transformMessageText={transformMessageText}
+            onArtifactOpen={onArtifactOpen}
+            renderMessageExtras={renderMessageExtras}
+            messageFooterActions={messageFooterActions}
             t={t}
           />
         );
@@ -1036,6 +1190,7 @@ export const ChatMessages = ({
           onPlayWaitingGame={onPlayWaitingGame}
           waitingGameUrl={waitingGameUrl}
           keepEndInView={follower.keepUp}
+          {...thinking}
         />
       )}
       {awaitingApproval && (
@@ -1051,6 +1206,7 @@ export const ChatMessages = ({
           t={t}
         />
       )}
+      {transcriptFooter}
       {/* Holds the list's gap below its last item. */}
       <div />
     </div>

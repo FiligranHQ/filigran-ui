@@ -33,6 +33,7 @@ export * from './MaximizeIcon';
 export * from './MessageSquareIcon';
 export * from './MicIcon';
 export * from './PencilIcon';
+export * from './PhoneOffIcon';
 export * from './PresentationIcon';
 export * from './SearchIcon';
 export * from './SendIcon';

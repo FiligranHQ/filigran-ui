@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChatPanel, ChatToggleButton } from '@filigran/chatbot';
-import type { ChatMode, MessageFeedback } from '@filigran/chatbot';
+import type { ChatPanelMode, MessageFeedback } from '@filigran/chatbot';
 
 interface LogEntry {
   at: string;
@@ -20,6 +20,8 @@ const SCENARIOS: { prompt: string; label: string; covers: string }[] = [
   { prompt: 'show me json', label: 'Bare JSON', covers: 'a whole message that is raw JSON' },
   { prompt: 'nested fences', label: 'Nested fences', covers: 'a ```markdown block containing its own fences' },
   { prompt: 'slow answer', label: 'Slow turn', covers: 'elapsed counter, stall, waiting game' },
+  { prompt: 'wait a moment', label: 'Announced wait', covers: 'wait countdown; Continue now on the web chat contract' },
+  { prompt: 'fail please', label: 'Failed turn', covers: 'a provisional error, then its stored end' },
   { prompt: 'long thread', label: 'Long thread', covers: '200 backfilled messages — render window' },
 ];
 
@@ -235,9 +237,39 @@ const HostToolbarSlot = ({ onClick, active }: { onClick: () => void; active: boo
   </button>
 );
 
+/**
+ * The routes of XTM One's web chat, on top of the platform ones: an event
+ * stream per conversation, Stop and "Continue now" on the backend, older pages,
+ * clear-all and the backend's voice.
+ */
+const WEB_CHAT_ENDPOINTS = {
+  events: '/chat/conversations',
+  cancel: '/chat/messages/cancel',
+  skipWait: '/chat/messages/skip-wait',
+  messagesPage: '/chat/sessions',
+  clearAll: '/chat/sessions',
+  tts: '/chat/tts',
+};
+
+const slotLabel = 'rounded-md border border-dashed border-[#7b5cff]/50 px-2 py-1 text-[0.7rem] text-[#7b5cff]';
+
+const HOST_EXTENSIONS = {
+  headerActions: <span className={slotLabel}>headerActions</span>,
+  banner: <div className={`${slotLabel} m-2`}>banner</div>,
+  composerHeader: <div className={slotLabel}>composerHeader</div>,
+  transcriptFooter: <div className={slotLabel}>transcriptFooter</div>,
+  renderMessageExtras: () => <div className={`${slotLabel} mt-1 inline-block`}>renderMessageExtras</div>,
+  messageFooterActions: () => <span className={slotLabel}>footer action</span>,
+  sidebarRowActions: () => <span className={slotLabel}>row</span>,
+  sidebarSections: <div className={`${slotLabel} m-2`}>sidebarSections</div>,
+  markerRenderers: { WORK_ITEM: { render: (id: string) => <div className={slotLabel}>Work item card · {id}</div> } },
+  agentMentions: true,
+  holdSendsDuringTurn: true,
+};
+
 const App = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState<ChatMode>('floating');
+  const [mode, setMode] = useState<ChatPanelMode>('floating');
   // Whether this "host" claims it can answer a tool-approval prompt. Off is not
   // a broken configuration — it is what every host that has not adopted
   // approvals looks like, and the degraded path it selects (the turn ends with
@@ -245,6 +277,11 @@ const App = () => {
   // One ships gating. Worth being able to see side by side, so it is a switch
   // rather than an edit.
   const [supportsApproval, setSupportsApproval] = useState(true);
+  // What a host can add of its own (banners, cards, row and footer controls),
+  // here as plain labels: the layout is the point, not the content.
+  const [showExtensions, setShowExtensions] = useState(false);
+  // XTM One's own web chat contract (`/api/v1/web`), served by the mock only.
+  const [webChat, setWebChat] = useState(false);
   // The message times and the read-aloud voice follow it; unset is the browser's.
   const [locale, setLocale] = useState<string | undefined>(undefined);
   const [isDark, setIsDark] = useState(true);
@@ -284,6 +321,58 @@ const App = () => {
   const handleTaskComplete = useCallback((title: string, body: string) => push(`task complete — ${title}: ${body}`), [push]);
   const handleDownloadError = useCallback((_err: unknown, att: { filename: string }) => push(`download failed — ${att.filename}`), [push]);
   const handleRelativeLink = useCallback((href: string) => push(`internal link — ${href}`), [push]);
+  const handleConversationChange = useCallback((id: string | null) => push(`conversation — ${id ?? 'new chat'}`), [push]);
+
+  const panel = (
+    <ChatPanel
+      // Another backend is another panel: its conversation, storage and streams start afresh.
+      key={webChat ? 'web-chat' : 'platform'}
+      mode={mode}
+      onClose={() => setIsOpen(false)}
+      onModeChange={setMode}
+      topOffset={HEADER_HEIGHT}
+      apiBaseUrl={webChat ? '/api/xtmone-web' : '/api/xtmone'}
+      // Tool approval and stored feedback are opt-in and have no default
+      // paths: naming them is how a host promises the backend answers
+      // them, so a widget that cannot must never claim it. All are plain
+      // passthroughs here — the dev server rewrites `/api/xtmone/*` onto
+      // XTM One's `/api/v1/platform/*` generically, so they need nothing
+      // of their own. The mock stores feedback; approval paths it does
+      // not know 404 and the panel degrades, which is the un-opted-in
+      // behaviour every current host has. XTM One's web chat serves no
+      // feedback route.
+      apiEndpoints={{
+        ...(webChat ? WEB_CHAT_ENDPOINTS : { feedback: '/chat/conversations' }),
+        ...(supportsApproval ? { approve: '/chat/messages/approve', pendingApprovals: '/chat/conversations' } : {}),
+        // Workspaces group the fullscreen history. The mock serves none,
+        // so they are named against XTM One only.
+        ...(usingMock || webChat ? {} : { workspaces: '/chat/workspaces' }),
+        // `@` in the composer references another conversation. Served by
+        // the mock too (its own conversations, plus one shared with you).
+        conversationReferences: '/chat/conversation-references',
+      }}
+      locale={locale}
+      agentDashboardUrl="https://xtm.example.com"
+      user={{ firstName: session.state === 'signed-in' ? session.email.split('@')[0] : 'Tester' }}
+      accentColor="#7b5cff"
+      // Only the mock understands these; against a real backend the
+      // agent's own suggestions are the ones worth exercising.
+      promptSuggestions={usingMock ? SCENARIOS.map((s) => s.prompt) : undefined}
+      // Sidebar mode is only half-implemented without these two: the
+      // panel must push the page aside, and be draggable to resize.
+      pushContentSelector="#app-content"
+      resizable
+      composerToolbar={<HostToolbarSlot active={hostToolActive} onClick={() => setHostToolActive((v) => !v)} />}
+      onMessageFeedback={handleMessageFeedback}
+      onTaskComplete={handleTaskComplete}
+      onDownloadError={handleDownloadError}
+      onRelativeLinkClick={handleRelativeLink}
+      onConversationChange={handleConversationChange}
+      // The web chat keeps its own conversation, as XTM One's page beside its floating assistant would.
+      storageKeyPrefix={webChat ? 'web-chat' : undefined}
+      {...(showExtensions ? HOST_EXTENSIONS : {})}
+    />
+  );
 
   const card = 'bg-white dark:bg-[#1e1e2e] rounded-xl p-6 border border-gray-200 dark:border-white/10';
 
@@ -352,6 +441,9 @@ const App = () => {
         */}
         <main id="app-content">
           <div className="p-8 max-w-3xl mx-auto space-y-6">
+            {isOpen && canChat && mode === 'inline' && (
+              <div className="h-[640px] overflow-hidden rounded-xl border border-gray-200 dark:border-white/10">{panel}</div>
+            )}
             {/*
               Signing in is the whole page until it is done. The controls below
               drive a panel that cannot mount yet, and the checklist describes
@@ -389,7 +481,7 @@ const App = () => {
                   <div className="mb-4">
                     <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Display mode:</p>
                     <div className="flex gap-2">
-                      {(['floating', 'sidebar', 'fullscreen'] as ChatMode[]).map((m) => (
+                      {(['floating', 'sidebar', 'fullscreen', 'inline'] as ChatPanelMode[]).map((m) => (
                         <button
                           key={m}
                           type="button"
@@ -429,6 +521,33 @@ const App = () => {
 
                   {/* Tool approval opt-in */}
                   <div className="mb-4">
+                    <label className="mb-3 flex items-start gap-2 text-sm text-gray-700 dark:text-white/70">
+                      <input type="checkbox" className="mt-0.5 accent-[#7b5cff]" checked={webChat} onChange={(e) => setWebChat(e.target.checked)} />
+                      <span>
+                        XTM One web chat contract (mock)
+                        <span className="block text-xs text-gray-500 dark:text-white/40">
+                          Turns that outlive their stream: open a second tab on the same conversation, reload mid-answer, Stop, ask for a{' '}
+                          <code className="font-mono">wait</code> to get "Continue now", or a <code className="font-mono">long thread</code> to page
+                          older messages.
+                        </span>
+                      </span>
+                    </label>
+                    <label className="mb-3 flex items-start gap-2 text-sm text-gray-700 dark:text-white/70">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-[#7b5cff]"
+                        checked={showExtensions}
+                        onChange={(e) => setShowExtensions(e.target.checked)}
+                      />
+                      <span>
+                        Host extensions
+                        <span className="block text-xs text-gray-500 dark:text-white/40">
+                          Header action, banner, composer header, transcript footer, message extras and footer action, sidebar row action and
+                          section, a card for <code className="font-mono">[[WORK_ITEM:…]]</code>, <code className="font-mono">@agent</code> mentions
+                          and sends held until the answer ends.
+                        </span>
+                      </span>
+                    </label>
                     <p className="text-sm text-gray-600 dark:text-white/50 mb-2">Tool approval:</p>
                     <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-white/70">
                       <input
@@ -561,50 +680,8 @@ const App = () => {
           </div>
         </main>
 
-        {/* Chat panel */}
-        {isOpen && canChat && (
-          <ChatPanel
-            mode={mode}
-            onClose={() => setIsOpen(false)}
-            onModeChange={setMode}
-            topOffset={HEADER_HEIGHT}
-            apiBaseUrl="/api/xtmone"
-            // Tool approval and stored feedback are opt-in and have no default
-            // paths: naming them is how a host promises the backend answers
-            // them, so a widget that cannot must never claim it. All are plain
-            // passthroughs here — the dev server rewrites `/api/xtmone/*` onto
-            // XTM One's `/api/v1/platform/*` generically, so they need nothing
-            // of their own. The mock stores feedback; approval paths it does
-            // not know 404 and the panel degrades, which is the un-opted-in
-            // behaviour every current host has.
-            apiEndpoints={{
-              feedback: '/chat/conversations',
-              ...(supportsApproval ? { approve: '/chat/messages/approve', pendingApprovals: '/chat/conversations' } : {}),
-              // Workspaces group the fullscreen history. The mock serves none,
-              // so they are named against XTM One only.
-              ...(usingMock ? {} : { workspaces: '/chat/workspaces' }),
-              // `@` in the composer references another conversation. Served by
-              // the mock too (its own conversations, plus one shared with you).
-              conversationReferences: '/chat/conversation-references',
-            }}
-            locale={locale}
-            agentDashboardUrl="https://xtm.example.com"
-            user={{ firstName: session.state === 'signed-in' ? session.email.split('@')[0] : 'Tester' }}
-            accentColor="#7b5cff"
-            // Only the mock understands these; against a real backend the
-            // agent's own suggestions are the ones worth exercising.
-            promptSuggestions={usingMock ? SCENARIOS.map((s) => s.prompt) : undefined}
-            // Sidebar mode is only half-implemented without these two: the
-            // panel must push the page aside, and be draggable to resize.
-            pushContentSelector="#app-content"
-            resizable
-            composerToolbar={<HostToolbarSlot active={hostToolActive} onClick={() => setHostToolActive((v) => !v)} />}
-            onMessageFeedback={handleMessageFeedback}
-            onTaskComplete={handleTaskComplete}
-            onDownloadError={handleDownloadError}
-            onRelativeLinkClick={handleRelativeLink}
-          />
-        )}
+        {/* Chat panel: in the page flow when inline, over the page otherwise */}
+        {isOpen && canChat && mode !== 'inline' && panel}
       </div>
     </div>
   );

@@ -1,0 +1,152 @@
+import { useCallback, useEffect, useInsertionEffect, useRef, useState } from 'react';
+import { chunkSpeech, speechAhead, type TtsRoute } from '../utils/speech';
+import { getSpeechRecognition } from './useDictation';
+import { createVoiceCall, type VoiceCallController, type VoiceCallDeps, type VoiceCallSnapshot } from './voiceCallController';
+import { probeTurn } from './voiceTurn';
+import { usePanelFetch } from './usePanelRequests';
+import { askHost } from '../utils/askHost';
+
+/** Longest piece of an answer spoken at once: one plays while the next is made. */
+const VOICE_CHUNK_LENGTH = 200;
+
+/** Whether this browser can hold a voice call: it needs speech recognition. */
+export const voiceCallSupported = (): boolean => getSpeechRecognition() !== null;
+
+interface UseVoiceCallOptions {
+  /** Sends a question through the panel, as the user. */
+  send: VoiceCallDeps['send'];
+  /** Stops the turn running (the Stop button's). */
+  stopTurn: () => void;
+  /** Whether the conversation's turn still runs, for the idle check; `null` when it could not be read. */
+  readTurnState?: () => Promise<{ running: boolean } | null>;
+  addressedAgentId: () => string | null;
+  speakable: (text: string) => string;
+  present: (text: string) => string;
+  /** The host's speech route; the browser's voice speaks without it, or when it fails. */
+  tts?: TtsRoute;
+  /** Language listened for and spoken in; the browser's own when unset. */
+  locale?: string;
+}
+
+/** Play *blob*; resolves once it ended or *signal* aborted it (`true`), or the browser could not play it (`false`). */
+function playAudio(blob: Blob, signal: AbortSignal): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    const done = (played: boolean) => {
+      audio.pause();
+      URL.revokeObjectURL(url);
+      signal.removeEventListener('abort', aborted);
+      resolve(played);
+    };
+    const aborted = () => done(true);
+    audio.onended = () => done(true);
+    audio.onerror = () => done(false);
+    signal.addEventListener('abort', aborted);
+    audio.play().catch(() => done(false));
+  });
+}
+
+/** Say *text* in the browser's voice; resolves at once without one. */
+function speakInBrowser(text: string, lang: string | undefined, signal: AbortSignal): Promise<void> {
+  if (typeof window === 'undefined' || !window.speechSynthesis || typeof window.SpeechSynthesisUtterance !== 'function') return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    if (lang) utterance.lang = lang;
+    const done = () => {
+      signal.removeEventListener('abort', stop);
+      resolve();
+    };
+    const stop = () => {
+      window.speechSynthesis.cancel();
+      done();
+    };
+    utterance.onend = done;
+    utterance.onerror = done;
+    signal.addEventListener('abort', stop);
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+/**
+ * A voice call over the panel: the browser listens, the panel sends, the
+ * answer is spoken through the host's speech route in sentence-sized pieces,
+ * played in order, the next one requested while one plays (`speechAhead`),
+ * each piece the route fails in the browser's voice. `onFrame` must see every
+ * frame of both streams.
+ */
+export function useVoiceCall(options: UseVoiceCallOptions) {
+  const panelFetch = usePanelFetch();
+  const optionsRef = useRef(options);
+  useInsertionEffect(() => {
+    optionsRef.current = options;
+  });
+  const [snapshot, setSnapshot] = useState<VoiceCallSnapshot | null>(null);
+  const callRef = useRef<VoiceCallController | null>(null);
+
+  const speak = useCallback(async (text: string, signal: AbortSignal) => {
+    const { tts, locale } = optionsRef.current;
+    const lang = locale || (typeof navigator !== 'undefined' ? navigator.language : undefined);
+    const chunks = chunkSpeech(text, VOICE_CHUNK_LENGTH);
+    const audio = tts ? speechAhead(panelFetch, tts, chunks, signal) : null;
+    for (const chunk of chunks) {
+      if (signal.aborted) return;
+      const blob = audio ? ((await audio.next()).value ?? null) : null;
+      if (signal.aborted) return;
+      // A piece the route fails, or the browser cannot play, is said in the browser's voice.
+      if (blob && (await playAudio(blob, signal))) continue;
+      if (signal.aborted) return;
+      await speakInBrowser(chunk, lang, signal);
+    }
+  }, []);
+
+  const start = useCallback((): boolean => {
+    if (callRef.current) return true;
+    const Recognition = getSpeechRecognition();
+    if (!Recognition) return false;
+    const call = createVoiceCall({
+      recognition: new Recognition(),
+      lang: optionsRef.current.locale || (typeof navigator !== 'undefined' ? navigator.language : undefined),
+      send: (text, hooks) => optionsRef.current.send(text, hooks),
+      speak,
+      // The host's rewriting that throws leaves the text as it is: the answer is
+      // still shown and spoken, and the call goes on.
+      speakable: (text) => askHost(optionsRef.current.speakable, text) ?? text,
+      present: (text) => askHost(optionsRef.current.present, text) ?? text,
+      // Without a way to read the turn, a turn silent for two minutes is taken as over.
+      probe: () => {
+        const read = optionsRef.current.readTurnState;
+        return read ? probeTurn(read) : Promise.resolve('over');
+      },
+      stopTurn: () => optionsRef.current.stopTurn(),
+      addressedAgentId: () => optionsRef.current.addressedAgentId(),
+      // An ended call says nothing more.
+      onChange: (next) => {
+        if (callRef.current === call) setSnapshot(next);
+      },
+    });
+    callRef.current = call;
+    call.start();
+    return true;
+  }, [speak]);
+
+  const end = useCallback(() => {
+    const call = callRef.current;
+    callRef.current = null;
+    call?.end();
+    setSnapshot(null);
+  }, []);
+
+  useEffect(() => end, [end]);
+
+  return {
+    /** The call on screen, or `null`. */
+    snapshot,
+    start,
+    end,
+    onFrame: useCallback((frame: Record<string, unknown>, relayed: boolean) => callRef.current?.frame(frame, relayed), []),
+    interrupt: useCallback(() => callRef.current?.interrupt(), []),
+    cancel: useCallback(() => callRef.current?.cancel(), []),
+    toggleMute: useCallback(() => callRef.current?.toggleMute(), []),
+  };
+}

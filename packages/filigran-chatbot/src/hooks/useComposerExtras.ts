@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatPromptTemplate, ChatQuotaStatus } from '../types';
 import { parseQuota } from '../utils/quota';
+import { usePanelFetch } from './usePanelRequests';
 
 interface UseComposerExtrasOptions {
   apiBaseUrl: string;
@@ -58,6 +59,7 @@ export function useComposerExtras({
   backendType = 'rest',
   requestHeaders,
 }: UseComposerExtrasOptions): UseComposerExtrasReturn {
+  const panelFetch = usePanelFetch();
   const [prompts, setPrompts] = useState<ChatPromptTemplate[] | null>(null);
   const [quota, setQuota] = useState<ChatQuotaStatus | null>(null);
 
@@ -73,7 +75,7 @@ export function useComposerExtras({
       return;
     }
     let cancelled = false;
-    fetch(promptsUrl, { credentials: 'include', headers: { ...(requestHeaders ?? {}) } })
+    panelFetch(promptsUrl, { credentials: 'include', headers: { ...(requestHeaders ?? {}) } })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled) return;
@@ -99,7 +101,7 @@ export function useComposerExtras({
       return;
     }
     let cancelled = false;
-    fetch(quotaUrl, { credentials: 'include', headers: { ...(requestHeaders ?? {}) } })
+    panelFetch(quotaUrl, { credentials: 'include', headers: { ...(requestHeaders ?? {}) } })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled) setQuota(parseQuota(data));
