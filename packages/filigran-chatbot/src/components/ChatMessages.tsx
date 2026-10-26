@@ -778,7 +778,7 @@ const MessageRow = memo(
             data-testid="filigran-chat-user-message"
             className="max-w-[90%] px-3.5 py-2 rounded-[14px_14px_4px_14px] bg-[var(--chat-accent-dark)] text-white text-[0.8125rem] leading-6 whitespace-pre-wrap break-words"
           >
-            {content}
+            {content.trim()}
           </div>
         )}
 

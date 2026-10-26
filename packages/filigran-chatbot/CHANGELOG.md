@@ -13,7 +13,8 @@ This file starts at 3.10.0; earlier releases are on the
 ### Fixed
 
 - A user's message keeps its line breaks: its bubble shows the lines and
-  paragraphs it was sent with, instead of running them into one paragraph.
+  paragraphs it was sent with, instead of running them into one paragraph
+  (#458).
 
 ## 3.15.0 — 2026-10-26
 

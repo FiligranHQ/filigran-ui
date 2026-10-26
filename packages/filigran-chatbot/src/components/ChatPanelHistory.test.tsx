@@ -41,12 +41,15 @@ test('older messages are fetched from the backend, before the oldest one shown',
   assert.equal(button('Load earlier messages'), undefined, 'nothing older is left');
 });
 
-test('a user message keeps its line breaks', async () => {
-  fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'user', content: 'first line\n\nsecond paragraph' }])]);
+// The DOM here applies no stylesheet: postcss/stylesheet.test.js pins that the
+// compiled `whitespace-pre-wrap` and `break-words` rules exist, inside the panel.
+test('a user message keeps its line breaks, without the blank lines around it', async () => {
+  fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'user', content: '\n\n  first line\n\nsecond paragraph\n\n' }])]);
   await render({ conversationId: 'c1' });
   const bubble = container.querySelector<HTMLElement>('[data-testid="filigran-chat-user-message"]')!;
   assert.equal(bubble.textContent, 'first line\n\nsecond paragraph');
   assert.ok(bubble.classList.contains('whitespace-pre-wrap'), 'the breaks are shown, not collapsed into one paragraph');
+  assert.ok(bubble.classList.contains('break-words'), 'a long unbroken word wraps inside the bubble');
 });
 
 test('without the route, a restore offers nothing older', async () => {
