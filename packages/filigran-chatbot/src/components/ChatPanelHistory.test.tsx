@@ -41,6 +41,14 @@ test('older messages are fetched from the backend, before the oldest one shown',
   assert.equal(button('Load earlier messages'), undefined, 'nothing older is left');
 });
 
+test('a user message keeps its line breaks', async () => {
+  fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'user', content: 'first line\n\nsecond paragraph' }])]);
+  await render({ conversationId: 'c1' });
+  const bubble = container.querySelector<HTMLElement>('[data-testid="filigran-chat-user-message"]')!;
+  assert.equal(bubble.textContent, 'first line\n\nsecond paragraph');
+  assert.ok(bubble.classList.contains('whitespace-pre-wrap'), 'the breaks are shown, not collapsed into one paragraph');
+});
+
 test('without the route, a restore offers nothing older', async () => {
   fakeBackend([agentsRoute, restoreRoute([{ id: 'm3', role: 'assistant', content: 'answer' }], { has_more: true })]);
   await render({ conversationId: 'c1' });
