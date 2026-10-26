@@ -1975,6 +1975,35 @@ test('the event stream reads only the turn frames that name their turn', async (
   await finish(...subscriptions);
 });
 
+test('a turn frame of the event stream naming no turn is warned of once per frame type', async () => {
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  fakeBackend([agentsRoute, restoreRoute(), eventsRoute(subscriptions)]);
+  const realWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => void warnings.push(args.map(String).join(' '));
+  try {
+    const frames: string[] = [];
+    await render({
+      conversationId: 'c1',
+      apiEndpoints: { events: '/chat/conversations' },
+      onStreamEvent: (frame) => frames.push(String(frame.type)),
+    });
+    await act(async () => {
+      subscriptions[0].send({ type: 'approval_required', proposals: [{ tool_call_id: 'call1', tool_name: 'search' }] });
+      subscriptions[0].send({ type: 'approval_required', proposals: [{ tool_call_id: 'call2', tool_name: 'search' }] });
+      subscriptions[0].send({ type: 'thinking' });
+      await settle(10);
+    });
+    assert.equal(warnings.length, 2);
+    assert.match(warnings[0], /"approval_required".*turn_id/);
+    assert.match(warnings[1], /"thinking".*turn_id/);
+    assert.deepEqual(frames, ['approval_required', 'approval_required', 'thinking'], 'the host still hears each frame');
+  } finally {
+    console.warn = realWarn;
+  }
+  await finish(...subscriptions);
+});
+
 test('a backend with no event stream or Stop route names no turn: each turn is the one its own stream carries', async () => {
   const streams = [sseStream(), sseStream(), sseStream(), sseStream()];
   let turns = 0;

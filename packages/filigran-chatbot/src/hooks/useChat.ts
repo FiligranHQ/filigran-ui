@@ -201,16 +201,27 @@ const STORED_ANSWER_FIELDS = [
   'feedback',
 ] as const satisfies readonly (keyof ChatMessage)[];
 
+// The text a user bubble showing other words was sent with, kept on the
+// bubble itself (copies of it keep it) under a key the host never reads.
+const SENT_TEXT = Symbol('sentText');
+type SentBubble = ChatMessage & { [SENT_TEXT]?: string };
+
+/** *message*, a user bubble sent with *text*: kept on it when it shows other words. */
+export function withSentText(message: ChatMessage, text: string): ChatMessage {
+  return text === message.content ? message : ({ ...message, [SENT_TEXT]: text } as SentBubble);
+}
+
+/** The text *message* was sent with: what the backend stored, and echoes back. */
+export function sentTextOf(message: ChatMessage): string {
+  return (message as SentBubble)[SENT_TEXT] ?? message.content;
+}
+
 /**
  * How a message on screen (*shownKey*: a user bubble by the text it was sent
  * with) and a stored one (*storedKey*) are told the same without a server id.
  */
-function readBackKeys(sentTextOf: (message: ChatMessage) => string) {
-  return {
-    shownKey: (m: ChatMessage) => `${m.role}\u0000${m.role === 'user' ? sentTextOf(m) : m.content}`,
-    storedKey: (m: ChatMessage) => `${m.role}\u0000${m.content}`,
-  };
-}
+const shownKey = (m: ChatMessage) => `${m.role}\u0000${m.role === 'user' ? sentTextOf(m) : m.content}`;
+const storedKey = (m: ChatMessage) => `${m.role}\u0000${m.content}`;
 
 /**
  * *shown*, the bubble on screen that *stored* is: it keeps what it shows (the
@@ -234,18 +245,11 @@ function adoptStored(shown: ChatMessage, stored: ChatMessage): ChatMessage {
  * bubble among it, follows them. *prev* as it is when nothing stored is
  * missing.
  */
-function mergeIntoTurn(
-  prev: ChatMessage[],
-  restored: ChatMessage[],
-  turnIds: ReadonlySet<string>,
-  liveId: string,
-  sentTextOf: (message: ChatMessage) => string,
-): ChatMessage[] {
+function mergeIntoTurn(prev: ChatMessage[], restored: ChatMessage[], turnIds: ReadonlySet<string>, liveId: string): ChatMessage[] {
   const start = prev.findIndex((m) => turnIds.has(m.id));
   if (start < 0) return prev;
   const before = prev.slice(0, start);
   const region = prev.slice(start);
-  const { shownKey, storedKey } = readBackKeys(sentTextOf);
   // What the history holds past the last message shown before the turn,
   // less what is on screen before it already, unsaved there.
   const shownBefore = new Set(before.map((m) => m.serverId).filter(Boolean));
@@ -286,8 +290,7 @@ function mergeIntoTurn(
  * that the store does not hold. With none of it on screen (a first
  * read-back), the history goes above what is shown.
  */
-export function mergeReadBack(prev: ChatMessage[], restored: ChatMessage[], sentTextOf: (message: ChatMessage) => string): ChatMessage[] {
-  const { shownKey, storedKey } = readBackKeys(sentTextOf);
+export function mergeReadBack(prev: ChatMessage[], restored: ChatMessage[]): ChatMessage[] {
   const next = [...prev];
   const byServerId = new Map<string, number>();
   next.forEach((m, i) => {
@@ -386,27 +389,6 @@ export function applySendDecision(text: string, decision: ChatSendDecision | und
   const shown = typeof adjust?.displayText === 'string' ? adjust.displayText.trim() : '';
   const fallback = typeof displayFallback === 'string' ? displayFallback.trim() : '';
   return { text: sent, displayText: shown || fallback || sent, extras: adjust?.extras };
-}
-
-/**
- * The text each user bubble showing other words was sent with, by bubble id:
- * what a read-back matches the bubble on. Kept for the bubbles on screen only.
- */
-export function createSentTexts() {
-  const texts = new Map<string, string>();
-  return {
-    of: (message: ChatMessage): string => texts.get(message.id) ?? message.content,
-    remember: (id: string, text: string) => void texts.set(id, text),
-    /** Forget the bubbles no longer among *onScreen*. */
-    keepOnly(onScreen: readonly ChatMessage[]) {
-      if (texts.size === 0) return;
-      const shown = new Set(onScreen.map((m) => m.id));
-      for (const id of texts.keys()) if (!shown.has(id)) texts.delete(id);
-    },
-    get size() {
-      return texts.size;
-    },
-  };
 }
 
 type TurnEndAction = Extract<ParsedAction, { action: 'done' | 'error' | 'cancelled' }>;
@@ -675,11 +657,6 @@ interface UseChatReturn {
   conversationIdRef: React.MutableRefObject<string | null>;
   handleFileAdd: (fileList: FileList | null) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
-  /**
-   * The text a user message was sent with, when its bubble shows other words
-   * (`displayText`): what the backend stored, and echoes back.
-   */
-  sentTextOf: (message: ChatMessage) => string;
   /** Send the composer's content, or *override*'s without touching the composer. */
   handleSendMessage: (override?: SendOverride) => Promise<ChatSendOutcome>;
   /** A message held until the running turn ends (`holdSends`), if any. */
@@ -979,10 +956,6 @@ export function useChat({
   messagesRef.current = messages;
   // Read-backs asked for so far (`reloadHistory`): `historyReloadNonce`.
   const historyReloadsRef = useRef(0);
-  // The text each user bubble showing other words was sent with, while it shows.
-  const [sentTexts] = useState(createSentTexts);
-  const sentTextOf = sentTexts.of;
-  useEffect(() => sentTexts.keepOnly(messages), [sentTexts, messages]);
   // This panel's identity on the conversation's event stream: the backend
   // never relays to it the turns it started itself.
   const [clientId, setClientId] = useState(() => randomId());
@@ -1434,14 +1407,10 @@ export function useChat({
     const convId = conversationIdRef.current;
     if (!steerUrl || !convId) return { result: 'failed' };
 
-    const optimistic: ChatMessage = {
-      id: randomId(),
-      role: 'user',
-      content: shown,
-      timestamp: new Date(),
-      files: files.length > 0 ? files : undefined,
-    };
-    if (shown !== content) sentTexts.remember(optimistic.id, content);
+    const optimistic = withSentText(
+      { id: randomId(), role: 'user', content: shown, timestamp: new Date(), files: files.length > 0 ? files : undefined },
+      content,
+    );
     setMessages((prev) => [...prev, optimistic]);
     const fileIds = files.filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
     // Why the backend refused it, when it says.
@@ -2085,15 +2054,17 @@ export function useChat({
       return 'dropped';
     }
 
-    const userMsg: ChatMessage = {
-      id: randomId(),
-      role: 'user',
-      content: shownText,
-      timestamp: new Date(),
-      files: files.length > 0 ? [...files] : undefined,
-      conversationRefs: sentRefs.length > 0 ? sentRefs : undefined,
-    };
-    if (shownText !== text) sentTexts.remember(userMsg.id, text);
+    const userMsg = withSentText(
+      {
+        id: randomId(),
+        role: 'user',
+        content: shownText,
+        timestamp: new Date(),
+        files: files.length > 0 ? [...files] : undefined,
+        conversationRefs: sentRefs.length > 0 ? sentRefs : undefined,
+      },
+      text,
+    );
     const assistantId = randomId();
     setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
     clearComposer();
@@ -2454,10 +2425,19 @@ export function useChat({
     if (!renderer || ownTurnActiveRef.current) return false;
     const turnIds = new Set(renderer.segmentIds());
     const liveId = renderer.currentAssistantId();
-    setMessages((prev) => mergeIntoTurn(prev, restored, turnIds, liveId, sentTextOf));
+    setMessages((prev) => mergeIntoTurn(prev, restored, turnIds, liveId));
     return true;
   };
 
+  // The frame types the event stream sent without `turn_id`, said once each.
+  const unnamedTurnFramesRef = useRef(new Set<string>());
+  const warnUnnamedTurnFrame = (type: string) => {
+    if (unnamedTurnFramesRef.current.has(type)) return;
+    unnamedTurnFramesRef.current.add(type);
+    console.warn(
+      `A "${type}" frame of the event stream names no turn and is not read: the events route needs \`turn_id\` on every turn frame (see "Turns that outlive their stream" in the README)`,
+    );
+  };
   /** One frame of the conversation's event stream. */
   const handleEventFrame = (evt: Record<string, unknown>) => {
     let relayedTurn = relayedTurnRef.current;
@@ -2479,7 +2459,10 @@ export function useChat({
     if (!TURN_ACTIONS.has(parsed.action)) return;
     // Every turn frame of the event stream names its turn: one naming none is not read.
     const turnId = typeof evt.turn_id === 'string' && evt.turn_id ? evt.turn_id : null;
-    if (!turnId) return;
+    if (!turnId) {
+      warnUnnamedTurnFrame(String(evt.type));
+      return;
+    }
     // A turn a provisional end already ended (never the panel's own turn):
     // its stored end gives the answer it left its id, and nothing of it
     // reopens the turn.
@@ -3305,7 +3288,6 @@ export function useChat({
     handleFileAdd,
     handlePaste,
     handleSendMessage,
-    sentTextOf,
     skipWait: skipWaitUrl ? skipWait : null,
     readPendingApprovals: pendingApprovalsBase ? readPendingApprovals : null,
     heldMessage,

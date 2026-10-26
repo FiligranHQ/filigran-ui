@@ -7,7 +7,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { act, createRef, StrictMode, useEffect, useRef } from 'react';
+import { act, createRef, StrictMode, useEffect, useLayoutEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { fakeBackend, json, settle, sseStream } from '../../test/dom.ts';
@@ -174,6 +174,61 @@ test('the send hook can show the user other words than it sends, for a new turn 
   assert.ok(bubbles()[1].includes('Shorter'));
   assert.ok(!text().includes('[Document: Q3 report]'));
   await finish(stream);
+});
+
+test('a steer sent as the answer streams keeps the text it was sent with, and its echo is shown once', async () => {
+  const turn = sseStream();
+  const events = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'steered' }) : undefined),
+    (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined),
+  ]);
+  // Presses "Send now" as the answer's first words commit, before that
+  // commit's passive effects run: the send lands while the panel's effects
+  // still see the thread without its bubble.
+  let pressed = false;
+  function SteerOnCommit() {
+    useLayoutEffect(() => {
+      if (pressed) return;
+      pressed = true;
+      container.querySelector<HTMLButtonElement>('button[aria-label="Send now"]')!.click();
+    });
+    return null;
+  }
+  const ref = createRef<Handle>();
+  await render(
+    {
+      conversationId: 'c1',
+      apiEndpoints: { events: '/chat/conversations' },
+      onBeforeSend: ({ text: typed }) => ({ text: `[Page: Report 42]\n\n${typed}`, displayText: typed }),
+      renderMessageExtras: (message, { streaming }) => (streaming && message.content ? <SteerOnCommit /> : null),
+    },
+    ref,
+  );
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle();
+  });
+  await act(async () => {
+    ref.current!.setDraft('Shorter');
+    await settle();
+  });
+  await act(async () => {
+    turn.send({ type: 'stream', content: 'Answer so far' });
+    await settle();
+  });
+  assert.ok(pressed);
+  await act(async () => {
+    events.send({ type: 'user_message', message: { id: 'm9', role: 'user', content: '[Page: Report 42]\n\nShorter' } });
+    await settle();
+  });
+  const bubbles = [...container.querySelectorAll('[data-testid="filigran-chat-user-message"]')].map((b) => b.textContent);
+  assert.deepEqual(bubbles, ['first', 'Shorter']);
+  assert.ok(container.querySelector('[data-message-id="m9"]'), 'the bubble takes the stored id');
+  await finish(turn, events);
 });
 
 test('a stopped answer says so, even when nothing was written yet', async () => {

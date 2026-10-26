@@ -295,7 +295,6 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     handleFileAdd,
     handlePaste,
     handleSendMessage,
-    sentTextOf,
     skipWait,
     readPendingApprovals,
     heldMessage,
@@ -573,7 +572,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     if (!data.messages?.length) return;
     const restored = parseRestoredMessages(data.messages);
     if (merge) {
-      setMessages((prev) => mergeReadBack(prev, restored, sentTextOf));
+      setMessages((prev) => mergeReadBack(prev, restored));
       return;
     }
     setMessages(restored);

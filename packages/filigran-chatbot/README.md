@@ -1048,8 +1048,8 @@ wherever it goes: each turn frame of the event stream (`thinking`, `status`,
 `stream`, `done`, `error`, `cancelled`, `approval_required`, and the replay of
 a turn), and each frame of the message stream from its `turn_started` (or
 `folded_into_active_turn`) on. A turn frame of the event stream naming none is
-not read. A backend without `events` need name no turn: each turn is then the
-one its own stream carries.
+not read, and the console warns of it once per frame type. A backend without
+`events` need name no turn: each turn is then the one its own stream carries.
 
 With `events` named, every message, steer, decision, page-action answer, Stop
 and "Continue now" carries the same id in `X-Chat-Client-Id` (the

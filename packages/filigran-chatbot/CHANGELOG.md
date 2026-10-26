@@ -263,8 +263,8 @@ This file starts at 3.10.0; earlier releases are on the
   after the page shows again or at once on a refused stream, until the
   conversation read back says how it ended. Every frame of a turn names it
   (`turn_id`): on the event stream, and on the message stream from its
-  `turn_started` on; an event stream frame of a turn naming none is not read.
-  See
+  `turn_started` on; an event stream frame of a turn naming none is not read,
+  and the console warns of it once per frame type. See
   [Turns that outlive their stream](README.md#turns-that-outlive-their-stream)
   for reconnection, the client id and replays.
 - With `cancel`, `skipWait` or `events` named, a send made while a turn ended
