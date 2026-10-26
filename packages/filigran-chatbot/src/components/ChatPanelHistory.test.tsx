@@ -43,11 +43,20 @@ test('older messages are fetched from the backend, before the oldest one shown',
 
 // The DOM here applies no stylesheet: postcss/stylesheet.test.js pins that the
 // compiled `whitespace-pre-wrap` and `break-words` rules exist, inside the panel.
-test('a user message keeps its line breaks, without the blank lines around it', async () => {
-  fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'user', content: '\n\n  first line\n\nsecond paragraph\n\n' }])]);
+test('a user message keeps its line breaks and indent, without the blank lines around it, and copies as shown', async (t) => {
+  fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'user', content: '\n\n  first line\n\nsecond paragraph  \n\n' }])]);
+  const copied: string[] = [];
+  const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (s: string) => void copied.push(s) } });
+  t.after(() => (original ? Object.defineProperty(navigator, 'clipboard', original) : delete (navigator as { clipboard?: unknown }).clipboard));
   await render({ conversationId: 'c1' });
   const bubble = container.querySelector<HTMLElement>('[data-testid="filigran-chat-user-message"]')!;
-  assert.equal(bubble.textContent, 'first line\n\nsecond paragraph');
+  assert.equal(bubble.textContent, '  first line\n\nsecond paragraph');
+  await act(async () => {
+    button('Copy message')!.click();
+    await settle();
+  });
+  assert.deepEqual(copied, ['  first line\n\nsecond paragraph']);
   assert.ok(bubble.classList.contains('whitespace-pre-wrap'), 'the breaks are shown, not collapsed into one paragraph');
   assert.ok(bubble.classList.contains('break-words'), 'a long unbroken word wraps inside the bubble');
 });

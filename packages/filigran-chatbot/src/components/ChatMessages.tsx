@@ -484,6 +484,9 @@ const MessageRow = memo(
     // What the host shows of the text: also what is copied and read aloud.
     // A transform that throws shows the text as it came, never takes the thread down.
     const content = useMemo(() => askHost(transformMessageText, msg.content, msg) ?? msg.content, [transformMessageText, msg]);
+    // A user's bubble, and what its Copy takes: the text without the blank lines
+    // around it, its first line's indent kept.
+    const userText = useMemo(() => content.replace(/^(?:[ \t]*\r?\n)+|\s+$/g, ''), [content]);
     const isEmpty = !content;
     const downRef = useRef<HTMLButtonElement>(null);
 
@@ -778,7 +781,7 @@ const MessageRow = memo(
             data-testid="filigran-chat-user-message"
             className="max-w-[90%] px-3.5 py-2 rounded-[14px_14px_4px_14px] bg-[var(--chat-accent-dark)] text-white text-[0.8125rem] leading-6 whitespace-pre-wrap break-words"
           >
-            {content.trim()}
+            {userText}
           </div>
         )}
 
@@ -789,7 +792,7 @@ const MessageRow = memo(
         {/* The user's side mirrors the answer's: the time hugs the bubble's edge. */}
         {!isAssistant && (
           <div className="mt-0.5 flex items-center justify-end gap-0.5 text-gray-400 dark:text-white/40">
-            {!!content.trim() && <MessageCopyButton text={content} label={t('Copy message')} t={t} />}
+            {!!userText && <MessageCopyButton text={userText} label={t('Copy message')} t={t} />}
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
           </div>
         )}
