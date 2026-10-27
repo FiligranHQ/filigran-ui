@@ -105,8 +105,12 @@ const RESUME_WATCH_MS = 900000;
  */
 const APPROVAL_PRESENCE_INTERVAL_MS = 600000;
 
-/** How long a dropped turn waits for the event stream to bring it back before reading the history. */
-const HANDOVER_GRACE_MS = 15000;
+/**
+ * How long a dropped turn waits for the event stream to reopen, at most: the
+ * backend restarting takes as long as it takes, and the replay or the end of
+ * the turn comes once it is back.
+ */
+const HANDOVER_BACKSTOP_MS = RESUME_WATCH_MS;
 /** How long Stop waits for the backend to end a cancelled turn before letting go of it. */
 const CANCEL_GRACE_MS = 10000;
 /** Reconnection backoff of the conversation's event stream. */
@@ -972,10 +976,18 @@ export function useChat({
   // The panel's own turn whose stream dropped, now awaited from the event stream.
   const handoverTimerRef = useRef<number | null>(null);
   const handoverTurnIdRef = useRef<string | null>(null);
+  // The event stream reopened since the drop, and the wait for its replay began.
+  const handoverReplayArmedRef = useRef(false);
+  // The empty bubble shown while the turn is awaited.
+  const handoverPlaceholderIdRef = useRef<string | null>(null);
   const clearHandover = () => {
     if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
     handoverTimerRef.current = null;
     handoverTurnIdRef.current = null;
+    handoverReplayArmedRef.current = false;
+    const placeholderId = handoverPlaceholderIdRef.current;
+    handoverPlaceholderIdRef.current = null;
+    if (placeholderId !== null) setMessages((prev) => prev.filter((m) => m.id !== placeholderId || m.content));
   };
   /** A turn ended provisionally: sends wait for its stored end, a while at most. */
   const startWindDown = (relayed: boolean) => {
@@ -1178,6 +1190,33 @@ export function useChat({
     historyReloadsRef.current += 1;
     setHistoryReloadNonce(historyReloadsRef.current);
   }, []);
+
+  /** The handed-over turn is over (*ended*): its answer, if it got one, is in the history. */
+  const endHandover = (ended: ChatTurnOutcome) => {
+    if (handoverTurnIdRef.current === null) return;
+    clearHandover();
+    stopRunning(ended);
+    setAgentStatus(null);
+    reloadHistory();
+  };
+  const endHandoverRef = useRef(endHandover);
+  endHandoverRef.current = endHandover;
+  /**
+   * The event stream is open again: the handed-over turn's replay comes with
+   * its snapshot, and none within {@link EVENTS_RESUME_GRACE_MS} means the
+   * turn ended while the stream was away.
+   */
+  const awaitHandoverReplay = () => {
+    if (handoverTurnIdRef.current === null || relayedTurnRef.current || handoverReplayArmedRef.current) return;
+    handoverReplayArmedRef.current = true;
+    if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
+    handoverTimerRef.current = window.setTimeout(() => {
+      handoverTimerRef.current = null;
+      if (!relayedTurnRef.current) endHandoverRef.current('stopped');
+    }, EVENTS_RESUME_GRACE_MS);
+  };
+  const awaitHandoverReplayRef = useRef(awaitHandoverReplay);
+  awaitHandoverReplayRef.current = awaitHandoverReplay;
 
   // Determine upload endpoint URL (null disables file upload proxying)
   const getUploadUrl = (): string | null => {
@@ -2118,25 +2157,26 @@ export function useChat({
       if (!hasEvents || !conversationIdRef.current || !ownTurnIdRef.current || turn.ended()) return false;
       handedOver = true;
       // The replay brings back the segment being written, never those an
-      // intermediate `done` closed: they stay.
-      if (!turn.doneReceived()) {
-        const segId = turn.currentAssistantId();
-        setMessages((prev) => prev.filter((m) => m.id !== segId));
-      }
+      // intermediate `done` closed: they stay. Until then an empty bubble
+      // says the turn is awaited.
+      const placeholderId = turn.doneReceived() ? randomId() : turn.currentAssistantId();
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== placeholderId),
+        { id: placeholderId, role: 'assistant', content: '', timestamp: new Date() },
+      ]);
+      handoverPlaceholderIdRef.current = placeholderId;
       handoverTurnIdRef.current = ownTurnIdRef.current;
+      handoverReplayArmedRef.current = false;
       ownTurnIdRef.current = null;
       setClientId(randomId());
+      setAgentStatus({ status: 'reconnecting' });
+      // The backend may be restarting: the turn is awaited for as long as the
+      // event stream takes to reopen (`awaitHandoverReplay`), up to this.
       if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
       handoverTimerRef.current = window.setTimeout(() => {
         handoverTimerRef.current = null;
-        if (relayedTurnRef.current || handoverTurnIdRef.current === null) return;
-        // Nothing came: the turn is over, and its answer is in the history,
-        // if it got one; nothing on screen says it did.
-        handoverTurnIdRef.current = null;
-        stopRunning('stopped');
-        setAgentStatus(null);
-        reloadHistory();
-      }, HANDOVER_GRACE_MS);
+        if (!relayedTurnRef.current) endHandoverRef.current('stopped');
+      }, HANDOVER_BACKSTOP_MS);
       return true;
     };
 
@@ -2524,6 +2564,11 @@ export function useChat({
       // it ended while the stream was away, and its answer is in the history.
       const withdrawn = withdrawnTurnRef.current;
       const replayed = withdrawn?.turnId === turnId;
+      // The end of this panel's own turn, awaited since its stream dropped.
+      if ((parsed.action === 'cancelled' || parsed.action === 'error') && turnId === handoverTurnIdRef.current) {
+        endHandover(parsed.action === 'error' ? 'failed' : 'stopped');
+        return;
+      }
       // The end of a turn never seen begins nothing.
       if ((parsed.action === 'cancelled' || parsed.action === 'error') && !replayed) {
         if (withdrawn) endTurnUnseen();
@@ -2901,12 +2946,16 @@ export function useChat({
         if ([401, 403, 404, 405].includes(res.status)) {
           refused = true;
           if ((res.status === 401 || res.status === 403) && !stopped) setEventsRefused({ url: eventsUrl, headersKey: sentHeadersKey });
-          // Nothing replays a relayed turn now: how it ended is read back.
-          if (!stopped) endTurnUnseenRef.current();
+          // Nothing replays a relayed or handed-over turn now: how it ended is read back.
+          if (!stopped) {
+            endTurnUnseenRef.current();
+            endHandoverRef.current('stopped');
+          }
           return;
         }
         if (!res.ok || !res.body) return;
         if (opened) awaitRelayedResumeRef.current();
+        awaitHandoverReplayRef.current();
         opened = true;
         openedAt = Date.now();
         await readSseEvents(res.body, (evt) => {

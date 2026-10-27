@@ -128,6 +128,7 @@ const fr: Catalog = {
   'Read aloud': 'Lire à voix haute',
   'Reasoning details': 'Détails du raisonnement',
   'Reasoning details — turn limit reached': 'Détails du raisonnement — limite de tours atteinte',
+  'Reconnecting…': 'Reconnexion…',
   'Reference a conversation': 'Faire référence à une conversation',
   'Remove from workspace': 'Retirer de l’espace de travail',
   'Rename conversation': 'Renommer la conversation',

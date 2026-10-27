@@ -1248,6 +1248,133 @@ test('a turn replayed after the own stream dropped reads back the segments it cl
   await finish(...subscriptions);
 });
 
+/**
+ * A backend that went away with the own turn's stream: the event stream fails
+ * (*down*) until it is back, then opens and records each subscription.
+ */
+function restartingBackend(down: () => boolean, subscriptions: ReturnType<typeof sseStream>[], own: ReturnType<typeof sseStream>) {
+  return fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    (req) => {
+      if (!req.url.startsWith('/api/chat/conversations/c1/events')) return undefined;
+      return down() ? json({ detail: 'Bad Gateway' }, 502) : eventsRoute(subscriptions)(req);
+    },
+    (req) => (req.url === '/api/chat/messages' ? own.response() : undefined),
+  ]);
+}
+
+test('a turn whose stream dropped is awaited for as long as the backend takes to come back, and goes on when the event stream replays it', async () => {
+  const timers = manualTimers([1000, 2000, 4000, 8000, 16000, 5000]);
+  try {
+    const subscriptions: ReturnType<typeof sseStream>[] = [];
+    const own = sseStream();
+    let down = false;
+    restartingBackend(() => down, subscriptions, own);
+    const ref = createRef<Handle>();
+    const { heard, onTurnRunningChange } = turnLog();
+    await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange }, ref);
+    await act(async () => {
+      void ref.current!.send('long task');
+      await settle();
+      own.send({ type: 'turn_started', turn_id: 't1' });
+      own.send({ type: 'stream', turn_id: 't1', content: 'Working' });
+      await settle(10);
+    });
+    down = true;
+    await act(async () => {
+      own.fail();
+      await settle(10);
+    });
+    // Down for longer than the old 15 s: the turn is still awaited.
+    for (const ms of [1000, 2000, 4000, 8000]) await timers.run(ms);
+    assert.deepEqual(heard, ['running']);
+    assert.ok(stopShown(), 'the turn still runs on screen');
+    assert.match(text(), /Reconnecting…/);
+    down = false;
+    await timers.run(16000);
+    await act(async () => {
+      const live = subscriptions[subscriptions.length - 1];
+      live.send({ type: 'thinking', turn_id: 't1', resumed: true });
+      live.send({ type: 'stream', turn_id: 't1', content: 'Working, still' });
+      await settle(10);
+    });
+    await timers.run(5000);
+    assert.deepEqual(heard, ['running'], 'the replay goes on past the grace');
+    await act(async () => {
+      subscriptions[subscriptions.length - 1].send({ type: 'done', turn_id: 't1', content: 'Working, done', message_id: 'a1' });
+      await settle(10);
+    });
+    assert.deepEqual(heard, ['running', 'answered']);
+    await finish(own, ...subscriptions);
+  } finally {
+    timers.restore();
+  }
+});
+
+test('a turn whose stream dropped, not replayed once the event stream is back, ends a grace later and is read back', async () => {
+  const timers = manualTimers([1000, 5000]);
+  try {
+    const subscriptions: ReturnType<typeof sseStream>[] = [];
+    const own = sseStream();
+    let down = false;
+    const requests = restartingBackend(() => down, subscriptions, own);
+    const ref = createRef<Handle>();
+    const { heard, onTurnRunningChange } = turnLog();
+    await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange }, ref);
+    await act(async () => {
+      void ref.current!.send('long task');
+      await settle();
+      own.send({ type: 'turn_started', turn_id: 't1' });
+      await settle(10);
+    });
+    down = true;
+    await act(async () => {
+      own.fail();
+      await settle(10);
+    });
+    down = false;
+    await timers.run(1000);
+    const restores = () => requests.filter((r) => r.url === '/api/chat/sessions').length;
+    const before = restores();
+    assert.deepEqual(heard, ['running'], 'the grace counts from the reopening');
+    await timers.run(5000);
+    assert.deepEqual(heard, ['running', 'stopped']);
+    assert.ok(restores() > before, 'what it stored is read back');
+    await finish(own, ...subscriptions);
+  } finally {
+    timers.restore();
+  }
+});
+
+test('a turn whose stream dropped ends as soon as the event stream says it was cut', async () => {
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  const own = sseStream();
+  const requests = restartingBackend(() => false, subscriptions, own);
+  const ref = createRef<Handle>();
+  const { heard, onTurnRunningChange } = turnLog();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange }, ref);
+  await act(async () => {
+    void ref.current!.send('long task');
+    await settle();
+    own.send({ type: 'turn_started', turn_id: 't1' });
+    await settle(10);
+  });
+  await act(async () => {
+    own.fail();
+    await settle(10);
+  });
+  const before = requests.filter((r) => r.url === '/api/chat/sessions').length;
+  await act(async () => {
+    subscriptions[subscriptions.length - 1].send({ type: 'error', turn_id: 't1', reason: 'interrupted', content: 'Interrupted', relayed: true });
+    await settle(10);
+  });
+  assert.deepEqual(heard, ['running', 'failed']);
+  assert.ok(!stopShown());
+  assert.ok(requests.filter((r) => r.url === '/api/chat/sessions').length > before, 'its stored reply is read back');
+  await finish(own, ...subscriptions);
+});
+
 test('a relayed turn let go of while the page was hidden keeps its closed segments, and its replay reads back the rest in place', async () => {
   let visibility = 'visible';
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility });
