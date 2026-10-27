@@ -48,6 +48,23 @@ test('the utilities a host also defines (.flex, .hidden, .grid) apply inside the
   }
 });
 
+test("the user bubble's line breaks and word wrapping compile, inside the panel", () => {
+  for (const [name, prop, value] of [
+    ['whitespace-pre-wrap', 'white-space', 'pre-wrap'],
+    ['break-words', 'overflow-wrap', 'break-word'],
+  ]) {
+    const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
+    assert.ok(matching.length > 0, `.${name} is compiled`);
+    for (const rule of matching) {
+      for (const selector of rule.selectors) assert.ok(selector.includes(PANEL_SCOPE), `unscoped .${name}: ${selector}`);
+      assert.ok(
+        rule.nodes.some((node) => node.type === 'decl' && node.prop === prop && node.value === value),
+        `.${name} sets ${prop}: ${value}`,
+      );
+    }
+  }
+});
+
 test('no variable is declared on the host document, and the theme is declared on the panel root', () => {
   const documentRules = rules.filter((rule) => rule.selectors.some((selector) => /:root|:host|^\s*(html|body|\*)\b/.test(selector)));
   assert.deepEqual(
