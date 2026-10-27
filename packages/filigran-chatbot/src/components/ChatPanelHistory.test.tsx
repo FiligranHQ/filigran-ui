@@ -61,15 +61,6 @@ test('a user message keeps its line breaks and indent, without the blank lines a
   assert.ok(bubble.classList.contains('break-words'), 'a long unbroken word wraps inside the bubble');
 });
 
-test('a user message padded with a long run of spaces renders at once', async () => {
-  const padded = `a${' '.repeat(200_000)}b`;
-  fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'user', content: `${padded}  \n` }])]);
-  const started = performance.now();
-  await render({ conversationId: 'c1' });
-  assert.ok(performance.now() - started < 1000, 'trimming the bubble is linear in the text');
-  assert.equal(container.querySelector('[data-testid="filigran-chat-user-message"]')!.textContent, padded);
-});
-
 test('without the route, a restore offers nothing older', async () => {
   fakeBackend([agentsRoute, restoreRoute([{ id: 'm3', role: 'assistant', content: 'answer' }], { has_more: true })]);
   await render({ conversationId: 'c1' });

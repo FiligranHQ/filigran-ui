@@ -19,6 +19,7 @@ import type { TtsRoute } from '../utils/speech';
 import { answerMarkdownSources, artifactKey, splitAnswerMarkers, stripAnswerMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
 import { formatMessageTime } from '../utils/messageTime';
+import { userMessageText } from '../utils/userMessage';
 import {
   createScrollFollower,
   innerBoxScrollsUp,
@@ -484,10 +485,8 @@ const MessageRow = memo(
     // What the host shows of the text: also what is copied and read aloud.
     // A transform that throws shows the text as it came, never takes the thread down.
     const content = useMemo(() => askHost(transformMessageText, msg.content, msg) ?? msg.content, [transformMessageText, msg]);
-    // A user's bubble, and what its Copy takes: the text without the blank lines
-    // around it, its first line's indent kept. Trimmed in linear time: a regex
-    // `\s+$` backtracks quadratically over padded text.
-    const userText = useMemo(() => (isAssistant ? '' : content.trimEnd().replace(/^(?:[ \t]*\r?\n)+/, '')), [isAssistant, content]);
+    // A user's bubble, and what its Copy takes.
+    const userText = useMemo(() => (isAssistant ? '' : userMessageText(content)), [isAssistant, content]);
     const isEmpty = !content;
     const downRef = useRef<HTMLButtonElement>(null);
 
