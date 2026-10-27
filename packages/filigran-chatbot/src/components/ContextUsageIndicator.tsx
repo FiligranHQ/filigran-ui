@@ -146,7 +146,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
           <span className={`text-[0.8125rem] tabular-nums ${textColor}`}>{translate(t, '{percent}% full', { percent })}</span>
           {/* The tilde is load-bearing: these are char-derived estimates, and a
               bare "168k/200k" would read as a measured count. */}
-          <span className="text-[0.7rem] tabular-nums text-gray-400 dark:text-white/40 shrink-0">~{tokens}</span>
+          <span className="text-[0.7rem] tabular-nums chat-text-muted shrink-0">~{tokens}</span>
         </div>
 
         {/* One stacked bar over the whole window: the segments are the legend's

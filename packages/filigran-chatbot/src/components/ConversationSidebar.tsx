@@ -80,7 +80,7 @@ function readCollapsed(key: string): Set<string> {
 
 const iconButton =
   'p-1 rounded-md text-gray-400 dark:text-white/30 hover:bg-gray-200/60 dark:hover:bg-white/10 transition-colors disabled:opacity-40 disabled:pointer-events-none';
-const sectionLabel = 'text-[0.625rem] font-medium uppercase tracking-wide text-gray-400 dark:text-white/40';
+const sectionLabel = 'text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted';
 
 /**
  * Persistent conversation list for fullscreen mode, mirroring the XTM One web
@@ -184,7 +184,7 @@ export const ConversationSidebar = ({
 
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center gap-1 border-r border-gray-200 dark:border-white/10 px-2 py-3 shrink-0">
+      <div className="flex flex-col items-center gap-1 border-r chat-border px-2 py-3 shrink-0">
         <Tooltip title={t('Show conversations')}>
           <button
             type="button"
@@ -231,12 +231,12 @@ export const ConversationSidebar = ({
   );
 
   return (
-    <div className="w-64 shrink-0 flex flex-col border-r border-gray-200 dark:border-white/10">
+    <div className="w-64 shrink-0 flex flex-col border-r chat-border">
       <div className="flex items-center gap-1 px-3 py-3">
         <button
           type="button"
           onClick={() => onNewChat()}
-          className="flex-1 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-white/10 px-3 py-1.5 text-[0.8125rem] text-gray-700 dark:text-white/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
+          className="flex-1 flex items-center gap-2 rounded-lg border chat-border px-3 py-1.5 text-[0.8125rem] text-gray-700 dark:text-white/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
         >
           <EditIcon size={15} />
           {t('New conversation')}
@@ -258,7 +258,7 @@ export const ConversationSidebar = ({
       {conversations.length > SEARCH_THRESHOLD && (
         <div className="px-3 pb-2">
           <div className="relative">
-            <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/40" />
+            <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 chat-text-muted" />
             <input
               type="text"
               value={query}
@@ -268,7 +268,7 @@ export const ConversationSidebar = ({
               }}
               placeholder={t('Search conversations...')}
               aria-label={t('Search conversations...')}
-              className="w-full h-7 pl-7 pr-2 rounded-md bg-gray-100 dark:bg-white/[0.06] text-[0.75rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+              className="w-full h-7 pl-7 pr-2 rounded-md bg-gray-100 dark:bg-white/[0.06] text-[0.75rem] chat-text placeholder:text-gray-400 dark:placeholder:text-white/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
             />
           </div>
         </div>
@@ -346,16 +346,16 @@ export const ConversationSidebar = ({
               )}
             </DropZone>
             {q && grouped.groups.length === 0 && grouped.unfiled.length === 0 && (
-              <p className="px-3 py-2 text-[0.75rem] text-gray-400 dark:text-white/40">{t('No conversation matches')}</p>
+              <p className="px-3 py-2 text-[0.75rem] chat-text-muted">{t('No conversation matches')}</p>
             )}
           </>
         ) : (
           <>
             {!loading && conversations.length === 0 && (
-              <p className="px-3 py-2 text-[0.75rem] text-gray-400 dark:text-white/40">{t('No conversations yet')}</p>
+              <p className="px-3 py-2 text-[0.75rem] chat-text-muted">{t('No conversations yet')}</p>
             )}
             {conversations.length > 0 && filtered.length === 0 && (
-              <p className="px-3 py-2 text-[0.75rem] text-gray-400 dark:text-white/40">{t('No conversation matches')}</p>
+              <p className="px-3 py-2 text-[0.75rem] chat-text-muted">{t('No conversation matches')}</p>
             )}
             {filtered.map(renderRow)}
           </>
@@ -468,7 +468,7 @@ const NameField = ({
       onBlur={commit}
       placeholder={placeholder}
       aria-label={placeholder}
-      className="mx-2 mb-1 w-[calc(100%-1rem)] rounded-md bg-white dark:bg-white/10 px-2 py-1 text-[0.8125rem] text-gray-900 dark:text-white outline-hidden ring-1 ring-[var(--chat-accent)]"
+      className="mx-2 mb-1 w-[calc(100%-1rem)] rounded-md bg-white dark:bg-white/10 px-2 py-1 text-[0.8125rem] chat-text outline-hidden ring-1 ring-[var(--chat-accent)]"
     />
   );
 };
@@ -696,10 +696,10 @@ const ConversationRow = ({
             }}
             onBlur={onCommitRename}
             aria-label={t('Conversation title')}
-            className="w-full rounded-md bg-white dark:bg-white/10 px-1.5 py-0.5 text-[0.8125rem] text-gray-900 dark:text-white outline-hidden ring-1 ring-[var(--chat-accent)]"
+            className="w-full rounded-md bg-white dark:bg-white/10 px-1.5 py-0.5 text-[0.8125rem] chat-text outline-hidden ring-1 ring-[var(--chat-accent)]"
           />
         ) : (
-          <span className={`block truncate text-[0.8125rem] ${isActive ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-white/70'}`}>
+          <span className={`block truncate text-[0.8125rem] ${isActive ? 'chat-text' : 'text-gray-700 dark:text-white/70'}`}>
             {c.title || t('Untitled conversation')}
           </span>
         )}
@@ -744,7 +744,7 @@ const ConversationRow = ({
               </button>
               <Dropdown open={moveOpen} onClose={() => setMoveOpen(false)} anchorRef={moveAnchor} placement="bottom-end" width={220}>
                 <div className="py-1" onClick={(e) => e.stopPropagation()}>
-                  <p className="px-3 pb-1 pt-1.5 text-[0.625rem] font-medium uppercase tracking-wide text-gray-400 dark:text-white/40">
+                  <p className="px-3 pb-1 pt-1.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted">
                     {t('Move to workspace')}
                   </p>
                   {fileable.map((w) => (

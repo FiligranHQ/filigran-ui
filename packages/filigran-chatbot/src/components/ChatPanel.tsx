@@ -3,6 +3,7 @@ import type { ChatArtifact, ChatArtifactKind, ChatAttachment, ChatPanelHandle, C
 import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
 import { speakableText } from '../utils/speech';
 import { optInRoute } from '../utils/routes';
+import { themeVariables } from '../utils/theme';
 import { createTranslate } from '../i18n';
 import { feedbackBaseUrl } from '../utils/feedback';
 import { conversationReferencesUrl } from '../utils/conversationRefs';
@@ -154,6 +155,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     waitingMessages: waitingMessagesProp,
     renderWaitingPanel,
     fontFamily,
+    theme,
     onReady: onReadyProp,
     onBeforeSend: onBeforeSendProp,
     onHeldSendSettled: onHeldSendSettledProp,
@@ -895,6 +897,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     '--chat-accent-50': hexAlpha(accentColor, 0.5),
     '--chat-accent-dark': accentColor,
     ...(fontFamily ? { fontFamily } : {}),
+    ...themeVariables(theme),
   } as React.CSSProperties;
 
   // The restore merges a replayed turn's read-back through this, outside its deps.
@@ -1229,13 +1232,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     const base = 'filigran-chatbot';
     switch (mode) {
       case 'sidebar':
-        return `${base} fixed right-0 bottom-0 flex flex-col bg-white dark:bg-[#1e1e2e] border-l border-gray-200 dark:border-white/10 z-[1200]`;
+        return `${base} fixed right-0 bottom-0 flex flex-col chat-surface-raised border-l chat-border z-[1200]`;
       case 'floating':
-        return `${base} fixed bottom-5 right-5 flex flex-col bg-white dark:bg-[#1e1e2e] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border border-gray-200 dark:border-white/10`;
+        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border chat-border`;
       case 'fullscreen':
-        return `${base} fixed right-0 bottom-0 left-0 flex flex-col bg-gray-50 dark:bg-[#161622] z-[1400]`;
+        return `${base} fixed right-0 bottom-0 left-0 flex flex-col chat-surface z-[1400]`;
       case 'inline':
-        return `${base} relative flex flex-col h-full w-full min-h-0 bg-gray-50 dark:bg-[#161622]`;
+        return `${base} relative flex flex-col h-full w-full min-h-0 chat-surface`;
       default:
         return base;
     }
@@ -1371,7 +1374,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               <button
                 type="button"
                 onClick={retryRefusedRestore}
-                className="rounded-md border border-gray-200 dark:border-white/10 px-3 py-1 text-[0.75rem] font-medium text-gray-700 dark:text-white/80 transition-colors hover:bg-gray-100 dark:hover:bg-white/[0.06]"
+                className="rounded-md border chat-border px-3 py-1 text-[0.75rem] font-medium text-gray-700 dark:text-white/80 transition-colors hover:bg-gray-100 dark:hover:bg-white/[0.06]"
               >
                 {t('Retry')}
               </button>
@@ -1438,7 +1441,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           )}
           {readOnly ? (
             readOnlyNotice && (
-              <div className="px-4 py-3 border-t border-gray-200 dark:border-white/10 text-sm text-gray-500 dark:text-white/50">{readOnlyNotice}</div>
+              <div className="px-4 py-3 border-t chat-border text-sm text-gray-500 dark:text-white/50">{readOnlyNotice}</div>
             )
           ) : (
             <ChatInput

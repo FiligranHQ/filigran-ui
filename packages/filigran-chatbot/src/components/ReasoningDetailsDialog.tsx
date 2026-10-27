@@ -182,12 +182,12 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
               aria-modal="true"
               aria-label={t('Reasoning details')}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md max-h-full flex flex-col rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] shadow-[0_8px_32px_rgba(0,0,0,0.25)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+              className="w-full max-w-md max-h-full flex flex-col rounded-xl border chat-border chat-surface-raised shadow-[0_8px_32px_rgba(0,0,0,0.25)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
             >
-              <div className="px-4 pt-3.5 pb-2.5 border-b border-gray-200 dark:border-white/10">
+              <div className="px-4 pt-3.5 pb-2.5 border-b chat-border">
                 <div className="flex items-center gap-2">
                   <WrenchIcon size={15} className="text-[var(--chat-accent)]" />
-                  <span className="flex-1 text-[0.875rem] font-semibold text-gray-900 dark:text-white">{t('Reasoning details')}</span>
+                  <span className="flex-1 text-[0.875rem] font-semibold chat-text">{t('Reasoning details')}</span>
                   <button
                     ref={closeButtonRef}
                     type="button"

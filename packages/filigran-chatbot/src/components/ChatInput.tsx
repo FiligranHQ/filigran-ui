@@ -219,7 +219,7 @@ export const ChatInput = ({
 
   return (
     <div
-      className={`px-4 py-3 border-t border-gray-200 dark:border-white/10 ${mode === 'floating' ? 'rounded-b-xl' : ''}`}
+      className={`px-4 py-3 border-t chat-border ${mode === 'floating' ? 'rounded-b-xl' : ''}`}
       style={separatorColor ? { borderTopColor: separatorColor, borderTopWidth: 1 } : undefined}
       data-testid="filigran-chat-composer"
     >
@@ -236,7 +236,7 @@ export const ChatInput = ({
             {heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}
           </span>
           {onCancelHeld && (
-            <button type="button" onClick={onCancelHeld} className="shrink-0 text-gray-400 dark:text-white/40 hover:text-red-500">
+            <button type="button" onClick={onCancelHeld} className="shrink-0 chat-text-muted hover:text-red-500">
               {t('Cancel')}
             </button>
           )}
@@ -251,8 +251,8 @@ export const ChatInput = ({
                 f.uploadStatus === 'error'
                   ? 'border-red-300 dark:border-red-500/30 text-red-500 dark:text-red-400'
                   : f.uploadStatus === 'pending'
-                    ? 'border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/40'
-                    : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60'
+                    ? 'chat-border chat-text-muted'
+                    : 'chat-border text-gray-600 dark:text-white/60'
               }`}
             >
               {f.uploadStatus === 'pending' ? (
@@ -278,7 +278,7 @@ export const ChatInput = ({
           `relative` anchors the @ menu, which opens above the field. */}
       <div
         className={`relative flex items-end border rounded-xl px-2 py-1 transition-colors ${
-          dictation.listening ? 'border-red-500/50' : 'border-gray-200 dark:border-white/10 focus-within:border-[var(--chat-accent)]'
+          dictation.listening ? 'border-red-500/50' : 'chat-border focus-within:border-[var(--chat-accent)]'
         } ${isLoading ? 'filigran-chat-active-border' : ''}`}
       >
         {isFileManagementEnabled && (
@@ -317,7 +317,7 @@ export const ChatInput = ({
           {...mentionMenu.textareaAria}
           onPaste={onPaste}
           rows={1}
-          className="flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 filigran-chat-scrollable"
+          className="flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 chat-text placeholder:text-gray-400 dark:placeholder:text-white/30 filigran-chat-scrollable"
           style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}
         />
         <MentionMenu

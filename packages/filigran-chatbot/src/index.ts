@@ -21,6 +21,7 @@ export type {
   AgentStatusState,
   BackendType,
   ChatPanelProps,
+  ChatPanelTheme,
   ChatToggleButtonProps,
   ChatMessage,
   ChatMessagePersistedFeedback,

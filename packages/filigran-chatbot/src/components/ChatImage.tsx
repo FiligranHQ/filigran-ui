@@ -137,7 +137,7 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
   const displaySrc = needsAuth ? blobUrl : src;
 
   if (errored) {
-    return <p className="my-2 text-[0.75rem] italic text-gray-400 dark:text-white/40">{t('Image could not be loaded')}</p>;
+    return <p className="my-2 text-[0.75rem] italic chat-text-muted">{t('Image could not be loaded')}</p>;
   }
 
   if (!displaySrc) {

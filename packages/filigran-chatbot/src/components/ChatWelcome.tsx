@@ -55,7 +55,7 @@ export const ChatWelcome = ({
     */}
     <h2
       key={agentName ?? 'default'}
-      className="text-xl font-medium mb-1 text-center text-gray-900 dark:text-white"
+      className="text-xl font-medium mb-1 text-center chat-text"
       style={{ fontFamily: '"Geologica", sans-serif', animation: 'chat-fade-in 0.35s ease-out' }}
     >
       <Greeting firstName={firstName} agentName={agentName} t={t} />
@@ -78,7 +78,7 @@ export const ChatWelcome = ({
           // replaced by the new agent's own suggestions.
           <div aria-hidden className="space-y-1">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-8 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-100/50 dark:bg-white/[0.03] animate-pulse" />
+              <div key={i} className="h-8 rounded-lg border chat-border bg-gray-100/50 dark:bg-white/[0.03] animate-pulse" />
             ))}
           </div>
         ) : (
@@ -88,7 +88,7 @@ export const ChatWelcome = ({
               key={prompt}
               type="button"
               onClick={() => onPromptClick(prompt)}
-              className="w-full text-left text-[0.8125rem] text-gray-800 dark:text-white py-1.5 px-3 mb-1 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)]"
+              className="w-full text-left text-[0.8125rem] text-gray-800 dark:text-white py-1.5 px-3 mb-1 rounded-lg border chat-border bg-transparent transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)]"
             >
               {prompt}
             </button>

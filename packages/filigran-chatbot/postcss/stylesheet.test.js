@@ -94,3 +94,27 @@ test('every overlay the panel portals is mounted inside the panel root, where th
     assert.ok(readFileSync(join(srcDir, path), 'utf8').includes('findChatbotRoot('), `${path} portals outside the panel root`);
   }
 });
+
+test("each theme utility reads its host variable and falls back to the panel's own look, light and dark", () => {
+  // The utility, the variable it reads, and whether it has a dark default of its own.
+  const utilities = [
+    ['chat-surface', '--filigran-chat-surface', true],
+    ['chat-surface-raised', '--filigran-chat-surface-raised', true],
+    ['chat-header-surface', '--filigran-chat-header-background', false],
+    ['chat-text', '--filigran-chat-text', true],
+    ['chat-text-muted', '--filigran-chat-text-muted', true],
+    ['chat-border', '--filigran-chat-border', true],
+    ['chat-answer-text', '--filigran-chat-text-size', false],
+    ['chat-user-bubble', '--filigran-chat-user-background', false],
+    ['chat-code', '--filigran-chat-font-mono', false],
+    ['chat-code-block', '--filigran-chat-code-surface', true],
+    ['chat-code-inline', '--filigran-chat-code-surface', true],
+  ];
+  for (const [name, variable, darkDefault] of utilities) {
+    const own = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
+    const reads = (rule) => rule.nodes.some((node) => node.type === 'decl' && node.value.includes(`var(${variable},`));
+    const light = own.filter((rule) => !rule.selector.includes('.dark'));
+    assert.ok(light.some(reads), `.${name} reads ${variable} with a fallback`);
+    if (darkDefault) assert.ok(own.some((rule) => rule.selector.includes('.dark') && reads(rule)), `.${name} has a dark fallback`);
+  }
+});

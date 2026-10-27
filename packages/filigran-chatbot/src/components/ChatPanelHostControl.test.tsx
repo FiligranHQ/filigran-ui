@@ -785,3 +785,13 @@ test('under StrictMode, a send from the host’s mount effect is not dropped by 
     strictContainer.remove();
   }
 });
+
+test("the host's theme is set on the panel root, where every part of the panel reads it", async () => {
+  fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'user', content: 'Hello' }])]);
+  await render({ conversationId: 'c1', theme: { surface: 'rgb(1, 2, 3)', userBackground: 'transparent' } });
+  const root = container.querySelector<HTMLElement>('[data-testid="filigran-chat-panel"]')!;
+  assert.equal(root.style.getPropertyValue('--filigran-chat-surface'), 'rgb(1, 2, 3)');
+  assert.equal(root.style.getPropertyValue('--filigran-chat-user-background'), 'transparent');
+  assert.equal(root.style.getPropertyValue('--filigran-chat-text'), '', 'an entry not given keeps the panel’s own');
+  assert.ok(container.querySelector('[data-testid="filigran-chat-user-message"]')!.classList.contains('chat-user-bubble'));
+});

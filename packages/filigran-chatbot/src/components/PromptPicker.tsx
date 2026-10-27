@@ -56,7 +56,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
       </Tooltip>
 
       <Dropdown open={open} onClose={close} anchorRef={anchorRef} width={280}>
-        <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase text-gray-400 dark:text-white/40">
+        <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted">
           {t('Insert prompt template')}
         </span>
 
@@ -72,13 +72,13 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
               }}
               placeholder={t('Search prompts...')}
               aria-label={t('Search prompts...')}
-              className="w-full h-7 px-2 rounded-md bg-gray-100 dark:bg-white/[0.06] text-[0.75rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+              className="w-full h-7 px-2 rounded-md bg-gray-100 dark:bg-white/[0.06] text-[0.75rem] chat-text placeholder:text-gray-400 dark:placeholder:text-white/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
             />
           </div>
         )}
 
         <div className="max-h-[240px] overflow-y-auto filigran-chat-scrollable">
-          {filtered.length === 0 && <div className="px-4 py-3 text-[0.75rem] text-gray-400 dark:text-white/40">{t('No prompt matches')}</div>}
+          {filtered.length === 0 && <div className="px-4 py-3 text-[0.75rem] chat-text-muted">{t('No prompt matches')}</div>}
           {filtered.map((p) => (
             <button
               key={p.id}
@@ -89,7 +89,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
               }}
               className="w-full px-4 py-1.5 text-left hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
             >
-              <div className="text-[0.8125rem] text-gray-900 dark:text-white truncate">{p.title}</div>
+              <div className="text-[0.8125rem] chat-text truncate">{p.title}</div>
               {p.description && <div className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">{p.description}</div>}
             </button>
           ))}

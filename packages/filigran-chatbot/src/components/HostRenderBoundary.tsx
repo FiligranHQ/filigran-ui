@@ -37,5 +37,5 @@ export function HostRendered({ draw }: { draw: () => ReactNode }) {
 
 /** What shows in place of a host's rendering that failed. */
 export function HostRenderFallback({ t }: { t: (key: string) => string }) {
-  return <p className="pl-1 text-[0.75rem] italic text-gray-400 dark:text-white/40">{t('This item could not be loaded.')}</p>;
+  return <p className="pl-1 text-[0.75rem] italic chat-text-muted">{t('This item could not be loaded.')}</p>;
 }
