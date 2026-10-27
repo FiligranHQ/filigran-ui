@@ -282,6 +282,16 @@ function mergeIntoTurn(prev: ChatMessage[], restored: ChatMessage[], turnIds: Re
 }
 
 /**
+ * *prev* with user message *message* added while a turn runs: before the
+ * answer the turn is still writing (*openId*), which is where the backend
+ * stores it and where it reads back, else at the end.
+ */
+export function withUserMessageDuringTurn(prev: ChatMessage[], message: ChatMessage, openId: string | null): ChatMessage[] {
+  const at = openId === null ? -1 : prev.findIndex((m) => m.id === openId);
+  return at < 0 ? [...prev, message] : [...prev.slice(0, at), message, ...prev.slice(at)];
+}
+
+/**
  * *prev* with the conversation read back (*restored*) merged in, for a
  * read-back that waited for a turn to end. A stored message already on
  * screen - by server id, else an unsaved one by role and text - stays where
@@ -1411,7 +1421,7 @@ export function useChat({
       { id: randomId(), role: 'user', content: shown, timestamp: new Date(), files: files.length > 0 ? files : undefined },
       content,
     );
-    setMessages((prev) => [...prev, optimistic]);
+    setMessages((prev) => withUserMessageDuringTurn(prev, optimistic, liveRendererRef.current?.openAnswerId() ?? null));
     const fileIds = files.filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
     // Why the backend refused it, when it says.
     let detail: string | null = null;
@@ -1809,6 +1819,8 @@ export function useChat({
       deltas,
       apply,
       currentAssistantId: () => currentAssistantId,
+      /** The answer this turn is still writing; null between segments and once it is done. */
+      openAnswerId: () => (doneReceived ? null : currentAssistantId),
       accumulated: () => accumulated,
       doneReceived: () => doneReceived,
       segmentIds: () => segmentIds,
@@ -1895,7 +1907,7 @@ export function useChat({
           if (own >= 0 && prev.length - own <= 3) {
             return prev.map((m, i) => (i === own ? { ...m, serverId: relayedMessage.serverId, raw: relayedMessage.raw } : m));
           }
-          return [...prev, relayedMessage];
+          return withUserMessageDuringTurn(prev, relayedMessage, liveRendererRef.current?.openAnswerId() ?? null);
         });
         return true;
       }

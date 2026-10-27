@@ -231,6 +231,105 @@ test('a steer sent as the answer streams keeps the text it was sent with, and it
   await finish(turn, events);
 });
 
+/** The thread as shown, top to bottom: `user:` or `assistant:` and each message's text. */
+function threadOrder(): string[] {
+  return [...container.querySelectorAll('[data-testid="filigran-chat-user-message"], [data-testid="filigran-chat-assistant-message"]')].map(
+    (e) => `${e.getAttribute('data-testid') === 'filigran-chat-user-message' ? 'user' : 'assistant'}: ${e.textContent?.trim() ?? ''}`,
+  );
+}
+
+test('a message sent while the answer is written shows above that answer, where the backend stores it', async () => {
+  const turn = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'steered', turn_id: 't1' }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle();
+  });
+  await act(async () => {
+    turn.send({ type: 'turn_started', turn_id: 't1' });
+    turn.send({ type: 'stream', content: 'Looking' });
+    await settle();
+  });
+  await act(async () => {
+    void ref.current!.send('and also');
+    await settle();
+  });
+  await act(async () => {
+    turn.send({ type: 'stream', content: ' into both' });
+    turn.send({ type: 'done', content: 'Looking into both', message_id: 'a1' });
+    await settle();
+  });
+  assert.deepEqual(threadOrder(), ['user: first', 'user: and also', 'assistant: Looking into both']);
+  await finish(turn);
+});
+
+test('a message sent between two segments of the answer shows after the first one', async () => {
+  const turn = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'steered', turn_id: 't1' }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('first');
+    await settle();
+  });
+  await act(async () => {
+    turn.send({ type: 'turn_started', turn_id: 't1' });
+    turn.send({ type: 'stream', content: 'Part one' });
+    turn.send({ type: 'done', content: 'Part one', intermediate: true });
+    await settle();
+  });
+  await act(async () => {
+    void ref.current!.send('and also');
+    await settle();
+  });
+  await act(async () => {
+    turn.send({ type: 'stream', content: 'Part two' });
+    turn.send({ type: 'done', content: 'Part two' });
+    await settle();
+  });
+  assert.deepEqual(threadOrder(), ['user: first', 'assistant: Part one', 'user: and also', 'assistant: Part two']);
+  await finish(turn);
+});
+
+test("another tab's message, relayed while a relayed answer is written, shows above that answer", async () => {
+  const events = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
+  await act(async () => {
+    events.send({ type: 'user_message', message: { id: 'm1', role: 'user', content: 'first' } });
+    events.send({ type: 'thinking', turn_id: 't9' });
+    events.send({ type: 'stream', turn_id: 't9', content: 'Looking' });
+    await settle(10);
+  });
+  await act(async () => {
+    events.send({ type: 'user_message', message: { id: 'm2', role: 'user', content: 'and also' } });
+    await settle(10);
+  });
+  await act(async () => {
+    events.send({ type: 'done', turn_id: 't9', content: 'Looking into both', message_id: 'a1' });
+    await settle(10);
+  });
+  assert.deepEqual(threadOrder(), ['user: first', 'user: and also', 'assistant: Looking into both']);
+  await finish(events);
+});
+
 test('a stopped answer says so, even when nothing was written yet', async () => {
   const stream = sseStream();
   fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);

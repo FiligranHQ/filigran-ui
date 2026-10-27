@@ -1069,10 +1069,9 @@ export const ChatMessages = ({
   }, [conversationId, userMessageCount, spokenStillShown, stopSpeech]);
 
   // The streaming response is the LAST ASSISTANT message — not necessarily
-  // the last message overall: a mid-run steering send appends an optimistic
-  // user bubble after the assistant message that is still streaming. Gating
-  // on `messages.length - 1` would then drop the live cursor / ChatThinking
-  // state the moment the user steers.
+  // the last message overall: a message sent between two segments of the
+  // turn comes after the last one written. Gating on `messages.length - 1`
+  // would then drop the live cursor / ChatThinking state.
   let streamingMessageId: string | null = null;
   if (isLoading) {
     for (let i = messages.length - 1; i >= 0; i--) {
