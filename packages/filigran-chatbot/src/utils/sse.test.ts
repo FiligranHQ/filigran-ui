@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { readSseEvents } from './sse.ts';
+import { readSseEvents, SseStreamSilentError } from './sse.ts';
 
 function body(...chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -52,4 +52,57 @@ test('returning false stops the read and cancels the body', async () => {
   });
   assert.deepEqual(await read(stream, 1), [{ n: 1 }]);
   assert.equal(cancelled, true);
+});
+
+/** A body that sends *chunks* one by one, *gapMs* apart, and stays open. */
+function paced(gapMs: number, ...chunks: string[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    async start(controller) {
+      for (const chunk of chunks) {
+        await new Promise((resolve) => setTimeout(resolve, gapMs));
+        controller.enqueue(encoder.encode(chunk));
+      }
+    },
+  });
+}
+
+test('a body its server keeps alive that falls silent is given up as dead', async () => {
+  const seen: Record<string, unknown>[] = [];
+  await assert.rejects(
+    readSseEvents(paced(0, ': keepalive\n\n', 'data: {"n":1}\n\n'), (evt) => void seen.push(evt), { idleTimeoutMs: 30 }),
+    SseStreamSilentError,
+  );
+  assert.deepEqual(seen, [{ n: 1 }]);
+});
+
+test('a body that never sent a keep-alive is not timed out, however long it stays silent', async () => {
+  const seen: Record<string, unknown>[] = [];
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      controller.enqueue(encoder.encode('data: {"n":1}\n\n'));
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      controller.enqueue(encoder.encode('data: {"n":2}\n\n'));
+      controller.close();
+    },
+  });
+  await readSseEvents(stream, (evt) => void seen.push(evt), { idleTimeoutMs: 30 });
+  assert.deepEqual(seen, [{ n: 1 }, { n: 2 }]);
+});
+
+test('keep-alives within the timeout keep the body read', async () => {
+  const seen: Record<string, unknown>[] = [];
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      for (const chunk of [': keepalive\n\n', ': keepalive\n\n', ': keepalive\n\n', 'data: {"n":1}\n\n']) {
+        await new Promise((resolve) => setTimeout(resolve, 15));
+        controller.enqueue(encoder.encode(chunk));
+      }
+      controller.close();
+    },
+  });
+  await readSseEvents(stream, (evt) => void seen.push(evt), { idleTimeoutMs: 60 });
+  assert.deepEqual(seen, [{ n: 1 }]);
 });

@@ -113,6 +113,11 @@ const APPROVAL_PRESENCE_INTERVAL_MS = 600000;
 const HANDOVER_BACKSTOP_MS = RESUME_WATCH_MS;
 /** How long Stop waits for the backend to end a cancelled turn before letting go of it. */
 const CANCEL_GRACE_MS = 10000;
+/**
+ * How long a stream the server keeps alive (a `: keepalive` every 15 s) may
+ * stay silent before it is taken for dead and dropped (`readSseEvents`).
+ */
+const SSE_IDLE_TIMEOUT_MS = 45000;
 /** Reconnection backoff of the conversation's event stream. */
 const EVENTS_RETRY_BASE_MS = 1000;
 const EVENTS_RETRY_MAX_MS = 30000;
@@ -2324,7 +2329,7 @@ export function useChat({
           // A frame that could not be applied is skipped, not fatal.
           return true;
         }
-      });
+      }, { idleTimeoutMs: SSE_IDLE_TIMEOUT_MS });
       turn.deltas.flush();
       // Ended without saying the turn is over (a proxy's idle timeout, a
       // server restart): the turn may well run on.
@@ -2967,7 +2972,7 @@ export function useChat({
           } catch {
             // A frame that could not be applied is skipped, not fatal.
           }
-        });
+        }, { idleTimeoutMs: SSE_IDLE_TIMEOUT_MS });
       } catch {
         // Dropped or aborted: reconnected below unless the effect is gone.
       } finally {
