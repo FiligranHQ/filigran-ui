@@ -485,8 +485,9 @@ const MessageRow = memo(
     // A transform that throws shows the text as it came, never takes the thread down.
     const content = useMemo(() => askHost(transformMessageText, msg.content, msg) ?? msg.content, [transformMessageText, msg]);
     // A user's bubble, and what its Copy takes: the text without the blank lines
-    // around it, its first line's indent kept.
-    const userText = useMemo(() => content.replace(/^(?:[ \t]*\r?\n)+|\s+$/g, ''), [content]);
+    // around it, its first line's indent kept. Trimmed in linear time: a regex
+    // `\s+$` backtracks quadratically over padded text.
+    const userText = useMemo(() => (isAssistant ? '' : content.trimEnd().replace(/^(?:[ \t]*\r?\n)+/, '')), [isAssistant, content]);
     const isEmpty = !content;
     const downRef = useRef<HTMLButtonElement>(null);
 
