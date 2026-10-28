@@ -15,6 +15,10 @@ This file starts at 3.10.0; earlier releases are on the
 - An empty workspace's hint shows the glyph of its New conversation button,
   where it said `+`, a button the list does not have. A host translating the
   hint keeps `{icon}` where the glyph goes.
+- A long conversation shown inline or fullscreen no longer lets the page
+  scroll the panel out of view: each message's screen-reader time, positioned
+  outside the transcript's scroll, laid the page out as tall as the whole
+  conversation.
 
 ## 3.16.0 — 2026-10-28
 
