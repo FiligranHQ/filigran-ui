@@ -148,9 +148,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
                   <span className="font-mono text-gray-700 dark:text-white/75">{name}</span>
                   {schema.description && <span className="text-gray-500 dark:text-white/45">— {schema.description}</span>}
                 </div>
-                <pre className="mt-0.5 whitespace-pre-wrap break-all font-mono chat-text-secondary-60">
-                  {formatValue(proposal.arguments?.[name])}
-                </pre>
+                <pre className="mt-0.5 whitespace-pre-wrap break-all font-mono chat-text-secondary-60">{formatValue(proposal.arguments?.[name])}</pre>
               </div>
             );
           })}

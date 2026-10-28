@@ -166,9 +166,7 @@ const MARKDOWN_COMPONENTS: Components = {
     </div>
   ),
   tr: ({ children }) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02]">{children}</tr>,
-  th: ({ children }) => (
-    <th className="px-3 py-2 text-left font-semibold chat-surface-subtle border-b chat-border chat-text">{children}</th>
-  ),
+  th: ({ children }) => <th className="px-3 py-2 text-left font-semibold chat-surface-subtle border-b chat-border chat-text">{children}</th>,
   td: ({ children }) => <td className="px-3 py-2 border-b chat-border text-gray-700 dark:text-white/80">{children}</td>,
 };
 

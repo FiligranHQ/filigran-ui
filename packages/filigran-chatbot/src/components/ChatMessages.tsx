@@ -542,10 +542,7 @@ const MessageRow = memo(
     // is still in flight (no server `fileId` yet) or when no download handler is
     // wired by the host.
     const renderFileChip = (name: string, key: string) => (
-      <span
-        key={key}
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border text-[0.7rem] chat-text-secondary-60"
-      >
+      <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border text-[0.7rem] chat-text-secondary-60">
         <FileIcon size={14} />
         {name}
       </span>

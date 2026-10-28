@@ -130,9 +130,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
           aria-label={muted ? t('Unmute microphone') : t('Mute microphone')}
           aria-pressed={muted}
           className={`${roundButton} ${
-            muted
-              ? 'border-red-400/40 bg-red-500/10 text-red-500'
-              : 'chat-border text-gray-600 dark:text-white/70 chat-surface-hover-soft'
+            muted ? 'border-red-400/40 bg-red-500/10 text-red-500' : 'chat-border text-gray-600 dark:text-white/70 chat-surface-hover-soft'
           }`}
         >
           {muted ? <MicOffIcon size={20} /> : <MicIcon size={20} />}

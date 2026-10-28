@@ -338,9 +338,7 @@ export const ChatInput = ({
               aria-label={t('Dictate a message')}
               aria-pressed={dictation.listening}
               className={`relative w-8 h-8 flex items-center justify-center shrink-0 rounded-lg mr-0.5 transition-colors ${
-                dictation.listening
-                  ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20'
-                  : 'text-gray-400 dark:text-white/30 chat-surface-hover'
+                dictation.listening ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'text-gray-400 dark:text-white/30 chat-surface-hover'
               }`}
             >
               {dictation.listening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}

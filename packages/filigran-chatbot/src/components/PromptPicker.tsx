@@ -44,9 +44,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
           aria-haspopup="menu"
           aria-expanded={open}
           className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
-            open
-              ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10'
-              : 'text-gray-400 dark:text-white/30 chat-surface-hover'
+            open ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10' : 'text-gray-400 dark:text-white/30 chat-surface-hover'
           }`}
         >
           <SparklesIcon size={15} />
