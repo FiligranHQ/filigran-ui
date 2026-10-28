@@ -142,16 +142,16 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
 
   if (!displaySrc) {
     return (
-      <span className="my-3 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 dark:border-white/10">
+      <span className="my-3 inline-flex items-center gap-2 rounded-lg border chat-border px-3 py-2">
         <ImageIcon size={14} className="shrink-0 animate-pulse text-[var(--chat-accent)]" />
-        <span className="text-[0.7rem] text-gray-500 dark:text-white/40">{t('Loading image…')}</span>
+        <span className="text-[0.7rem] chat-text-muted-500-40">{t('Loading image…')}</span>
       </span>
     );
   }
 
   return (
     <>
-      <span className="group/img relative my-3 inline-block max-w-full rounded-lg border border-gray-200 p-1 transition-colors hover:border-[var(--chat-accent)]/40 dark:border-white/10">
+      <span className="group/img relative my-3 inline-block max-w-full rounded-lg border chat-border p-1 transition-colors hover:border-[var(--chat-accent)]/40">
         <img
           src={displaySrc}
           alt={alt}

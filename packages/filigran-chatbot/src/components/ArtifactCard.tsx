@@ -16,7 +16,7 @@ const KIND_ICONS: Record<ChatArtifactKind, typeof PresentationIcon> = {
 };
 
 const ACTION =
-  'inline-flex items-center gap-1 rounded-md border chat-border px-2 py-1 text-[0.7rem] chat-text-secondary-70 transition-colors hover:border-[var(--chat-accent)] hover:text-[var(--chat-accent)] disabled:opacity-50 disabled:cursor-default outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
+  'inline-flex items-center gap-1 rounded-md border chat-border px-2 py-1 text-[0.7rem] chat-text-secondary-700-70 transition-colors hover:border-[var(--chat-accent)] hover:text-[var(--chat-accent)] disabled:opacity-50 disabled:cursor-default outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
 
 interface ArtifactCardProps {
   artifact: ChatArtifact;

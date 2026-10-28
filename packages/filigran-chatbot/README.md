@@ -1229,10 +1229,10 @@ both. The same variables may be set in CSS on an ancestor instead.
 | `surfaceHover`     | `--filigran-chat-surface-hover`     | A row or a button under the pointer |
 | `headerBackground` | `--filigran-chat-header-background` | The header's background image (`none` for the surface alone) |
 | `text`             | `--filigran-chat-text`              | Text |
-| `textMuted`        | `--filigran-chat-text-muted`        | Times, labels and hints |
-| `textSecondary`    | `--filigran-chat-text-secondary`    | Table cells, chips, list items, notices |
+| `textMuted`        | `--filigran-chat-text-muted`        | Times, labels, hints and placeholders |
+| `textSecondary`    | `--filigran-chat-text-secondary`    | Table cells, chips, descriptions, notices |
 | `border`           | `--filigran-chat-border`            | Dividers and outlines |
-| `textSize`         | `--filigran-chat-text-size`         | An answer's prose; its headings in proportion |
+| `textSize`         | `--filigran-chat-text-size`         | An answer's prose, its headings in proportion, and a user's message unless `userTextSize` |
 | `userBackground`, `userText`, `userRadius`, `userPadding`, `userTextSize` | `--filigran-chat-user-*` | A user's message |
 | `fontMono`, `codeSize`, `codeSurface` | `--filigran-chat-font-mono`, `-code-size`, `-code-surface` | Code, in a block or inline |
 

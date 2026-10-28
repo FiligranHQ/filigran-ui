@@ -61,9 +61,7 @@ export const ChatWelcome = ({
       <Greeting firstName={firstName} agentName={agentName} t={t} />
     </h2>
 
-    {agentDescription && (
-      <p className="mb-5 max-w-[320px] text-center text-[0.75rem] leading-5 text-gray-500 dark:text-white/40">{agentDescription}</p>
-    )}
+    {agentDescription && <p className="mb-5 max-w-[320px] text-center text-[0.75rem] leading-5 chat-text-muted-500-40">{agentDescription}</p>}
     {!agentDescription && <span className="mb-5" />}
 
     {/* A host that passes no suggestions gets no section: the heading on its own
@@ -78,7 +76,7 @@ export const ChatWelcome = ({
           // replaced by the new agent's own suggestions.
           <div aria-hidden className="space-y-1">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-8 rounded-lg border chat-border bg-gray-100/50 dark:bg-white/[0.03] animate-pulse" />
+              <div key={i} className="h-8 rounded-lg border chat-border chat-surface-subtle-100a50-3 animate-pulse" />
             ))}
           </div>
         ) : (
@@ -88,7 +86,7 @@ export const ChatWelcome = ({
               key={prompt}
               type="button"
               onClick={() => onPromptClick(prompt)}
-              className="w-full text-left text-[0.8125rem] text-gray-800 dark:text-white py-1.5 px-3 mb-1 rounded-lg border chat-border bg-transparent transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)]"
+              className="w-full text-left text-[0.8125rem] chat-text-800-100 py-1.5 px-3 mb-1 rounded-lg border chat-border bg-transparent transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)]"
             >
               {prompt}
             </button>

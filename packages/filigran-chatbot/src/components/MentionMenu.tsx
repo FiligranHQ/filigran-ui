@@ -64,7 +64,7 @@ export const MentionMenu = ({ view, items, activeIndex, listboxId, optionId, onH
                   onMouseMove={() => {
                     if (!active) onHover(i);
                   }}
-                  className={`flex items-center gap-2.5 px-4 py-1.5 cursor-pointer transition-colors ${active ? 'bg-gray-100 dark:bg-white/10' : ''}`}
+                  className={`flex items-center gap-2.5 px-4 py-1.5 cursor-pointer transition-colors ${active ? 'chat-surface-subtle-100-10' : ''}`}
                 >
                   <span className="shrink-0 text-[var(--chat-accent)]">
                     {item.type === 'agent' ? <BotIcon size={14} /> : <MessageSquareIcon size={14} />}
@@ -72,12 +72,12 @@ export const MentionMenu = ({ view, items, activeIndex, listboxId, optionId, onH
                   {item.type === 'agent' ? (
                     <span className="flex flex-col min-w-0 flex-1">
                       <span className="text-[0.8125rem] chat-text truncate">{item.mention.name}</span>
-                      <span className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">@{item.mention.key}</span>
+                      <span className="text-[0.7rem] chat-text-muted-500-40 truncate">@{item.mention.key}</span>
                     </span>
                   ) : (
                     <span className="flex flex-col min-w-0 flex-1">
                       <span className="text-[0.8125rem] chat-text truncate">{item.candidate.title || t('Untitled conversation')}</span>
-                      <span className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">
+                      <span className="text-[0.7rem] chat-text-muted-500-40 truncate">
                         @{item.candidate.key}
                         {!item.candidate.isOwn && ` · ${t('Shared with you')}`}
                       </span>

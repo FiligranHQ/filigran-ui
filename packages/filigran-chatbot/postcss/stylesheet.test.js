@@ -95,40 +95,54 @@ test('every overlay the panel portals is mounted inside the panel root, where th
   }
 });
 
-test("each theme utility reads its host variable and falls back to the panel's own look, light and dark", () => {
-  // The utility, the variable it reads, and whether it has a dark default of its own.
-  const utilities = [
-    ['chat-surface', '--filigran-chat-surface', true],
-    ['chat-surface-raised', '--filigran-chat-surface-raised', true],
-    ['chat-menu-surface', '--filigran-chat-surface-raised', true],
-    ['chat-surface-subtle', '--filigran-chat-surface-subtle', true],
-    ['chat-surface-subtle-strong', '--filigran-chat-surface-subtle', true],
-    ['chat-surface-hover', '--filigran-chat-surface-hover', true],
-    ['chat-surface-hover-soft', '--filigran-chat-surface-hover', true],
-    ['chat-header-surface', '--filigran-chat-header-background', false],
-    ['chat-text', '--filigran-chat-text', true],
-    ['chat-text-muted', '--filigran-chat-text-muted', true],
-    ['chat-text-secondary', '--filigran-chat-text-secondary', true],
-    ['chat-text-secondary-60', '--filigran-chat-text-secondary', true],
-    ['chat-text-secondary-70', '--filigran-chat-text-secondary', true],
-    ['chat-border', '--filigran-chat-border', true],
-    ['chat-answer-text', '--filigran-chat-text-size', false],
-    ['chat-user-bubble', '--filigran-chat-user-background', false],
-    ['chat-code', '--filigran-chat-font-mono', false],
-    ['chat-code-block', '--filigran-chat-code-surface', true],
-    ['chat-code-inline', '--filigran-chat-code-surface', true],
-  ];
-  for (const [name, variable, darkDefault] of utilities) {
-    const own = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
-    const reads = (rule) => rule.nodes.some((node) => node.type === 'decl' && node.value.includes(`var(${variable},`));
-    const light = own.filter((rule) => !rule.selector.includes('.dark'));
-    assert.ok(light.some(reads), `.${name} reads ${variable} with a fallback`);
-    if (darkDefault) {
-      const dark = own.filter((rule) => rule.selector.includes('.dark') && reads(rule));
-      assert.ok(dark.length > 0, `.${name} has a dark fallback`);
-      // As the `dark:` classes it replaces did, the dark fallback outranks a
-      // plain `hover:` or `focus-within:` colour on the same element.
-      for (const rule of dark) assert.ok(rule.selector.includes(`.${name}.${name}`), `.${name}'s dark rule outranks a variant: ${rule.selector}`);
-    }
+const SRC = fileURLToPath(new URL('../src/', import.meta.url));
+/** The source files of the panel, tests left out. */
+function sourceFiles(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return sourceFiles(path);
+    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [path] : [];
+  });
+}
+const declarations = rules.flatMap((rule) => rule.nodes.filter((node) => node.type === 'decl'));
+
+test("every theme entry is read by a rule, with the panel's own look to fall back to", () => {
+  const variables = [...readFileSync(join(SRC, 'utils/theme.ts'), 'utf8').matchAll(/'(--filigran-chat-[a-z-]+)'/g)].map((m) => m[1]);
+  assert.ok(variables.length > 10, `found only ${variables.length} theme variables`);
+  for (const variable of variables) {
+    assert.ok(
+      declarations.some((decl) => decl.value.includes(`var(${variable},`)),
+      `${variable} is read by no rule, or with no fallback`,
+    );
+  }
+});
+
+test('every chat-* class the components use is compiled', () => {
+  const used = new Set(
+    sourceFiles(SRC).flatMap((file) => [...readFileSync(file, 'utf8').matchAll(/(?<![\w[-])chat-[a-z0-9-]+(?![\w-])/g)].map((m) => m[0])),
+  );
+  // Keyframe names (an inline `animation`) are no classes.
+  for (const [, name] of readFileSync(SOURCE, 'utf8').matchAll(/@keyframes (chat-[a-z0-9-]+)/g)) used.delete(name);
+  assert.ok(used.size > 20, `found only ${used.size} chat-* classes`);
+  // Behind a variant (`hover:chat-x`), the class is escaped: `.hover\\:chat-x:hover`.
+  const compiled = (selector, name) => hasClass(selector, name) || new RegExp(`\\\\:${name}(?![\\w\\\\-])`).test(selector);
+  const missing = [...used].filter((name) => !rules.some((rule) => rule.selectors.some((selector) => compiled(selector, name))));
+  assert.deepEqual(missing, []);
+});
+
+test("every default of the panel's own look is declared for both modes on the panel root", () => {
+  const declared = (match) =>
+    new Set(
+      rules
+        .filter((rule) => rule.selectors.some(match))
+        .flatMap((rule) => rule.nodes.filter((node) => node.type === 'decl').map((node) => node.prop)),
+    );
+  const light = declared((selector) => /^\.filigran-chatbot$/.test(selector.trim()));
+  const dark = declared((selector) => /^\.dark \.filigran-chatbot$/.test(selector.trim()));
+  const read = new Set(declarations.flatMap((decl) => [...decl.value.matchAll(/var\((--chat-default-[a-z0-9-]+)/g)].map((m) => m[1])));
+  assert.ok(read.size > 20, `found only ${read.size} defaults read`);
+  for (const token of read) {
+    assert.ok(light.has(token), `${token} has no light default`);
+    assert.ok(dark.has(token), `${token} has no dark default`);
   }
 });

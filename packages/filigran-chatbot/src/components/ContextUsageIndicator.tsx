@@ -66,11 +66,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
   const compacting = ratio >= COMPACTION_RATIO;
 
   const ringColor = pruning ? 'text-red-500' : compacting ? 'text-amber-500' : 'text-[var(--chat-accent)]';
-  const textColor = pruning
-    ? 'text-red-500 dark:text-red-400'
-    : compacting
-      ? 'text-amber-600 dark:text-amber-400'
-      : 'text-gray-400 dark:text-white/30';
+  const textColor = pruning ? 'text-red-500 dark:text-red-400' : compacting ? 'text-amber-600 dark:text-amber-400' : 'chat-text-muted-400-30';
 
   const percent = Math.round(ratio * 100);
   const counts = `${compactCount(used)}/${compactCount(limit)}`;
@@ -135,7 +131,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
           aria-label={`${summary} (${percent}%)`}
           aria-haspopup="dialog"
           aria-expanded={open}
-          className="flex items-center rounded-md px-1 -mx-1 py-0.5 transition-colors chat-surface-hover"
+          className="flex items-center rounded-md px-1 -mx-1 py-0.5 transition-colors hover:chat-surface-hover"
         >
           {gauge}
         </button>
@@ -153,7 +149,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
             own colours, so proportions are readable without matching numbers to
             rows. The trailing gap is the headroom left. */}
         <div className="px-3.5 pb-2.5 pt-1.5">
-          <span className="flex h-1.5 w-full gap-px rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+          <span className="flex h-1.5 w-full gap-px rounded-full chat-surface-subtle-200-10 overflow-hidden">
             {rows.map((row) => (
               <span
                 key={row.field}
@@ -178,10 +174,8 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
                   pill, which turns the swatches into dots that read as bullets
                   rather than as keys to the bar's segments. */}
               <span className="h-2 w-2 shrink-0" style={{ backgroundColor: row.color, borderRadius: 2 }} aria-hidden="true" />
-              <span className="text-[0.75rem] chat-text-secondary-70 truncate">{row.label(t)}</span>
-              <span className="ml-auto text-[0.7rem] tabular-nums text-gray-500 dark:text-white/40 shrink-0">
-                {compactCount(breakdown?.[row.field] ?? 0)}
-              </span>
+              <span className="text-[0.75rem] chat-text-secondary-700-70 truncate">{row.label(t)}</span>
+              <span className="ml-auto text-[0.7rem] tabular-nums chat-text-muted-500-40 shrink-0">{compactCount(breakdown?.[row.field] ?? 0)}</span>
             </div>
           ))}
         </div>

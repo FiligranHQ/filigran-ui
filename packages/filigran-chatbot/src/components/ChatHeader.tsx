@@ -142,14 +142,14 @@ export const ChatHeader = ({
           ref={agentAnchorRef}
           type="button"
           onClick={onAgentMenuToggle}
-          className="flex max-w-full items-center gap-1.5 text-sm font-semibold chat-text px-2 py-1 rounded-lg chat-surface-hover transition-colors"
+          className="flex max-w-full items-center gap-1.5 text-sm font-semibold chat-text px-2 py-1 rounded-lg hover:chat-surface-hover transition-colors"
         >
           <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
           <span className="min-w-0 truncate">{agentName}</span>
-          <ChevronDownIcon size={16} className="shrink-0 text-gray-400 dark:text-white/30" />
+          <ChevronDownIcon size={16} className="shrink-0 chat-text-muted-400-30" />
         </button>
         {transferredFrom && (
-          <div className="pl-10 pr-2 text-[0.6rem] font-normal text-gray-400 dark:text-white/30">
+          <div className="pl-10 pr-2 text-[0.6rem] font-normal chat-text-muted-400-30">
             {translate(t, 'Transferred from {agent}', { agent: transferredFrom })}
           </div>
         )}
@@ -175,7 +175,7 @@ export const ChatHeader = ({
         {agents.length === 0 && !agentsLoading && agentsError && (
           <div className="px-4 py-3 flex items-start gap-2">
             <AlertTriangleIcon size={14} className="mt-0.5 shrink-0 text-amber-500 dark:text-amber-400" />
-            <span className="text-[0.75rem] leading-5 chat-text-secondary-60">
+            <span className="text-[0.75rem] leading-5 chat-text-secondary-600-60">
               {t('Could not reach the assistant service. Check the connection and try again.')}
             </span>
           </div>
@@ -199,7 +199,7 @@ export const ChatHeader = ({
                 }}
                 placeholder={t('Search agents...')}
                 aria-label={t('Search agents...')}
-                className="w-full h-7 pl-7 pr-2 rounded-md chat-surface-subtle-strong text-[0.75rem] chat-text placeholder:text-gray-400 dark:placeholder:text-white/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+                className="w-full h-7 pl-7 pr-2 rounded-md chat-surface-subtle-100-6 text-[0.75rem] chat-text placeholder:chat-text-muted outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
               />
             </div>
           </div>
@@ -216,7 +216,7 @@ export const ChatHeader = ({
                   key={agent.id}
                   type="button"
                   onClick={() => onSwitchAgent(agent)}
-                  className={`w-full flex items-center gap-2 px-4 py-1.5 text-left chat-surface-hover transition-colors ${
+                  className={`w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover transition-colors ${
                     agent.id === selectedAgent?.id ? 'bg-[var(--chat-accent)]/10' : ''
                   }`}
                 >
@@ -225,14 +225,14 @@ export const ChatHeader = ({
                   </div>
                   <div className="min-w-0">
                     <div className="text-[0.8125rem] font-medium chat-text truncate">{agent.name}</div>
-                    {agent.description && <div className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">{agent.description}</div>}
+                    {agent.description && <div className="text-[0.7rem] chat-text-muted-500-40 truncate">{agent.description}</div>}
                   </div>
                 </button>
               ))}
             </div>
           ))}
         </div>
-        <div className="h-px bg-gray-200 dark:bg-white/10 mx-2" />
+        <div className="h-px chat-surface-subtle-200-10 mx-2" />
         <div>
           {agentDashboardUrl && (
             <button
@@ -241,10 +241,10 @@ export const ChatHeader = ({
                 onAgentMenuClose();
                 window.open(`${agentDashboardUrl}/agents`, '_blank');
               }}
-              className="w-full flex items-center gap-2 px-4 py-1.5 text-left chat-surface-hover transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover transition-colors"
             >
               <ExternalLinkIcon size={18} className="chat-text-muted shrink-0" />
-              <span className="text-[0.8125rem] chat-text-secondary-70">{t('Browse agents')}</span>
+              <span className="text-[0.8125rem] chat-text-secondary-700-70">{t('Browse agents')}</span>
             </button>
           )}
           {agentDashboardUrl && (
@@ -254,10 +254,10 @@ export const ChatHeader = ({
                 onAgentMenuClose();
                 window.open(`${agentDashboardUrl}/agents/new`, '_blank');
               }}
-              className="w-full flex items-center gap-2 px-4 py-1.5 text-left chat-surface-hover transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover transition-colors"
             >
               <UserPlusIcon size={18} className="chat-text-muted shrink-0" />
-              <span className="text-[0.8125rem] chat-text-secondary-70">{t('Create agent')}</span>
+              <span className="text-[0.8125rem] chat-text-secondary-700-70">{t('Create agent')}</span>
             </button>
           )}
         </div>
@@ -275,7 +275,7 @@ export const ChatHeader = ({
               aria-label={t('Conversation history')}
               aria-haspopup="menu"
               aria-expanded={historyMenuOpen}
-              className="w-8 h-8 flex items-center justify-center rounded-lg chat-surface-hover text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover chat-text-muted-500-40 hover:chat-text-secondary-700-70 transition-colors"
             >
               <HistoryIcon size={18} />
             </button>
@@ -298,13 +298,13 @@ export const ChatHeader = ({
                 return (
                   <div
                     key={conv.conversationId}
-                    className={`group flex items-center gap-2 px-4 py-1.5 chat-surface-hover transition-colors ${
+                    className={`group flex items-center gap-2 px-4 py-1.5 hover:chat-surface-hover transition-colors ${
                       isActive ? 'bg-[var(--chat-accent)]/10' : ''
                     }`}
                   >
                     <button type="button" onClick={() => onSelectConversation?.(conv.conversationId)} className="flex-1 min-w-0 text-left">
                       <div className="text-[0.8125rem] font-medium chat-text truncate">{conv.title || t('Untitled conversation')}</div>
-                      {when && <div className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">{when}</div>}
+                      {when && <div className="text-[0.7rem] chat-text-muted-500-40 truncate">{when}</div>}
                     </button>
                     {onDeleteConversation && (
                       <button
@@ -312,7 +312,7 @@ export const ChatHeader = ({
                         onClick={() => onDeleteConversation(conv.conversationId)}
                         title={t('Delete conversation')}
                         aria-label={t('Delete conversation')}
-                        className="shrink-0 p-1 rounded-md text-gray-400 dark:text-white/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
+                        className="shrink-0 p-1 rounded-md chat-text-muted-400-30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
                       >
                         <TrashIcon size={14} />
                       </button>
@@ -321,17 +321,17 @@ export const ChatHeader = ({
                 );
               })}
             </div>
-            <div className="h-px bg-gray-200 dark:bg-white/10 mx-2" />
+            <div className="h-px chat-surface-subtle-200-10 mx-2" />
             <button
               type="button"
               onClick={() => {
                 onHistoryMenuClose?.();
                 onNewChat();
               }}
-              className="w-full flex items-center gap-2 px-4 py-2 text-left chat-surface-hover transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-2 text-left hover:chat-surface-hover transition-colors"
             >
               <EditIcon size={16} className="chat-text-muted shrink-0" />
-              <span className="text-[0.8125rem] chat-text-secondary-70">{t('New conversation')}</span>
+              <span className="text-[0.8125rem] chat-text-secondary-700-70">{t('New conversation')}</span>
             </button>
             {onClearAll && conversations.length > 0 && (
               <ClearAllConversations
@@ -340,7 +340,7 @@ export const ChatHeader = ({
                   onClearAll();
                 }}
                 className="px-3 pb-2"
-                iconButtonClass="p-1 rounded-md chat-text-muted chat-surface-hover transition-colors"
+                iconButtonClass="p-1 rounded-md chat-text-muted hover:chat-surface-hover transition-colors"
                 t={t}
               />
             )}
@@ -354,7 +354,7 @@ export const ChatHeader = ({
         <button
           type="button"
           onClick={onNewChat}
-          className="w-8 h-8 flex items-center justify-center rounded-lg chat-surface-hover text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover chat-text-muted-500-40 hover:chat-text-secondary-700-70 transition-colors"
         >
           <EditIcon size={18} />
         </button>
@@ -368,7 +368,7 @@ export const ChatHeader = ({
               type="button"
               aria-label={t('Switch view')}
               onClick={onModeMenuToggle}
-              className="w-8 h-8 flex items-center justify-center rounded-lg chat-surface-hover text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover chat-text-muted-500-40 hover:chat-text-secondary-700-70 transition-colors"
             >
               <CurrentModeIcon size={18} />
             </button>
@@ -385,12 +385,12 @@ export const ChatHeader = ({
                     onModeChange(opt.mode);
                     onModeMenuClose();
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-1 text-left chat-surface-hover transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-1 text-left hover:chat-surface-hover transition-colors ${
                     mode === opt.mode ? 'bg-[var(--chat-accent)]/10' : ''
                   }`}
                 >
                   {opt.getIcon({ size: 18, className: 'chat-text-muted' })}
-                  <span className="text-[0.8125rem] chat-text-secondary-70">{opt.label(t)}</span>
+                  <span className="text-[0.8125rem] chat-text-secondary-700-70">{opt.label(t)}</span>
                 </button>
               ))}
             </div>
@@ -404,7 +404,7 @@ export const ChatHeader = ({
               type="button"
               aria-label={t('Close')}
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg chat-surface-hover text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover chat-text-muted-500-40 hover:chat-text-secondary-700-70 transition-colors"
             >
               <CloseIcon size={18} />
             </button>

@@ -86,7 +86,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
           <span className="text-[var(--chat-accent)] [&>svg]:w-10 [&>svg]:h-10">{logoIcon}</span>
         </button>
         <h2 className="max-w-full truncate text-base font-semibold chat-text">{agentName}</h2>
-        <p aria-live="polite" className="text-center text-[0.8125rem] text-gray-500 dark:text-white/60">
+        <p aria-live="polite" className="text-center text-[0.8125rem] chat-text-secondary-500-60">
           {label}
         </p>
         {phase === 'speaking' && <p className="text-[0.7rem] chat-text-muted">{t('Speak or tap to interrupt')}</p>}
@@ -103,9 +103,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
               <div key={i} className={`flex ${line.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[85%] rounded-lg px-3 py-1.5 text-[0.75rem] leading-5 ${
-                    line.role === 'user'
-                      ? 'bg-[var(--chat-accent)]/10 text-gray-800 dark:text-white/80'
-                      : 'chat-surface-subtle-strong chat-text-secondary-70'
+                    line.role === 'user' ? 'bg-[var(--chat-accent)]/10 chat-text-800-80' : 'chat-surface-subtle-100-6 chat-text-secondary-700-70'
                   }`}
                 >
                   {line.agent && (
@@ -130,7 +128,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
           aria-label={muted ? t('Unmute microphone') : t('Mute microphone')}
           aria-pressed={muted}
           className={`${roundButton} ${
-            muted ? 'border-red-400/40 bg-red-500/10 text-red-500' : 'chat-border text-gray-600 dark:text-white/70 chat-surface-hover-soft'
+            muted ? 'border-red-400/40 bg-red-500/10 text-red-500' : 'chat-border chat-text-secondary-600-70 hover:chat-surface-hover-100-6'
           }`}
         >
           {muted ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
@@ -148,7 +146,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
           onClick={onInterrupt}
           disabled={phase !== 'speaking'}
           aria-label={t('Skip response')}
-          className={`${roundButton} chat-border text-gray-600 dark:text-white/70 chat-surface-hover-soft`}
+          className={`${roundButton} chat-border chat-text-secondary-600-70 hover:chat-surface-hover-100-6`}
         >
           <VolumeOffIcon size={20} />
         </button>

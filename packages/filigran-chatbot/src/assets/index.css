@@ -26,61 +26,234 @@
 @variant dark (.dark &);
 
 /*
- * The host's theme (`ChatPanelProps.theme`, or the `--filigran-chat-*`
- * variables set on an ancestor): what lets the panel take the colours, type
- * and shapes of the host's design system. Each utility falls back to the
- * panel's own look, light and dark, so a host that sets nothing sees no
- * change. A host value applies in both modes: a host's own tokens already
- * follow its theme.
+ * The host's theme (`--filigran-chat-*`): a host value applies in both modes,
+ * since a host's own tokens already follow its theme; unset, the panel's own look.
  */
+.filigran-chatbot {
+  --chat-default-border: var(--color-gray-200);
+  --chat-default-border-100-4: var(--color-gray-100);
+  --chat-default-border-200-15: var(--color-gray-200);
+  --chat-default-border-200-6: var(--color-gray-200);
+  --chat-default-surface-hover: var(--color-gray-100);
+  --chat-default-surface-hover-100-5: var(--color-gray-100);
+  --chat-default-surface-hover-100-6: var(--color-gray-100);
+  --chat-default-surface-hover-200-10: var(--color-gray-200);
+  --chat-default-surface-hover-200a60-10: color-mix(in oklab, var(--color-gray-200) 60%, transparent);
+  --chat-default-surface-hover-50-2: var(--color-gray-50);
+  --chat-default-surface-hover-50-3: var(--color-gray-50);
+  --chat-default-surface-subtle: var(--color-gray-50);
+  --chat-default-surface-subtle-100-10: var(--color-gray-100);
+  --chat-default-surface-subtle-100-3: var(--color-gray-100);
+  --chat-default-surface-subtle-100-6: var(--color-gray-100);
+  --chat-default-surface-subtle-100a50-3: color-mix(in oklab, var(--color-gray-100) 50%, transparent);
+  --chat-default-surface-subtle-200-10: var(--color-gray-200);
+  --chat-default-surface-subtle-200a70-6: color-mix(in oklab, var(--color-gray-200) 70%, transparent);
+  --chat-default-surface-subtle-50-3: var(--color-gray-50);
+  --chat-default-surface-subtle-50a50-1: color-mix(in oklab, var(--color-gray-50) 50%, transparent);
+  --chat-default-text: var(--color-gray-900);
+  --chat-default-text-800-100: var(--color-gray-800);
+  --chat-default-text-800-80: var(--color-gray-800);
+  --chat-default-text-800-85: var(--color-gray-800);
+  --chat-default-text-800-90: var(--color-gray-800);
+  --chat-default-text-muted: var(--color-gray-400);
+  --chat-default-text-muted-300-20: var(--color-gray-300);
+  --chat-default-text-muted-300-30: var(--color-gray-300);
+  --chat-default-text-muted-400-30: var(--color-gray-400);
+  --chat-default-text-muted-400-35: var(--color-gray-400);
+  --chat-default-text-muted-400-50: var(--color-gray-400);
+  --chat-default-text-muted-500-40: var(--color-gray-500);
+  --chat-default-text-muted-500-45: var(--color-gray-500);
+  --chat-default-text-secondary: var(--color-gray-500);
+  --chat-default-text-secondary-500-60: var(--color-gray-500);
+  --chat-default-text-secondary-600-60: var(--color-gray-600);
+  --chat-default-text-secondary-600-70: var(--color-gray-600);
+  --chat-default-text-secondary-700-70: var(--color-gray-700);
+  --chat-default-text-secondary-700-75: var(--color-gray-700);
+  --chat-default-text-secondary-700-80: var(--color-gray-700);
+  --chat-default-surface: var(--color-gray-50);
+  --chat-default-surface-raised: var(--color-white);
+  --chat-default-menu-surface: var(--color-white);
+  --chat-default-answer-text: var(--color-gray-900);
+  --chat-default-code-block: var(--color-gray-50);
+  --chat-default-code-inline: var(--color-gray-100);
+}
+.dark .filigran-chatbot {
+  --chat-default-border: color-mix(in oklab, var(--color-white) 10%, transparent);
+  --chat-default-border-100-4: color-mix(in oklab, var(--color-white) 4%, transparent);
+  --chat-default-border-200-15: color-mix(in oklab, var(--color-white) 15%, transparent);
+  --chat-default-border-200-6: color-mix(in oklab, var(--color-white) 6%, transparent);
+  --chat-default-surface-hover: color-mix(in oklab, var(--color-white) 10%, transparent);
+  --chat-default-surface-hover-100-5: color-mix(in oklab, var(--color-white) 5%, transparent);
+  --chat-default-surface-hover-100-6: color-mix(in oklab, var(--color-white) 6%, transparent);
+  --chat-default-surface-hover-200-10: color-mix(in oklab, var(--color-white) 10%, transparent);
+  --chat-default-surface-hover-200a60-10: color-mix(in oklab, var(--color-white) 10%, transparent);
+  --chat-default-surface-hover-50-2: color-mix(in oklab, var(--color-white) 2%, transparent);
+  --chat-default-surface-hover-50-3: color-mix(in oklab, var(--color-white) 3%, transparent);
+  --chat-default-surface-subtle: color-mix(in oklab, var(--color-white) 4%, transparent);
+  --chat-default-surface-subtle-100-10: color-mix(in oklab, var(--color-white) 10%, transparent);
+  --chat-default-surface-subtle-100-3: color-mix(in oklab, var(--color-white) 3%, transparent);
+  --chat-default-surface-subtle-100-6: color-mix(in oklab, var(--color-white) 6%, transparent);
+  --chat-default-surface-subtle-100a50-3: color-mix(in oklab, var(--color-white) 3%, transparent);
+  --chat-default-surface-subtle-200-10: color-mix(in oklab, var(--color-white) 10%, transparent);
+  --chat-default-surface-subtle-200a70-6: color-mix(in oklab, var(--color-white) 6%, transparent);
+  --chat-default-surface-subtle-50-3: color-mix(in oklab, var(--color-white) 3%, transparent);
+  --chat-default-surface-subtle-50a50-1: color-mix(in oklab, var(--color-white) 1%, transparent);
+  --chat-default-text: var(--color-white);
+  --chat-default-text-800-100: var(--color-white);
+  --chat-default-text-800-80: color-mix(in oklab, var(--color-white) 80%, transparent);
+  --chat-default-text-800-85: color-mix(in oklab, var(--color-white) 85%, transparent);
+  --chat-default-text-800-90: color-mix(in oklab, var(--color-white) 90%, transparent);
+  --chat-default-text-muted: color-mix(in oklab, var(--color-white) 40%, transparent);
+  --chat-default-text-muted-300-20: color-mix(in oklab, var(--color-white) 20%, transparent);
+  --chat-default-text-muted-300-30: color-mix(in oklab, var(--color-white) 30%, transparent);
+  --chat-default-text-muted-400-30: color-mix(in oklab, var(--color-white) 30%, transparent);
+  --chat-default-text-muted-400-35: color-mix(in oklab, var(--color-white) 35%, transparent);
+  --chat-default-text-muted-400-50: color-mix(in oklab, var(--color-white) 50%, transparent);
+  --chat-default-text-muted-500-40: color-mix(in oklab, var(--color-white) 40%, transparent);
+  --chat-default-text-muted-500-45: color-mix(in oklab, var(--color-white) 45%, transparent);
+  --chat-default-text-secondary: color-mix(in oklab, var(--color-white) 50%, transparent);
+  --chat-default-text-secondary-500-60: color-mix(in oklab, var(--color-white) 60%, transparent);
+  --chat-default-text-secondary-600-60: color-mix(in oklab, var(--color-white) 60%, transparent);
+  --chat-default-text-secondary-600-70: color-mix(in oklab, var(--color-white) 70%, transparent);
+  --chat-default-text-secondary-700-70: color-mix(in oklab, var(--color-white) 70%, transparent);
+  --chat-default-text-secondary-700-75: color-mix(in oklab, var(--color-white) 75%, transparent);
+  --chat-default-text-secondary-700-80: color-mix(in oklab, var(--color-white) 80%, transparent);
+  --chat-default-surface: #161622;
+  --chat-default-surface-raised: #1e1e2e;
+  --chat-default-menu-surface: #2a2a3e;
+  --chat-default-answer-text: color-mix(in oklab, var(--color-white) 90%, transparent);
+  --chat-default-code-block: color-mix(in oklab, var(--color-white) 3%, transparent);
+  --chat-default-code-inline: color-mix(in oklab, var(--color-white) 8%, transparent);
+}
+@utility chat-border {
+  border-color: var(--filigran-chat-border, var(--chat-default-border));
+}
+@utility chat-border-100-4 {
+  border-color: var(--filigran-chat-border, var(--chat-default-border-100-4));
+}
+@utility chat-border-200-15 {
+  border-color: var(--filigran-chat-border, var(--chat-default-border-200-15));
+}
+@utility chat-border-200-6 {
+  border-color: var(--filigran-chat-border, var(--chat-default-border-200-6));
+}
+@utility chat-surface-hover {
+  background-color: var(--filigran-chat-surface-hover, var(--chat-default-surface-hover));
+}
+@utility chat-surface-hover-100-5 {
+  background-color: var(--filigran-chat-surface-hover, var(--chat-default-surface-hover-100-5));
+}
+@utility chat-surface-hover-100-6 {
+  background-color: var(--filigran-chat-surface-hover, var(--chat-default-surface-hover-100-6));
+}
+@utility chat-surface-hover-200-10 {
+  background-color: var(--filigran-chat-surface-hover, var(--chat-default-surface-hover-200-10));
+}
+@utility chat-surface-hover-200a60-10 {
+  background-color: var(--filigran-chat-surface-hover, var(--chat-default-surface-hover-200a60-10));
+}
+@utility chat-surface-hover-50-2 {
+  background-color: var(--filigran-chat-surface-hover, var(--chat-default-surface-hover-50-2));
+}
+@utility chat-surface-hover-50-3 {
+  background-color: var(--filigran-chat-surface-hover, var(--chat-default-surface-hover-50-3));
+}
+@utility chat-surface-subtle {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-surface-subtle));
+}
+@utility chat-surface-subtle-100-10 {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-surface-subtle-100-10));
+}
+@utility chat-surface-subtle-100-3 {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-surface-subtle-100-3));
+}
+@utility chat-surface-subtle-100-6 {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-surface-subtle-100-6));
+}
+@utility chat-surface-subtle-100a50-3 {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-surface-subtle-100a50-3));
+}
+@utility chat-surface-subtle-200-10 {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-surface-subtle-200-10));
+}
+@utility chat-surface-subtle-200a70-6 {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-surface-subtle-200a70-6));
+}
+@utility chat-surface-subtle-50-3 {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-surface-subtle-50-3));
+}
+@utility chat-surface-subtle-50a50-1 {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-surface-subtle-50a50-1));
+}
+@utility chat-text {
+  color: var(--filigran-chat-text, var(--chat-default-text));
+}
+@utility chat-text-800-100 {
+  color: var(--filigran-chat-text, var(--chat-default-text-800-100));
+}
+@utility chat-text-800-80 {
+  color: var(--filigran-chat-text, var(--chat-default-text-800-80));
+}
+@utility chat-text-800-85 {
+  color: var(--filigran-chat-text, var(--chat-default-text-800-85));
+}
+@utility chat-text-800-90 {
+  color: var(--filigran-chat-text, var(--chat-default-text-800-90));
+}
+@utility chat-text-muted {
+  color: var(--filigran-chat-text-muted, var(--chat-default-text-muted));
+}
+@utility chat-text-muted-300-20 {
+  color: var(--filigran-chat-text-muted, var(--chat-default-text-muted-300-20));
+}
+@utility chat-text-muted-300-30 {
+  color: var(--filigran-chat-text-muted, var(--chat-default-text-muted-300-30));
+}
+@utility chat-text-muted-400-30 {
+  color: var(--filigran-chat-text-muted, var(--chat-default-text-muted-400-30));
+}
+@utility chat-text-muted-400-35 {
+  color: var(--filigran-chat-text-muted, var(--chat-default-text-muted-400-35));
+}
+@utility chat-text-muted-400-50 {
+  color: var(--filigran-chat-text-muted, var(--chat-default-text-muted-400-50));
+}
+@utility chat-text-muted-500-40 {
+  color: var(--filigran-chat-text-muted, var(--chat-default-text-muted-500-40));
+}
+@utility chat-text-muted-500-45 {
+  color: var(--filigran-chat-text-muted, var(--chat-default-text-muted-500-45));
+}
+@utility chat-text-secondary {
+  color: var(--filigran-chat-text-secondary, var(--chat-default-text-secondary));
+}
+@utility chat-text-secondary-500-60 {
+  color: var(--filigran-chat-text-secondary, var(--chat-default-text-secondary-500-60));
+}
+@utility chat-text-secondary-600-60 {
+  color: var(--filigran-chat-text-secondary, var(--chat-default-text-secondary-600-60));
+}
+@utility chat-text-secondary-600-70 {
+  color: var(--filigran-chat-text-secondary, var(--chat-default-text-secondary-600-70));
+}
+@utility chat-text-secondary-700-70 {
+  color: var(--filigran-chat-text-secondary, var(--chat-default-text-secondary-700-70));
+}
+@utility chat-text-secondary-700-75 {
+  color: var(--filigran-chat-text-secondary, var(--chat-default-text-secondary-700-75));
+}
+@utility chat-text-secondary-700-80 {
+  color: var(--filigran-chat-text-secondary, var(--chat-default-text-secondary-700-80));
+}
 @utility chat-surface {
-  background-color: var(--filigran-chat-surface, var(--color-gray-50));
-  .dark && {
-    background-color: var(--filigran-chat-surface, #161622);
-  }
+  background-color: var(--filigran-chat-surface, var(--chat-default-surface));
 }
 @utility chat-surface-raised {
-  background-color: var(--filigran-chat-surface-raised, var(--color-white));
-  .dark && {
-    background-color: var(--filigran-chat-surface-raised, #1e1e2e);
-  }
+  background-color: var(--filigran-chat-surface-raised, var(--chat-default-surface-raised));
 }
 /* Menus (the dropdowns, the mention list): raised above the panel. */
 @utility chat-menu-surface {
-  background-color: var(--filigran-chat-surface-raised, var(--color-white));
-  .dark && {
-    background-color: var(--filigran-chat-surface-raised, #2a2a3e);
-  }
-}
-/* Inputs, cards, a table's or a code block's header: a shade off the surface. */
-@utility chat-surface-subtle {
-  background-color: var(--filigran-chat-surface-subtle, var(--color-gray-50));
-  .dark && {
-    background-color: var(--filigran-chat-surface-subtle, color-mix(in oklab, var(--color-white) 4%, transparent));
-  }
-}
-@utility chat-surface-subtle-strong {
-  background-color: var(--filigran-chat-surface-subtle, var(--color-gray-100));
-  .dark && {
-    background-color: var(--filigran-chat-surface-subtle, color-mix(in oklab, var(--color-white) 6%, transparent));
-  }
-}
-/* What a row or a button shows under the pointer. */
-@utility chat-surface-hover {
-  &:hover {
-    background-color: var(--filigran-chat-surface-hover, var(--color-gray-100));
-  }
-  .dark &&:hover {
-    background-color: var(--filigran-chat-surface-hover, color-mix(in oklab, var(--color-white) 10%, transparent));
-  }
-}
-@utility chat-surface-hover-soft {
-  &:hover {
-    background-color: var(--filigran-chat-surface-hover, var(--color-gray-100));
-  }
-  .dark &&:hover {
-    background-color: var(--filigran-chat-surface-hover, color-mix(in oklab, var(--color-white) 6%, transparent));
-  }
+  background-color: var(--filigran-chat-surface-raised, var(--chat-default-menu-surface));
 }
 @utility chat-header-surface {
   background-image: var(
@@ -92,54 +265,15 @@
     )
   );
 }
-@utility chat-text {
-  color: var(--filigran-chat-text, var(--color-gray-900));
-  .dark && {
-    color: var(--filigran-chat-text, var(--color-white));
-  }
-}
-@utility chat-text-muted {
-  color: var(--filigran-chat-text-muted, var(--color-gray-400));
-  .dark && {
-    color: var(--filigran-chat-text-muted, color-mix(in oklab, var(--color-white) 40%, transparent));
-  }
-}
-@utility chat-border {
-  border-color: var(--filigran-chat-border, var(--color-gray-200));
-  .dark && {
-    border-color: var(--filigran-chat-border, color-mix(in oklab, var(--color-white) 10%, transparent));
-  }
-}
-/* Secondary text: table cells, chips, list items, notices, in three strengths. */
-@utility chat-text-secondary {
-  color: var(--filigran-chat-text-secondary, var(--color-gray-500));
-  .dark && {
-    color: var(--filigran-chat-text-secondary, color-mix(in oklab, var(--color-white) 50%, transparent));
-  }
-}
-@utility chat-text-secondary-60 {
-  color: var(--filigran-chat-text-secondary, var(--color-gray-600));
-  .dark && {
-    color: var(--filigran-chat-text-secondary, color-mix(in oklab, var(--color-white) 60%, transparent));
-  }
-}
-@utility chat-text-secondary-70 {
-  color: var(--filigran-chat-text-secondary, var(--color-gray-700));
-  .dark && {
-    color: var(--filigran-chat-text-secondary, color-mix(in oklab, var(--color-white) 70%, transparent));
-  }
-}
 /* An answer's prose: its paragraphs and lists. */
 @utility chat-answer-text {
   font-size: var(--filigran-chat-text-size, 0.8125rem);
-  color: var(--filigran-chat-text, var(--color-gray-900));
-  .dark && {
-    color: var(--filigran-chat-text, color-mix(in oklab, var(--color-white) 90%, transparent));
-  }
+  color: var(--filigran-chat-text, var(--chat-default-answer-text));
 }
 /* An answer's headings, in proportion to its prose. */
 @utility chat-answer-heading-1 {
   font-size: calc(var(--filigran-chat-text-size, 0.8125rem) * 1.231);
+  line-height: var(--tw-leading, 1.5);
 }
 @utility chat-answer-heading-2 {
   font-size: calc(var(--filigran-chat-text-size, 0.8125rem) * 1.108);
@@ -161,16 +295,10 @@
   line-height: var(--tw-leading, var(--text-xs--line-height));
 }
 @utility chat-code-block {
-  background-color: var(--filigran-chat-code-surface, var(--color-gray-50));
-  .dark && {
-    background-color: var(--filigran-chat-code-surface, color-mix(in oklab, var(--color-white) 3%, transparent));
-  }
+  background-color: var(--filigran-chat-code-surface, var(--chat-default-code-block));
 }
 @utility chat-code-inline {
-  background-color: var(--filigran-chat-code-surface, var(--color-gray-100));
-  .dark && {
-    background-color: var(--filigran-chat-code-surface, color-mix(in oklab, var(--color-white) 8%, transparent));
-  }
+  background-color: var(--filigran-chat-code-surface, var(--chat-default-code-inline));
 }
 
 /*

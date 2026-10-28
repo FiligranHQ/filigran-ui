@@ -72,19 +72,19 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
   if (match || codeStr.includes('\n')) {
     const block = (
       <div className="my-3 rounded-lg border chat-border overflow-hidden chat-code-block">
-        <div className="flex items-center justify-between px-3 py-1.5 border-b chat-border bg-gray-100 dark:bg-white/[0.03]">
-          <span className="text-[0.7rem] text-gray-500 dark:text-white/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
+        <div className="flex items-center justify-between px-3 py-1.5 border-b chat-border chat-surface-subtle-100-3">
+          <span className="text-[0.7rem] chat-text-muted-500-40 font-mono">{match?.[1] ?? 'plaintext'}</span>
           <button
             type="button"
             onClick={() => onCopyCode(codeStr)}
             aria-label={copiedBlock === codeStr ? t('Copied') : t('Copy code')}
-            className="p-0.5 rounded-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+            className="p-0.5 rounded-sm hover:chat-surface-hover-200-10 transition-colors"
           >
             {copiedBlock === codeStr ? <CheckIcon size={14} className="text-green-500" /> : <CopyIcon size={14} className="chat-text-muted" />}
           </button>
         </div>
         <pre className="m-0 px-3 py-2 overflow-x-auto">
-          <code className="chat-code leading-[1.7] text-gray-800 dark:text-white/90 whitespace-pre">{codeStr}</code>
+          <code className="chat-code leading-[1.7] chat-text-800-90 whitespace-pre">{codeStr}</code>
         </pre>
       </div>
     );
@@ -151,7 +151,7 @@ const MARKDOWN_COMPONENTS: Components = {
   em: ({ children }) => <em className="italic">{children}</em>,
   hr: () => <hr className="my-4 chat-border" />,
   blockquote: ({ children }) => (
-    <blockquote className="my-3 border-l-2 border-[var(--chat-accent)]/30 bg-[var(--chat-accent)]/[0.03] pl-4 pr-3 py-2 rounded-r-md italic text-gray-500 dark:text-white/60">
+    <blockquote className="my-3 border-l-2 border-[var(--chat-accent)]/30 bg-[var(--chat-accent)]/[0.03] pl-4 pr-3 py-2 rounded-r-md italic chat-text-secondary-500-60">
       {children}
     </blockquote>
   ),
@@ -165,9 +165,9 @@ const MARKDOWN_COMPONENTS: Components = {
       <table className="w-full border-collapse text-xs">{children}</table>
     </div>
   ),
-  tr: ({ children }) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02]">{children}</tr>,
+  tr: ({ children }) => <tr className="transition-colors hover:chat-surface-hover-50-2">{children}</tr>,
   th: ({ children }) => <th className="px-3 py-2 text-left font-semibold chat-surface-subtle border-b chat-border chat-text">{children}</th>,
-  td: ({ children }) => <td className="px-3 py-2 border-b chat-border text-gray-700 dark:text-white/80">{children}</td>,
+  td: ({ children }) => <td className="px-3 py-2 border-b chat-border chat-text-secondary-700-80">{children}</td>,
 };
 
 const REMARK_PLUGINS = [remarkGfm, remarkBreaks];

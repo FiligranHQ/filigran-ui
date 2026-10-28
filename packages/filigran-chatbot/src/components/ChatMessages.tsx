@@ -334,7 +334,7 @@ const FeedbackComment = ({
 
   return (
     <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 rounded-lg border chat-border chat-surface-subtle p-2">
-      <label htmlFor={id} className="text-[0.7rem] chat-text-secondary-60">
+      <label htmlFor={id} className="text-[0.7rem] chat-text-secondary-600-60">
         {t('Tell us what went wrong (optional)')}
       </label>
       <textarea
@@ -358,7 +358,7 @@ const FeedbackComment = ({
           }
         }}
         placeholder={t('What could be improved?')}
-        className="w-full resize-y rounded-md border chat-border bg-white dark:bg-transparent px-2 py-1 text-[0.75rem] leading-5 chat-text placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+        className="w-full resize-y rounded-md border chat-border bg-white dark:bg-transparent px-2 py-1 text-[0.75rem] leading-5 chat-text placeholder:chat-text-muted-400-30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
         <button
@@ -531,7 +531,7 @@ const MessageRow = memo(
               <span className="text-[0.65rem] chat-text-muted uppercase">{[att.type, sizeLabel].filter(Boolean).join(' · ')}</span>
             )}
           </span>
-          <span className="shrink-0 text-gray-400 dark:text-white/30 group-hover:text-[var(--chat-accent)]">
+          <span className="shrink-0 chat-text-muted-400-30 group-hover:text-[var(--chat-accent)]">
             <DownloadIcon size={15} />
           </span>
         </button>
@@ -542,7 +542,7 @@ const MessageRow = memo(
     // is still in flight (no server `fileId` yet) or when no download handler is
     // wired by the host.
     const renderFileChip = (name: string, key: string) => (
-      <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border text-[0.7rem] chat-text-secondary-60">
+      <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border text-[0.7rem] chat-text-secondary-600-60">
         <FileIcon size={14} />
         {name}
       </span>
@@ -719,7 +719,7 @@ const MessageRow = memo(
       }
       return (
         <Tooltip key={`ref-${ref.conversationId}-${i}`} title={ref.key ? `@${ref.key}` : ''}>
-          <span className={`${chip} chat-border chat-text-secondary-60`}>{content}</span>
+          <span className={`${chip} chat-border chat-text-secondary-600-60`}>{content}</span>
         </Tooltip>
       );
     };

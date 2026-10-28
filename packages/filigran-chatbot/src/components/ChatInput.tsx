@@ -232,9 +232,7 @@ export const ChatInput = ({
       {heldMessage && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
           <span className="shrink-0 chat-text-secondary">{t('Sends when the answer ends:')}</span>
-          <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-white/80">
-            {heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}
-          </span>
+          <span className="min-w-0 flex-1 truncate chat-text-800-80">{heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}</span>
           {onCancelHeld && (
             <button type="button" onClick={onCancelHeld} className="shrink-0 chat-text-muted hover:text-red-500">
               {t('Cancel')}
@@ -252,7 +250,7 @@ export const ChatInput = ({
                   ? 'border-red-300 dark:border-red-500/30 text-red-500 dark:text-red-400'
                   : f.uploadStatus === 'pending'
                     ? 'chat-border chat-text-muted'
-                    : 'chat-border chat-text-secondary-60'
+                    : 'chat-border chat-text-secondary-600-60'
               }`}
             >
               {f.uploadStatus === 'pending' ? (
@@ -262,11 +260,7 @@ export const ChatInput = ({
               )}
               {f.name}
               {f.uploadStatus === 'error' && <span className="text-red-400 text-[0.6rem]">✕</span>}
-              <button
-                type="button"
-                onClick={() => onFileRemove?.(i)}
-                className="ml-0.5 text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60"
-              >
+              <button type="button" onClick={() => onFileRemove?.(i)} className="ml-0.5 chat-text-muted-400-30 hover:chat-text-secondary-600-60">
                 ×
               </button>
             </span>
@@ -297,7 +291,7 @@ export const ChatInput = ({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               aria-label={t('Attach files')}
-              className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-gray-400 dark:text-white/30 chat-surface-hover mr-0.5 transition-colors"
+              className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg chat-text-muted-400-30 hover:chat-surface-hover mr-0.5 transition-colors"
             >
               <AttachFileIcon size={18} />
             </button>
@@ -317,7 +311,7 @@ export const ChatInput = ({
           {...mentionMenu.textareaAria}
           onPaste={onPaste}
           rows={1}
-          className="flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 chat-text placeholder:text-gray-400 dark:placeholder:text-white/30 filigran-chat-scrollable"
+          className="flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 chat-text placeholder:chat-text-muted-400-30 filigran-chat-scrollable"
           style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}
         />
         <MentionMenu
@@ -338,7 +332,7 @@ export const ChatInput = ({
               aria-label={t('Dictate a message')}
               aria-pressed={dictation.listening}
               className={`relative w-8 h-8 flex items-center justify-center shrink-0 rounded-lg mr-0.5 transition-colors ${
-                dictation.listening ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'text-gray-400 dark:text-white/30 chat-surface-hover'
+                dictation.listening ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'chat-text-muted-400-30 hover:chat-surface-hover'
               }`}
             >
               {dictation.listening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
@@ -381,7 +375,7 @@ export const ChatInput = ({
                 ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20 ml-0.5'
                 : canSend
                   ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20'
-                  : 'text-gray-300 dark:text-white/20 cursor-not-allowed'
+                  : 'chat-text-muted-300-20 cursor-not-allowed'
             }`}
           >
             {isLoading ? <StopCircleIcon size={18} /> : <SendIcon size={18} />}
@@ -414,7 +408,7 @@ export const ChatInput = ({
           <span className="truncate">{dictation.interim}</span>
         </p>
       ) : (
-        <p data-testid="filigran-chat-disclaimer" className="text-center text-[0.65rem] text-gray-400 dark:text-white/30 mt-1.5 opacity-70">
+        <p data-testid="filigran-chat-disclaimer" className="text-center text-[0.65rem] chat-text-muted-400-30 mt-1.5 opacity-70">
           {footerText}
         </p>
       )}

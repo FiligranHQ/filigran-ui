@@ -44,7 +44,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
           aria-haspopup="menu"
           aria-expanded={open}
           className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
-            open ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10' : 'text-gray-400 dark:text-white/30 chat-surface-hover'
+            open ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10' : 'chat-text-muted-400-30 hover:chat-surface-hover'
           }`}
         >
           <SparklesIcon size={15} />
@@ -66,7 +66,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
               }}
               placeholder={t('Search prompts...')}
               aria-label={t('Search prompts...')}
-              className="w-full h-7 px-2 rounded-md chat-surface-subtle-strong text-[0.75rem] chat-text placeholder:text-gray-400 dark:placeholder:text-white/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+              className="w-full h-7 px-2 rounded-md chat-surface-subtle-100-6 text-[0.75rem] chat-text placeholder:chat-text-muted outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
             />
           </div>
         )}
@@ -81,10 +81,10 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
                 onPick(p.content);
                 close();
               }}
-              className="w-full px-4 py-1.5 text-left chat-surface-hover transition-colors"
+              className="w-full px-4 py-1.5 text-left hover:chat-surface-hover transition-colors"
             >
               <div className="text-[0.8125rem] chat-text truncate">{p.title}</div>
-              {p.description && <div className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">{p.description}</div>}
+              {p.description && <div className="text-[0.7rem] chat-text-muted-500-40 truncate">{p.description}</div>}
             </button>
           ))}
         </div>

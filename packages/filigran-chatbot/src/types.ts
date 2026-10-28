@@ -398,13 +398,13 @@ export interface ChatPanelTheme {
   headerBackground?: string;
   /** Text (`--filigran-chat-text`). */
   text?: string;
-  /** Faint text: times, labels, hints (`--filigran-chat-text-muted`). */
+  /** Faint text: times, labels, hints, placeholders (`--filigran-chat-text-muted`). */
   textMuted?: string;
-  /** Secondary text: table cells, chips, list items, notices (`--filigran-chat-text-secondary`). */
+  /** Secondary text: table cells, chips, descriptions, notices (`--filigran-chat-text-secondary`). */
   textSecondary?: string;
   /** Dividers and outlines (`--filigran-chat-border`). */
   border?: string;
-  /** The size of an answer's prose, its headings in proportion (`--filigran-chat-text-size`). */
+  /** The size of an answer's prose, its headings in proportion, and of a user's message unless `userTextSize` (`--filigran-chat-text-size`). */
   textSize?: string;
   /** A user's message: background, text, corners, padding and size (`--filigran-chat-user-*`). */
   userBackground?: string;
