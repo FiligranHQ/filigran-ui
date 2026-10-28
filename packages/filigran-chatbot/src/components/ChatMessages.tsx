@@ -22,6 +22,7 @@ import { formatMessageTime } from '../utils/messageTime';
 import { userMessageText } from '../utils/userMessage';
 import {
   createScrollFollower,
+  watchContentGrowth,
   innerBoxScrollsUp,
   keyScrollsUp,
   nextTouchAnchor,
@@ -919,6 +920,12 @@ export const ChatMessages = ({
   // bottom (see `createScrollFollower`). It holds no React state: its timer
   // firing after unmount finds no container and does nothing.
   const [follower] = useState(() => createScrollFollower(() => scrollRef.current));
+  // What grows after its message rendered (an image, a file card) is kept in
+  // view too: the effects below only hear of changes to the messages.
+  useEffect(() => {
+    const container = scrollRef.current;
+    return container ? watchContentGrowth(container, follower.keepUp) : undefined;
+  }, [follower]);
   // The highest point of the touch in progress: a swipe is measured from it,
   // so a finger that turns back down counts from where it turned.
   const touchAnchorRef = useRef<number | null>(null);
