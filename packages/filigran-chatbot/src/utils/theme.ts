@@ -4,9 +4,12 @@ import type { ChatPanelTheme } from '../types';
 const THEME_VARIABLES: Readonly<Record<keyof ChatPanelTheme, string>> = {
   surface: '--filigran-chat-surface',
   surfaceRaised: '--filigran-chat-surface-raised',
+  surfaceSubtle: '--filigran-chat-surface-subtle',
+  surfaceHover: '--filigran-chat-surface-hover',
   headerBackground: '--filigran-chat-header-background',
   text: '--filigran-chat-text',
   textMuted: '--filigran-chat-text-muted',
+  textSecondary: '--filigran-chat-text-secondary',
   border: '--filigran-chat-border',
   textSize: '--filigran-chat-text-size',
   userBackground: '--filigran-chat-user-background',

@@ -12,10 +12,12 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Added
 
-- `theme`: the host's colours, type and shapes (surfaces, text, borders, a
-  user's message, an answer's text size, code), set as `--filigran-chat-*`
-  variables on the panel root. Every entry left out keeps the panel's own
-  look, so a host that sets nothing sees no change (#460).
+- `theme`: the host's colours, type and shapes (surfaces, menus, subtle and
+  hover fills, text, secondary and muted text, borders, a user's message, an
+  answer's text size, code), set as `--filigran-chat-*` variables on the panel
+  root. Every entry left out keeps the panel's own look, light and dark, with
+  the same precedence over hover and focus colours, so a host that sets
+  nothing sees no change (#460).
 
 ## 3.15.2 — unreleased
 

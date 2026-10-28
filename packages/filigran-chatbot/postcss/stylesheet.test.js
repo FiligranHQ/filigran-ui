@@ -100,9 +100,17 @@ test("each theme utility reads its host variable and falls back to the panel's o
   const utilities = [
     ['chat-surface', '--filigran-chat-surface', true],
     ['chat-surface-raised', '--filigran-chat-surface-raised', true],
+    ['chat-menu-surface', '--filigran-chat-surface-raised', true],
+    ['chat-surface-subtle', '--filigran-chat-surface-subtle', true],
+    ['chat-surface-subtle-strong', '--filigran-chat-surface-subtle', true],
+    ['chat-surface-hover', '--filigran-chat-surface-hover', true],
+    ['chat-surface-hover-soft', '--filigran-chat-surface-hover', true],
     ['chat-header-surface', '--filigran-chat-header-background', false],
     ['chat-text', '--filigran-chat-text', true],
     ['chat-text-muted', '--filigran-chat-text-muted', true],
+    ['chat-text-secondary', '--filigran-chat-text-secondary', true],
+    ['chat-text-secondary-60', '--filigran-chat-text-secondary', true],
+    ['chat-text-secondary-70', '--filigran-chat-text-secondary', true],
     ['chat-border', '--filigran-chat-border', true],
     ['chat-answer-text', '--filigran-chat-text-size', false],
     ['chat-user-bubble', '--filigran-chat-user-background', false],
@@ -115,10 +123,12 @@ test("each theme utility reads its host variable and falls back to the panel's o
     const reads = (rule) => rule.nodes.some((node) => node.type === 'decl' && node.value.includes(`var(${variable},`));
     const light = own.filter((rule) => !rule.selector.includes('.dark'));
     assert.ok(light.some(reads), `.${name} reads ${variable} with a fallback`);
-    if (darkDefault)
-      assert.ok(
-        own.some((rule) => rule.selector.includes('.dark') && reads(rule)),
-        `.${name} has a dark fallback`,
-      );
+    if (darkDefault) {
+      const dark = own.filter((rule) => rule.selector.includes('.dark') && reads(rule));
+      assert.ok(dark.length > 0, `.${name} has a dark fallback`);
+      // As the `dark:` classes it replaces did, the dark fallback outranks a
+      // plain `hover:` or `focus-within:` colour on the same element.
+      for (const rule of dark) assert.ok(rule.selector.includes(`.${name}.${name}`), `.${name}'s dark rule outranks a variant: ${rule.selector}`);
+    }
   }
 });

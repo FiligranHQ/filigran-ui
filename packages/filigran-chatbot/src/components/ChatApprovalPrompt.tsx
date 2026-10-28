@@ -122,7 +122,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
                 "unknown tool": the placeholder is the package's own text and
                 therefore translated here, not in the parser. */}
             <p className="truncate font-mono text-xs text-gray-800 dark:text-white/85">{proposal.toolName || t('unknown tool')}</p>
-            {proposal.toolDescription && <p className="mt-0.5 text-[0.7rem] text-gray-600 dark:text-white/60">{proposal.toolDescription}</p>}
+            {proposal.toolDescription && <p className="mt-0.5 text-[0.7rem] chat-text-secondary-60">{proposal.toolDescription}</p>}
             {proposal.source && <p className="mt-0.5 text-[0.65rem] text-gray-400 dark:text-white/35">{proposal.source}</p>}
           </div>
         </div>
@@ -148,7 +148,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
                   <span className="font-mono text-gray-700 dark:text-white/75">{name}</span>
                   {schema.description && <span className="text-gray-500 dark:text-white/45">— {schema.description}</span>}
                 </div>
-                <pre className="mt-0.5 whitespace-pre-wrap break-all font-mono text-gray-600 dark:text-white/60">
+                <pre className="mt-0.5 whitespace-pre-wrap break-all font-mono chat-text-secondary-60">
                   {formatValue(proposal.arguments?.[name])}
                 </pre>
               </div>

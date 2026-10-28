@@ -35,14 +35,51 @@
  */
 @utility chat-surface {
   background-color: var(--filigran-chat-surface, var(--color-gray-50));
-  .dark & {
+  .dark && {
     background-color: var(--filigran-chat-surface, #161622);
   }
 }
 @utility chat-surface-raised {
   background-color: var(--filigran-chat-surface-raised, var(--color-white));
-  .dark & {
+  .dark && {
     background-color: var(--filigran-chat-surface-raised, #1e1e2e);
+  }
+}
+/* Menus (the dropdowns, the mention list): raised above the panel. */
+@utility chat-menu-surface {
+  background-color: var(--filigran-chat-surface-raised, var(--color-white));
+  .dark && {
+    background-color: var(--filigran-chat-surface-raised, #2a2a3e);
+  }
+}
+/* Inputs, cards, a table's or a code block's header: a shade off the surface. */
+@utility chat-surface-subtle {
+  background-color: var(--filigran-chat-surface-subtle, var(--color-gray-50));
+  .dark && {
+    background-color: var(--filigran-chat-surface-subtle, color-mix(in oklab, var(--color-white) 4%, transparent));
+  }
+}
+@utility chat-surface-subtle-strong {
+  background-color: var(--filigran-chat-surface-subtle, var(--color-gray-100));
+  .dark && {
+    background-color: var(--filigran-chat-surface-subtle, color-mix(in oklab, var(--color-white) 6%, transparent));
+  }
+}
+/* What a row or a button shows under the pointer. */
+@utility chat-surface-hover {
+  &:hover {
+    background-color: var(--filigran-chat-surface-hover, var(--color-gray-100));
+  }
+  .dark &&:hover {
+    background-color: var(--filigran-chat-surface-hover, color-mix(in oklab, var(--color-white) 10%, transparent));
+  }
+}
+@utility chat-surface-hover-soft {
+  &:hover {
+    background-color: var(--filigran-chat-surface-hover, var(--color-gray-100));
+  }
+  .dark &&:hover {
+    background-color: var(--filigran-chat-surface-hover, color-mix(in oklab, var(--color-white) 6%, transparent));
   }
 }
 @utility chat-header-surface {
@@ -57,31 +94,53 @@
 }
 @utility chat-text {
   color: var(--filigran-chat-text, var(--color-gray-900));
-  .dark & {
+  .dark && {
     color: var(--filigran-chat-text, var(--color-white));
   }
 }
 @utility chat-text-muted {
   color: var(--filigran-chat-text-muted, var(--color-gray-400));
-  .dark & {
+  .dark && {
     color: var(--filigran-chat-text-muted, color-mix(in oklab, var(--color-white) 40%, transparent));
   }
 }
 @utility chat-border {
   border-color: var(--filigran-chat-border, var(--color-gray-200));
-  .dark & {
+  .dark && {
     border-color: var(--filigran-chat-border, color-mix(in oklab, var(--color-white) 10%, transparent));
+  }
+}
+/* Secondary text: table cells, chips, list items, notices, in three strengths. */
+@utility chat-text-secondary {
+  color: var(--filigran-chat-text-secondary, var(--color-gray-500));
+  .dark && {
+    color: var(--filigran-chat-text-secondary, color-mix(in oklab, var(--color-white) 50%, transparent));
+  }
+}
+@utility chat-text-secondary-60 {
+  color: var(--filigran-chat-text-secondary, var(--color-gray-600));
+  .dark && {
+    color: var(--filigran-chat-text-secondary, color-mix(in oklab, var(--color-white) 60%, transparent));
+  }
+}
+@utility chat-text-secondary-70 {
+  color: var(--filigran-chat-text-secondary, var(--color-gray-700));
+  .dark && {
+    color: var(--filigran-chat-text-secondary, color-mix(in oklab, var(--color-white) 70%, transparent));
   }
 }
 /* An answer's prose: its paragraphs and lists. */
 @utility chat-answer-text {
   font-size: var(--filigran-chat-text-size, 0.8125rem);
   color: var(--filigran-chat-text, var(--color-gray-900));
-  .dark & {
+  .dark && {
     color: var(--filigran-chat-text, color-mix(in oklab, var(--color-white) 90%, transparent));
   }
 }
 /* An answer's headings, in proportion to its prose. */
+@utility chat-answer-heading-1 {
+  font-size: calc(var(--filigran-chat-text-size, 0.8125rem) * 1.231);
+}
 @utility chat-answer-heading-2 {
   font-size: calc(var(--filigran-chat-text-size, 0.8125rem) * 1.108);
 }
@@ -103,13 +162,13 @@
 }
 @utility chat-code-block {
   background-color: var(--filigran-chat-code-surface, var(--color-gray-50));
-  .dark & {
+  .dark && {
     background-color: var(--filigran-chat-code-surface, color-mix(in oklab, var(--color-white) 3%, transparent));
   }
 }
 @utility chat-code-inline {
   background-color: var(--filigran-chat-code-surface, var(--color-gray-100));
-  .dark & {
+  .dark && {
     background-color: var(--filigran-chat-code-surface, color-mix(in oklab, var(--color-white) 8%, transparent));
   }
 }

@@ -157,7 +157,7 @@ const MARKDOWN_COMPONENTS: Components = {
   ),
   a: MarkdownLink,
   img: MarkdownImage,
-  h1: ({ children }) => <h1 className="mt-4 first:mt-0 mb-2 font-bold text-base chat-text">{children}</h1>,
+  h1: ({ children }) => <h1 className="mt-4 first:mt-0 mb-2 font-bold chat-answer-heading-1 chat-text">{children}</h1>,
   h2: ({ children }) => <h2 className="mt-3 first:mt-0 mb-2 font-bold chat-answer-heading-2 chat-text">{children}</h2>,
   h3: ({ children }) => <h3 className="mt-3 first:mt-0 mb-1.5 font-semibold chat-answer-heading-3 chat-text">{children}</h3>,
   table: ({ children }) => (
@@ -167,7 +167,7 @@ const MARKDOWN_COMPONENTS: Components = {
   ),
   tr: ({ children }) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02]">{children}</tr>,
   th: ({ children }) => (
-    <th className="px-3 py-2 text-left font-semibold bg-gray-50 dark:bg-white/[0.04] border-b chat-border chat-text">{children}</th>
+    <th className="px-3 py-2 text-left font-semibold chat-surface-subtle border-b chat-border chat-text">{children}</th>
   ),
   td: ({ children }) => <td className="px-3 py-2 border-b chat-border text-gray-700 dark:text-white/80">{children}</td>,
 };

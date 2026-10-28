@@ -72,14 +72,14 @@ const ToolCallRow = ({ entry, index, t }: { entry: ToolCallTraceEntry; index: nu
           {hasInput && (
             <div className="px-3 py-2 border-b border-gray-100 dark:border-white/[0.04] bg-gray-50/50 dark:bg-white/[0.01]">
               <p className="m-0 mb-1.5 text-[0.6rem] text-gray-500 dark:text-white/40 uppercase tracking-wider font-medium">{t('Input')}</p>
-              <pre className="m-0 text-[0.7rem] text-gray-600 dark:text-white/60 font-mono whitespace-pre-wrap break-all leading-relaxed max-h-40 overflow-y-auto filigran-chat-scrollable">
+              <pre className="m-0 text-[0.7rem] chat-text-secondary-60 font-mono whitespace-pre-wrap break-all leading-relaxed max-h-40 overflow-y-auto filigran-chat-scrollable">
                 {inputDisplay}
               </pre>
             </div>
           )}
           <div className="px-3 py-2 bg-gray-50/50 dark:bg-white/[0.01]">
             <p className="m-0 mb-1.5 text-[0.6rem] text-gray-500 dark:text-white/40 uppercase tracking-wider font-medium">{t('Output')}</p>
-            <pre className="m-0 text-[0.7rem] text-gray-600 dark:text-white/60 font-mono whitespace-pre-wrap break-all leading-relaxed max-h-48 overflow-y-auto filigran-chat-scrollable">
+            <pre className="m-0 text-[0.7rem] chat-text-secondary-60 font-mono whitespace-pre-wrap break-all leading-relaxed max-h-48 overflow-y-auto filigran-chat-scrollable">
               {outputDisplay || t('(no output)')}
             </pre>
           </div>
@@ -193,7 +193,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
                     type="button"
                     onClick={onClose}
                     aria-label={t('Close')}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg chat-surface-hover text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/70 transition-colors"
                   >
                     <CloseIcon size={16} />
                   </button>
@@ -218,7 +218,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
                   <div>
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <BrainIcon size={13} className="text-[var(--chat-accent)]/70" />
-                      <span className="text-[0.72rem] font-medium text-gray-500 dark:text-white/50">{t('Model reasoning')}</span>
+                      <span className="text-[0.72rem] font-medium chat-text-secondary">{t('Model reasoning')}</span>
                     </div>
                     <div className="rounded-md border border-gray-200 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.01] px-2.5 py-2 max-h-44 overflow-y-auto filigran-chat-scrollable">
                       <p className="m-0 whitespace-pre-wrap break-words text-[0.72rem] leading-5 text-gray-500 dark:text-white/45">
@@ -259,7 +259,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
                   <div>
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <ArrowRightLeftIcon size={13} className="text-[var(--chat-accent)]/70" />
-                      <span className="text-[0.72rem] font-medium text-gray-500 dark:text-white/50">{t('Transfer chain')}</span>
+                      <span className="text-[0.72rem] font-medium chat-text-secondary">{t('Transfer chain')}</span>
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {transfers.map((tr, i) => (

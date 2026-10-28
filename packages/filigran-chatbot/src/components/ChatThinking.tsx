@@ -381,7 +381,7 @@ export const ChatThinking = ({
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--chat-accent)]/15 to-[var(--chat-accent)]/5">
           <span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{logoIcon}</span>
         </div>
-        <div className="filigran-chat-active-border rounded-lg chat-code-block px-4 py-3 relative overflow-hidden">
+        <div className="filigran-chat-active-border rounded-lg bg-gray-50 dark:bg-white/[0.03] px-4 py-3 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-[var(--chat-accent)]/[0.03] via-transparent to-[var(--chat-accent)]/[0.03] animate-pulse pointer-events-none" />
           <div className="relative flex items-center gap-2.5">
             {showDots ? (
@@ -397,7 +397,7 @@ export const ChatThinking = ({
             ) : (
               <StatusIcon size={14} className="text-[var(--chat-accent)] animate-pulse transition-all duration-300" />
             )}
-            <span className="text-sm text-gray-500 dark:text-white/50 transition-all duration-300">{label}</span>
+            <span className="text-sm chat-text-secondary transition-all duration-300">{label}</span>
             {waitLeftS !== undefined ? (
               <span className="text-xs text-gray-400 dark:text-white/30 tabular-nums shrink-0">{formatElapsed(Math.ceil(waitLeftS))}</span>
             ) : (

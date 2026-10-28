@@ -1368,13 +1368,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               className="flex-1 flex flex-col items-center justify-center gap-3 px-6 py-6 text-center"
             >
               <AlertTriangleIcon size={18} className="text-amber-500 dark:text-amber-400" />
-              <p className="max-w-sm text-[0.8125rem] leading-6 text-gray-600 dark:text-white/60">
+              <p className="max-w-sm text-[0.8125rem] leading-6 chat-text-secondary-60">
                 {refusedRestore.detail ?? t('This conversation could not be loaded.')}
               </p>
               <button
                 type="button"
                 onClick={retryRefusedRestore}
-                className="rounded-md border chat-border px-3 py-1 text-[0.75rem] font-medium text-gray-700 dark:text-white/80 transition-colors hover:bg-gray-100 dark:hover:bg-white/[0.06]"
+                className="rounded-md border chat-border px-3 py-1 text-[0.75rem] font-medium text-gray-700 dark:text-white/80 transition-colors chat-surface-hover-soft"
               >
                 {t('Retry')}
               </button>
@@ -1440,7 +1440,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             />
           )}
           {readOnly ? (
-            readOnlyNotice && <div className="px-4 py-3 border-t chat-border text-sm text-gray-500 dark:text-white/50">{readOnlyNotice}</div>
+            readOnlyNotice && <div className="px-4 py-3 border-t chat-border text-sm chat-text-secondary">{readOnlyNotice}</div>
           ) : (
             <ChatInput
               header={composerHeader}

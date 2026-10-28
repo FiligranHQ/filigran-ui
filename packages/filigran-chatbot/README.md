@@ -1222,10 +1222,13 @@ both. The same variables may be set in CSS on an ancestor instead.
 | Entry              | Variable                            | Styles |
 | ------------------ | ----------------------------------- | ------ |
 | `surface`          | `--filigran-chat-surface`           | The background inline and fullscreen |
-| `surfaceRaised`    | `--filigran-chat-surface-raised`    | The background as a sidebar or floating card, and of its dialogs |
+| `surfaceRaised`    | `--filigran-chat-surface-raised`    | The background as a sidebar or floating card, and of its dialogs and menus |
+| `surfaceSubtle`    | `--filigran-chat-surface-subtle`    | Inputs, cards, a table's or a code block's header |
+| `surfaceHover`     | `--filigran-chat-surface-hover`     | A row or a button under the pointer |
 | `headerBackground` | `--filigran-chat-header-background` | The header's background image (`none` for the surface alone) |
 | `text`             | `--filigran-chat-text`              | Text |
 | `textMuted`        | `--filigran-chat-text-muted`        | Times, labels and hints |
+| `textSecondary`    | `--filigran-chat-text-secondary`    | Table cells, chips, list items, notices |
 | `border`           | `--filigran-chat-border`            | Dividers and outlines |
 | `textSize`         | `--filigran-chat-text-size`         | An answer's prose; its headings in proportion |
 | `userBackground`, `userText`, `userRadius`, `userPadding`, `userTextSize` | `--filigran-chat-user-*` | A user's message |

@@ -390,12 +390,18 @@ export interface ChatPanelTheme {
   surface?: string;
   /** The panel's background as a sidebar or floating card, and its dialogs' (`--filigran-chat-surface-raised`). */
   surfaceRaised?: string;
+  /** Inputs, cards, a table's or a code block's header: a shade off the surface (`--filigran-chat-surface-subtle`). */
+  surfaceSubtle?: string;
+  /** A row or a button under the pointer (`--filigran-chat-surface-hover`). */
+  surfaceHover?: string;
   /** The header's background image, `none` for the surface alone (`--filigran-chat-header-background`). */
   headerBackground?: string;
   /** Text (`--filigran-chat-text`). */
   text?: string;
-  /** Secondary text: times, labels, hints (`--filigran-chat-text-muted`). */
+  /** Faint text: times, labels, hints (`--filigran-chat-text-muted`). */
   textMuted?: string;
+  /** Secondary text: table cells, chips, list items, notices (`--filigran-chat-text-secondary`). */
+  textSecondary?: string;
   /** Dividers and outlines (`--filigran-chat-border`). */
   border?: string;
   /** The size of an answer's prose, its headings in proportion (`--filigran-chat-text-size`). */

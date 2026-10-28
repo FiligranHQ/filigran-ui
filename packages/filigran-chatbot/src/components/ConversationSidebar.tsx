@@ -191,7 +191,7 @@ export const ConversationSidebar = ({
             onClick={onToggleCollapsed}
             aria-label={t('Show conversations')}
             aria-expanded={false}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-white/30 chat-surface-hover transition-colors"
           >
             <SidebarIcon size={17} />
           </button>
@@ -201,7 +201,7 @@ export const ConversationSidebar = ({
             type="button"
             onClick={() => onNewChat()}
             aria-label={t('New conversation')}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-white/30 chat-surface-hover transition-colors"
           >
             <EditIcon size={17} />
           </button>
@@ -236,7 +236,7 @@ export const ConversationSidebar = ({
         <button
           type="button"
           onClick={() => onNewChat()}
-          className="flex-1 flex items-center gap-2 rounded-lg border chat-border px-3 py-1.5 text-[0.8125rem] text-gray-700 dark:text-white/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
+          className="flex-1 flex items-center gap-2 rounded-lg border chat-border px-3 py-1.5 text-[0.8125rem] chat-text-secondary-70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
         >
           <EditIcon size={15} />
           {t('New conversation')}
@@ -248,7 +248,7 @@ export const ConversationSidebar = ({
             onClick={onToggleCollapsed}
             aria-label={t('Hide conversations')}
             aria-expanded
-            className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-gray-400 dark:text-white/30 chat-surface-hover transition-colors"
           >
             <SidebarIcon size={17} />
           </button>
@@ -268,7 +268,7 @@ export const ConversationSidebar = ({
               }}
               placeholder={t('Search conversations...')}
               aria-label={t('Search conversations...')}
-              className="w-full h-7 pl-7 pr-2 rounded-md bg-gray-100 dark:bg-white/[0.06] text-[0.75rem] chat-text placeholder:text-gray-400 dark:placeholder:text-white/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+              className="w-full h-7 pl-7 pr-2 rounded-md chat-surface-subtle-strong text-[0.75rem] chat-text placeholder:text-gray-400 dark:placeholder:text-white/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
             />
           </div>
         </div>
@@ -508,7 +508,7 @@ const WorkspaceGroupSection = ({
 
   return (
     <DropZone onDropConversation={onDropConversation} accepts={manageable} className="mb-0.5">
-      <div className="group/ws flex items-center gap-1 rounded-lg px-1.5 py-1 hover:bg-gray-100 dark:hover:bg-white/[0.06]">
+      <div className="group/ws flex items-center gap-1 rounded-lg px-1.5 py-1 chat-surface-hover-soft">
         {renaming && workspace ? (
           <NameField
             initial={workspace.name}
@@ -668,12 +668,12 @@ const ConversationRow = ({
         }
       }}
       className={`group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left cursor-pointer transition-colors ${
-        isActive ? 'bg-[var(--chat-accent)]/10' : 'hover:bg-gray-100 dark:hover:bg-white/[0.06]'
+        isActive ? 'bg-[var(--chat-accent)]/10' : 'chat-surface-hover-soft'
       }`}
     >
       <span
         className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${
-          isActive ? 'bg-[var(--chat-accent)]/20 text-[var(--chat-accent)]' : 'bg-gray-100 dark:bg-white/[0.06] text-gray-400 dark:text-white/30'
+          isActive ? 'bg-[var(--chat-accent)]/20 text-[var(--chat-accent)]' : 'chat-surface-subtle-strong text-gray-400 dark:text-white/30'
         }`}
       >
         <BotIcon size={13} />
@@ -697,7 +697,7 @@ const ConversationRow = ({
             className="w-full rounded-md bg-white dark:bg-white/10 px-1.5 py-0.5 text-[0.8125rem] chat-text outline-hidden ring-1 ring-[var(--chat-accent)]"
           />
         ) : (
-          <span className={`block truncate text-[0.8125rem] ${isActive ? 'chat-text' : 'text-gray-700 dark:text-white/70'}`}>
+          <span className={`block truncate text-[0.8125rem] ${isActive ? 'chat-text' : 'chat-text-secondary-70'}`}>
             {c.title || t('Untitled conversation')}
           </span>
         )}
@@ -752,7 +752,7 @@ const ConversationRow = ({
                         setMoveOpen(false);
                         onMove(c.conversationId, w.id);
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[0.8125rem] text-gray-700 dark:text-white/80 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-40"
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[0.8125rem] text-gray-700 dark:text-white/80 chat-surface-hover disabled:opacity-40"
                     >
                       <FolderIcon size={13} className="shrink-0 text-[var(--chat-accent)]" />
                       <span className="truncate">{w.name}</span>
@@ -767,7 +767,7 @@ const ConversationRow = ({
                       setMoveOpen(false);
                       onMove(c.conversationId, null);
                     }}
-                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[0.8125rem] text-gray-700 dark:text-white/80 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-40"
+                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[0.8125rem] text-gray-700 dark:text-white/80 chat-surface-hover disabled:opacity-40"
                   >
                     <CloseIcon size={13} className="shrink-0" />
                     {t('Remove from workspace')}

@@ -64,7 +64,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
       data-testid="filigran-chat-voice-call"
       className="absolute inset-0 z-40 flex flex-col rounded-[inherit] chat-surface-raised"
     >
-      <div className="flex items-center justify-between px-4 py-3 text-[0.7rem] uppercase tracking-[1px] text-gray-500 dark:text-white/50">
+      <div className="flex items-center justify-between px-4 py-3 text-[0.7rem] uppercase tracking-[1px] chat-text-secondary">
         <span>{t('Voice call')}</span>
         <span className="font-mono normal-case tracking-normal">{formatDuration(seconds)}</span>
       </div>
@@ -92,7 +92,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
         {phase === 'speaking' && <p className="text-[0.7rem] chat-text-muted">{t('Speak or tap to interrupt')}</p>}
         {phase === 'processing' && <p className="text-[0.7rem] chat-text-muted">{t('Tap to cancel')}</p>}
         {phase === 'listening' && call.heard && (
-          <p className="mt-3 max-w-md text-center text-[0.8125rem] italic text-gray-500 dark:text-white/50">“{call.heard}”</p>
+          <p className="mt-3 max-w-md text-center text-[0.8125rem] italic chat-text-secondary">“{call.heard}”</p>
         )}
       </div>
 
@@ -105,13 +105,13 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
                   className={`max-w-[85%] rounded-lg px-3 py-1.5 text-[0.75rem] leading-5 ${
                     line.role === 'user'
                       ? 'bg-[var(--chat-accent)]/10 text-gray-800 dark:text-white/80'
-                      : 'bg-gray-100 dark:bg-white/[0.06] text-gray-700 dark:text-white/70'
+                      : 'chat-surface-subtle-strong chat-text-secondary-70'
                   }`}
                 >
                   {line.agent && (
                     <div className="mb-0.5 text-[0.7rem] font-medium text-[var(--chat-accent)]">
                       {line.agent.name}
-                      {line.agent.failed && <span className="font-normal text-gray-500 dark:text-white/50"> · {t('Did not answer')}</span>}
+                      {line.agent.failed && <span className="font-normal chat-text-secondary"> · {t('Did not answer')}</span>}
                     </div>
                   )}
                   {line.content.length > LINE_MAX_LENGTH ? `${line.content.slice(0, LINE_MAX_LENGTH)}…` : line.content}
@@ -132,7 +132,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
           className={`${roundButton} ${
             muted
               ? 'border-red-400/40 bg-red-500/10 text-red-500'
-              : 'chat-border text-gray-600 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/[0.06]'
+              : 'chat-border text-gray-600 dark:text-white/70 chat-surface-hover-soft'
           }`}
         >
           {muted ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
@@ -150,7 +150,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
           onClick={onInterrupt}
           disabled={phase !== 'speaking'}
           aria-label={t('Skip response')}
-          className={`${roundButton} chat-border text-gray-600 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/[0.06]`}
+          className={`${roundButton} chat-border text-gray-600 dark:text-white/70 chat-surface-hover-soft`}
         >
           <VolumeOffIcon size={20} />
         </button>

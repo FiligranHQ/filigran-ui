@@ -231,7 +231,7 @@ export const ChatInput = ({
       )}
       {heldMessage && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
-          <span className="shrink-0 text-gray-500 dark:text-white/50">{t('Sends when the answer ends:')}</span>
+          <span className="shrink-0 chat-text-secondary">{t('Sends when the answer ends:')}</span>
           <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-white/80">
             {heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}
           </span>
@@ -252,7 +252,7 @@ export const ChatInput = ({
                   ? 'border-red-300 dark:border-red-500/30 text-red-500 dark:text-red-400'
                   : f.uploadStatus === 'pending'
                     ? 'chat-border chat-text-muted'
-                    : 'chat-border text-gray-600 dark:text-white/60'
+                    : 'chat-border chat-text-secondary-60'
               }`}
             >
               {f.uploadStatus === 'pending' ? (
@@ -297,7 +297,7 @@ export const ChatInput = ({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               aria-label={t('Attach files')}
-              className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10 mr-0.5 transition-colors"
+              className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-gray-400 dark:text-white/30 chat-surface-hover mr-0.5 transition-colors"
             >
               <AttachFileIcon size={18} />
             </button>
@@ -340,7 +340,7 @@ export const ChatInput = ({
               className={`relative w-8 h-8 flex items-center justify-center shrink-0 rounded-lg mr-0.5 transition-colors ${
                 dictation.listening
                   ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20'
-                  : 'text-gray-400 dark:text-white/30 hover:bg-gray-100 dark:hover:bg-white/10'
+                  : 'text-gray-400 dark:text-white/30 chat-surface-hover'
               }`}
             >
               {dictation.listening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}

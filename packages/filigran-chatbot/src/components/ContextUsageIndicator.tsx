@@ -135,7 +135,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
           aria-label={`${summary} (${percent}%)`}
           aria-haspopup="dialog"
           aria-expanded={open}
-          className="flex items-center rounded-md px-1 -mx-1 py-0.5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10"
+          className="flex items-center rounded-md px-1 -mx-1 py-0.5 transition-colors chat-surface-hover"
         >
           {gauge}
         </button>
@@ -178,7 +178,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
                   pill, which turns the swatches into dots that read as bullets
                   rather than as keys to the bar's segments. */}
               <span className="h-2 w-2 shrink-0" style={{ backgroundColor: row.color, borderRadius: 2 }} aria-hidden="true" />
-              <span className="text-[0.75rem] text-gray-700 dark:text-white/70 truncate">{row.label(t)}</span>
+              <span className="text-[0.75rem] chat-text-secondary-70 truncate">{row.label(t)}</span>
               <span className="ml-auto text-[0.7rem] tabular-nums text-gray-500 dark:text-white/40 shrink-0">
                 {compactCount(breakdown?.[row.field] ?? 0)}
               </span>

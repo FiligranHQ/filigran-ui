@@ -333,8 +333,8 @@ const FeedbackComment = ({
   const canSave = !pending && !!text.trim();
 
   return (
-    <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 rounded-lg border chat-border bg-gray-50 dark:bg-white/[0.04] p-2">
-      <label htmlFor={id} className="text-[0.7rem] text-gray-600 dark:text-white/60">
+    <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 rounded-lg border chat-border chat-surface-subtle p-2">
+      <label htmlFor={id} className="text-[0.7rem] chat-text-secondary-60">
         {t('Tell us what went wrong (optional)')}
       </label>
       <textarea
@@ -367,7 +367,7 @@ const FeedbackComment = ({
             if (!pending) onSkip();
           }}
           aria-disabled={pending || undefined}
-          className="rounded-md px-2 py-0.5 text-[0.7rem] text-gray-500 dark:text-white/50 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+          className="rounded-md px-2 py-0.5 text-[0.7rem] chat-text-secondary transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
         >
           {t('Skip')}
         </button>
@@ -519,7 +519,7 @@ const MessageRow = memo(
           className={`group flex items-center gap-2 text-left rounded-lg border px-2.5 py-1.5 transition-colors cursor-pointer max-w-[90%] ${
             isWorking
               ? 'chat-border bg-transparent'
-              : 'chat-border bg-gray-50 dark:bg-white/[0.04] hover:border-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/5'
+              : 'chat-border chat-surface-subtle hover:border-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/5'
           }`}
         >
           <span className={`shrink-0 ${isWorking ? 'chat-text-muted' : 'text-[var(--chat-accent)]'}`}>
@@ -544,7 +544,7 @@ const MessageRow = memo(
     const renderFileChip = (name: string, key: string) => (
       <span
         key={key}
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border text-[0.7rem] text-gray-600 dark:text-white/60"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border text-[0.7rem] chat-text-secondary-60"
       >
         <FileIcon size={14} />
         {name}
@@ -722,7 +722,7 @@ const MessageRow = memo(
       }
       return (
         <Tooltip key={`ref-${ref.conversationId}-${i}`} title={ref.key ? `@${ref.key}` : ''}>
-          <span className={`${chip} chat-border text-gray-600 dark:text-white/60`}>{content}</span>
+          <span className={`${chip} chat-border chat-text-secondary-60`}>{content}</span>
         </Tooltip>
       );
     };
@@ -1106,7 +1106,7 @@ export const ChatMessages = ({
             type="button"
             disabled={loadingEarlier}
             onClick={() => void showEarlier()}
-            className="flex items-center gap-1.5 rounded-full border chat-border px-3 py-1 text-[0.7rem] text-gray-500 dark:text-white/50 transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)]"
+            className="flex items-center gap-1.5 rounded-full border chat-border px-3 py-1 text-[0.7rem] chat-text-secondary transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)]"
           >
             <ChevronDownIcon size={13} className="rotate-180" />
             {t('Load earlier messages')}

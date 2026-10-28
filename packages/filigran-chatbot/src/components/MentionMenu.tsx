@@ -36,7 +36,7 @@ export const MentionMenu = ({ view, items, activeIndex, listboxId, optionId, onH
   const heading = hasAgents ? t('Mention an agent') : t('Reference a conversation');
 
   return (
-    <div className="absolute left-0 right-0 bottom-full mb-1.5 z-20 rounded-[10px] overflow-hidden border chat-border bg-white dark:bg-[#2a2a3e] shadow-xl">
+    <div className="absolute left-0 right-0 bottom-full mb-1.5 z-20 rounded-[10px] overflow-hidden border chat-border chat-menu-surface shadow-xl">
       <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted">{heading}</span>
 
       {items.length > 0 && (
