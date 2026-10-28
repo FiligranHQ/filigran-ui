@@ -15,7 +15,6 @@ This file starts at 3.10.0; earlier releases are on the
 - The thread keeps the end of the conversation in view when what an answer
   carries takes its height after the answer rendered (an image, a chart, a file
   card): it used to stop short of it (#460).
-
 - A message sent while the agent writes its answer shows above that answer,
   where the backend stores it, instead of below it with the rest of the answer
   streaming in above; the same for a message of another tab relayed during a
