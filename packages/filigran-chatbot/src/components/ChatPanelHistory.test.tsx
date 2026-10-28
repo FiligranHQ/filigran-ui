@@ -218,7 +218,7 @@ test('a backend whose turns outlive their stream gets the conversation created b
   await finish(stream);
 });
 
-test("what a message positions absolutely is clipped by the transcript's scroll, so a long conversation does not grow the page", async () => {
+test("the transcript is the containing block of a message's screen-reader time (the class; the clipping it gives is layout, which happy-dom does not do)", async () => {
   fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'assistant', content: 'An answer with a time', created_at: '2026-10-28T10:00:00Z' }])]);
   await render({ conversationId: 'c1' });
   await settle();
@@ -226,5 +226,6 @@ test("what a message positions absolutely is clipped by the transcript's scroll,
   assert.ok(transcript.querySelector('.sr-only'), "the message's screen-reader time");
   // An absolute box is clipped by the scroll of its containing block only: the
   // transcript has to be one, or the times lie down the page and the page scrolls.
+  // Checked in a browser on XTM One's chat page; here only the class it takes.
   assert.ok(transcript.classList.contains('relative'), 'the transcript is no containing block');
 });
