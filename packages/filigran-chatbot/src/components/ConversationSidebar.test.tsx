@@ -54,6 +54,8 @@ test("an empty workspace's hint shows the glyph of its New conversation button, 
   const button = container.querySelector('button[aria-label="New conversation in this workspace"]');
   assert.ok(button, "the workspace's New conversation button");
   assert.equal(hint.querySelector('svg')?.innerHTML, button.querySelector('svg')?.innerHTML, 'the same glyph as the button');
+  const glyph = hint.querySelector('[role="img"]');
+  assert.equal(glyph?.getAttribute('aria-label'), 'New conversation in this workspace', 'the glyph is named as the button it stands for');
   await unmount();
 });
 

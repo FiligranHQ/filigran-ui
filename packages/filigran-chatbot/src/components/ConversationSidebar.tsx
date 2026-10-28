@@ -329,10 +329,19 @@ export const ConversationSidebar = ({
                   group.conversations.map(renderRow)
                 ) : (
                   <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">
-                    {/* The glyph is the workspace's own New conversation button. */}
+                    {/* The glyph is the workspace's own New conversation button, named as it is. */}
                     {t('Drop a conversation here, or start one with {icon}.')
                       .split('{icon}')
-                      .flatMap((part, i) => (i === 0 ? [part] : [<EditIcon key={i} size={11} className="inline align-[-1px]" />, part]))}
+                      .flatMap((part, i) =>
+                        i === 0
+                          ? [part]
+                          : [
+                              <span key={i} role="img" aria-label={t('New conversation in this workspace')} className="inline-block align-[-1px]">
+                                <EditIcon size={11} />
+                              </span>,
+                              part,
+                            ],
+                      )}
                   </p>
                 )}
               </WorkspaceGroupSection>
