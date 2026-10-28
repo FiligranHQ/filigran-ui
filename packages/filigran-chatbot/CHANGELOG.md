@@ -8,7 +8,28 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
-## 3.15.1 — unreleased
+## 3.15.2 — unreleased
+
+### Fixed
+
+- The thread keeps the end of the conversation in view when what an answer
+  carries takes its height after the answer rendered (an image, a chart, a file
+  card): it used to stop short of it (#460).
+- A message sent while the agent writes its answer shows above that answer,
+  where the backend stores it, instead of below it with the rest of the answer
+  streaming in above; the same for a message of another tab relayed during a
+  relayed answer (#460).
+- A turn whose stream drops is awaited for as long as the event stream takes
+  to reopen (a backend restart), showing "Reconnecting…", instead of being
+  marked stopped 15 s after the drop; an `error` or `cancelled` of the event
+  stream naming it ends it at once, and one that ended out of sight is
+  answered or stopped as the history read back says (#460).
+- A stream its server keeps alive (comments at a keep-alive cadence) that then
+  falls silent for 45 s is taken for dropped, so a stream a proxy left
+  half-open is handed over instead of hanging, when the event stream can pick
+  its turn up (#460).
+
+## 3.15.1 — 2026-10-27
 
 ### Fixed
 

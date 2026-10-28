@@ -18,6 +18,7 @@ import {
   singleTouchY,
   swipeScrollsUp,
   TOUCH_SLOP_PX,
+  watchContentGrowth,
   wheelScrollsUp,
   type ScrollBox,
   type ScrollNode,
@@ -359,4 +360,63 @@ test('a box inside the thread that can still go up takes the gesture first', () 
   const reasoning = makeNode(thread, 'hidden', { scrollTop: 120, scrollHeight: 280, clientHeight: 160 });
   assert.equal(scrollsInside(makeNode(reasoning), thread), false);
   assert.equal(scrollsInside(thread, thread), false);
+});
+
+/** Observers a test drives by hand: what each watches, and a way to fire them. */
+function fakeObservers() {
+  const watched = new Set<unknown>();
+  let resized: (() => void) | null = null;
+  let mutated: ((records: { addedNodes: unknown[] }[]) => void) | null = null;
+  let disconnected = 0;
+  class Resize {
+    constructor(callback: () => void) {
+      resized = callback;
+    }
+    observe(target: unknown) {
+      watched.add(target);
+    }
+    disconnect() {
+      disconnected += 1;
+    }
+  }
+  class Mutation {
+    constructor(callback: (records: { addedNodes: unknown[] }[]) => void) {
+      mutated = callback;
+    }
+    observe() {}
+    disconnect() {
+      disconnected += 1;
+    }
+  }
+  return {
+    observers: { ResizeObserver: Resize, MutationObserver: Mutation } as unknown as Parameters<typeof watchContentGrowth>[2],
+    watched,
+    resize: () => resized?.(),
+    add: (node: unknown) => mutated?.([{ addedNodes: [node] }]),
+    disconnected: () => disconnected,
+  };
+}
+
+test('what grows after its message rendered is kept up with: each child, and each child added later', () => {
+  const first = { nodeType: 1 };
+  const container = { children: [first] } as unknown as Element;
+  const fake = fakeObservers();
+  let grew = 0;
+  const stop = watchContentGrowth(container, () => (grew += 1), fake.observers);
+  assert.ok(fake.watched.has(first));
+  const later = { nodeType: 1 };
+  fake.add(later);
+  assert.ok(fake.watched.has(later), 'a message added later is watched too');
+  const text = { nodeType: 3 };
+  fake.add(text);
+  assert.ok(!fake.watched.has(text), 'a text node is no box to watch');
+  fake.resize();
+  assert.equal(grew, 1);
+  stop();
+  assert.equal(fake.disconnected(), 2);
+});
+
+test('without ResizeObserver nothing is watched, and nothing breaks', () => {
+  const stop = watchContentGrowth({ children: [] } as unknown as Element, () => assert.fail('no growth to hear of'), {});
+  stop();
 });

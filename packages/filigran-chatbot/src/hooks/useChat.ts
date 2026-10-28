@@ -105,10 +105,21 @@ const RESUME_WATCH_MS = 900000;
  */
 const APPROVAL_PRESENCE_INTERVAL_MS = 600000;
 
-/** How long a dropped turn waits for the event stream to bring it back before reading the history. */
-const HANDOVER_GRACE_MS = 15000;
+/**
+ * How long a dropped turn waits for the event stream to reopen, at most: the
+ * backend restarting takes as long as it takes, and the replay or the end of
+ * the turn comes once it is back.
+ */
+const HANDOVER_BACKSTOP_MS = RESUME_WATCH_MS;
+/** How long a dropped turn is awaited when the event stream cannot open (no conversation to follow yet). */
+const HANDOVER_UNFOLLOWED_MS = 15000;
 /** How long Stop waits for the backend to end a cancelled turn before letting go of it. */
 const CANCEL_GRACE_MS = 10000;
+/**
+ * How long a stream the server keeps alive (a `: keepalive` every 15 s) may
+ * stay silent before it is taken for dead and dropped (`readSseEvents`).
+ */
+const SSE_IDLE_TIMEOUT_MS = 45000;
 /** Reconnection backoff of the conversation's event stream. */
 const EVENTS_RETRY_BASE_MS = 1000;
 const EVENTS_RETRY_MAX_MS = 30000;
@@ -279,6 +290,16 @@ function mergeIntoTurn(prev: ChatMessage[], restored: ChatMessage[], turnIds: Re
     return adoptStored(match, m);
   });
   return [...before, ...stored, ...region.filter((m) => !taken.has(m.id))];
+}
+
+/**
+ * *prev* with user message *message* added while a turn runs: before the
+ * answer the turn is still writing (*openId*), which is where the backend
+ * stores it and where it reads back, else at the end.
+ */
+export function withUserMessageDuringTurn(prev: ChatMessage[], message: ChatMessage, openId: string | null): ChatMessage[] {
+  const at = openId === null ? -1 : prev.findIndex((m) => m.id === openId);
+  return at < 0 ? [...prev, message] : [...prev.slice(0, at), message, ...prev.slice(at)];
 }
 
 /**
@@ -962,10 +983,26 @@ export function useChat({
   // The panel's own turn whose stream dropped, now awaited from the event stream.
   const handoverTimerRef = useRef<number | null>(null);
   const handoverTurnIdRef = useRef<string | null>(null);
+  // The event stream reopened since the drop, and the wait for its replay began.
+  const handoverReplayArmedRef = useRef(false);
+  // When the handed-over turn is given up, the event stream never back (`HANDOVER_BACKSTOP_MS`).
+  const handoverDeadlineRef = useRef(0);
+  // The event stream the panel follows, set as it renders (`eventsUrl`).
+  const eventsUrlRef = useRef<string | null>(null);
+  // The empty bubble shown while the turn is awaited.
+  const handoverPlaceholderIdRef = useRef<string | null>(null);
+  // A handed-over turn given up, awaiting the read-back that says how it ended (`settleUnseenEnd`).
+  const handoverEndingRef = useRef<{ from: number; shownUpTo: string | null; timer: number } | null>(null);
   const clearHandover = () => {
     if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
     handoverTimerRef.current = null;
     handoverTurnIdRef.current = null;
+    handoverReplayArmedRef.current = false;
+    if (handoverEndingRef.current) window.clearTimeout(handoverEndingRef.current.timer);
+    handoverEndingRef.current = null;
+    const placeholderId = handoverPlaceholderIdRef.current;
+    handoverPlaceholderIdRef.current = null;
+    if (placeholderId !== null) setMessages((prev) => prev.filter((m) => m.id !== placeholderId || m.content));
   };
   /** A turn ended provisionally: sends wait for its stored end, a while at most. */
   const startWindDown = (relayed: boolean) => {
@@ -1168,6 +1205,67 @@ export function useChat({
     historyReloadsRef.current += 1;
     setHistoryReloadNonce(historyReloadsRef.current);
   }, []);
+
+  /**
+   * Nothing replayed the handed-over turn, or the event stream cannot: it
+   * ended out of sight, answered or not, as the conversation read back says
+   * (`settleUnseenEnd`) - a turn that finished normally while the stream was
+   * away is answered.
+   */
+  const endHandoverUnseen = () => {
+    if (handoverTurnIdRef.current === null) return;
+    const shownUpTo = lastStoredId(messagesRef.current);
+    clearHandover();
+    if (!getSessionsUrl()) {
+      // As any turn ends: a Stop still awaiting its answer must not stop the next turn.
+      settleTurn('stopped');
+      return;
+    }
+    reloadHistory();
+    const timer = window.setTimeout(() => {
+      if (handoverEndingRef.current?.timer !== timer) return;
+      handoverEndingRef.current = null;
+      settleTurn('stopped');
+    }, UNSEEN_END_READ_BACK_MS);
+    handoverEndingRef.current = { from: historyReloadsRef.current, shownUpTo, timer };
+  };
+  const endHandoverUnseenRef = useRef(endHandoverUnseen);
+  endHandoverUnseenRef.current = endHandoverUnseen;
+  /** Wait for the event stream to reopen, until the handover's deadline at most. */
+  const awaitEventStream = () => {
+    if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
+    handoverReplayArmedRef.current = false;
+    handoverTimerRef.current = window.setTimeout(
+      () => {
+        handoverTimerRef.current = null;
+        if (!relayedTurnRef.current) endHandoverUnseenRef.current();
+      },
+      Math.max(0, handoverDeadlineRef.current - Date.now()),
+    );
+  };
+  /**
+   * The event stream is open again: the handed-over turn's replay comes with
+   * its snapshot, and none within {@link EVENTS_RESUME_GRACE_MS} means the
+   * turn ended while the stream was away.
+   */
+  const awaitHandoverReplay = () => {
+    if (handoverTurnIdRef.current === null || relayedTurnRef.current || handoverReplayArmedRef.current) return;
+    handoverReplayArmedRef.current = true;
+    if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
+    handoverTimerRef.current = window.setTimeout(() => {
+      handoverTimerRef.current = null;
+      if (!relayedTurnRef.current) endHandoverUnseenRef.current();
+    }, EVENTS_RESUME_GRACE_MS);
+  };
+  const awaitHandoverReplayRef = useRef(awaitHandoverReplay);
+  awaitHandoverReplayRef.current = awaitHandoverReplay;
+  /** The event stream dropped again before replaying the turn: the grace no longer runs, the wait for its reopening does. */
+  const suspendHandoverReplay = () => {
+    if (handoverTurnIdRef.current === null || relayedTurnRef.current || !handoverReplayArmedRef.current) return;
+    awaitEventStream();
+  };
+  const suspendHandoverReplayRef = useRef(suspendHandoverReplay);
+  suspendHandoverReplayRef.current = suspendHandoverReplay;
 
   // Determine upload endpoint URL (null disables file upload proxying)
   const getUploadUrl = (): string | null => {
@@ -1411,7 +1509,9 @@ export function useChat({
       { id: randomId(), role: 'user', content: shown, timestamp: new Date(), files: files.length > 0 ? files : undefined },
       content,
     );
-    setMessages((prev) => [...prev, optimistic]);
+    // Read now: by the time React runs the update, the turn may have ended.
+    const openAnswerId = liveRendererRef.current?.openAnswerId() ?? handoverPlaceholderIdRef.current;
+    setMessages((prev) => withUserMessageDuringTurn(prev, optimistic, openAnswerId));
     const fileIds = files.filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
     // Why the backend refused it, when it says.
     let detail: string | null = null;
@@ -1809,6 +1909,8 @@ export function useChat({
       deltas,
       apply,
       currentAssistantId: () => currentAssistantId,
+      /** The answer this turn is still writing; null between segments and once it is done. */
+      openAnswerId: () => (doneReceived ? null : currentAssistantId),
       accumulated: () => accumulated,
       doneReceived: () => doneReceived,
       segmentIds: () => segmentIds,
@@ -1886,6 +1988,8 @@ export function useChat({
     switch (parsed.action) {
       case 'user_message': {
         const relayedMessage = parsed.message;
+        // Read now: by the time React runs the update, the turn may have ended.
+        const openAnswerId = liveRendererRef.current?.openAnswerId() ?? handoverPlaceholderIdRef.current;
         setMessages((prev) => {
           if (relayedMessage.serverId && prev.some((m) => m.serverId === relayedMessage.serverId)) return prev;
           // This tab's own message, echoed back: it takes the persisted id rather than a second bubble.
@@ -1895,7 +1999,7 @@ export function useChat({
           if (own >= 0 && prev.length - own <= 3) {
             return prev.map((m, i) => (i === own ? { ...m, serverId: relayedMessage.serverId, raw: relayedMessage.raw } : m));
           }
-          return [...prev, relayedMessage];
+          return withUserMessageDuringTurn(prev, relayedMessage, openAnswerId);
         });
         return true;
       }
@@ -2106,25 +2210,24 @@ export function useChat({
       if (!hasEvents || !conversationIdRef.current || !ownTurnIdRef.current || turn.ended()) return false;
       handedOver = true;
       // The replay brings back the segment being written, never those an
-      // intermediate `done` closed: they stay.
-      if (!turn.doneReceived()) {
-        const segId = turn.currentAssistantId();
-        setMessages((prev) => prev.filter((m) => m.id !== segId));
-      }
+      // intermediate `done` closed: they stay. Until then an empty bubble
+      // says the turn is awaited.
+      const placeholderId = turn.doneReceived() ? randomId() : turn.currentAssistantId();
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== placeholderId),
+        { id: placeholderId, role: 'assistant', content: '', timestamp: new Date() },
+      ]);
+      handoverPlaceholderIdRef.current = placeholderId;
       handoverTurnIdRef.current = ownTurnIdRef.current;
       ownTurnIdRef.current = null;
       setClientId(randomId());
-      if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
-      handoverTimerRef.current = window.setTimeout(() => {
-        handoverTimerRef.current = null;
-        if (relayedTurnRef.current || handoverTurnIdRef.current === null) return;
-        // Nothing came: the turn is over, and its answer is in the history,
-        // if it got one; nothing on screen says it did.
-        handoverTurnIdRef.current = null;
-        stopRunning('stopped');
-        setAgentStatus(null);
-        reloadHistory();
-      }, HANDOVER_GRACE_MS);
+      // A Stop on its way still says so.
+      setAgentStatus((prev) => (prev?.status === 'cancelling' ? prev : { status: 'reconnecting' }));
+      // The backend may be restarting: the turn is awaited for as long as the
+      // event stream takes to reopen (`awaitHandoverReplay`), up to this; not
+      // long when the stream has no conversation to follow yet.
+      handoverDeadlineRef.current = Date.now() + (eventsUrlRef.current ? HANDOVER_BACKSTOP_MS : HANDOVER_UNFOLLOWED_MS);
+      awaitEventStream();
       return true;
     };
 
@@ -2214,65 +2317,70 @@ export function useChat({
       override?.onSent?.();
 
       const parseEvent = getParser(backendType);
-      await readSseEvents(res.body, (evt) => {
-        const parsed = readFrame(parseEvent, evt, turn.ctx, false);
-        if (!parsed) return true;
-        try {
-          if (awaitingStoredEnd) {
-            // A new chat took the panel over: nothing of this turn is on screen.
-            if (sessionGate.generation !== turnGeneration) return false;
-            if (applyConversationFrame(parsed)) return true;
-            return !applyStoredEnd(turn.currentAssistantId(), parsed, false);
-          }
-          if (!ownTurnStartedRef.current && liveRendererRef.current === turn) {
-            // The turn holds the conversation now: a cancel answered `none`
-            // before it did goes again, to reach it (one not answered yet
-            // goes again on its answer).
-            ownTurnStartedRef.current = true;
-            if (cancelBeforeStartRef.current === 'resend') {
-              cancelBeforeStartRef.current = 'off';
-              if (cancelTimerRef.current !== null) postCancel(cancelTimerRef.current);
+      await readSseEvents(
+        res.body,
+        (evt) => {
+          const parsed = readFrame(parseEvent, evt, turn.ctx, false);
+          if (!parsed) return true;
+          try {
+            if (awaitingStoredEnd) {
+              // A new chat took the panel over: nothing of this turn is on screen.
+              if (sessionGate.generation !== turnGeneration) return false;
+              if (applyConversationFrame(parsed)) return true;
+              return !applyStoredEnd(turn.currentAssistantId(), parsed, false);
             }
-          }
-          if (!ownTurnIdRef.current && typeof evt.turn_id === 'string' && evt.turn_id) ownTurnIdRef.current = evt.turn_id;
-          if (parsed.action === 'folded') {
-            if (parsed.turnId) ownTurnIdRef.current = parsed.turnId;
-            return true;
-          }
-          if (applyConversationFrame(parsed)) return true;
-          if (parsed.action === 'set_chat_id') {
-            setLegacyChatId(parsed.chatId);
-            writeStorage('local', legacyChatIdStorageKey, parsed.chatId);
-            return true;
-          }
-          if (parsed.action === 'page_action_required') {
-            turn.deltas.flush();
-            // Not awaited: the stream stays silent until the answer lands,
-            // and the reader must keep draining its keep-alives meanwhile.
-            void answerPageAction(parsed.actionId, parsed.pageAction, parsed.conversationId);
-            return true;
-          }
-          if (parsed.action === 'session_ended' || turnEndOf(parsed)) sawTurnEnd = true;
-          if (turn.apply(parsed) !== 'end') return true;
-          if (isProvisionalEnd(parsed)) {
-            // Over for the user and the host now; its stored end, still to
-            // come on this stream, carries the answer's id.
-            turn.deltas.flush();
-            awaitingStoredEnd = true;
-            // A turn that outlives its stream holds the conversation until
-            // that end: sends wait for it.
-            if (turnsOutliveStream) windDown = startWindDown(false);
+            if (!ownTurnStartedRef.current && liveRendererRef.current === turn) {
+              // The turn holds the conversation now: a cancel answered `none`
+              // before it did goes again, to reach it (one not answered yet
+              // goes again on its answer).
+              ownTurnStartedRef.current = true;
+              if (cancelBeforeStartRef.current === 'resend') {
+                cancelBeforeStartRef.current = 'off';
+                if (cancelTimerRef.current !== null) postCancel(cancelTimerRef.current);
+              }
+            }
+            if (!ownTurnIdRef.current && typeof evt.turn_id === 'string' && evt.turn_id) ownTurnIdRef.current = evt.turn_id;
+            if (parsed.action === 'folded') {
+              if (parsed.turnId) ownTurnIdRef.current = parsed.turnId;
+              return true;
+            }
+            if (applyConversationFrame(parsed)) return true;
+            if (parsed.action === 'set_chat_id') {
+              setLegacyChatId(parsed.chatId);
+              writeStorage('local', legacyChatIdStorageKey, parsed.chatId);
+              return true;
+            }
+            if (parsed.action === 'page_action_required') {
+              turn.deltas.flush();
+              // Not awaited: the stream stays silent until the answer lands,
+              // and the reader must keep draining its keep-alives meanwhile.
+              void answerPageAction(parsed.actionId, parsed.pageAction, parsed.conversationId);
+              return true;
+            }
+            if (parsed.action === 'session_ended' || turnEndOf(parsed)) sawTurnEnd = true;
+            if (turn.apply(parsed) !== 'end') return true;
+            if (isProvisionalEnd(parsed)) {
+              // Over for the user and the host now; its stored end, still to
+              // come on this stream, carries the answer's id.
+              turn.deltas.flush();
+              awaitingStoredEnd = true;
+              // A turn that outlives its stream holds the conversation until
+              // that end: sends wait for it.
+              if (turnsOutliveStream) windDown = startWindDown(false);
 
-            storedEndControllerRef.current = controller;
-            release();
+              storedEndControllerRef.current = controller;
+              release();
+              return true;
+            }
+            return false;
+          } catch {
+            // A frame that could not be applied is skipped, not fatal.
             return true;
           }
-          return false;
-        } catch {
-          // A frame that could not be applied is skipped, not fatal.
-          return true;
-        }
-      });
+        },
+        // Given up on, the stream is of use only when the event stream can pick the turn up.
+        { idleTimeoutMs: () => (hasEvents && conversationIdRef.current && ownTurnIdRef.current ? SSE_IDLE_TIMEOUT_MS : undefined) },
+      );
       turn.deltas.flush();
       // Ended without saying the turn is over (a proxy's idle timeout, a
       // server restart): the turn may well run on.
@@ -2388,6 +2496,12 @@ export function useChat({
    * the read-back says (`unseenTurnOutcome`).
    */
   const settleUnseenEnd = (readFor: number, restored: ChatMessage[] | null) => {
+    const ending = handoverEndingRef.current;
+    if (ending && readFor >= ending.from) {
+      window.clearTimeout(ending.timer);
+      handoverEndingRef.current = null;
+      settleTurn(restored ? unseenTurnOutcome(restored, ending.shownUpTo) : 'stopped');
+    }
     const withdrawn = withdrawnTurnRef.current;
     if (!withdrawn?.readBack || readFor < withdrawn.readBack.from) return;
     endWithdrawnTurn(restored ? unseenTurnOutcome(restored, withdrawn.shownUpTo) : 'stopped');
@@ -2449,10 +2563,9 @@ export function useChat({
       // handed-over turn of our own will not be replayed.
       endRelayedTurn();
       endWithdrawnTurn('stopped');
-      if (handoverTurnIdRef.current !== null && !ownTurnActiveRef.current) {
+      if ((handoverTurnIdRef.current !== null || handoverEndingRef.current !== null) && !ownTurnActiveRef.current) {
         clearHandover();
-        stopRunning('stopped');
-        setAgentStatus(null);
+        settleTurn('stopped');
       }
       return;
     }
@@ -2512,8 +2625,12 @@ export function useChat({
       // it ended while the stream was away, and its answer is in the history.
       const withdrawn = withdrawnTurnRef.current;
       const replayed = withdrawn?.turnId === turnId;
+      // This panel's own turn, awaited since its stream dropped, goes on here
+      // even from its end alone (a restart cut it): the end is applied as a
+      // relayed turn's, its stored end awaited when it is provisional.
+      const handedOver = turnId === handoverTurnIdRef.current;
       // The end of a turn never seen begins nothing.
-      if ((parsed.action === 'cancelled' || parsed.action === 'error') && !replayed) {
+      if ((parsed.action === 'cancelled' || parsed.action === 'error') && !replayed && !handedOver) {
         if (withdrawn) endTurnUnseen();
         return;
       }
@@ -2534,9 +2651,12 @@ export function useChat({
       // stream closed while the page was hidden), replayed: the segments it
       // closed meanwhile are only in the history, read back into it.
       setWithdrawnTurn(null);
-      const lostSight = turnId === handoverTurnIdRef.current || replayed;
+      const lostSight = handedOver || replayed;
       if (evt.resumed === true && lostSight) {
         turnReadBackRef.current = current.renderer;
+        reloadHistory();
+      } else if (handedOver && (parsed.action === 'cancelled' || parsed.action === 'error')) {
+        // What the cut turn stored (its interrupted reply) is in the history.
         reloadHistory();
       }
       clearHandover();
@@ -2844,6 +2964,8 @@ export function useChat({
    * host's `requestHeaders` change, so a refreshed token picks the stream up.
    */
   const eventsUrl = conversationId && historySettledFor === conversationId ? getEventsUrl(conversationId) : null;
+  // Whether a dropped turn can be followed on the event stream (`handOver`).
+  eventsUrlRef.current = eventsUrl;
   const headersKey = requestHeadersKey(requestHeaders);
   const headersKeyRef = useRef(headersKey);
   headersKeyRef.current = headersKey;
@@ -2889,28 +3011,42 @@ export function useChat({
         if ([401, 403, 404, 405].includes(res.status)) {
           refused = true;
           if ((res.status === 401 || res.status === 403) && !stopped) setEventsRefused({ url: eventsUrl, headersKey: sentHeadersKey });
-          // Nothing replays a relayed turn now: how it ended is read back.
-          if (!stopped) endTurnUnseenRef.current();
+          // Nothing replays a relayed or handed-over turn now: how it ended is read back.
+          if (!stopped) {
+            endTurnUnseenRef.current();
+            endHandoverUnseenRef.current();
+          }
           return;
         }
-        if (!res.ok || !res.body) return;
+        if (!res.ok || !res.body) {
+          // Only a backend coming back (a gateway between it and the panel says so) is worth waiting for.
+          if (!stopped && ![502, 503, 504].includes(res.status)) endHandoverUnseenRef.current();
+          return;
+        }
         if (opened) awaitRelayedResumeRef.current();
+        awaitHandoverReplayRef.current();
         opened = true;
         openedAt = Date.now();
-        await readSseEvents(res.body, (evt) => {
-          // A stream that delivers is healthy: its next drop, or the server's
-          // own end of it, is retried from the shortest delay again.
-          retry = 0;
-          try {
-            handleEventFrameRef.current(evt);
-          } catch {
-            // A frame that could not be applied is skipped, not fatal.
-          }
-        });
+        await readSseEvents(
+          res.body,
+          (evt) => {
+            // A stream that delivers is healthy: its next drop, or the server's
+            // own end of it, is retried from the shortest delay again.
+            retry = 0;
+            try {
+              handleEventFrameRef.current(evt);
+            } catch {
+              // A frame that could not be applied is skipped, not fatal.
+            }
+          },
+          { idleTimeoutMs: SSE_IDLE_TIMEOUT_MS },
+        );
       } catch {
         // Dropped or aborted: reconnected below unless the effect is gone.
       } finally {
         connected = false;
+        // A handed-over turn the stream had not replayed yet waits for its next reopening.
+        if (openedAt !== null && !stopped) suspendHandoverReplayRef.current();
         // So is one that lived a while, keep-alives only: one that opens and
         // closes at once is not, and backs off.
         if (openedAt !== null && Date.now() - openedAt >= EVENTS_HEALTHY_MS) retry = 0;
@@ -3105,6 +3241,7 @@ export function useChat({
       if (windDownRef.current) window.clearTimeout(windDownRef.current.timer);
 
       if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
+      if (handoverEndingRef.current) window.clearTimeout(handoverEndingRef.current.timer);
       if (resumeWaitRef.current) window.clearTimeout(resumeWaitRef.current.timer);
       // A message still held goes nowhere with the panel.
       cancelHeld();

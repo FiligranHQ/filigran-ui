@@ -120,6 +120,8 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
       return { label: t('Waiting for your approval…'), StatusIcon: AlertTriangleIcon, showDots: false };
     case 'cancelling':
       return { label: t('Stopping…'), StatusIcon: BrainIcon, showDots: true };
+    case 'reconnecting':
+      return { label: t('Reconnecting…'), StatusIcon: BrainIcon, showDots: true };
     case 'wait_start':
       return { label: agentStatus.waitReason || t('Waiting before continuing…'), StatusIcon: SparklesIcon, showDots: false };
     case 'acting_on_page':

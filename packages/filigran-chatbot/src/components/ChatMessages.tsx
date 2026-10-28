@@ -22,6 +22,7 @@ import { formatMessageTime } from '../utils/messageTime';
 import { userMessageText } from '../utils/userMessage';
 import {
   createScrollFollower,
+  watchContentGrowth,
   innerBoxScrollsUp,
   keyScrollsUp,
   nextTouchAnchor,
@@ -919,6 +920,12 @@ export const ChatMessages = ({
   // bottom (see `createScrollFollower`). It holds no React state: its timer
   // firing after unmount finds no container and does nothing.
   const [follower] = useState(() => createScrollFollower(() => scrollRef.current));
+  // What grows after its message rendered (an image, a file card) is kept in
+  // view too: the effects below only hear of changes to the messages.
+  useEffect(() => {
+    const container = scrollRef.current;
+    return container ? watchContentGrowth(container, follower.keepUp) : undefined;
+  }, [follower]);
   // The highest point of the touch in progress: a swipe is measured from it,
   // so a finger that turns back down counts from where it turned.
   const touchAnchorRef = useRef<number | null>(null);
@@ -1069,10 +1076,9 @@ export const ChatMessages = ({
   }, [conversationId, userMessageCount, spokenStillShown, stopSpeech]);
 
   // The streaming response is the LAST ASSISTANT message — not necessarily
-  // the last message overall: a mid-run steering send appends an optimistic
-  // user bubble after the assistant message that is still streaming. Gating
-  // on `messages.length - 1` would then drop the live cursor / ChatThinking
-  // state the moment the user steers.
+  // the last message overall: a message sent between two segments of the
+  // turn comes after the last one written. Gating on `messages.length - 1`
+  // would then drop the live cursor / ChatThinking state.
   let streamingMessageId: string | null = null;
   if (isLoading) {
     for (let i = messages.length - 1; i >= 0; i--) {

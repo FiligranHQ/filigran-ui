@@ -128,6 +128,7 @@ const ja: Catalog = {
   'Read aloud': '読み上げ',
   'Reasoning details': '推論の詳細',
   'Reasoning details — turn limit reached': '推論の詳細 — ターン制限に達しました',
+  'Reconnecting…': '再接続中…',
   'Reference a conversation': '会話を参照',
   'Remove from workspace': 'ワークスペースから外す',
   'Rename conversation': '会話の名前を変更',
