@@ -56,7 +56,7 @@ export const Dropdown = ({ open, onClose, anchorRef, placement = 'bottom-start',
   return createPortal(
     <div
       ref={panelRef}
-      className="fixed z-[10000] rounded-[10px] overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-[#2a2a3e] shadow-xl"
+      className="fixed z-[10000] rounded-[10px] overflow-hidden border chat-border-200/10 chat-menu-surface shadow-xl"
       style={{ top: pos.top, left: pos.left, width }}
     >
       {children}

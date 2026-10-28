@@ -26,6 +26,137 @@
 @variant dark (.dark &);
 
 /*
+ * The host's theme (`--filigran-chat-*`): a host value applies in both modes,
+ * since a host's own tokens already follow its theme; unset, the panel's own
+ * look. A class names that look: `chat-text-secondary-700/80` is gray-700 in
+ * light mode and white at 80% in dark, as `--chat-dark` says which.
+ */
+.filigran-chatbot {
+  --chat-dark: 0;
+  --chat-default-surface: var(--color-gray-50);
+  --chat-default-surface-raised: var(--color-white);
+  --chat-default-menu-surface: var(--color-white);
+  --chat-default-answer-text: var(--color-gray-900);
+  --chat-default-code-block: var(--color-gray-50);
+  --chat-default-code-inline: var(--color-gray-100);
+  --chat-default-skeleton-fill: color-mix(in oklab, var(--color-gray-200) 70%, transparent);
+  --chat-default-skeleton-card: color-mix(in oklab, var(--color-gray-100) 50%, transparent);
+  --chat-default-icon-hover: color-mix(in oklab, var(--color-gray-200) 60%, transparent);
+  --chat-default-detail-surface: color-mix(in oklab, var(--color-gray-50) 50%, transparent);
+}
+.dark .filigran-chatbot {
+  --chat-dark: 1;
+  --chat-default-surface: #161622;
+  --chat-default-surface-raised: #1e1e2e;
+  --chat-default-menu-surface: #2a2a3e;
+  --chat-default-answer-text: color-mix(in oklab, var(--color-white) 90%, transparent);
+  --chat-default-code-block: color-mix(in oklab, var(--color-white) 3%, transparent);
+  --chat-default-code-inline: color-mix(in oklab, var(--color-white) 8%, transparent);
+  --chat-default-skeleton-fill: color-mix(in oklab, var(--color-white) 6%, transparent);
+  --chat-default-skeleton-card: color-mix(in oklab, var(--color-white) 3%, transparent);
+  --chat-default-icon-hover: color-mix(in oklab, var(--color-white) 10%, transparent);
+  --chat-default-detail-surface: color-mix(in oklab, var(--color-white) 1%, transparent);
+}
+@utility chat-text-* {
+  color: var(--filigran-chat-text, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
+}
+@utility chat-text-secondary-* {
+  color: var(--filigran-chat-text-secondary, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
+}
+@utility chat-text-muted-* {
+  color: var(--filigran-chat-text-muted, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
+}
+@utility chat-border-* {
+  border-color: var(--filigran-chat-border, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
+}
+/* Dividers, a gauge's track: a line's tone, as a fill. */
+@utility chat-border-fill-* {
+  background-color: var(--filigran-chat-border, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
+}
+@utility chat-surface-subtle-* {
+  background-color: var(--filigran-chat-surface-subtle, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
+}
+@utility chat-surface-hover-* {
+  background-color: var(--filigran-chat-surface-hover, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
+}
+@utility chat-input-surface-* {
+  background-color: var(--filigran-chat-input-surface, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
+  background-color: var(--filigran-chat-input-surface, color-mix(in oklab, --value(--color-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
+}
+/* The composer's box: no fill of its own, the host's field fill when it sets one. */
+@utility chat-composer-surface {
+  background-color: var(--filigran-chat-input-surface, transparent);
+}
+@utility chat-skeleton-fill {
+  background-color: var(--filigran-chat-border, var(--chat-default-skeleton-fill));
+}
+@utility chat-skeleton-card {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-skeleton-card));
+}
+@utility chat-icon-hover {
+  background-color: var(--filigran-chat-surface-hover, var(--chat-default-icon-hover));
+}
+@utility chat-detail-surface {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-detail-surface));
+}
+@utility chat-surface {
+  background-color: var(--filigran-chat-surface, var(--chat-default-surface));
+}
+@utility chat-surface-raised {
+  background-color: var(--filigran-chat-surface-raised, var(--chat-default-surface-raised));
+}
+/* Menus (the dropdowns, the mention list): raised above the panel. */
+@utility chat-menu-surface {
+  background-color: var(--filigran-chat-surface-raised, var(--chat-default-menu-surface));
+}
+/* A colour or an image: `background` takes either. */
+@utility chat-header-surface {
+  background: var(
+    --filigran-chat-header-background,
+    linear-gradient(
+      to bottom right in oklab,
+      color-mix(in oklab, var(--chat-accent-dark) 13%, transparent),
+      color-mix(in oklab, var(--chat-accent) 7%, transparent)
+    )
+  );
+}
+/* An answer's prose: its paragraphs and lists. */
+@utility chat-answer-text {
+  font-size: var(--filigran-chat-text-size, 0.8125rem);
+  color: var(--filigran-chat-text, var(--chat-default-answer-text));
+}
+/* An answer's headings, in proportion to its prose. */
+@utility chat-answer-heading-1 {
+  font-size: calc(var(--filigran-chat-text-size, 0.8125rem) * 1.231);
+  line-height: var(--tw-leading, 1.5);
+}
+@utility chat-answer-heading-2 {
+  font-size: calc(var(--filigran-chat-text-size, 0.8125rem) * 1.108);
+}
+@utility chat-answer-heading-3 {
+  font-size: calc(var(--filigran-chat-text-size, 0.8125rem) * 1.046);
+}
+@utility chat-user-bubble {
+  background-color: var(--filigran-chat-user-background, var(--chat-accent-dark));
+  color: var(--filigran-chat-user-text, var(--color-white));
+  border-radius: var(--filigran-chat-user-radius, 14px 14px 4px 14px);
+  padding: var(--filigran-chat-user-padding, 0.5rem 0.875rem);
+  font-size: var(--filigran-chat-user-text-size, var(--filigran-chat-text-size, 0.8125rem));
+}
+/* Code, in a block or inline. */
+@utility chat-code {
+  font-family: var(--filigran-chat-font-mono, var(--font-mono));
+  font-size: var(--filigran-chat-code-size, var(--text-xs));
+  line-height: var(--tw-leading, var(--text-xs--line-height));
+}
+@utility chat-code-block {
+  background-color: var(--filigran-chat-code-surface, var(--chat-default-code-block));
+}
+@utility chat-code-inline {
+  background-color: var(--filigran-chat-code-surface, var(--chat-default-code-inline));
+}
+
+/*
  * Filigran Chat — scoped styles
  * Preflight is disabled in tailwind.config to avoid leaking global resets
  * (border-style: solid on *) into the host application.

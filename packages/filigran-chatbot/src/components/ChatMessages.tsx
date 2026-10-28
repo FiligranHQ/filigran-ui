@@ -218,7 +218,7 @@ const MessageTime = ({ timestamp, locale }: { timestamp: Date; locale?: string }
   if (!time) return null;
   return (
     <Tooltip title={time.full}>
-      <time dateTime={time.iso} className="px-1 text-[0.65rem] tabular-nums text-gray-400 dark:text-white/40 select-none">
+      <time dateTime={time.iso} className="px-1 text-[0.65rem] tabular-nums chat-text-muted-400/40 select-none">
         <span aria-hidden="true">{time.label}</span>
         <span className="sr-only">{time.full}</span>
       </time>
@@ -334,8 +334,8 @@ const FeedbackComment = ({
   const canSave = !pending && !!text.trim();
 
   return (
-    <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] p-2">
-      <label htmlFor={id} className="text-[0.7rem] text-gray-600 dark:text-white/60">
+    <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 rounded-lg border chat-border-200/10 chat-surface-subtle-50/4 p-2">
+      <label htmlFor={id} className="text-[0.7rem] chat-text-secondary-600/60">
         {t('Tell us what went wrong (optional)')}
       </label>
       <textarea
@@ -359,7 +359,7 @@ const FeedbackComment = ({
           }
         }}
         placeholder={t('What could be improved?')}
-        className="w-full resize-y rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-transparent px-2 py-1 text-[0.75rem] leading-5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+        className="w-full resize-y rounded-md border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-[0.75rem] leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
         <button
@@ -368,7 +368,7 @@ const FeedbackComment = ({
             if (!pending) onSkip();
           }}
           aria-disabled={pending || undefined}
-          className="rounded-md px-2 py-0.5 text-[0.7rem] text-gray-500 dark:text-white/50 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+          className="rounded-md px-2 py-0.5 text-[0.7rem] chat-text-secondary-500/50 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
         >
           {t('Skip')}
         </button>
@@ -519,20 +519,20 @@ const MessageRow = memo(
           title={t('Download')}
           className={`group flex items-center gap-2 text-left rounded-lg border px-2.5 py-1.5 transition-colors cursor-pointer max-w-[90%] ${
             isWorking
-              ? 'border-gray-200 dark:border-white/10 bg-transparent'
-              : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] hover:border-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/5'
+              ? 'chat-border-200/10 bg-transparent'
+              : 'chat-border-200/10 chat-surface-subtle-50/4 hover:border-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/5'
           }`}
         >
-          <span className={`shrink-0 ${isWorking ? 'text-gray-400 dark:text-white/40' : 'text-[var(--chat-accent)]'}`}>
+          <span className={`shrink-0 ${isWorking ? 'chat-text-muted-400/40' : 'text-[var(--chat-accent)]'}`}>
             <FileIcon size={16} />
           </span>
           <span className="flex flex-col min-w-0 flex-1">
-            <span className="truncate text-[0.75rem] text-gray-900 dark:text-white">{att.filename}</span>
+            <span className="truncate text-[0.75rem] chat-text-900/100">{att.filename}</span>
             {(att.type || sizeLabel) && (
-              <span className="text-[0.65rem] text-gray-400 dark:text-white/40 uppercase">{[att.type, sizeLabel].filter(Boolean).join(' · ')}</span>
+              <span className="text-[0.65rem] chat-text-muted-400/40 uppercase">{[att.type, sizeLabel].filter(Boolean).join(' · ')}</span>
             )}
           </span>
-          <span className="shrink-0 text-gray-400 dark:text-white/30 group-hover:text-[var(--chat-accent)]">
+          <span className="shrink-0 chat-text-muted-400/30 group-hover:text-[var(--chat-accent)]">
             <DownloadIcon size={15} />
           </span>
         </button>
@@ -545,7 +545,7 @@ const MessageRow = memo(
     const renderFileChip = (name: string, key: string) => (
       <span
         key={key}
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-200 dark:border-white/10 text-[0.7rem] text-gray-600 dark:text-white/60"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border-200/10 text-[0.7rem] chat-text-secondary-600/60"
       >
         <FileIcon size={14} />
         {name}
@@ -652,7 +652,7 @@ const MessageRow = memo(
       // and we're not still streaming.
       if (blocks.length === 0 && !isStreaming && !msg.stopped) {
         blocks.push(
-          <span key="empty" className="pl-1 text-[0.8125rem] text-gray-400 dark:text-white/40 italic">
+          <span key="empty" className="pl-1 text-[0.8125rem] chat-text-muted-400/40 italic">
             ...
           </span>,
         );
@@ -723,7 +723,7 @@ const MessageRow = memo(
       }
       return (
         <Tooltip key={`ref-${ref.conversationId}-${i}`} title={ref.key ? `@${ref.key}` : ''}>
-          <span className={`${chip} border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60`}>{content}</span>
+          <span className={`${chip} chat-border-200/10 chat-text-secondary-600/60`}>{content}</span>
         </Tooltip>
       );
     };
@@ -759,7 +759,7 @@ const MessageRow = memo(
               a thread that changed hands mid-way must keep each answer under
               the agent that wrote it.
             */}
-            <span className="font-semibold text-xs text-gray-900 dark:text-white">{msg.agentName ?? agentName}</span>
+            <span className="font-semibold text-xs chat-text-900/100">{msg.agentName ?? agentName}</span>
           </div>
         )}
 
@@ -774,14 +774,11 @@ const MessageRow = memo(
         {isAssistant ? (
           <div data-testid="filigran-chat-assistant-message" className="flex flex-col gap-1.5 w-full items-start">
             {buildAssistantBlocks()}
-            {msg.stopped && !isStreaming && <p className="pl-1 text-[0.75rem] italic text-gray-400 dark:text-white/40">{t('Stopped')}</p>}
+            {msg.stopped && !isStreaming && <p className="pl-1 text-[0.75rem] italic chat-text-muted-400/40">{t('Stopped')}</p>}
             {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-xs ml-1 animate-pulse" />}
           </div>
         ) : (
-          <div
-            data-testid="filigran-chat-user-message"
-            className="max-w-[90%] px-3.5 py-2 rounded-[14px_14px_4px_14px] bg-[var(--chat-accent-dark)] text-white text-[0.8125rem] leading-6 whitespace-pre-wrap break-words"
-          >
+          <div data-testid="filigran-chat-user-message" className="max-w-[90%] chat-user-bubble leading-6 whitespace-pre-wrap break-words">
             {userText}
           </div>
         )}
@@ -792,14 +789,14 @@ const MessageRow = memo(
 
         {/* The user's side mirrors the answer's: the time hugs the bubble's edge. */}
         {!isAssistant && (
-          <div className="mt-0.5 flex items-center justify-end gap-0.5 text-gray-400 dark:text-white/40">
+          <div className="mt-0.5 flex items-center justify-end gap-0.5 chat-text-muted-400/40">
             {!!userText && <MessageCopyButton text={userText} label={t('Copy message')} t={t} />}
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
           </div>
         )}
 
         {showActions && (
-          <div className="mt-0.5 flex flex-wrap items-center gap-0.5 text-gray-400 dark:text-white/40">
+          <div className="mt-0.5 flex flex-wrap items-center gap-0.5 chat-text-muted-400/40">
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
             {hasReasoningDetails && (
               <Tooltip title={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}>
@@ -1116,7 +1113,7 @@ export const ChatMessages = ({
             type="button"
             disabled={loadingEarlier}
             onClick={() => void showEarlier()}
-            className="flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-white/10 px-3 py-1 text-[0.7rem] text-gray-500 dark:text-white/50 transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)]"
+            className="flex items-center gap-1.5 rounded-full border chat-border-200/10 px-3 py-1 text-[0.7rem] chat-text-secondary-500/50 transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)]"
           >
             <ChevronDownIcon size={13} className="rotate-180" />
             {t('Load earlier messages')}

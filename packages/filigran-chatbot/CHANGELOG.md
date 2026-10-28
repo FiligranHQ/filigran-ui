@@ -8,7 +8,23 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
-## 3.15.2 — unreleased
+## 3.16.0 — unreleased
+
+### Added
+
+- `theme`: the host's colours, type and shapes (surfaces, menus, subtle and
+  hover fills, text fields, text, secondary and muted text, borders, a user's message, an
+  answer's text size, code), set as `--filigran-chat-*` variables on the panel
+  root. Every entry left out keeps the panel's own look, light and dark, so a
+  host that sets nothing sees the same panel (#460).
+
+### Fixed
+
+- In dark mode, the hover and focus colours an element carries show as they do
+  in light mode (an accent border on hover, the composer's focus border); its
+  dark colour used to hide them (#460).
+
+## 3.15.2 — 2026-10-28
 
 ### Fixed
 

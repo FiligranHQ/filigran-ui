@@ -36,8 +36,8 @@ export const MentionMenu = ({ view, items, activeIndex, listboxId, optionId, onH
   const heading = hasAgents ? t('Mention an agent') : t('Reference a conversation');
 
   return (
-    <div className="absolute left-0 right-0 bottom-full mb-1.5 z-20 rounded-[10px] overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-[#2a2a3e] shadow-xl">
-      <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase text-gray-400 dark:text-white/40">{heading}</span>
+    <div className="absolute left-0 right-0 bottom-full mb-1.5 z-20 rounded-[10px] overflow-hidden border chat-border-200/10 chat-menu-surface shadow-xl">
+      <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{heading}</span>
 
       {items.length > 0 && (
         <div ref={listRef} id={listboxId} role="listbox" aria-label={heading} className="max-h-[240px] overflow-y-auto pb-1 filigran-chat-scrollable">
@@ -47,7 +47,7 @@ export const MentionMenu = ({ view, items, activeIndex, listboxId, optionId, onH
             return (
               <div key={item.type === 'agent' ? `agent-${item.mention.agentId}` : item.candidate.id}>
                 {startsConversations && (
-                  <span className="block px-4 pt-2 pb-1 text-[0.68rem] tracking-[1px] uppercase text-gray-400 dark:text-white/40">
+                  <span className="block px-4 pt-2 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">
                     {t('Reference a conversation')}
                   </span>
                 )}
@@ -64,22 +64,20 @@ export const MentionMenu = ({ view, items, activeIndex, listboxId, optionId, onH
                   onMouseMove={() => {
                     if (!active) onHover(i);
                   }}
-                  className={`flex items-center gap-2.5 px-4 py-1.5 cursor-pointer transition-colors ${active ? 'bg-gray-100 dark:bg-white/10' : ''}`}
+                  className={`flex items-center gap-2.5 px-4 py-1.5 cursor-pointer transition-colors ${active ? 'chat-surface-subtle-100/10' : ''}`}
                 >
                   <span className="shrink-0 text-[var(--chat-accent)]">
                     {item.type === 'agent' ? <BotIcon size={14} /> : <MessageSquareIcon size={14} />}
                   </span>
                   {item.type === 'agent' ? (
                     <span className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[0.8125rem] text-gray-900 dark:text-white truncate">{item.mention.name}</span>
-                      <span className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">@{item.mention.key}</span>
+                      <span className="text-[0.8125rem] chat-text-900/100 truncate">{item.mention.name}</span>
+                      <span className="text-[0.7rem] chat-text-muted-500/40 truncate">@{item.mention.key}</span>
                     </span>
                   ) : (
                     <span className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[0.8125rem] text-gray-900 dark:text-white truncate">
-                        {item.candidate.title || t('Untitled conversation')}
-                      </span>
-                      <span className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">
+                      <span className="text-[0.8125rem] chat-text-900/100 truncate">{item.candidate.title || t('Untitled conversation')}</span>
+                      <span className="text-[0.7rem] chat-text-muted-500/40 truncate">
                         @{item.candidate.key}
                         {!item.candidate.isOwn && ` · ${t('Shared with you')}`}
                       </span>
@@ -93,13 +91,13 @@ export const MentionMenu = ({ view, items, activeIndex, listboxId, optionId, onH
       )}
 
       {view.kind === 'empty' && items.length === 0 && (
-        <div role="status" className="px-4 pt-1 pb-3 text-[0.75rem] text-gray-400 dark:text-white/40">
+        <div role="status" className="px-4 pt-1 pb-3 text-[0.75rem] chat-text-muted-400/40">
           {t('No conversation matches')}
         </div>
       )}
 
       {view.kind === 'full' && (
-        <div role="status" className="px-4 pt-1 pb-3 text-[0.75rem] text-gray-400 dark:text-white/40">
+        <div role="status" className="px-4 pt-1 pb-3 text-[0.75rem] chat-text-muted-400/40">
           {translate(t, 'A message references at most {count} conversations', { count: MAX_REFERENCED_CONVERSATIONS })}
         </div>
       )}

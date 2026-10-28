@@ -381,6 +381,45 @@ export interface ChatContextBreakdown {
   toolResults?: number;
 }
 
+/**
+ * What a host's design system sets on the panel (`ChatPanelProps.theme`):
+ * CSS values, each the `--filigran-chat-*` variable named beside it.
+ */
+export interface ChatPanelTheme {
+  /** The panel's background inline and fullscreen (`--filigran-chat-surface`). */
+  surface?: string;
+  /** The panel's background as a sidebar or floating card, and its dialogs' (`--filigran-chat-surface-raised`). */
+  surfaceRaised?: string;
+  /** Cards, search boxes, a table's or a code block's header: a shade off the surface (`--filigran-chat-surface-subtle`). */
+  surfaceSubtle?: string;
+  /** A row or a button under the pointer (`--filigran-chat-surface-hover`). */
+  surfaceHover?: string;
+  /** A text field: the composer (no fill unless set), a rename field, the feedback and approval comments (`--filigran-chat-input-surface`). */
+  inputSurface?: string;
+  /** The header's background, a colour or an image; `none` for the surface alone (`--filigran-chat-header-background`). */
+  headerBackground?: string;
+  /** Text (`--filigran-chat-text`). */
+  text?: string;
+  /** Faint text: times, labels, hints, placeholders (`--filigran-chat-text-muted`). */
+  textMuted?: string;
+  /** Secondary text: table cells, chips, descriptions, notices (`--filigran-chat-text-secondary`). */
+  textSecondary?: string;
+  /** Dividers, outlines, a gauge's track and the loading skeleton (`--filigran-chat-border`). */
+  border?: string;
+  /** The size of an answer's prose, its headings in proportion, and of a user's message unless `userTextSize` (`--filigran-chat-text-size`). */
+  textSize?: string;
+  /** A user's message: background, text, corners, padding and size (`--filigran-chat-user-*`). */
+  userBackground?: string;
+  userText?: string;
+  userRadius?: string;
+  userPadding?: string;
+  userTextSize?: string;
+  /** Code: its font, size and background (`--filigran-chat-font-mono`, `-code-size`, `-code-surface`). */
+  fontMono?: string;
+  codeSize?: string;
+  codeSurface?: string;
+}
+
 export interface ChatPanelProps {
   mode: ChatPanelMode;
   /** Shows the close button; inline mode has none. */
@@ -641,6 +680,13 @@ export interface ChatPanelProps {
   renderWaitingPanel?: () => React.ReactNode;
   /** Font of the panel's text; the package's own otherwise. */
   fontFamily?: string;
+  /**
+   * The host's colours, type and shapes, as CSS values (a host's own
+   * variables, `var(--x)`, follow its light and dark modes); each one unset
+   * keeps the panel's own. The same `--filigran-chat-*` variables can be set
+   * in CSS on an ancestor instead.
+   */
+  theme?: ChatPanelTheme;
   /**
    * Called once, when the panel has chosen its agent and read back the
    * conversation on screen. Calls made through the handle before then wait

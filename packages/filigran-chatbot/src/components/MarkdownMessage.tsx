@@ -71,24 +71,20 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
   // of collapsing it into a single run of inline code.
   if (match || codeStr.includes('\n')) {
     const block = (
-      <div className="my-3 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden bg-gray-50 dark:bg-white/[0.03]">
-        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/[0.03]">
-          <span className="text-[0.7rem] text-gray-500 dark:text-white/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
+      <div className="my-3 rounded-lg border chat-border-200/10 overflow-hidden chat-code-block">
+        <div className="flex items-center justify-between px-3 py-1.5 border-b chat-border-200/10 chat-surface-subtle-100/3">
+          <span className="text-[0.7rem] chat-text-muted-500/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
           <button
             type="button"
             onClick={() => onCopyCode(codeStr)}
             aria-label={copiedBlock === codeStr ? t('Copied') : t('Copy code')}
-            className="p-0.5 rounded-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+            className="p-0.5 rounded-sm hover:chat-surface-hover-200/10 transition-colors"
           >
-            {copiedBlock === codeStr ? (
-              <CheckIcon size={14} className="text-green-500" />
-            ) : (
-              <CopyIcon size={14} className="text-gray-400 dark:text-white/40" />
-            )}
+            {copiedBlock === codeStr ? <CheckIcon size={14} className="text-green-500" /> : <CopyIcon size={14} className="chat-text-muted-400/40" />}
           </button>
         </div>
         <pre className="m-0 px-3 py-2 overflow-x-auto">
-          <code className="font-mono text-xs leading-[1.7] text-gray-800 dark:text-white/90 whitespace-pre">{codeStr}</code>
+          <code className="chat-code leading-[1.7] chat-text-800/90 whitespace-pre">{codeStr}</code>
         </pre>
       </div>
     );
@@ -99,7 +95,7 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
       </HostRenderBoundary>
     );
   }
-  return <code className="bg-gray-100 dark:bg-white/[0.08] px-1.5 py-0.5 rounded-sm font-mono text-xs text-[var(--chat-accent)]">{children}</code>;
+  return <code className="chat-code-inline chat-code px-1.5 py-0.5 rounded-sm text-[var(--chat-accent)]">{children}</code>;
 };
 
 const MarkdownLink = ({ href, children }: { href?: string; children?: React.ReactNode }) => {
@@ -139,7 +135,7 @@ const MarkdownImage = ({ src, alt }: { src?: unknown; alt?: string }) => {
 };
 
 const MARKDOWN_COMPONENTS: Components = {
-  p: ({ children }) => <p className="mb-3 last:mb-0 leading-7 break-words text-[0.8125rem] text-gray-900 dark:text-white/90">{children}</p>,
+  p: ({ children }) => <p className="mb-3 last:mb-0 leading-7 break-words chat-answer-text">{children}</p>,
   // A fenced block renders as `<pre><code>`; the `code` override below
   // returns a `<div>` wrapper, which is not valid inside `<pre>`. Passing
   // the children straight through keeps the markup well-formed.
@@ -148,42 +144,32 @@ const MARKDOWN_COMPONENTS: Components = {
   // `list-disc` / `list-decimal` are required, not decorative: the
   // package's scoped preflight resets `list-style` inside the panel, so
   // without them every list renders as unmarked, indented prose.
-  ul: ({ children }) => (
-    <ul className="list-disc pl-5 mb-3 text-[0.8125rem] text-gray-900 dark:text-white/90 [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">
-      {children}
-    </ul>
-  ),
-  ol: ({ children }) => (
-    <ol className="list-decimal pl-5 mb-3 text-[0.8125rem] text-gray-900 dark:text-white/90 [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">
-      {children}
-    </ol>
-  ),
+  ul: ({ children }) => <ul className="list-disc pl-5 mb-3 chat-answer-text [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 chat-answer-text [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">{children}</ol>,
   li: ({ children }) => <li className="leading-7 break-words">{children}</li>,
-  strong: ({ children }) => <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>,
+  strong: ({ children }) => <strong className="font-semibold chat-text-900/100">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
-  hr: () => <hr className="my-4 border-gray-200 dark:border-white/10" />,
+  hr: () => <hr className="my-4 chat-border-200/10" />,
   blockquote: ({ children }) => (
-    <blockquote className="my-3 border-l-2 border-[var(--chat-accent)]/30 bg-[var(--chat-accent)]/[0.03] pl-4 pr-3 py-2 rounded-r-md italic text-gray-500 dark:text-white/60">
+    <blockquote className="my-3 border-l-2 border-[var(--chat-accent)]/30 bg-[var(--chat-accent)]/[0.03] pl-4 pr-3 py-2 rounded-r-md italic chat-text-secondary-500/60">
       {children}
     </blockquote>
   ),
   a: MarkdownLink,
   img: MarkdownImage,
-  h1: ({ children }) => <h1 className="mt-4 first:mt-0 mb-2 font-bold text-base text-gray-900 dark:text-white">{children}</h1>,
-  h2: ({ children }) => <h2 className="mt-3 first:mt-0 mb-2 font-bold text-[0.9rem] text-gray-900 dark:text-white">{children}</h2>,
-  h3: ({ children }) => <h3 className="mt-3 first:mt-0 mb-1.5 font-semibold text-[0.85rem] text-gray-900 dark:text-white">{children}</h3>,
+  h1: ({ children }) => <h1 className="mt-4 first:mt-0 mb-2 font-bold chat-answer-heading-1 chat-text-900/100">{children}</h1>,
+  h2: ({ children }) => <h2 className="mt-3 first:mt-0 mb-2 font-bold chat-answer-heading-2 chat-text-900/100">{children}</h2>,
+  h3: ({ children }) => <h3 className="mt-3 first:mt-0 mb-1.5 font-semibold chat-answer-heading-3 chat-text-900/100">{children}</h3>,
   table: ({ children }) => (
-    <div className="my-3 overflow-x-auto rounded-lg border border-gray-200 dark:border-white/10">
+    <div className="my-3 overflow-x-auto rounded-lg border chat-border-200/10">
       <table className="w-full border-collapse text-xs">{children}</table>
     </div>
   ),
-  tr: ({ children }) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02]">{children}</tr>,
+  tr: ({ children }) => <tr className="transition-colors hover:chat-surface-hover-50/2">{children}</tr>,
   th: ({ children }) => (
-    <th className="px-3 py-2 text-left font-semibold bg-gray-50 dark:bg-white/[0.04] border-b border-gray-200 dark:border-white/10 text-gray-900 dark:text-white">
-      {children}
-    </th>
+    <th className="px-3 py-2 text-left font-semibold chat-surface-subtle-50/4 border-b chat-border-200/10 chat-text-900/100">{children}</th>
   ),
-  td: ({ children }) => <td className="px-3 py-2 border-b border-gray-200 dark:border-white/10 text-gray-700 dark:text-white/80">{children}</td>,
+  td: ({ children }) => <td className="px-3 py-2 border-b chat-border-200/10 chat-text-secondary-700/80">{children}</td>,
 };
 
 const REMARK_PLUGINS = [remarkGfm, remarkBreaks];

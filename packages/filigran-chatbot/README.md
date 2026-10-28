@@ -121,6 +121,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `waitingMessages`   | `string[]`                                | built-in     | The waiting panel's rotating messages, already translated |
 | `renderWaitingPanel` | `() => React.ReactNode`                  | —            | Replaces the waiting panel's content (its messages and the invitation to play) |
 | `fontFamily`        | `string`                                  | —            | Font of the panel's text |
+| `theme`             | `ChatPanelTheme`                          | —            | The host's colours, type and shapes; see [Custom Theme](#custom-theme) |
 | `agentMentions`     | `boolean`                                 | `false`      | `@` also mentions agents of the agent list; the message carries their ids as `mentioned_agent_ids` |
 | `steerAttachments`  | `boolean`                                 | `false`      | Uploaded files may steer the running turn (the steer route takes `file_ids`) |
 | `onReady`           | `() => void`                              | —            | Called once, when the panel has chosen its agent and read back the conversation on screen; handle calls made earlier wait for it and then run in order |
@@ -1207,6 +1208,44 @@ import { MyLogo } from './icons';
 ```tsx
 <ChatPanel
   accentColor="#00bcd4"
+  // ...
+/>
+```
+
+### Custom Theme
+
+`theme` gives the panel the host's design system. Each entry is a CSS value
+and sets the `--filigran-chat-*` variable named beside it on the panel root,
+where everything the panel renders (its dialogs and menus included) reads it;
+an entry left out keeps the panel's own look, light and dark. A host's own
+variables (`var(--x)`) follow its light and dark modes, so one value serves
+both. The same variables may be set in CSS on an ancestor instead.
+
+| Entry              | Variable                            | Styles |
+| ------------------ | ----------------------------------- | ------ |
+| `surface`          | `--filigran-chat-surface`           | The background inline and fullscreen |
+| `surfaceRaised`    | `--filigran-chat-surface-raised`    | The background as a sidebar or floating card, and of its dialogs and menus |
+| `surfaceSubtle`    | `--filigran-chat-surface-subtle`    | Cards, search boxes, a table's or a code block's header |
+| `surfaceHover`     | `--filigran-chat-surface-hover`     | A row or a button under the pointer |
+| `inputSurface`     | `--filigran-chat-input-surface`     | A text field: the composer (no fill unless set), a rename field, the feedback and approval comments |
+| `headerBackground` | `--filigran-chat-header-background` | The header's background, a colour or an image (`none` for the surface alone) |
+| `text`             | `--filigran-chat-text`              | Text |
+| `textMuted`        | `--filigran-chat-text-muted`        | Times, labels, hints and placeholders |
+| `textSecondary`    | `--filigran-chat-text-secondary`    | Table cells, chips, descriptions, notices |
+| `border`           | `--filigran-chat-border`            | Dividers, outlines, a gauge's track and the loading skeleton |
+| `textSize`         | `--filigran-chat-text-size`         | An answer's prose, its headings in proportion, and a user's message unless `userTextSize` |
+| `userBackground`, `userText`, `userRadius`, `userPadding`, `userTextSize` | `--filigran-chat-user-*` | A user's message |
+| `fontMono`, `codeSize`, `codeSurface` | `--filigran-chat-font-mono`, `-code-size`, `-code-surface` | Code, in a block or inline |
+
+```tsx
+<ChatPanel
+  theme={{
+    surface: 'var(--page-background)',
+    text: 'var(--text-primary)',
+    userBackground: 'color-mix(in oklab, var(--accent) 10%, transparent)',
+    userText: 'var(--text-primary)',
+    textSize: '1rem',
+  }}
   // ...
 />
 ```

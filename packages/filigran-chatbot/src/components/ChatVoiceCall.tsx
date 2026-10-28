@@ -62,9 +62,9 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
       role="dialog"
       aria-label={t('Voice call')}
       data-testid="filigran-chat-voice-call"
-      className="absolute inset-0 z-40 flex flex-col rounded-[inherit] bg-white dark:bg-[#1e1e2e]"
+      className="absolute inset-0 z-40 flex flex-col rounded-[inherit] chat-surface-raised"
     >
-      <div className="flex items-center justify-between px-4 py-3 text-[0.7rem] uppercase tracking-[1px] text-gray-500 dark:text-white/50">
+      <div className="flex items-center justify-between px-4 py-3 text-[0.7rem] uppercase tracking-[1px] chat-text-secondary-500/50">
         <span>{t('Voice call')}</span>
         <span className="font-mono normal-case tracking-normal">{formatDuration(seconds)}</span>
       </div>
@@ -85,14 +85,14 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
           )}
           <span className="text-[var(--chat-accent)] [&>svg]:w-10 [&>svg]:h-10">{logoIcon}</span>
         </button>
-        <h2 className="max-w-full truncate text-base font-semibold text-gray-900 dark:text-white">{agentName}</h2>
-        <p aria-live="polite" className="text-center text-[0.8125rem] text-gray-500 dark:text-white/60">
+        <h2 className="max-w-full truncate text-base font-semibold chat-text-900/100">{agentName}</h2>
+        <p aria-live="polite" className="text-center text-[0.8125rem] chat-text-secondary-500/60">
           {label}
         </p>
-        {phase === 'speaking' && <p className="text-[0.7rem] text-gray-400 dark:text-white/40">{t('Speak or tap to interrupt')}</p>}
-        {phase === 'processing' && <p className="text-[0.7rem] text-gray-400 dark:text-white/40">{t('Tap to cancel')}</p>}
+        {phase === 'speaking' && <p className="text-[0.7rem] chat-text-muted-400/40">{t('Speak or tap to interrupt')}</p>}
+        {phase === 'processing' && <p className="text-[0.7rem] chat-text-muted-400/40">{t('Tap to cancel')}</p>}
         {phase === 'listening' && call.heard && (
-          <p className="mt-3 max-w-md text-center text-[0.8125rem] italic text-gray-500 dark:text-white/50">“{call.heard}”</p>
+          <p className="mt-3 max-w-md text-center text-[0.8125rem] italic chat-text-secondary-500/50">“{call.heard}”</p>
         )}
       </div>
 
@@ -103,15 +103,13 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
               <div key={i} className={`flex ${line.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[85%] rounded-lg px-3 py-1.5 text-[0.75rem] leading-5 ${
-                    line.role === 'user'
-                      ? 'bg-[var(--chat-accent)]/10 text-gray-800 dark:text-white/80'
-                      : 'bg-gray-100 dark:bg-white/[0.06] text-gray-700 dark:text-white/70'
+                    line.role === 'user' ? 'bg-[var(--chat-accent)]/10 chat-text-800/80' : 'chat-surface-subtle-100/6 chat-text-secondary-700/70'
                   }`}
                 >
                   {line.agent && (
                     <div className="mb-0.5 text-[0.7rem] font-medium text-[var(--chat-accent)]">
                       {line.agent.name}
-                      {line.agent.failed && <span className="font-normal text-gray-500 dark:text-white/50"> · {t('Did not answer')}</span>}
+                      {line.agent.failed && <span className="font-normal chat-text-secondary-500/50"> · {t('Did not answer')}</span>}
                     </div>
                   )}
                   {line.content.length > LINE_MAX_LENGTH ? `${line.content.slice(0, LINE_MAX_LENGTH)}…` : line.content}
@@ -130,9 +128,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
           aria-label={muted ? t('Unmute microphone') : t('Mute microphone')}
           aria-pressed={muted}
           className={`${roundButton} ${
-            muted
-              ? 'border-red-400/40 bg-red-500/10 text-red-500'
-              : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/[0.06]'
+            muted ? 'border-red-400/40 bg-red-500/10 text-red-500' : 'chat-border-200/10 chat-text-secondary-600/70 hover:chat-surface-hover-100/6'
           }`}
         >
           {muted ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
@@ -150,7 +146,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
           onClick={onInterrupt}
           disabled={phase !== 'speaking'}
           aria-label={t('Skip response')}
-          className={`${roundButton} border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/[0.06]`}
+          className={`${roundButton} chat-border-200/10 chat-text-secondary-600/70 hover:chat-surface-hover-100/6`}
         >
           <VolumeOffIcon size={20} />
         </button>
