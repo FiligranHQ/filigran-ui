@@ -1585,6 +1585,37 @@ test('a dropped turn the event stream cannot follow yet is awaited a short while
   }
 });
 
+test('a dropped turn whose event stream answers an error a backend coming back does not give ends at once, as the history says', async () => {
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  const own = sseStream();
+  let broken = false;
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    (req) => {
+      if (!req.url.startsWith('/api/chat/conversations/c1/events')) return undefined;
+      return broken ? json({ detail: 'boom' }, 500) : eventsRoute(subscriptions)(req);
+    },
+    (req) => (req.url === '/api/chat/messages' ? own.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  const { heard, onTurnRunningChange } = turnLog();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange }, ref);
+  await act(async () => {
+    void ref.current!.send('long task');
+    await settle();
+    own.send({ type: 'turn_started', turn_id: 't1' });
+    await settle(10);
+  });
+  broken = true;
+  await act(async () => {
+    own.fail();
+    await settle(20);
+  });
+  assert.deepEqual(heard, ['running', 'stopped']);
+  await finish(own, ...subscriptions);
+});
+
 test('a message sent while a dropped turn is awaited shows above its "Reconnecting…" bubble', async () => {
   const subscriptions: ReturnType<typeof sseStream>[] = [];
   const own = sseStream();

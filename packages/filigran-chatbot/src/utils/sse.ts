@@ -11,36 +11,45 @@ export class SseStreamSilentError extends Error {
  * lines (`: keepalive`), `event:` lines and malformed JSON are skipped.
  * *onEvent* returning `false` stops the read early.
  *
- * With *idleTimeoutMs*, a body that sent comment lines - two at least: a
- * server keeping it alive, not one opening comment - and then nothing for
- * that long is dead (a proxy left it half-open, the machine slept): the read
- * is cancelled and rejects with {@link SseStreamSilentError}. A body that
- * did not is never timed out, since its server may stay silent through a
- * long step.
+ * With *idleTimeoutMs* (or a function giving it, read each time it is armed;
+ * `undefined` keeps it off), a body whose comment lines span a third of it at
+ * least - a server keeping it alive, not an opening burst - and that then
+ * sends nothing for that long is dead (a proxy left it half-open, the machine
+ * slept): the read is cancelled and rejects with {@link SseStreamSilentError}.
+ * Any other body is never timed out, since its server may stay silent through
+ * a long step.
  */
 export async function readSseEvents(
   body: ReadableStream<Uint8Array>,
   onEvent: (evt: Record<string, unknown>) => boolean | void,
-  { idleTimeoutMs }: { idleTimeoutMs?: number } = {},
+  { idleTimeoutMs }: { idleTimeoutMs?: number | (() => number | undefined) } = {},
 ): Promise<void> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  let comments = 0;
+  // When the first comment came, and whether later ones showed a keep-alive cadence.
+  let firstCommentAt: number | null = null;
+  let keptAlive = false;
   let silent = false;
   let watchdog: ReturnType<typeof setTimeout> | null = null;
   const rearm = () => {
     if (watchdog !== null) clearTimeout(watchdog);
     watchdog = null;
-    if (comments < 2 || idleTimeoutMs === undefined) return;
+    const timeout = typeof idleTimeoutMs === 'function' ? idleTimeoutMs() : idleTimeoutMs;
+    if (!keptAlive || timeout === undefined) return;
     watchdog = setTimeout(() => {
       silent = true;
       void reader.cancel().catch(() => undefined);
-    }, idleTimeoutMs);
+    }, timeout);
   };
   const handle = (rawLine: string): boolean => {
     const line = rawLine.replace(/\r$/, '');
-    if (line.startsWith(':')) comments += 1;
+    if (line.startsWith(':')) {
+      const now = Date.now();
+      if (firstCommentAt === null) firstCommentAt = now;
+      const timeout = typeof idleTimeoutMs === 'function' ? idleTimeoutMs() : idleTimeoutMs;
+      if (timeout !== undefined && now - firstCommentAt >= timeout / 3) keptAlive = true;
+    }
     if (!line.startsWith('data:')) return true;
     const json = line.startsWith('data: ') ? line.slice(6) : line.slice(5);
     let evt: unknown;

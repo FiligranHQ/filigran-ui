@@ -32,9 +32,10 @@ This file starts at 3.10.0; earlier releases are on the
   marked stopped 15 s after the drop; an `error` or `cancelled` of the event
   stream naming it ends it at once, and one that ended out of sight is
   answered or stopped as the history read back says (#460).
-- A stream its server keeps alive (two comment lines at least) that then falls silent for 45 s is taken for
-  dropped, so a stream a proxy left half-open is handed over instead of
-  hanging (#460).
+- A stream its server keeps alive (comments at a keep-alive cadence) that then
+  falls silent for 45 s is taken for dropped, so a stream a proxy left
+  half-open is handed over instead of hanging, when the event stream can pick
+  its turn up (#460).
 
 ## 3.15.1 — 2026-10-27
 
