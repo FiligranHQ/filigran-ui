@@ -147,6 +147,36 @@ export function createScrollFollower(getBox: () => ScrollBox | null, timers: Scr
   };
 }
 
+/** The observers {@link watchContentGrowth} uses; the browser's own unless a test passes its own. */
+export interface GrowthObservers {
+  ResizeObserver?: typeof ResizeObserver;
+  MutationObserver?: typeof MutationObserver;
+}
+
+/**
+ * Call *onGrow* whenever what *container* holds changes size: an image, a
+ * chart or a file card that takes its height after the message that carries
+ * it was rendered, which no change of the messages announces. Each child is
+ * watched, and so is each child added later. Returns the cleanup; a no-op
+ * where the browser has no `ResizeObserver`.
+ */
+export function watchContentGrowth(container: Element, onGrow: () => void, observers: GrowthObservers = globalThis as GrowthObservers): () => void {
+  const { ResizeObserver: Resize, MutationObserver: Mutation } = observers;
+  if (!Resize) return () => undefined;
+  const sizes = new Resize(() => onGrow());
+  for (const child of Array.from(container.children)) sizes.observe(child);
+  const children = Mutation
+    ? new Mutation((records) => {
+        for (const record of records) for (const node of Array.from(record.addedNodes)) if (node.nodeType === 1) sizes.observe(node as Element);
+      })
+    : null;
+  children?.observe(container, { childList: true });
+  return () => {
+    sizes.disconnect();
+    children?.disconnect();
+  };
+}
+
 /** A wheel turned toward the top. A pinch (ctrl + wheel) zooms, and a mostly sideways one pans a code block or a table. */
 export function wheelScrollsUp(event: { deltaX: number; deltaY: number; ctrlKey: boolean }): boolean {
   return !event.ctrlKey && event.deltaY < 0 && Math.abs(event.deltaY) > Math.abs(event.deltaX);
