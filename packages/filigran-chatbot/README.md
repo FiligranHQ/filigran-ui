@@ -1058,8 +1058,14 @@ never relay a panel's own turn back to it; frames naming the `turn_id` of the
 panel's own turn are dropped too. When the panel's own stream drops mid-turn,
 or ends without the turn's last frame (`done`, `error`, `session_expired` or
 `cancelled`), it takes a new id and picks the turn up from the event stream,
-keeping the segments it closed (or reads the history back when nothing comes
-within 15 s). A read-back that waited for a turn to end joins the thread in
+keeping the segments it closed. It shows "Reconnecting…" for as long as the
+event stream takes to reopen (a backend restarting, up to 15 minutes), then
+waits 5 s for the snapshot to replay the turn; an `error` or `cancelled` of
+the event stream naming that turn ends it at once, and with nothing in time
+the history is read back. A stream that sent a `: keepalive` comment and then
+nothing for 45 s (a proxy that left it half-open) is taken for dropped the
+same way. A message sent while a turn writes its answer shows above that
+answer, where the backend stores it. A read-back that waited for a turn to end joins the thread in
 place: each stored message missing from the screen goes after the one stored
 before it, so nothing lands above messages it follows.
 
