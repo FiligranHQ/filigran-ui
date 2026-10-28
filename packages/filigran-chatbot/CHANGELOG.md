@@ -13,8 +13,10 @@ This file starts at 3.10.0; earlier releases are on the
 ### Fixed
 
 - An empty workspace's hint shows the glyph of its New conversation button,
-  where it said `+`, a button the list does not have. A host translating the
-  hint keeps `{icon}` where the glyph goes.
+  where it said `+`, a button the list does not have. Its key changed: a host
+  translating `Drop a conversation here, or start one with +.` translates
+  `Drop a conversation here, or start one with {icon}.` instead, keeping
+  `{icon}` where the glyph goes; until then the hint shows in English.
 - A long conversation shown inline or fullscreen no longer lets the page
   scroll the panel out of view: each message's screen-reader time, positioned
   outside the transcript's scroll, laid the page out as tall as the whole
