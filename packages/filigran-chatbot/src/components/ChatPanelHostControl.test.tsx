@@ -305,11 +305,7 @@ test('a message sent between two segments of the answer shows after the first on
 
 test("another tab's message, relayed while a relayed answer is written, shows above that answer", async () => {
   const events = sseStream();
-  fakeBackend([
-    agentsRoute,
-    restoreRoute([]),
-    (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined),
-  ]);
+  fakeBackend([agentsRoute, restoreRoute([]), (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined)]);
   const ref = createRef<Handle>();
   await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
   await act(async () => {
@@ -323,6 +319,27 @@ test("another tab's message, relayed while a relayed answer is written, shows ab
     await settle(10);
   });
   await act(async () => {
+    events.send({ type: 'done', turn_id: 't9', content: 'Looking into both', message_id: 'a1' });
+    await settle(10);
+  });
+  assert.deepEqual(threadOrder(), ['user: first', 'user: and also', 'assistant: Looking into both']);
+  await finish(events);
+});
+
+test("another tab's message relayed in the same tick as the answer's end still shows above that answer", async () => {
+  const events = sseStream();
+  fakeBackend([agentsRoute, restoreRoute([]), (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
+  await act(async () => {
+    events.send({ type: 'user_message', message: { id: 'm1', role: 'user', content: 'first' } });
+    events.send({ type: 'thinking', turn_id: 't9' });
+    events.send({ type: 'stream', turn_id: 't9', content: 'Looking' });
+    await settle(10);
+  });
+  // No render between the two: the update placing the message runs after the turn ended.
+  await act(async () => {
+    events.send({ type: 'user_message', message: { id: 'm2', role: 'user', content: 'and also' } });
     events.send({ type: 'done', turn_id: 't9', content: 'Looking into both', message_id: 'a1' });
     await settle(10);
   });
