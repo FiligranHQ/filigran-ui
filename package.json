@@ -41,6 +41,6 @@
     "postcss-svgo": "7.1.1",
     "prosemirror-model": "1.25.11",
     "serialize-javascript": "7.0.5",
-    "svgo": "4.0.2"
+    "svgo": "4.1.0"
   }
 }
