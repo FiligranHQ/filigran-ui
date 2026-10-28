@@ -351,9 +351,7 @@ export const ConversationSidebar = ({
           </>
         ) : (
           <>
-            {!loading && conversations.length === 0 && (
-              <p className="px-3 py-2 text-[0.75rem] chat-text-muted">{t('No conversations yet')}</p>
-            )}
+            {!loading && conversations.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted">{t('No conversations yet')}</p>}
             {conversations.length > 0 && filtered.length === 0 && (
               <p className="px-3 py-2 text-[0.75rem] chat-text-muted">{t('No conversation matches')}</p>
             )}
@@ -744,9 +742,7 @@ const ConversationRow = ({
               </button>
               <Dropdown open={moveOpen} onClose={() => setMoveOpen(false)} anchorRef={moveAnchor} placement="bottom-end" width={220}>
                 <div className="py-1" onClick={(e) => e.stopPropagation()}>
-                  <p className="px-3 pb-1 pt-1.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted">
-                    {t('Move to workspace')}
-                  </p>
+                  <p className="px-3 pb-1 pt-1.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted">{t('Move to workspace')}</p>
                   {fileable.map((w) => (
                     <button
                       key={w.id}

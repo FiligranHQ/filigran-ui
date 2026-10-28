@@ -136,9 +136,7 @@ export const ChatHeader = ({
   const CurrentModeIcon = mode === 'sidebar' ? SidebarIcon : mode === 'fullscreen' ? FullscreenExitIcon : FloatingIcon;
 
   return (
-    <div
-      className={`flex items-center px-3 py-2 min-h-[48px] border-b chat-border chat-header-surface ${mode === 'floating' ? 'rounded-t-xl' : ''}`}
-    >
+    <div className={`flex items-center px-3 py-2 min-h-[48px] border-b chat-border chat-header-surface ${mode === 'floating' ? 'rounded-t-xl' : ''}`}>
       <div className="min-w-0">
         <button
           ref={agentAnchorRef}
@@ -158,9 +156,7 @@ export const ChatHeader = ({
       </div>
 
       <Dropdown open={agentMenuOpen} onClose={onAgentMenuClose} anchorRef={agentAnchorRef} width={280}>
-        <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted">
-          {t('Switch to another agent')}
-        </span>
+        <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted">{t('Switch to another agent')}</span>
         {/* Three distinct states, because an empty array alone cannot tell them
             apart — and treating "failed" as "still loading" is what left this
             menu spinning forever against an unreachable backend.
@@ -214,11 +210,7 @@ export const ChatHeader = ({
           )}
           {groupAgents(filteredAgents).map(({ group, agents: groupMembers }) => (
             <div key={group ?? ''} role="group" aria-label={group ?? undefined}>
-              {group && (
-                <span className="block px-4 pt-2 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted">
-                  {group}
-                </span>
-              )}
+              {group && <span className="block px-4 pt-2 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted">{group}</span>}
               {groupMembers.map((agent) => (
                 <button
                   key={agent.id}
@@ -290,9 +282,7 @@ export const ChatHeader = ({
           </Tooltip>
 
           <Dropdown open={historyMenuOpen} onClose={() => onHistoryMenuClose?.()} anchorRef={historyAnchorRef} placement="bottom-end" width={300}>
-            <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted">
-              {t('Conversation history')}
-            </span>
+            <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted">{t('Conversation history')}</span>
             <div className="max-h-72 overflow-y-auto filigran-chat-scrollable">
               {conversationsLoading && conversations.length === 0 && (
                 <div className="px-4 py-2">
@@ -313,9 +303,7 @@ export const ChatHeader = ({
                     }`}
                   >
                     <button type="button" onClick={() => onSelectConversation?.(conv.conversationId)} className="flex-1 min-w-0 text-left">
-                      <div className="text-[0.8125rem] font-medium chat-text truncate">
-                        {conv.title || t('Untitled conversation')}
-                      </div>
+                      <div className="text-[0.8125rem] font-medium chat-text truncate">{conv.title || t('Untitled conversation')}</div>
                       {when && <div className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">{when}</div>}
                     </button>
                     {onDeleteConversation && (

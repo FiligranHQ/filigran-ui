@@ -1440,9 +1440,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             />
           )}
           {readOnly ? (
-            readOnlyNotice && (
-              <div className="px-4 py-3 border-t chat-border text-sm text-gray-500 dark:text-white/50">{readOnlyNotice}</div>
-            )
+            readOnlyNotice && <div className="px-4 py-3 border-t chat-border text-sm text-gray-500 dark:text-white/50">{readOnlyNotice}</div>
           ) : (
             <ChatInput
               header={composerHeader}

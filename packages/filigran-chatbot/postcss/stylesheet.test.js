@@ -115,6 +115,10 @@ test("each theme utility reads its host variable and falls back to the panel's o
     const reads = (rule) => rule.nodes.some((node) => node.type === 'decl' && node.value.includes(`var(${variable},`));
     const light = own.filter((rule) => !rule.selector.includes('.dark'));
     assert.ok(light.some(reads), `.${name} reads ${variable} with a fallback`);
-    if (darkDefault) assert.ok(own.some((rule) => rule.selector.includes('.dark') && reads(rule)), `.${name} has a dark fallback`);
+    if (darkDefault)
+      assert.ok(
+        own.some((rule) => rule.selector.includes('.dark') && reads(rule)),
+        `.${name} has a dark fallback`,
+      );
   }
 });

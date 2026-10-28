@@ -31,9 +31,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
   };
 
   const q = query.trim().toLowerCase();
-  const filtered = q
-    ? prompts.filter((p) => p.title.toLowerCase().includes(q) || (p.description ?? '').toLowerCase().includes(q))
-    : prompts;
+  const filtered = q ? prompts.filter((p) => p.title.toLowerCase().includes(q) || (p.description ?? '').toLowerCase().includes(q)) : prompts;
 
   return (
     <>
@@ -56,9 +54,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
       </Tooltip>
 
       <Dropdown open={open} onClose={close} anchorRef={anchorRef} width={280}>
-        <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted">
-          {t('Insert prompt template')}
-        </span>
+        <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted">{t('Insert prompt template')}</span>
 
         {prompts.length > SEARCH_THRESHOLD && (
           <div className="px-3 pb-2 pt-1">

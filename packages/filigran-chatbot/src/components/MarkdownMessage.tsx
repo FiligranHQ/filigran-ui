@@ -80,11 +80,7 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
             aria-label={copiedBlock === codeStr ? t('Copied') : t('Copy code')}
             className="p-0.5 rounded-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
           >
-            {copiedBlock === codeStr ? (
-              <CheckIcon size={14} className="text-green-500" />
-            ) : (
-              <CopyIcon size={14} className="chat-text-muted" />
-            )}
+            {copiedBlock === codeStr ? <CheckIcon size={14} className="text-green-500" /> : <CopyIcon size={14} className="chat-text-muted" />}
           </button>
         </div>
         <pre className="m-0 px-3 py-2 overflow-x-auto">
@@ -148,16 +144,8 @@ const MARKDOWN_COMPONENTS: Components = {
   // `list-disc` / `list-decimal` are required, not decorative: the
   // package's scoped preflight resets `list-style` inside the panel, so
   // without them every list renders as unmarked, indented prose.
-  ul: ({ children }) => (
-    <ul className="list-disc pl-5 mb-3 chat-answer-text [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">
-      {children}
-    </ul>
-  ),
-  ol: ({ children }) => (
-    <ol className="list-decimal pl-5 mb-3 chat-answer-text [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">
-      {children}
-    </ol>
-  ),
+  ul: ({ children }) => <ul className="list-disc pl-5 mb-3 chat-answer-text [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 chat-answer-text [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">{children}</ol>,
   li: ({ children }) => <li className="leading-7 break-words">{children}</li>,
   strong: ({ children }) => <strong className="font-semibold chat-text">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
@@ -179,9 +167,7 @@ const MARKDOWN_COMPONENTS: Components = {
   ),
   tr: ({ children }) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02]">{children}</tr>,
   th: ({ children }) => (
-    <th className="px-3 py-2 text-left font-semibold bg-gray-50 dark:bg-white/[0.04] border-b chat-border chat-text">
-      {children}
-    </th>
+    <th className="px-3 py-2 text-left font-semibold bg-gray-50 dark:bg-white/[0.04] border-b chat-border chat-text">{children}</th>
   ),
   td: ({ children }) => <td className="px-3 py-2 border-b chat-border text-gray-700 dark:text-white/80">{children}</td>,
 };

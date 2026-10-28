@@ -76,9 +76,7 @@ export const MentionMenu = ({ view, items, activeIndex, listboxId, optionId, onH
                     </span>
                   ) : (
                     <span className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[0.8125rem] chat-text truncate">
-                        {item.candidate.title || t('Untitled conversation')}
-                      </span>
+                      <span className="text-[0.8125rem] chat-text truncate">{item.candidate.title || t('Untitled conversation')}</span>
                       <span className="text-[0.7rem] text-gray-500 dark:text-white/40 truncate">
                         @{item.candidate.key}
                         {!item.candidate.isOwn && ` · ${t('Shared with you')}`}

@@ -777,10 +777,7 @@ const MessageRow = memo(
             {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-xs ml-1 animate-pulse" />}
           </div>
         ) : (
-          <div
-            data-testid="filigran-chat-user-message"
-            className="max-w-[90%] chat-user-bubble leading-6 whitespace-pre-wrap break-words"
-          >
+          <div data-testid="filigran-chat-user-message" className="max-w-[90%] chat-user-bubble leading-6 whitespace-pre-wrap break-words">
             {userText}
           </div>
         )}
