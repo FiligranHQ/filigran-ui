@@ -390,11 +390,13 @@ export interface ChatPanelTheme {
   surface?: string;
   /** The panel's background as a sidebar or floating card, and its dialogs' (`--filigran-chat-surface-raised`). */
   surfaceRaised?: string;
-  /** Inputs, cards, a table's or a code block's header: a shade off the surface (`--filigran-chat-surface-subtle`). */
+  /** Cards, search boxes, a table's or a code block's header: a shade off the surface (`--filigran-chat-surface-subtle`). */
   surfaceSubtle?: string;
   /** A row or a button under the pointer (`--filigran-chat-surface-hover`). */
   surfaceHover?: string;
-  /** The header's background image, `none` for the surface alone (`--filigran-chat-header-background`). */
+  /** A text field: the message editor, a rename field, an approval's comment (`--filigran-chat-input-surface`). */
+  inputSurface?: string;
+  /** The header's background, a colour or an image; `none` for the surface alone (`--filigran-chat-header-background`). */
   headerBackground?: string;
   /** Text (`--filigran-chat-text`). */
   text?: string;

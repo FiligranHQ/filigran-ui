@@ -126,7 +126,7 @@ export const ChatWaitingPanel = ({ t, enabled = true, onPlay, playUrl, keepEndIn
         <span
           key={current}
           aria-hidden
-          className="text-xs chat-text-muted-500-45"
+          className="text-xs chat-text-muted-500/45"
           style={reducedMotion ? undefined : { animation: 'chat-fade-in 0.4s ease-out' }}
         >
           {current}

@@ -27,7 +27,7 @@ export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
     const title = withScope(period ? translate(t, 'Usage · {period}', { period }) : t('Usage'));
     return (
       <Tooltip title={title}>
-        <span className="text-[0.68rem] tabular-nums chat-text-muted-400-30" role="img" aria-label={`${title} ${compact(used)}`}>
+        <span className="text-[0.68rem] tabular-nums chat-text-muted-400/30" role="img" aria-label={`${title} ${compact(used)}`}>
           {compact(used)}
         </span>
       </Tooltip>
@@ -40,7 +40,7 @@ export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
   const nearLimit = ratio >= 0.75;
 
   const barColor = exhausted ? 'bg-red-500' : nearLimit ? 'bg-amber-500' : 'bg-[var(--chat-accent)]/60';
-  const textColor = exhausted ? 'text-red-500 dark:text-red-400' : nearLimit ? 'text-amber-600 dark:text-amber-400' : 'chat-text-muted-400-30';
+  const textColor = exhausted ? 'text-red-500 dark:text-red-400' : nearLimit ? 'text-amber-600 dark:text-amber-400' : 'chat-text-muted-400/30';
 
   const label = `${compact(used)}/${compact(limit)}`;
   const headline = exhausted ? t('Quota reached') : t('Quota');
@@ -49,7 +49,7 @@ export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
   return (
     <Tooltip title={title}>
       <span className="flex items-center gap-1.5" role="img" aria-label={`${title} ${label}`}>
-        <span className="h-1 w-10 rounded-full chat-border-fill overflow-hidden">
+        <span className="h-1 w-10 rounded-full chat-border-fill-200/10 overflow-hidden">
           <span className={`block h-full rounded-full transition-[width] duration-300 ${barColor}`} style={{ width: `${ratio * 100}%` }} />
         </span>
         <span className={`text-[0.68rem] tabular-nums ${textColor}`}>{label}</span>

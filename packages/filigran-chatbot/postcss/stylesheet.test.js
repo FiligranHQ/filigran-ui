@@ -119,13 +119,22 @@ test("every theme entry is read by a rule, with the panel's own look to fall bac
 
 test('every chat-* class the components use is compiled', () => {
   const used = new Set(
-    sourceFiles(SRC).flatMap((file) => [...readFileSync(file, 'utf8').matchAll(/(?<![\w[-])chat-[a-z0-9-]+(?![\w-])/g)].map((m) => m[0])),
+    sourceFiles(SRC).flatMap((file) => [...readFileSync(file, 'utf8').matchAll(/(?<![\w[-])chat-[a-z0-9-]+(?:\/\d+)?(?![\w-])/g)].map((m) => m[0])),
   );
   // Keyframe names (an inline `animation`) are no classes.
   for (const [, name] of readFileSync(SOURCE, 'utf8').matchAll(/@keyframes (chat-[a-z0-9-]+)/g)) used.delete(name);
   assert.ok(used.size > 20, `found only ${used.size} chat-* classes`);
-  // Behind a variant (`hover:chat-x`), the class is escaped: `.hover\\:chat-x:hover`.
-  const compiled = (selector, name) => hasClass(selector, name) || new RegExp(`\\\\:${name}(?![\\w\\\\-])`).test(selector);
+  // In a selector a shade's alpha is escaped (`.chat-text-secondary-700\\/80`), and a
+  // class behind a variant follows its escaped colon (`.hover\\:chat-x:hover`).
+  const compiled = (selector, name) => {
+    const escaped = name.replace('/', '\\/');
+    for (let at = selector.indexOf(escaped); at !== -1; at = selector.indexOf(escaped, at + 1)) {
+      const before = selector[at - 1];
+      const after = selector[at + escaped.length] ?? '';
+      if ((before === '.' || before === ':') && !/[\w\\-]/.test(after)) return true;
+    }
+    return false;
+  };
   const missing = [...used].filter((name) => !rules.some((rule) => rule.selectors.some((selector) => compiled(selector, name))));
   assert.deepEqual(missing, []);
 });
@@ -140,7 +149,8 @@ test("every default of the panel's own look is declared for both modes on the pa
   const light = declared((selector) => /^\.filigran-chatbot$/.test(selector.trim()));
   const dark = declared((selector) => /^\.dark \.filigran-chatbot$/.test(selector.trim()));
   const read = new Set(declarations.flatMap((decl) => [...decl.value.matchAll(/var\((--chat-default-[a-z0-9-]+)/g)].map((m) => m[1])));
-  assert.ok(read.size > 20, `found only ${read.size} defaults read`);
+  assert.ok(read.size > 5, `found only ${read.size} defaults read`);
+  assert.ok(light.has('--chat-dark') && dark.has('--chat-dark'), 'the mode switch is declared for both modes');
   for (const token of read) {
     assert.ok(light.has(token), `${token} has no light default`);
     assert.ok(dark.has(token), `${token} has no dark default`);

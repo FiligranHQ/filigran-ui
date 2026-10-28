@@ -71,20 +71,20 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
   // of collapsing it into a single run of inline code.
   if (match || codeStr.includes('\n')) {
     const block = (
-      <div className="my-3 rounded-lg border chat-border overflow-hidden chat-code-block">
-        <div className="flex items-center justify-between px-3 py-1.5 border-b chat-border chat-surface-subtle-100-3">
-          <span className="text-[0.7rem] chat-text-muted-500-40 font-mono">{match?.[1] ?? 'plaintext'}</span>
+      <div className="my-3 rounded-lg border chat-border-200/10 overflow-hidden chat-code-block">
+        <div className="flex items-center justify-between px-3 py-1.5 border-b chat-border-200/10 chat-surface-subtle-100/3">
+          <span className="text-[0.7rem] chat-text-muted-500/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
           <button
             type="button"
             onClick={() => onCopyCode(codeStr)}
             aria-label={copiedBlock === codeStr ? t('Copied') : t('Copy code')}
-            className="p-0.5 rounded-sm hover:chat-surface-hover-200-10 transition-colors"
+            className="p-0.5 rounded-sm hover:chat-surface-hover-200/10 transition-colors"
           >
-            {copiedBlock === codeStr ? <CheckIcon size={14} className="text-green-500" /> : <CopyIcon size={14} className="chat-text-muted" />}
+            {copiedBlock === codeStr ? <CheckIcon size={14} className="text-green-500" /> : <CopyIcon size={14} className="chat-text-muted-400/40" />}
           </button>
         </div>
         <pre className="m-0 px-3 py-2 overflow-x-auto">
-          <code className="chat-code leading-[1.7] chat-text-800-90 whitespace-pre">{codeStr}</code>
+          <code className="chat-code leading-[1.7] chat-text-800/90 whitespace-pre">{codeStr}</code>
         </pre>
       </div>
     );
@@ -147,27 +147,29 @@ const MARKDOWN_COMPONENTS: Components = {
   ul: ({ children }) => <ul className="list-disc pl-5 mb-3 chat-answer-text [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">{children}</ul>,
   ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 chat-answer-text [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">{children}</ol>,
   li: ({ children }) => <li className="leading-7 break-words">{children}</li>,
-  strong: ({ children }) => <strong className="font-semibold chat-text">{children}</strong>,
+  strong: ({ children }) => <strong className="font-semibold chat-text-900/100">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
-  hr: () => <hr className="my-4 chat-border" />,
+  hr: () => <hr className="my-4 chat-border-200/10" />,
   blockquote: ({ children }) => (
-    <blockquote className="my-3 border-l-2 border-[var(--chat-accent)]/30 bg-[var(--chat-accent)]/[0.03] pl-4 pr-3 py-2 rounded-r-md italic chat-text-secondary-500-60">
+    <blockquote className="my-3 border-l-2 border-[var(--chat-accent)]/30 bg-[var(--chat-accent)]/[0.03] pl-4 pr-3 py-2 rounded-r-md italic chat-text-secondary-500/60">
       {children}
     </blockquote>
   ),
   a: MarkdownLink,
   img: MarkdownImage,
-  h1: ({ children }) => <h1 className="mt-4 first:mt-0 mb-2 font-bold chat-answer-heading-1 chat-text">{children}</h1>,
-  h2: ({ children }) => <h2 className="mt-3 first:mt-0 mb-2 font-bold chat-answer-heading-2 chat-text">{children}</h2>,
-  h3: ({ children }) => <h3 className="mt-3 first:mt-0 mb-1.5 font-semibold chat-answer-heading-3 chat-text">{children}</h3>,
+  h1: ({ children }) => <h1 className="mt-4 first:mt-0 mb-2 font-bold chat-answer-heading-1 chat-text-900/100">{children}</h1>,
+  h2: ({ children }) => <h2 className="mt-3 first:mt-0 mb-2 font-bold chat-answer-heading-2 chat-text-900/100">{children}</h2>,
+  h3: ({ children }) => <h3 className="mt-3 first:mt-0 mb-1.5 font-semibold chat-answer-heading-3 chat-text-900/100">{children}</h3>,
   table: ({ children }) => (
-    <div className="my-3 overflow-x-auto rounded-lg border chat-border">
+    <div className="my-3 overflow-x-auto rounded-lg border chat-border-200/10">
       <table className="w-full border-collapse text-xs">{children}</table>
     </div>
   ),
-  tr: ({ children }) => <tr className="transition-colors hover:chat-surface-hover-50-2">{children}</tr>,
-  th: ({ children }) => <th className="px-3 py-2 text-left font-semibold chat-surface-subtle border-b chat-border chat-text">{children}</th>,
-  td: ({ children }) => <td className="px-3 py-2 border-b chat-border chat-text-secondary-700-80">{children}</td>,
+  tr: ({ children }) => <tr className="transition-colors hover:chat-surface-hover-50/2">{children}</tr>,
+  th: ({ children }) => (
+    <th className="px-3 py-2 text-left font-semibold chat-surface-subtle-50/4 border-b chat-border-200/10 chat-text-900/100">{children}</th>
+  ),
+  td: ({ children }) => <td className="px-3 py-2 border-b chat-border-200/10 chat-text-secondary-700/80">{children}</td>,
 };
 
 const REMARK_PLUGINS = [remarkGfm, remarkBreaks];

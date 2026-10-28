@@ -1225,9 +1225,10 @@ both. The same variables may be set in CSS on an ancestor instead.
 | ------------------ | ----------------------------------- | ------ |
 | `surface`          | `--filigran-chat-surface`           | The background inline and fullscreen |
 | `surfaceRaised`    | `--filigran-chat-surface-raised`    | The background as a sidebar or floating card, and of its dialogs and menus |
-| `surfaceSubtle`    | `--filigran-chat-surface-subtle`    | Inputs, cards, a table's or a code block's header |
+| `surfaceSubtle`    | `--filigran-chat-surface-subtle`    | Cards, search boxes, a table's or a code block's header |
 | `surfaceHover`     | `--filigran-chat-surface-hover`     | A row or a button under the pointer |
-| `headerBackground` | `--filigran-chat-header-background` | The header's background image (`none` for the surface alone) |
+| `inputSurface`     | `--filigran-chat-input-surface`     | A text field: the message editor, a rename field, an approval's comment |
+| `headerBackground` | `--filigran-chat-header-background` | The header's background, a colour or an image (`none` for the surface alone) |
 | `text`             | `--filigran-chat-text`              | Text |
 | `textMuted`        | `--filigran-chat-text-muted`        | Times, labels, hints and placeholders |
 | `textSecondary`    | `--filigran-chat-text-secondary`    | Table cells, chips, descriptions, notices |

@@ -1232,9 +1232,9 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     const base = 'filigran-chatbot';
     switch (mode) {
       case 'sidebar':
-        return `${base} fixed right-0 bottom-0 flex flex-col chat-surface-raised border-l chat-border z-[1200]`;
+        return `${base} fixed right-0 bottom-0 flex flex-col chat-surface-raised border-l chat-border-200/10 z-[1200]`;
       case 'floating':
-        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border chat-border`;
+        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border chat-border-200/10`;
       case 'fullscreen':
         return `${base} fixed right-0 bottom-0 left-0 flex flex-col chat-surface z-[1400]`;
       case 'inline':
@@ -1357,7 +1357,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             <div data-testid="filigran-chat-loading" className="flex-1 flex flex-col gap-4 px-4 py-6" aria-busy="true">
               {[0, 1, 2].map((i) => (
                 <div key={i} className={`flex ${i % 2 ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`h-10 rounded-xl chat-border-fill-200a70-6 animate-pulse ${i % 2 ? 'w-1/3' : 'w-2/3'}`} />
+                  <div className={`h-10 rounded-xl chat-skeleton-fill animate-pulse ${i % 2 ? 'w-1/3' : 'w-2/3'}`} />
                 </div>
               ))}
             </div>
@@ -1368,13 +1368,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               className="flex-1 flex flex-col items-center justify-center gap-3 px-6 py-6 text-center"
             >
               <AlertTriangleIcon size={18} className="text-amber-500 dark:text-amber-400" />
-              <p className="max-w-sm text-[0.8125rem] leading-6 chat-text-secondary-600-60">
+              <p className="max-w-sm text-[0.8125rem] leading-6 chat-text-secondary-600/60">
                 {refusedRestore.detail ?? t('This conversation could not be loaded.')}
               </p>
               <button
                 type="button"
                 onClick={retryRefusedRestore}
-                className="rounded-md border chat-border px-3 py-1 text-[0.75rem] font-medium chat-text-secondary-700-80 transition-colors hover:chat-surface-hover-100-6"
+                className="rounded-md border chat-border-200/10 px-3 py-1 text-[0.75rem] font-medium chat-text-secondary-700/80 transition-colors hover:chat-surface-hover-100/6"
               >
                 {t('Retry')}
               </button>
@@ -1440,7 +1440,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             />
           )}
           {readOnly ? (
-            readOnlyNotice && <div className="px-4 py-3 border-t chat-border text-sm chat-text-secondary">{readOnlyNotice}</div>
+            readOnlyNotice && <div className="px-4 py-3 border-t chat-border-200/10 text-sm chat-text-secondary-500/50">{readOnlyNotice}</div>
           ) : (
             <ChatInput
               header={composerHeader}
