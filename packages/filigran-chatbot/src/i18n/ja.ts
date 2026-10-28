@@ -66,7 +66,7 @@ const ja: Catalog = {
   'Did not answer': '回答なし',
   Download: 'ダウンロード',
   'Download {format}': '{format} をダウンロード',
-  'Drop a conversation here, or start one with +.': 'ここに会話をドロップするか、+ で新しく開始してください。',
+  'Drop a conversation here, or start one with {icon}.': 'ここに会話をドロップするか、{icon} で新しく開始してください。',
   'Drop files to attach them': 'ファイルをドロップして添付',
   'End voice call': '音声通話を終了',
   'Enter to send now · Esc to stop': 'Enterキーで今すぐ送信 · Escキーで停止',

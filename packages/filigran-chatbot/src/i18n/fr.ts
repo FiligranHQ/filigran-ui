@@ -66,7 +66,7 @@ const fr: Catalog = {
   'Did not answer': 'N’a pas répondu',
   Download: 'Télécharger',
   'Download {format}': 'Télécharger en {format}',
-  'Drop a conversation here, or start one with +.': 'Déposez une conversation ici ou démarrez-en une avec +.',
+  'Drop a conversation here, or start one with {icon}.': 'Déposez une conversation ici ou démarrez-en une avec {icon}.',
   'Drop files to attach them': 'Déposez des fichiers pour les joindre',
   'End voice call': 'Terminer l’appel vocal',
   'Enter to send now · Esc to stop': 'Appuyez sur Entrée pour envoyer maintenant · Appuyez sur Échap pour arrêter',

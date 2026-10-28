@@ -65,7 +65,7 @@ const es: Catalog = {
   'Did not answer': 'No respondió',
   Download: 'Descargar',
   'Download {format}': 'Descargar en {format}',
-  'Drop a conversation here, or start one with +.': 'Suelte aquí una conversación o inicie una con +.',
+  'Drop a conversation here, or start one with {icon}.': 'Suelte aquí una conversación o inicie una con {icon}.',
   'Drop files to attach them': 'Suelte los archivos para adjuntarlos',
   'End voice call': 'Finalizar la llamada de voz',
   'Enter to send now · Esc to stop': 'Pulse Intro para enviar ahora · Esc para detener',
