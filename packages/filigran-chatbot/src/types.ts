@@ -394,7 +394,7 @@ export interface ChatPanelTheme {
   surfaceSubtle?: string;
   /** A row or a button under the pointer (`--filigran-chat-surface-hover`). */
   surfaceHover?: string;
-  /** A text field: the message editor, a rename field, an approval's comment (`--filigran-chat-input-surface`). */
+  /** A text field: the composer (no fill unless set), a rename field, the feedback and approval comments (`--filigran-chat-input-surface`). */
   inputSurface?: string;
   /** The header's background, a colour or an image; `none` for the surface alone (`--filigran-chat-header-background`). */
   headerBackground?: string;

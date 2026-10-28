@@ -24,7 +24,7 @@ This file starts at 3.10.0; earlier releases are on the
   in light mode (an accent border on hover, the composer's focus border); its
   dark colour used to hide them (#460).
 
-## 3.15.2 — unreleased
+## 3.15.2 — 2026-10-28
 
 ### Fixed
 

@@ -83,6 +83,10 @@
   background-color: var(--filigran-chat-input-surface, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
   background-color: var(--filigran-chat-input-surface, color-mix(in oklab, --value(--color-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
 }
+/* The composer's box: no fill of its own, the host's field fill when it sets one. */
+@utility chat-composer-surface {
+  background-color: var(--filigran-chat-input-surface, transparent);
+}
 @utility chat-skeleton-fill {
   background-color: var(--filigran-chat-border, var(--chat-default-skeleton-fill));
 }
