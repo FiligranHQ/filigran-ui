@@ -1265,7 +1265,7 @@ function restartingBackend(down: () => boolean, subscriptions: ReturnType<typeof
 }
 
 test('a turn whose stream dropped is awaited for as long as the backend takes to come back, and goes on when the event stream replays it', async () => {
-  const timers = manualTimers([1000, 2000, 4000, 8000, 16000, 5000]);
+  const timers = manualTimers([1000, 2000, 4000, 8000, 16000, 5000, 15000]);
   try {
     const subscriptions: ReturnType<typeof sseStream>[] = [];
     const own = sseStream();
@@ -1286,7 +1286,8 @@ test('a turn whose stream dropped is awaited for as long as the backend takes to
       own.fail();
       await settle(10);
     });
-    // Down for longer than the old 15 s: the turn is still awaited.
+    // Down for longer than the old 15 s: the turn is still awaited, by nothing that short.
+    assert.ok(!timers.pending().includes(15000), 'no 15 s limit from the drop');
     for (const ms of [1000, 2000, 4000, 8000]) await timers.run(ms);
     assert.deepEqual(heard, ['running']);
     assert.ok(stopShown(), 'the turn still runs on screen');
@@ -1514,6 +1515,104 @@ test('a handed-over turn ended provisionally holds sends until its stored end, w
   });
   assert.deepEqual(heard.slice(0, 2), ['running', 'failed'], 'the stored end opens no second turn');
   assert.equal(sent(requests, '/api/chat/messages').length, 2, 'the held send goes once the stored end came');
+  await finish(own, ...subscriptions);
+});
+
+test('a handed-over turn that finished while the event stream was away is answered, as the history read back says', async () => {
+  const timers = manualTimers([5000]);
+  try {
+    const subscriptions: ReturnType<typeof sseStream>[] = [];
+    const own = sseStream();
+    let history: unknown[] = [];
+    fakeBackend([
+      agentsRoute,
+      (req) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', messages: history }) : undefined),
+      eventsRoute(subscriptions),
+      (req) => (req.url === '/api/chat/messages' ? own.response() : undefined),
+    ]);
+    const ref = createRef<Handle>();
+    const { heard, onTurnRunningChange } = turnLog();
+    await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onTurnRunningChange }, ref);
+    await act(async () => {
+      void ref.current!.send('long task');
+      await settle();
+      own.send({ type: 'turn_started', turn_id: 't1' });
+      await settle(10);
+    });
+    await act(async () => {
+      own.fail();
+      await settle(10);
+    });
+    // It finished, and stored its answer, while nothing was listening.
+    history = [
+      { id: 'u1', role: 'user', content: 'long task' },
+      { id: 'a1', role: 'assistant', content: 'Done' },
+    ];
+    await timers.run(5000);
+    assert.deepEqual(heard, ['running', 'answered']);
+    assert.match(text(), /Done/);
+    await finish(own, ...subscriptions);
+  } finally {
+    timers.restore();
+  }
+});
+
+test('a dropped turn the event stream cannot follow yet is awaited a short while only', async () => {
+  const timers = manualTimers([15000]);
+  try {
+    const own = sseStream();
+    fakeBackend([agentsRoute, restoreRoute([]), (req) => (req.url === '/api/chat/messages' ? own.response() : undefined)]);
+    const ref = createRef<Handle>();
+    const { heard, onTurnRunningChange } = turnLog();
+    // No history to read: the event stream never has a conversation to follow.
+    await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations', sessions: null }, onTurnRunningChange }, ref);
+    await act(async () => {
+      void ref.current!.send('long task');
+      await settle();
+      own.send({ type: 'turn_started', turn_id: 't1' });
+      await settle(10);
+    });
+    await act(async () => {
+      own.fail();
+      await settle(10);
+    });
+    assert.deepEqual(heard, ['running']);
+    await timers.run(15000);
+    assert.deepEqual(heard, ['running', 'stopped']);
+    await finish(own);
+  } finally {
+    timers.restore();
+  }
+});
+
+test('a message sent while a dropped turn is awaited shows above its "Reconnecting…" bubble', async () => {
+  const subscriptions: ReturnType<typeof sseStream>[] = [];
+  const own = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([]),
+    eventsRoute(subscriptions),
+    (req) => (req.url === '/api/chat/messages' ? own.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'steered', turn_id: 't1' }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
+  await act(async () => {
+    void ref.current!.send('long task');
+    await settle();
+    own.send({ type: 'turn_started', turn_id: 't1' });
+    await settle(10);
+  });
+  await act(async () => {
+    own.fail();
+    await settle(10);
+  });
+  await act(async () => {
+    void ref.current!.send('and also');
+    await settle(10);
+  });
+  const shown = text();
+  assert.ok(shown.indexOf('and also') >= 0 && shown.indexOf('and also') < shown.indexOf('Reconnecting…'), shown);
   await finish(own, ...subscriptions);
 });
 
