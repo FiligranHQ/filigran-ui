@@ -359,7 +359,7 @@ const FeedbackComment = ({
           }
         }}
         placeholder={t('What could be improved?')}
-        className="w-full resize-y rounded-md border chat-border bg-white dark:bg-transparent px-2 py-1 text-[0.75rem] leading-5 chat-text placeholder:chat-text-muted-400-30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+        className="w-full resize-y rounded-md border chat-border chat-surface-subtle-white-0 px-2 py-1 text-[0.75rem] leading-5 chat-text placeholder:chat-text-muted-400-30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
         <button

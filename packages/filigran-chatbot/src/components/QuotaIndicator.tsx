@@ -49,7 +49,7 @@ export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
   return (
     <Tooltip title={title}>
       <span className="flex items-center gap-1.5" role="img" aria-label={`${title} ${label}`}>
-        <span className="h-1 w-10 rounded-full chat-surface-subtle-200-10 overflow-hidden">
+        <span className="h-1 w-10 rounded-full chat-border-fill overflow-hidden">
           <span className={`block h-full rounded-full transition-[width] duration-300 ${barColor}`} style={{ width: `${ratio * 100}%` }} />
         </span>
         <span className={`text-[0.68rem] tabular-nums ${textColor}`}>{label}</span>

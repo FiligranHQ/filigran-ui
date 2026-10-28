@@ -1357,7 +1357,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             <div data-testid="filigran-chat-loading" className="flex-1 flex flex-col gap-4 px-4 py-6" aria-busy="true">
               {[0, 1, 2].map((i) => (
                 <div key={i} className={`flex ${i % 2 ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`h-10 rounded-xl chat-surface-subtle-200a70-6 animate-pulse ${i % 2 ? 'w-1/3' : 'w-2/3'}`} />
+                  <div className={`h-10 rounded-xl chat-border-fill-200a70-6 animate-pulse ${i % 2 ? 'w-1/3' : 'w-2/3'}`} />
                 </div>
               ))}
             </div>

@@ -402,7 +402,7 @@ export interface ChatPanelTheme {
   textMuted?: string;
   /** Secondary text: table cells, chips, descriptions, notices (`--filigran-chat-text-secondary`). */
   textSecondary?: string;
-  /** Dividers and outlines (`--filigran-chat-border`). */
+  /** Dividers, outlines, a gauge's track and the loading skeleton (`--filigran-chat-border`). */
   border?: string;
   /** The size of an answer's prose, its headings in proportion, and of a user's message unless `userTextSize` (`--filigran-chat-text-size`). */
   textSize?: string;

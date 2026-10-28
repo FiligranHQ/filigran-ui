@@ -466,7 +466,7 @@ const NameField = ({
       onBlur={commit}
       placeholder={placeholder}
       aria-label={placeholder}
-      className="mx-2 mb-1 w-[calc(100%-1rem)] rounded-md bg-white dark:bg-white/10 px-2 py-1 text-[0.8125rem] chat-text outline-hidden ring-1 ring-[var(--chat-accent)]"
+      className="mx-2 mb-1 w-[calc(100%-1rem)] rounded-md chat-surface-subtle-white-10 px-2 py-1 text-[0.8125rem] chat-text outline-hidden ring-1 ring-[var(--chat-accent)]"
     />
   );
 };
@@ -692,7 +692,7 @@ const ConversationRow = ({
             }}
             onBlur={onCommitRename}
             aria-label={t('Conversation title')}
-            className="w-full rounded-md bg-white dark:bg-white/10 px-1.5 py-0.5 text-[0.8125rem] chat-text outline-hidden ring-1 ring-[var(--chat-accent)]"
+            className="w-full rounded-md chat-surface-subtle-white-10 px-1.5 py-0.5 text-[0.8125rem] chat-text outline-hidden ring-1 ring-[var(--chat-accent)]"
           />
         ) : (
           <span className={`block truncate text-[0.8125rem] ${isActive ? 'chat-text' : 'chat-text-secondary-700-70'}`}>
@@ -757,7 +757,7 @@ const ConversationRow = ({
                       {w.id === c.workspaceId && <CheckIcon size={12} className="ml-auto shrink-0" />}
                     </button>
                   ))}
-                  <div className="my-1 h-px chat-surface-subtle-200-10" />
+                  <div className="my-1 h-px chat-border-fill" />
                   <button
                     type="button"
                     disabled={!c.workspaceId}

@@ -232,7 +232,7 @@ export const ChatHeader = ({
             </div>
           ))}
         </div>
-        <div className="h-px chat-surface-subtle-200-10 mx-2" />
+        <div className="h-px chat-border-fill mx-2" />
         <div>
           {agentDashboardUrl && (
             <button
@@ -321,7 +321,7 @@ export const ChatHeader = ({
                 );
               })}
             </div>
-            <div className="h-px chat-surface-subtle-200-10 mx-2" />
+            <div className="h-px chat-border-fill mx-2" />
             <button
               type="button"
               onClick={() => {

@@ -169,7 +169,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t('e.g. wrong environment — use staging instead')}
-            className="w-full resize-none rounded-md border chat-border bg-white px-2 py-1 text-[0.7rem] chat-text-800-85 outline-none focus:border-[var(--chat-accent)]/50 dark:bg-white/[0.03]"
+            className="w-full resize-none rounded-md border chat-border chat-surface-subtle-white-3 px-2 py-1 text-[0.7rem] chat-text-800-85 outline-none focus:border-[var(--chat-accent)]/50"
           />
           <div className="flex items-center gap-1.5">
             <button

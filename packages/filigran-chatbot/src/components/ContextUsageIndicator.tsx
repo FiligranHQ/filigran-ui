@@ -149,7 +149,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
             own colours, so proportions are readable without matching numbers to
             rows. The trailing gap is the headroom left. */}
         <div className="px-3.5 pb-2.5 pt-1.5">
-          <span className="flex h-1.5 w-full gap-px rounded-full chat-surface-subtle-200-10 overflow-hidden">
+          <span className="flex h-1.5 w-full gap-px rounded-full chat-border-fill overflow-hidden">
             {rows.map((row) => (
               <span
                 key={row.field}
