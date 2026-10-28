@@ -217,3 +217,14 @@ test('a backend whose turns outlive their stream gets the conversation created b
   stream.send({ type: 'cancelled' });
   await finish(stream);
 });
+
+test("what a message positions absolutely is clipped by the transcript's scroll, so a long conversation does not grow the page", async () => {
+  fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'assistant', content: 'An answer with a time', created_at: '2026-10-28T10:00:00Z' }])]);
+  await render({ conversationId: 'c1' });
+  await settle();
+  const transcript = container.querySelector<HTMLElement>('[data-testid="filigran-chat-transcript"]')!;
+  assert.ok(transcript.querySelector('.sr-only'), "the message's screen-reader time");
+  // An absolute box is clipped by the scroll of its containing block only: the
+  // transcript has to be one, or the times lie down the page and the page scrolls.
+  assert.ok(transcript.classList.contains('relative'), 'the transcript is no containing block');
+});

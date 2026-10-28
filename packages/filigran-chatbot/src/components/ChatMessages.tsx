@@ -1105,7 +1105,9 @@ export const ChatMessages = ({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       data-testid="filigran-chat-transcript"
-      className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent-50)]"
+      // `relative`: what a message positions absolutely (its screen-reader time)
+      // is clipped by this scroll, not laid out down the page, which would scroll.
+      className="relative flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent-50)]"
     >
       {(hasEarlierMessages || onLoadEarlier) && (
         <div className="flex justify-center">
