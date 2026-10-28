@@ -325,11 +325,7 @@ export const ConversationSidebar = ({
                 onDropConversation={(conversationId) => group.workspace && void move(conversationId, group.workspace.id)}
                 t={t}
               >
-                {group.conversations.length > 0 ? (
-                  group.conversations.map(renderRow)
-                ) : group.workspace?.canManage ? (
-                  <EmptyWorkspaceHint t={t} />
-                ) : null}
+                {group.conversations.length > 0 ? group.conversations.map(renderRow) : <EmptyWorkspaceHint t={t} />}
               </WorkspaceGroupSection>
             ))}
             <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
@@ -424,11 +420,11 @@ const DropZone = ({
 };
 
 /**
- * An empty workspace's hint, in a workspace that has the New conversation
- * button: that button's glyph, named as the button is, where the sentence
- * puts `{icon}`.
+ * An empty workspace's hint: its New conversation button's glyph, named as the
+ * button is, where the sentence puts `{icon}`. Only a workspace one may file
+ * into is listed empty (`groupConversations`), and it has that button.
  */
-function EmptyWorkspaceHint({ t }: { t: (key: string) => string }) {
+const EmptyWorkspaceHint = ({ t }: { t: (key: string) => string }) => {
   const { before, after, hasSlot } = translateAround(t, 'Drop a conversation here, or start one with {icon}.', 'icon');
   return (
     <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">
@@ -441,7 +437,7 @@ function EmptyWorkspaceHint({ t }: { t: (key: string) => string }) {
       {after}
     </p>
   );
-}
+};
 
 /** A one-line name field: Enter commits, Escape or an empty blur cancels. */
 const NameField = ({
