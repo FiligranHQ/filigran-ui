@@ -2378,7 +2378,8 @@ export function useChat({
             return true;
           }
         },
-        { idleTimeoutMs: SSE_IDLE_TIMEOUT_MS },
+        // Given up on, the stream is of use only when the event stream can pick the turn up.
+        { idleTimeoutMs: () => (hasEvents && conversationIdRef.current && ownTurnIdRef.current ? SSE_IDLE_TIMEOUT_MS : undefined) },
       );
       turn.deltas.flush();
       // Ended without saying the turn is over (a proxy's idle timeout, a
@@ -3017,7 +3018,11 @@ export function useChat({
           }
           return;
         }
-        if (!res.ok || !res.body) return;
+        if (!res.ok || !res.body) {
+          // Only a backend coming back (a gateway between it and the panel says so) is worth waiting for.
+          if (!stopped && ![502, 503, 504].includes(res.status)) endHandoverUnseenRef.current();
+          return;
+        }
         if (opened) awaitRelayedResumeRef.current();
         awaitHandoverReplayRef.current();
         opened = true;
@@ -3236,6 +3241,7 @@ export function useChat({
       if (windDownRef.current) window.clearTimeout(windDownRef.current.timer);
 
       if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
+      if (handoverEndingRef.current) window.clearTimeout(handoverEndingRef.current.timer);
       if (resumeWaitRef.current) window.clearTimeout(resumeWaitRef.current.timer);
       // A message still held goes nowhere with the panel.
       cancelHeld();

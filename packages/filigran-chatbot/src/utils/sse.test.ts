@@ -70,7 +70,7 @@ function paced(gapMs: number, ...chunks: string[]): ReadableStream<Uint8Array> {
 test('a body its server keeps alive that falls silent is given up as dead', async () => {
   const seen: Record<string, unknown>[] = [];
   await assert.rejects(
-    readSseEvents(paced(0, ': keepalive\n\n', ': keepalive\n\n', 'data: {"n":1}\n\n'), (evt) => void seen.push(evt), {
+    readSseEvents(paced(15, ': keepalive\n\n', ': keepalive\n\n', 'data: {"n":1}\n\n'), (evt) => void seen.push(evt), {
       idleTimeoutMs: 30,
     }),
     SseStreamSilentError,
@@ -93,18 +93,36 @@ test('a body that never sent a keep-alive is not timed out, however long it stay
   assert.deepEqual(seen, [{ n: 1 }, { n: 2 }]);
 });
 
-test('a single opening comment does not arm the timeout', async () => {
+test('an opening burst of comments does not arm the timeout: it is no keep-alive cadence', async () => {
   const seen: Record<string, unknown>[] = [];
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      controller.enqueue(encoder.encode(': connected\n\n'));
+      controller.enqueue(encoder.encode(': connected\n\n: ok\n\n'));
       await new Promise((resolve) => setTimeout(resolve, 80));
       controller.enqueue(encoder.encode('data: {"n":1}\n\n'));
       controller.close();
     },
   });
   await readSseEvents(stream, (evt) => void seen.push(evt), { idleTimeoutMs: 30 });
+  assert.deepEqual(seen, [{ n: 1 }]);
+});
+
+test('a timeout given by a function that answers nothing stays off', async () => {
+  const seen: Record<string, unknown>[] = [];
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      for (const chunk of [': keepalive\n\n', ': keepalive\n\n']) {
+        await new Promise((resolve) => setTimeout(resolve, 15));
+        controller.enqueue(encoder.encode(chunk));
+      }
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      controller.enqueue(encoder.encode('data: {"n":1}\n\n'));
+      controller.close();
+    },
+  });
+  await readSseEvents(stream, (evt) => void seen.push(evt), { idleTimeoutMs: () => undefined });
   assert.deepEqual(seen, [{ n: 1 }]);
 });
 

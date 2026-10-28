@@ -1064,9 +1064,11 @@ waits 5 s for the snapshot to replay the turn; an `error` or `cancelled` of
 the event stream naming that turn ends it as a relayed turn's end would, and
 with nothing in time the turn ended out of sight, answered or stopped as the
 history read back says. When the event stream cannot open (no conversation
-to follow yet), the turn is awaited 15 s. A stream that sent `: keepalive`
-comments and then nothing for 45 s (a proxy that left it half-open) is taken
-for dropped the same way. A message sent while a turn writes its answer shows above that
+to follow yet) or answers an error other than a gateway's (502, 503, 504),
+the turn is not awaited that long. A stream whose `: keepalive` comments came
+at a keep-alive cadence and that then sends nothing for 45 s (a proxy that left
+it half-open) is taken for dropped the same way, when the event stream can
+pick its turn up; a backend without one keeps a silent stream open, as before. A message sent while a turn writes its answer shows above that
 answer, where the backend stores it. A read-back that waited for a turn to end joins the thread in
 place: each stored message missing from the screen goes after the one stored
 before it, so nothing lands above messages it follows.
