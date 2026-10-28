@@ -1062,10 +1062,12 @@ or ends without the turn's last frame (`done`, `error`, `session_expired` or
 keeping the segments it closed. It shows "Reconnecting…" for as long as the
 event stream takes to reopen (a backend restarting, up to 15 minutes), then
 waits 5 s for the snapshot to replay the turn; an `error` or `cancelled` of
-the event stream naming that turn ends it at once, and with nothing in time
-the history is read back. A stream that sent a `: keepalive` comment and then
-nothing for 45 s (a proxy that left it half-open) is taken for dropped the
-same way. A message sent while a turn writes its answer shows above that
+the event stream naming that turn ends it as a relayed turn's end would, and
+with nothing in time the turn ended out of sight, answered or stopped as the
+history read back says. When the event stream cannot open (no conversation
+to follow yet), the turn is awaited 15 s. A stream that sent `: keepalive`
+comments and then nothing for 45 s (a proxy that left it half-open) is taken
+for dropped the same way. A message sent while a turn writes its answer shows above that
 answer, where the backend stores it. A read-back that waited for a turn to end joins the thread in
 place: each stored message missing from the screen goes after the one stored
 before it, so nothing lands above messages it follows.

@@ -111,6 +111,8 @@ const APPROVAL_PRESENCE_INTERVAL_MS = 600000;
  * the turn comes once it is back.
  */
 const HANDOVER_BACKSTOP_MS = RESUME_WATCH_MS;
+/** How long a dropped turn is awaited when the event stream cannot open (no conversation to follow yet). */
+const HANDOVER_UNFOLLOWED_MS = 15000;
 /** How long Stop waits for the backend to end a cancelled turn before letting go of it. */
 const CANCEL_GRACE_MS = 10000;
 /**
@@ -985,13 +987,19 @@ export function useChat({
   const handoverReplayArmedRef = useRef(false);
   // When the handed-over turn is given up, the event stream never back (`HANDOVER_BACKSTOP_MS`).
   const handoverDeadlineRef = useRef(0);
+  // The event stream the panel follows, set as it renders (`eventsUrl`).
+  const eventsUrlRef = useRef<string | null>(null);
   // The empty bubble shown while the turn is awaited.
   const handoverPlaceholderIdRef = useRef<string | null>(null);
+  // A handed-over turn given up, awaiting the read-back that says how it ended (`settleUnseenEnd`).
+  const handoverEndingRef = useRef<{ from: number; shownUpTo: string | null; timer: number } | null>(null);
   const clearHandover = () => {
     if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
     handoverTimerRef.current = null;
     handoverTurnIdRef.current = null;
     handoverReplayArmedRef.current = false;
+    if (handoverEndingRef.current) window.clearTimeout(handoverEndingRef.current.timer);
+    handoverEndingRef.current = null;
     const placeholderId = handoverPlaceholderIdRef.current;
     handoverPlaceholderIdRef.current = null;
     if (placeholderId !== null) setMessages((prev) => prev.filter((m) => m.id !== placeholderId || m.content));
@@ -1198,16 +1206,31 @@ export function useChat({
     setHistoryReloadNonce(historyReloadsRef.current);
   }, []);
 
-  /** The handed-over turn is over (*ended*): its answer, if it got one, is in the history. */
-  const endHandover = (ended: ChatTurnOutcome) => {
+  /**
+   * Nothing replayed the handed-over turn, or the event stream cannot: it
+   * ended out of sight, answered or not, as the conversation read back says
+   * (`settleUnseenEnd`) - a turn that finished normally while the stream was
+   * away is answered.
+   */
+  const endHandoverUnseen = () => {
     if (handoverTurnIdRef.current === null) return;
+    const shownUpTo = lastStoredId(messagesRef.current);
     clearHandover();
-    // As any turn ends: a Stop still awaiting its answer must not stop the next turn.
-    settleTurn(ended);
+    if (!getSessionsUrl()) {
+      // As any turn ends: a Stop still awaiting its answer must not stop the next turn.
+      settleTurn('stopped');
+      return;
+    }
     reloadHistory();
+    const timer = window.setTimeout(() => {
+      if (handoverEndingRef.current?.timer !== timer) return;
+      handoverEndingRef.current = null;
+      settleTurn('stopped');
+    }, UNSEEN_END_READ_BACK_MS);
+    handoverEndingRef.current = { from: historyReloadsRef.current, shownUpTo, timer };
   };
-  const endHandoverRef = useRef(endHandover);
-  endHandoverRef.current = endHandover;
+  const endHandoverUnseenRef = useRef(endHandoverUnseen);
+  endHandoverUnseenRef.current = endHandoverUnseen;
   /** Wait for the event stream to reopen, until the handover's deadline at most. */
   const awaitEventStream = () => {
     if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
@@ -1215,7 +1238,7 @@ export function useChat({
     handoverTimerRef.current = window.setTimeout(
       () => {
         handoverTimerRef.current = null;
-        if (!relayedTurnRef.current) endHandoverRef.current('stopped');
+        if (!relayedTurnRef.current) endHandoverUnseenRef.current();
       },
       Math.max(0, handoverDeadlineRef.current - Date.now()),
     );
@@ -1231,7 +1254,7 @@ export function useChat({
     if (handoverTimerRef.current !== null) window.clearTimeout(handoverTimerRef.current);
     handoverTimerRef.current = window.setTimeout(() => {
       handoverTimerRef.current = null;
-      if (!relayedTurnRef.current) endHandoverRef.current('stopped');
+      if (!relayedTurnRef.current) endHandoverUnseenRef.current();
     }, EVENTS_RESUME_GRACE_MS);
   };
   const awaitHandoverReplayRef = useRef(awaitHandoverReplay);
@@ -1487,7 +1510,7 @@ export function useChat({
       content,
     );
     // Read now: by the time React runs the update, the turn may have ended.
-    const openAnswerId = liveRendererRef.current?.openAnswerId() ?? null;
+    const openAnswerId = liveRendererRef.current?.openAnswerId() ?? handoverPlaceholderIdRef.current;
     setMessages((prev) => withUserMessageDuringTurn(prev, optimistic, openAnswerId));
     const fileIds = files.filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
     // Why the backend refused it, when it says.
@@ -1966,7 +1989,7 @@ export function useChat({
       case 'user_message': {
         const relayedMessage = parsed.message;
         // Read now: by the time React runs the update, the turn may have ended.
-        const openAnswerId = liveRendererRef.current?.openAnswerId() ?? null;
+        const openAnswerId = liveRendererRef.current?.openAnswerId() ?? handoverPlaceholderIdRef.current;
         setMessages((prev) => {
           if (relayedMessage.serverId && prev.some((m) => m.serverId === relayedMessage.serverId)) return prev;
           // This tab's own message, echoed back: it takes the persisted id rather than a second bubble.
@@ -2198,10 +2221,12 @@ export function useChat({
       handoverTurnIdRef.current = ownTurnIdRef.current;
       ownTurnIdRef.current = null;
       setClientId(randomId());
-      setAgentStatus({ status: 'reconnecting' });
+      // A Stop on its way still says so.
+      setAgentStatus((prev) => (prev?.status === 'cancelling' ? prev : { status: 'reconnecting' }));
       // The backend may be restarting: the turn is awaited for as long as the
-      // event stream takes to reopen (`awaitHandoverReplay`), up to this.
-      handoverDeadlineRef.current = Date.now() + HANDOVER_BACKSTOP_MS;
+      // event stream takes to reopen (`awaitHandoverReplay`), up to this; not
+      // long when the stream has no conversation to follow yet.
+      handoverDeadlineRef.current = Date.now() + (eventsUrlRef.current ? HANDOVER_BACKSTOP_MS : HANDOVER_UNFOLLOWED_MS);
       awaitEventStream();
       return true;
     };
@@ -2470,6 +2495,12 @@ export function useChat({
    * the read-back says (`unseenTurnOutcome`).
    */
   const settleUnseenEnd = (readFor: number, restored: ChatMessage[] | null) => {
+    const ending = handoverEndingRef.current;
+    if (ending && readFor >= ending.from) {
+      window.clearTimeout(ending.timer);
+      handoverEndingRef.current = null;
+      settleTurn(restored ? unseenTurnOutcome(restored, ending.shownUpTo) : 'stopped');
+    }
     const withdrawn = withdrawnTurnRef.current;
     if (!withdrawn?.readBack || readFor < withdrawn.readBack.from) return;
     endWithdrawnTurn(restored ? unseenTurnOutcome(restored, withdrawn.shownUpTo) : 'stopped');
@@ -2531,10 +2562,9 @@ export function useChat({
       // handed-over turn of our own will not be replayed.
       endRelayedTurn();
       endWithdrawnTurn('stopped');
-      if (handoverTurnIdRef.current !== null && !ownTurnActiveRef.current) {
+      if ((handoverTurnIdRef.current !== null || handoverEndingRef.current !== null) && !ownTurnActiveRef.current) {
         clearHandover();
-        stopRunning('stopped');
-        setAgentStatus(null);
+        settleTurn('stopped');
       }
       return;
     }
@@ -2933,6 +2963,8 @@ export function useChat({
    * host's `requestHeaders` change, so a refreshed token picks the stream up.
    */
   const eventsUrl = conversationId && historySettledFor === conversationId ? getEventsUrl(conversationId) : null;
+  // Whether a dropped turn can be followed on the event stream (`handOver`).
+  eventsUrlRef.current = eventsUrl;
   const headersKey = requestHeadersKey(requestHeaders);
   const headersKeyRef = useRef(headersKey);
   headersKeyRef.current = headersKey;
@@ -2981,7 +3013,7 @@ export function useChat({
           // Nothing replays a relayed or handed-over turn now: how it ended is read back.
           if (!stopped) {
             endTurnUnseenRef.current();
-            endHandoverRef.current('stopped');
+            endHandoverUnseenRef.current();
           }
           return;
         }

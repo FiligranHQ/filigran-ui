@@ -28,8 +28,9 @@ This file starts at 3.10.0; earlier releases are on the
 - A turn whose stream drops is awaited for as long as the event stream takes
   to reopen (a backend restart), showing "Reconnecting…", instead of being
   marked stopped 15 s after the drop; an `error` or `cancelled` of the event
-  stream naming it ends it at once (#460).
-- A stream its server keeps alive that then falls silent for 45 s is taken for
+  stream naming it ends it at once, and one that ended out of sight is
+  answered or stopped as the history read back says (#460).
+- A stream its server keeps alive (two comment lines at least) that then falls silent for 45 s is taken for
   dropped, so a stream a proxy left half-open is handed over instead of
   hanging (#460).
 

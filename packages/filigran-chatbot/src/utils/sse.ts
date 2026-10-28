@@ -11,11 +11,12 @@ export class SseStreamSilentError extends Error {
  * lines (`: keepalive`), `event:` lines and malformed JSON are skipped.
  * *onEvent* returning `false` stops the read early.
  *
- * With *idleTimeoutMs*, a body that sent a comment line - the server keeps it
- * alive - and then nothing for that long is dead (a proxy left it half-open,
- * the machine slept): the read is cancelled and rejects with
- * {@link SseStreamSilentError}. A body that never sent a comment is never
- * timed out, since its server may stay silent through a long step.
+ * With *idleTimeoutMs*, a body that sent comment lines - two at least: a
+ * server keeping it alive, not one opening comment - and then nothing for
+ * that long is dead (a proxy left it half-open, the machine slept): the read
+ * is cancelled and rejects with {@link SseStreamSilentError}. A body that
+ * did not is never timed out, since its server may stay silent through a
+ * long step.
  */
 export async function readSseEvents(
   body: ReadableStream<Uint8Array>,
@@ -25,13 +26,13 @@ export async function readSseEvents(
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  let keptAlive = false;
+  let comments = 0;
   let silent = false;
   let watchdog: ReturnType<typeof setTimeout> | null = null;
   const rearm = () => {
     if (watchdog !== null) clearTimeout(watchdog);
     watchdog = null;
-    if (!keptAlive || idleTimeoutMs === undefined) return;
+    if (comments < 2 || idleTimeoutMs === undefined) return;
     watchdog = setTimeout(() => {
       silent = true;
       void reader.cancel().catch(() => undefined);
@@ -39,7 +40,7 @@ export async function readSseEvents(
   };
   const handle = (rawLine: string): boolean => {
     const line = rawLine.replace(/\r$/, '');
-    if (line.startsWith(':')) keptAlive = true;
+    if (line.startsWith(':')) comments += 1;
     if (!line.startsWith('data:')) return true;
     const json = line.startsWith('data: ') ? line.slice(6) : line.slice(5);
     let evt: unknown;
