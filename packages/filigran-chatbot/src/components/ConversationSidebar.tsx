@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import type { ChatConversationSummary, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
-import { timeAgo } from '../utils';
+import { timeAgo, translateAround } from '../utils';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
@@ -325,11 +325,7 @@ export const ConversationSidebar = ({
                 onDropConversation={(conversationId) => group.workspace && void move(conversationId, group.workspace.id)}
                 t={t}
               >
-                {group.conversations.length > 0 ? (
-                  group.conversations.map(renderRow)
-                ) : (
-                  <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">{t('Drop a conversation here, or start one with +.')}</p>
-                )}
+                {group.conversations.length > 0 ? group.conversations.map(renderRow) : <EmptyWorkspaceHint t={t} />}
               </WorkspaceGroupSection>
             ))}
             <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
@@ -420,6 +416,26 @@ const DropZone = ({
     >
       {children}
     </div>
+  );
+};
+
+/**
+ * An empty workspace's hint: its New conversation button's glyph, named as the
+ * button is, where the sentence puts `{icon}`. Only a workspace one may file
+ * into is listed empty (`groupConversations`), and it has that button.
+ */
+const EmptyWorkspaceHint = ({ t }: { t: (key: string) => string }) => {
+  const { before, after, hasSlot } = translateAround(t, 'Drop a conversation here, or start one with {icon}.', 'icon');
+  return (
+    <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">
+      {before}
+      {hasSlot && (
+        <span role="img" aria-label={t('New conversation in this workspace')} className="inline-block align-[-1px]">
+          <EditIcon size={11} />
+        </span>
+      )}
+      {after}
+    </p>
   );
 };
 
