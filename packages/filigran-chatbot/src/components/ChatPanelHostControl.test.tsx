@@ -232,6 +232,42 @@ test('a send stopped while it waits for the agents never leaves', async () => {
   assert.equal(sessions().length + messages().length, 0);
 });
 
+test('a send stopped while it waits for the agents, in a stored conversation, asks the backend to cancel nothing', async () => {
+  const { requests, messages, releaseAgents, releaseSessions } = heldAgentsAndSessions();
+  const ref = createRef<Handle>();
+  await render({ initialAgent: 'hunter', conversationId: 'c1', apiEndpoints: { cancel: '/chat/messages/cancel' } }, ref);
+  await typeAndSend(ref, 'hello');
+  await act(async () => {
+    ref.current!.stop();
+    await settle();
+  });
+  assert.ok(!text().includes('Cancelling'), 'let go of at once');
+  await act(async () => {
+    releaseAgents();
+    releaseSessions();
+    await settle(10);
+  });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/messages/cancel').length, 0);
+  assert.equal(messages().length, 0);
+});
+
+test('a new conversation the host asked for as the agents land lets go of the send waiting for them', async () => {
+  const { sessions, messages, releaseAgents, releaseSessions } = heldAgentsAndSessions();
+  const ref = createRef<Handle>();
+  await render({ initialAgent: 'hunter', apiEndpoints: { cancel: '/chat/messages/cancel' } }, ref);
+  releaseSessions();
+  await typeAndSend(ref, 'hello');
+  await act(async () => {
+    ref.current!.newConversation();
+    await settle();
+  });
+  await act(async () => {
+    releaseAgents();
+    await settle(10);
+  });
+  assert.equal(sessions().length + messages().length, 0, 'nothing of the send reaches the new chat');
+});
+
 test('the send hook can take a send over, or reword it and add fields', async () => {
   const stream = sseStream();
   const requests = fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);

@@ -1339,6 +1339,8 @@ export function useChat({
   const agentPendingRef = useRef(agentPending);
   agentPendingRef.current = agentPending;
   const agentWaitersRef = useRef<(() => void)[]>([]);
+  /** The own send waiting for its agent: nothing of it reached the backend yet. */
+  const sendAwaitingAgentRef = useRef<AbortController | null>(null);
   useEffect(() => {
     if (agentPending) return;
     for (const resume of agentWaitersRef.current.splice(0)) resume();
@@ -2294,7 +2296,15 @@ export function useChat({
       abortControllerRef.current = controller;
       pageActionControllerRef.current = pageActions;
 
-      const sendSlug = await chosenAgentSlug(controller.signal);
+      sendAwaitingAgentRef.current = controller;
+      let sendSlug: string | null | undefined;
+      try {
+        sendSlug = await chosenAgentSlug(controller.signal);
+      } finally {
+        if (sendAwaitingAgentRef.current === controller) sendAwaitingAgentRef.current = null;
+      }
+      // Let go of meanwhile (a new chat run as the agent landed): it never leaves.
+      if (controller.signal.aborted) return 'dropped';
       // Collect file_ids from already-uploaded files (uploaded eagerly on selection)
       const fileIds = (userMsg.files ?? []).filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
 
@@ -2896,6 +2906,11 @@ export function useChat({
     }
     if (!isLoadingRef.current) {
       stopLocally(false);
+      return;
+    }
+    // A send still waiting for its agent reached nothing the backend could cancel.
+    if (sendAwaitingAgentRef.current) {
+      stopLocally();
       return;
     }
     stopRequestedRef.current = true;

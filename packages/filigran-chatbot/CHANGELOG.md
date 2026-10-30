@@ -29,8 +29,9 @@ This file starts at 3.10.0; earlier releases are on the
   goes to the agent the host asked for (`initialAgent`); it went with no agent
   before, and the backend answered with the user's default one. The message
   shows at once and leaves when the agents land, whether from the composer,
-  the handle or a voice call, and Stop lets it go meanwhile. A history still
-  being read back does not hold it.
+  the handle or a voice call, and Stop lets it go meanwhile. One from the
+  composer or a voice call does not wait for a history still being read back;
+  the handle's `send` still does.
 
 ## 3.16.1 — 2026-10-29
 
