@@ -839,6 +839,15 @@ export interface ChatPanelHandle {
   startVoiceCall: () => boolean;
   /** Read the agent list again, keeping the agent picked unless it is gone. */
   reloadAgents: () => void;
+  /**
+   * Read the conversation on screen back from the server again, for a change
+   * the host made to it outside the panel (a message it stored, its agent
+   * changed): its latest messages and its agent, as when it was opened. The
+   * composer's draft is kept; while a turn runs, the read-back waits for it to
+   * end. Nothing without a conversation. `selectConversation` with the id on
+   * screen does nothing, so a host's sync with its own state never resets it.
+   */
+  reloadConversation: () => void;
   /** Scroll to a message on screen (by its server id) and highlight it; false when it is not there. */
   scrollToMessage: (messageId: string) => boolean;
 }

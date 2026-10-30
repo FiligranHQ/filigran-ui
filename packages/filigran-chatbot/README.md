@@ -163,12 +163,13 @@ chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigatio
 | --- | --- |
 | `send(text, { extras, displayText })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body, and the user's bubble shows `displayText` in place of *text* (as `onBeforeSend`'s `displayText`, which wins when it gives one). Resolves to `'sent'` (once the backend takes it), `'steered'` (joined the running turn), `'held'` (sent when the turn ends - also, with or without `holdSendsDuringTurn`, while a turn ended provisionally winds down, after `onTurnRunningChange(false)`), `'dropped'` (empty, taken over by `onBeforeSend`, `readOnly`, or the panel unmounted first) or `'failed'` (the backend refused it) |
 | `newConversation({ workspaceId, agent })` | Starts a new chat, in a workspace and with an agent (id or slug) if given |
-| `selectConversation(id)` | Opens a conversation |
+| `selectConversation(id)` | Opens a conversation; the one on screen is left as it is |
 | `setDraft(text)` / `focusComposer()` | Fills / focuses the composer |
 | `getDraft()` | The composer's text as it stands (typed by the user, or set by `setDraft`), e.g. for `onBeforeSend` taking over a held message (`draft.held`) to tell whether the composer still holds what was typed for it |
 | `stop()` | Same as the Stop button; during a voice call it also drops the question awaited and stops speaking |
 | `startVoiceCall()` | Starts a [voice call](#voice-call) over the panel; `false` when this browser has no speech recognition or the panel is `readOnly` |
 | `reloadAgents()` | Reads the agent list again, keeping the agent picked unless it is gone |
+| `reloadConversation()` | Reads the conversation on screen back from the server again, for a change the host made to it outside the panel (a message it stored, its agent changed): its latest messages and its agent, as when it was opened. The composer's draft is kept; while a turn runs, the read-back waits for it to end |
 | `scrollToMessage(id)` | Scrolls to a message by its server id and highlights it; `false` when it is not on screen |
 
 #### Host extensions

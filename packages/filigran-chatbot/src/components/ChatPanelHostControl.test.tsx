@@ -2,7 +2,7 @@
  * Rendering tests of what a host relies on when it drives the panel - `yarn
  * test`: steering named to the backend, host cards replacing built-in ones,
  * readiness, the send hook and the words a bubble shows, the trace a stopped
- * answer leaves, reloading the agents, `onTurnRunningChange` for own,
+ * answer leaves, reloading the agents and the conversation, `onTurnRunningChange` for own,
  * relayed and handed-over turns, and `getDraft`.
  */
 import { test } from 'node:test';
@@ -394,6 +394,49 @@ test('a reload that finds no agent left picks none', async () => {
     await settle();
   });
   assert.ok(!text().includes('Hunter'), 'the removed agent is no longer shown as picked');
+});
+
+test('reloading the conversation shows what the host changed in it, and keeps the draft', async () => {
+  const stored: unknown[] = [
+    { id: 'm1', role: 'user', content: 'Draft the deck' },
+    { id: 'a1', role: 'assistant', content: 'Here is the outline' },
+  ];
+  const requests = fakeBackend([agentsRoute, restoreRoute(stored)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  assert.ok(text().includes('Here is the outline'));
+  const sessions = () => requests.filter((r) => r.url === '/api/chat/sessions').length;
+  const opened = sessions();
+  act(() => ref.current!.setDraft('and the speaker notes'));
+  // The host changed the conversation outside the panel: another agent took it over.
+  stored.push({ id: 'a2', role: 'assistant', content: 'Continued by Deck Bot on 2026-10-30.' });
+  await act(async () => {
+    ref.current!.selectConversation('c1');
+    await settle();
+  });
+  assert.equal(sessions(), opened, 'selecting the conversation on screen reads nothing');
+  assert.ok(!text().includes('Continued by Deck Bot'));
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle();
+  });
+  assert.equal(sessions(), opened + 1);
+  assert.ok(text().includes('Here is the outline'));
+  assert.ok(text().includes('Continued by Deck Bot on 2026-10-30.'));
+  assert.equal(ref.current!.getDraft(), 'and the speaker notes');
+});
+
+test('reloading with no conversation on screen reads nothing', async () => {
+  const requests = fakeBackend([agentsRoute, restoreRoute([])]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: null }, ref);
+  const sessions = () => requests.filter((r) => r.url === '/api/chat/sessions').length;
+  const opened = sessions();
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle();
+  });
+  assert.equal(sessions(), opened);
 });
 
 test('a send from the handle can show the user other words than it sends, unless the send hook says otherwise', async () => {

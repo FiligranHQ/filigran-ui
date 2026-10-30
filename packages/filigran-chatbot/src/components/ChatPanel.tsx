@@ -1213,6 +1213,10 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       },
       startVoiceCall: () => !readOnlyRef.current && voice.start(),
       reloadAgents,
+      reloadConversation: () =>
+        enqueue(() => {
+          if (conversationIdRef.current) reloadHistory();
+        }),
       scrollToMessage: (messageId) => {
         const target = [...(rootRef.current?.querySelectorAll<HTMLElement>('[data-message-id]') ?? [])].find(
           (el) => el.dataset.messageId === messageId,
@@ -1224,7 +1228,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         return true;
       },
     }),
-    // setInputValue, reloadAgents and the voice call's controls are stable; everything else goes through a ref.
+    // setInputValue, reloadAgents, reloadHistory and the voice call's controls are stable; everything else goes through a ref.
     [],
   );
 
