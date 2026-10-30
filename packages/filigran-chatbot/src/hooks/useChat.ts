@@ -712,6 +712,8 @@ interface UseChatReturn {
    * created inside that workspace (`workspace_id` on the session `POST`).
    */
   handleNewChat: (workspaceId?: string) => void;
+  /** Move to *id*, a conversation the backend re-created in place of the one read back: the new-chat reset, the composer kept. */
+  adoptRecreatedConversation: (id: string) => void;
   /** The workspace the next conversation will be created in, if any. */
   pendingWorkspaceId: string | null;
   /** Forget *workspaceId* as the next conversation's workspace (it was deleted). */
@@ -2696,8 +2698,11 @@ export function useChat({
     setHeldMessage(null);
   };
 
-  /** The new-chat reset; *notify*: the host hears of the empty conversation (not on a switch, which names the next one). */
-  const resetChat = (workspaceId: string | undefined, notify: boolean) => {
+  /**
+   * The new-chat reset; *notify*: the host hears of the empty conversation (not on a switch, which names the next one);
+   * *keepComposer*: what the user is typing, with its references, mentions and files, stays.
+   */
+  const resetChat = (workspaceId: string | undefined, notify: boolean, keepComposer = false) => {
     // A string only: the header and the sidebar pass this as a click handler,
     // and the click event must never reach the session request.
     const workspace = typeof workspaceId === 'string' && workspaceId ? workspaceId : null;
@@ -2732,10 +2737,12 @@ export function useChat({
     noticeUntilSendRef.current = false;
     stopRunning('stopped');
     setMessages([]);
-    setInputValue('');
-    setConversationRefs([]);
-    setAgentMentions([]);
-    setAttachedFiles([]);
+    if (!keepComposer) {
+      setInputValue('');
+      setConversationRefs([]);
+      setAgentMentions([]);
+      setAttachedFiles([]);
+    }
     setAgentStatus(null);
     setTransferredAgent(null);
     // A fresh (or newly selected) conversation starts with no known occupancy;
@@ -2756,6 +2763,11 @@ export function useChat({
     } else {
       updateConversationId(null, { notify });
     }
+  };
+
+  const adoptRecreatedConversation = (id: string) => {
+    resetChat(undefined, false, true);
+    updateConversationId(id);
   };
 
   const clearPendingWorkspace = (workspaceId: string) => {
@@ -3441,6 +3453,7 @@ export function useChat({
     agentMentions,
     addAgentMention,
     handleNewChat,
+    adoptRecreatedConversation,
     pendingWorkspaceId,
     clearPendingWorkspace,
     handleStopGenerating,

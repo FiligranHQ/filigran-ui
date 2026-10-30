@@ -11,7 +11,7 @@ import { act, createRef, StrictMode, useEffect, useLayoutEffect, useRef } from '
 import { createRoot } from 'react-dom/client';
 
 import { fakeBackend, json, settle, sseStream } from '../../test/dom.ts';
-import { AGENTS, agentsRoute, BASE_PROPS, container, finish, mountPanels, restoreRoute, text, type Handle } from '../../test/panel.tsx';
+import { AGENTS, agentsRoute, BASE_PROPS, container, eventsRoute, finish, mountPanels, restoreRoute, text, type Handle } from '../../test/panel.tsx';
 
 const { render, unmount } = mountPanels({ ...BASE_PROPS, onClose: () => undefined, onModeChange: () => undefined });
 
@@ -769,6 +769,107 @@ test('a reload with no agent to read the conversation with is dropped, and the o
   });
   assert.equal(requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST').length, 1);
   assert.deepEqual(changes, [null], 'the open is not a host reload');
+});
+
+test("a host reload after the panel's own read-back failed is still the host's", async () => {
+  let visibility = 'visible';
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility });
+  const setVisibility = (state: string) =>
+    act(async () => {
+      visibility = state;
+      document.dispatchEvent(new Event('visibilitychange'));
+      await settle(10);
+    });
+  // The event stream closes after a minute hidden: that timer runs on demand.
+  const realSetTimeout = window.setTimeout;
+  const hiddenCloses: (() => void)[] = [];
+  window.setTimeout = ((fn: () => void, ms?: number, ...args: unknown[]) => {
+    if (ms !== 60000) return realSetTimeout(fn, ms, ...args);
+    hiddenCloses.push(fn);
+    return -1;
+  }) as typeof window.setTimeout;
+  try {
+    const statuses: number[] = [];
+    const subscriptions: ReturnType<typeof sseStream>[] = [];
+    const stored = [{ id: 'a1', role: 'assistant', content: 'Here is the outline' }];
+    fakeBackend([
+      agentsRoute,
+      (req) =>
+        req.url === '/api/chat/sessions' && req.method === 'POST'
+          ? statuses.length
+            ? json({ detail: 'x' }, statuses.shift())
+            : json({ conversation_id: 'c1', messages: stored })
+          : undefined,
+      eventsRoute(subscriptions),
+    ]);
+    const ref = createRef<Handle>();
+    const changes: (string | null)[] = [];
+    await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' }, onConversationChange: (id) => changes.push(id) }, ref);
+    assert.ok(text().includes('Here is the outline'));
+    // Hidden long enough to close the stream; shown again, the panel reads the conversation back: the backend is down.
+    statuses.push(503);
+    await setVisibility('hidden');
+    await act(async () => {
+      for (const close of hiddenCloses.splice(0)) close();
+      await settle(10);
+    });
+    await setVisibility('visible');
+    assert.equal(statuses.length, 0, "the panel's own read-back was answered 503");
+    statuses.push(500);
+    await act(async () => {
+      ref.current!.reloadConversation();
+      await settle(10);
+    });
+    assert.equal(statuses.length, 0);
+    assert.deepEqual(changes, [], 'the thread on screen keeps its conversation');
+    assert.ok(text().includes('Here is the outline'));
+    await finish(...subscriptions);
+  } finally {
+    window.setTimeout = realSetTimeout;
+    visibility = 'visible';
+  }
+});
+
+test('a re-created conversation answered behind a turn is switched to all the same, keeping the draft', async () => {
+  let readBackHeld: Promise<void> | null = null;
+  let releaseReadBack!: () => void;
+  const session: Record<string, unknown> = {
+    conversation_id: 'c1',
+    messages: [{ id: 'a1', role: 'assistant', content: 'Here is the outline' }],
+  };
+  const turn = sseStream();
+  fakeBackend([
+    agentsRoute,
+    async (req) => {
+      if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+      if (readBackHeld) await readBackHeld;
+      return json(session);
+    },
+    (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  const changes: (string | null)[] = [];
+  await render({ conversationId: 'c1', onConversationChange: (id) => changes.push(id) }, ref);
+  readBackHeld = new Promise((resolve) => (releaseReadBack = resolve));
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle();
+  });
+  act(() => ref.current!.setDraft('go'));
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!.click();
+    await settle();
+  });
+  act(() => ref.current!.setDraft('and the notes'));
+  Object.assign(session, { conversation_id: 'c2', messages: [] });
+  await act(async () => {
+    releaseReadBack();
+    await settle(10);
+  });
+  assert.deepEqual(changes, ['c2']);
+  assert.ok(!text().includes('Here is the outline'), 'nothing of c1 stays under c2');
+  assert.equal(ref.current!.getDraft(), 'and the notes');
+  await finish(turn);
 });
 
 test('reloading with no conversation on screen reads nothing', async () => {
