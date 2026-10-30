@@ -249,15 +249,21 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const [eventsGateFor, setEventsGateFor] = useState<string | null | undefined>(undefined);
   // A read-back that came while a turn was on screen: put above that turn as
   // soon as it ends.
-  const [restorePostponed, setRestorePostponed] = useState<{ conversationId: string; data: RestoredHistory; mode: 'after-turn' | 'host' } | null>(
-    null,
-  );
+  // `host`: each of these comes from a host's `reloadConversation`, and so does its retry.
+  const [restorePostponed, setRestorePostponed] = useState<{ conversationId: string; data: RestoredHistory; host: boolean } | null>(null);
   // A conversation the backend could not be reached for: read back once it can.
-  const [restoreOwedId, setRestoreOwedId] = useState<string | null>(null);
+  const [restoreOwed, setRestoreOwed] = useState<{ conversationId: string; host: boolean } | null>(null);
   const restoreAttemptsRef = useRef(0);
   // A conversation whose read-back refused the credentials (401, 403): what the
   // backend said, and the headers it refused.
-  const [restoreRefused, setRestoreRefused] = useState<{ conversationId: string; detail: string | null; headersKey: string } | null>(null);
+  const [restoreRefused, setRestoreRefused] = useState<{
+    conversationId: string;
+    detail: string | null;
+    headersKey: string;
+    host: boolean;
+  } | null>(null);
+  // The conversation the next read-back is a host's for, taken by the restore effect's next run.
+  const hostReadBackRef = useRef<string | null>(null);
   // Retitled elsewhere, or by the backend after the first answer.
   const refreshConversationsRef = useRef<() => Promise<unknown>>(async () => undefined);
   // Every frame of both streams goes to the voice call first, then to the
@@ -568,20 +574,23 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   }, [messagesPageBase, conversationIdRef, requestHeaders, setMessages]);
 
   /**
-   * Put a conversation's history read back on screen: `open` in place of what
-   * is shown; `after-turn` (a turn ran meanwhile) and `host` (a host's
-   * `reloadConversation`) joined to it (see `mergeReadBack`). A host's keeps
-   * the earlier pages already loaded on offer as they were.
+   * Put a conversation's history read back on screen: in place of what is
+   * shown, or joined to it (*merge*, see `mergeReadBack`) after a turn ran
+   * meanwhile (*afterTurn*: the turn set the gauge itself) or for a host
+   * (*host*: the earlier pages already loaded stay on offer as they were).
    */
-  const applyRestoredHistory = (convId: string, data: RestoredHistory, mode: 'open' | 'after-turn' | 'host') => {
+  const applyRestoredHistory = (
+    convId: string,
+    data: RestoredHistory,
+    { merge, afterTurn, host }: { merge: boolean; afterTurn: boolean; host: boolean },
+  ) => {
     setEventsReadyId(convId);
-    if (mode !== 'host') setServerHasEarlier(!!messagesPageBase && data.has_more === true);
+    if (!host) setServerHasEarlier(!!messagesPageBase && data.has_more === true);
     if (!data.messages?.length) return;
     const restored = parseRestoredMessages(data.messages);
-    if (mode === 'open') setMessages(restored);
-    else setMessages((prev) => mergeReadBack(prev, restored));
-    // The turn that ran set the gauge itself.
-    if (mode === 'after-turn') return;
+    if (merge) setMessages((prev) => mergeReadBack(prev, restored));
+    else setMessages(restored);
+    if (afterTurn) return;
     // The context gauge is conversation state, not per-message: the NEWEST
     // entry that carries a reading is the current occupancy. Scanned from
     // the end so a turn that predates the field (or a user message) falls
@@ -607,15 +616,16 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     if (!restorePostponed || isLoading) return;
     setRestorePostponed(null);
     if (restorePostponed.conversationId === conversationId) {
-      applyRestoredHistory(restorePostponed.conversationId, restorePostponed.data, restorePostponed.mode);
+      applyRestoredHistory(restorePostponed.conversationId, restorePostponed.data, { merge: true, afterTurn: true, host: restorePostponed.host });
     }
   }, [restorePostponed, isLoading, conversationId]);
   useEffect(() => {
-    if (!restoreOwedId || restoreOwedId !== conversationId || isLoading) return;
+    if (!restoreOwed || restoreOwed.conversationId !== conversationId || isLoading) return;
     const retry = () => {
       if (isLoadingNowRef.current) return;
-      setRestoreOwedId(null);
+      setRestoreOwed(null);
       restoreAttemptsRef.current += 1;
+      hostReadBackRef.current = restoreOwed.host ? restoreOwed.conversationId : null;
       reloadHistory();
     };
     const delay = Math.min(RESTORE_RETRY_MAX_MS, RESTORE_RETRY_BASE_MS * 2 ** restoreAttemptsRef.current);
@@ -630,26 +640,19 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       window.removeEventListener('online', retry);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [restoreOwedId, conversationId, isLoading, reloadHistory]);
+  }, [restoreOwed, conversationId, isLoading, reloadHistory]);
 
-  // A host's read-back (`reloadConversation`): owed for the conversation it
-  // was asked for (`hostReloadOwedId`), then read in the host's mode, which
-  // belongs to that conversation (`hostReloadIdRef`) until a read-back of it
-  // lands or says it is gone: a retry after a backend down or credentials
-  // refused keeps it, another conversation never gets it.
+  // A host's `reloadConversation`, owed until the panel can read it back.
   const [hostReloadOwedId, setHostReloadOwedId] = useState<string | null>(null);
-  const hostReloadIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    hostReloadIdRef.current = null;
-  }, [conversationId]);
 
   // A read-back refused for its credentials is tried again once the host's
   // credentials change (a token refreshed), or when the user asks.
   const headersKey = requestHeadersKey(requestHeaders);
   const retryRefusedRestore = useCallback(() => {
     setRestoreRefused(null);
+    hostReadBackRef.current = restoreRefused?.host ? restoreRefused.conversationId : null;
     reloadHistory();
-  }, [reloadHistory]);
+  }, [restoreRefused, reloadHistory]);
   useEffect(() => {
     if (!restoreRefused || restoreRefused.conversationId !== conversationId || isLoading) return;
     if (restoreRefused.headersKey !== headersKey) retryRefusedRestore();
@@ -942,6 +945,9 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
 
   // Load conversation history when agent is selected
   useEffect(() => {
+    // Whether this run's read-back is a host's: taken here, issued or not.
+    const hostAsked = hostReadBackRef.current;
+    hostReadBackRef.current = null;
     // Skip session history if disabled, using single endpoint mode, or non-REST backend
     if (apiEndpoints?.sessions === null || apiEndpoints?.singleEndpoint || backendType === 'legacy' || backendType === 'ag-ui') return;
     // No conversation means a fresh chat — "New conversation", or an agent
@@ -990,10 +996,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     const isStale = () => !isMountedRef.current || conversationIdRef.current !== requestedConversationId;
     // A host's read-back of the thread on screen: merged into it, and a
     // failure leaves it as it is.
-    const hostReload = hostReloadIdRef.current === requestedConversationId;
-    const hostReloadSettled = () => {
-      if (hostReloadIdRef.current === requestedConversationId) hostReloadIdRef.current = null;
-    };
+    const hostReload = hostAsked === requestedConversationId;
     const requestedHeadersKey = requestHeadersKey(requestHeaders);
     // What a turn that ended out of sight is told of this read-back (see `settleUnseenEnd`).
     const readFor = historyReloadNonce;
@@ -1022,32 +1025,33 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           // credentials change or the user retries.
           if (RESTORE_REFUSED_STATUSES.has(res.status)) {
             return readRefusalDetail(res).then((detail) => {
-              if (!isStale()) setRestoreRefused({ conversationId: requestedConversationId, detail, headersKey: requestedHeadersKey });
+              if (!isStale()) {
+                setRestoreRefused({ conversationId: requestedConversationId, detail, headersKey: requestedHeadersKey, host: hostReload });
+              }
               return null;
             });
           }
-          if (BACKEND_DOWN_STATUSES.has(res.status)) setRestoreOwedId(requestedConversationId);
-          else if (hostReload) hostReloadSettled();
-          else updateConversationId(null);
+          if (BACKEND_DOWN_STATUSES.has(res.status)) setRestoreOwed({ conversationId: requestedConversationId, host: hostReload });
+          else if (!hostReload) updateConversationId(null);
           return null;
         }
         restoreAttemptsRef.current = 0;
-        setRestoreOwedId(null);
+        setRestoreOwed(null);
         setRestoreRefused(null);
         return res.json();
       })
       .then((data) => {
         if (!data || isStale()) return;
-        if (hostReload) hostReloadSettled();
         // The backend resolves the session: it returns the same id when the
         // conversation still exists, or transparently creates a fresh one and
         // returns its NEW id when the stored id is stale. Adopt whatever id it
         // returns (and persist it) so we never send subsequent messages
         // against a dead conversation — which would 404 with
         // "conversation does not exist".
-        if (typeof data.conversation_id === 'string' && data.conversation_id && data.conversation_id !== requestedConversationId) {
-          updateConversationId(data.conversation_id);
-        }
+        const recreated = typeof data.conversation_id === 'string' && !!data.conversation_id && data.conversation_id !== requestedConversationId;
+        if (recreated) updateConversationId(data.conversation_id);
+        // A conversation re-created in place of the one asked for is opened, not merged into.
+        const asHost = hostReload && !recreated;
         // Null is meaningful and different from absent: it says the backend
         // knows this conversation has no agent (one predating per-conversation
         // routing), where a missing key means an older backend that cannot
@@ -1064,16 +1068,16 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         // A turn started meanwhile is on screen: the history waits for it to
         // end, and so does the event stream, which follows that history.
         if (isLoadingNowRef.current) {
-          setRestorePostponed({ conversationId: requestedConversationId, data, mode: hostReload ? 'host' : 'after-turn' });
+          setRestorePostponed({ conversationId: requestedConversationId, data, host: asHost });
           return;
         }
-        applyRestoredHistory(requestedConversationId, data, hostReload ? 'host' : 'open');
+        applyRestoredHistory(requestedConversationId, data, { merge: asHost, afterTurn: false, host: asHost });
       })
       // Unreachable: nothing is known of the conversation, whose id is kept.
       .catch(() => {
         if (isStale()) return;
         settleUnseenEndRef.current(readFor, null);
-        setRestoreOwedId(requestedConversationId);
+        setRestoreOwed({ conversationId: requestedConversationId, host: hostReload });
       })
       .finally(() => {
         if (restoringIdRef.current === requestedConversationId) restoringIdRef.current = null;
@@ -1118,9 +1122,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // Ready once the agent is chosen and the conversation on screen is read back:
   // what the host does through the handle before then waits for it.
   const ready = agentsSettled && !restoringHistory;
-  // A host's read-back waits for the panel to be ready (none read back yet, or
-  // one in flight) and for no turn to run there: a history read mid-turn would
-  // land on the turn's answer.
+  // Read once the panel is ready (no read-back pending or in flight) and no turn
+  // runs there: a history read mid-turn would land on the turn's answer.
   useEffect(() => {
     if (hostReloadOwedId === null) return;
     if (hostReloadOwedId !== conversationId) {
@@ -1129,7 +1132,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     }
     if (!ready || turnRunning) return;
     setHostReloadOwedId(null);
-    hostReloadIdRef.current = conversationId;
+    hostReadBackRef.current = conversationId;
     reloadHistory();
   }, [hostReloadOwedId, conversationId, ready, turnRunning, reloadHistory]);
   const onReady = useLatestCallback(onReadyProp);
