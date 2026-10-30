@@ -69,9 +69,26 @@ test('a peer the consulted agent consults in turn shows under the agent consulte
   await send(consultFrame('Writer', { status: 'thinking' }), consultFrame('Analyst', { status: 'streaming' }, ['Researcher']));
   assert.ok(text().includes('Consulting 2 agents…'), text());
 
-  // The agent consulted answers: its consult ends, the other runs on.
-  await send(consultFrame('Analyst', { status: 'streaming' }), consultFrame('Writer', { status: 'thinking' }));
-  assert.ok(text().includes('Consulting Writer…'), text());
+  // The agent consulted answers: its consult ends, the other one shows, as it last was.
+  await send(consultFrame('Writer', { status: 'tool_start', tools: ['draft_report'] }), consultFrame('Analyst', { status: 'streaming' }));
+  assert.ok(text().includes('Consulting Writer: Draft Report…'), text());
+
+  // The last one answers: it shows writing its answer.
+  await send(consultFrame('Writer', { status: 'streaming' }));
+  assert.ok(text().includes('Consulting Writer: writing the answer…'), text());
+  await finish(stream);
+});
+
+test('a consult that has only reported a tool’s progress or its reasoning is counted', async () => {
+  const { stream, send } = await consulting();
+  await send(consultFrame('Analyst', { status: 'tool_start', tools: ['search_iocs'] }));
+  await send(consultFrame('Writer', { status: 'tool_progress', event: 'output' }));
+  assert.ok(text().includes('Consulting 2 agents…'), text());
+
+  // Its report keeps what the other shows once it is the only one left.
+  await send(consultFrame('Researcher', { status: 'thinking_text', content: 'hmm' }), consultFrame('Writer', { status: 'streaming' }));
+  await send(consultFrame('Researcher', { status: 'streaming' }));
+  assert.ok(text().includes('Consulting Analyst: Search Iocs…'), text());
   await finish(stream);
 });
 

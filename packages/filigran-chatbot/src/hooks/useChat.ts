@@ -1745,8 +1745,9 @@ export function useChat({
     // An error, a stop or the session's end the stream reported: what it wrote must not be put back over it.
     let ended: 'error' | 'cancelled' | 'session' | null = null;
     const ctx: ProtocolContext = { hasUsedTools: false, activeNodeId: '' };
-    // The consults running, by the consulted agent's id: the status line counts them.
-    const consults = new Set<string>();
+    // The consults running, by the consulted agent's id, each with what it last
+    // showed; the most recently active last. The status line counts them.
+    const consults = new Map<string, Omit<ConsultStatus, 'count'>>();
 
     const deltas = createStreamDeltas((textChanged, thinking) => {
       if (textChanged) {
@@ -1824,16 +1825,20 @@ export function useChat({
       } else if (parsed.status === 'consult_progress') {
         const consult = parsed.consult;
         if (!consult) return;
-        // Only the consulted agent's own answer ends its consult, not that of a peer it consulted in turn.
-        if (consult.answering) consults.delete(consult.agentId);
-        else consults.add(consult.agentId);
-        if (CONSULT_STATUSES_KEEPING_LABEL.has(consult.status)) return;
-        const shown: ConsultStatus = {
-          agentName: consult.agentName,
-          status: consult.status,
-          tools: consult.tools,
-          count: Math.max(consults.size, 1),
-        };
+        const { agentId, agentName } = consult;
+        if (consult.answering) {
+          // Only the consulted agent's own answer ends its consult, not that of a peer it consulted in turn.
+          consults.delete(agentId);
+        } else if (!CONSULT_STATUSES_KEEPING_LABEL.has(consult.status)) {
+          consults.delete(agentId);
+          consults.set(agentId, { agentName, status: consult.status, tools: consult.tools });
+        } else if (!consults.has(agentId)) {
+          // A tool's report or the agent's reasoning: a consult running, with nothing more to show.
+          consults.set(agentId, { agentName, status: 'thinking' });
+        }
+        // The consult most recently active, or the one answering when it was the last.
+        const latest = [...consults.values()].pop() ?? { agentName, status: consult.status };
+        const shown: ConsultStatus = { ...latest, count: Math.max(consults.size, 1) };
         // A consult is a long tool call: its elapsed time runs on, re-anchored by
         // the heartbeats between these frames. An unchanged label keeps its
         // object, so the frames of a long consult do not render the panel again.
