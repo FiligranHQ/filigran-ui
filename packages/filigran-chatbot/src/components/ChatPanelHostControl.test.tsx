@@ -543,6 +543,119 @@ test('a reload keeps what only the panel holds: a stopped answer', async () => {
   assert.ok(text().includes('Stopped'));
 });
 
+test('a reload whose backend is down and then gone keeps the thread and the conversation', async () => {
+  const statuses: number[] = [];
+  const stored = [{ id: 'a1', role: 'assistant', content: 'Here is the outline' }];
+  fakeBackend([
+    agentsRoute,
+    (req) =>
+      req.url === '/api/chat/sessions'
+        ? statuses.length
+          ? json({ detail: 'boom' }, statuses.shift())
+          : json({ conversation_id: 'c1', messages: stored })
+        : undefined,
+  ]);
+  const ref = createRef<Handle>();
+  const changes: (string | null)[] = [];
+  await render({ conversationId: 'c1', onConversationChange: (id) => changes.push(id) }, ref);
+  statuses.push(503, 500);
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle(10);
+  });
+  // The owed read-back is tried again: still the host's.
+  await act(async () => {
+    window.dispatchEvent(new Event('online'));
+    await settle(10);
+  });
+  assert.equal(statuses.length, 0, 'both answers were read');
+  assert.deepEqual(changes, [], 'the conversation is kept');
+  assert.ok(text().includes('Here is the outline'));
+});
+
+test("a reload retried after its backend was down is still the host's: merged, and the transfer forgotten", async () => {
+  let down = false;
+  const session: Record<string, unknown> = {
+    conversation_id: 'c1',
+    messages: [{ id: 'a1', role: 'assistant', content: 'Here is the outline' }],
+    agent_name: 'Hunter',
+  };
+  const turn = sseStream();
+  fakeBackend([
+    agentsRoute,
+    (req) => (req.url === '/api/chat/sessions' ? (down ? json({ detail: 'down' }, 503) : json(session)) : undefined),
+    (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('escalate');
+    await settle();
+  });
+  await act(async () => {
+    turn.send({ type: 'done', content: 'Handing over', transfer_agent_id: 'x9', transfer_agent_name: 'Escalation Desk' });
+    turn.close();
+    await settle(10);
+  });
+  assert.ok(text().includes('Escalation Desk'));
+  session.agent_name = 'Deck Bot';
+  down = true;
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle(10);
+  });
+  down = false;
+  await act(async () => {
+    window.dispatchEvent(new Event('online'));
+    await settle(10);
+  });
+  assert.ok(text().includes('Handing over'), 'merged: the answer the server does not hold stays');
+  assert.ok(!text().includes('Escalation Desk'));
+  assert.ok(text().includes('Deck Bot'));
+});
+
+test('a reload asked before the agents are listed waits for the open, which still drops a stale conversation', async () => {
+  let listAgents!: () => void;
+  const agentsListed = new Promise<void>((resolve) => (listAgents = resolve));
+  const requests = fakeBackend([
+    async (req) => {
+      if (req.url !== '/api/chat/agents') return undefined;
+      await agentsListed;
+      return json(AGENTS);
+    },
+    (req) => (req.url === '/api/chat/sessions' ? json({ detail: 'Conversation not found' }, 404) : undefined),
+  ]);
+  const reads = () => requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST').length;
+  const ref = createRef<Handle>();
+  const changes: (string | null)[] = [];
+  await render({ conversationId: 'c1', onConversationChange: (id) => changes.push(id) }, ref);
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle();
+  });
+  assert.equal(reads(), 0);
+  await act(async () => {
+    listAgents();
+    await settle(10);
+  });
+  assert.equal(reads(), 1, 'the open alone');
+  assert.deepEqual(changes, [null], 'the open is not a host reload: a stale conversation is dropped');
+});
+
+test("a reload refreshes the context gauge from the conversation's newest reading", async () => {
+  const stored: Record<string, unknown>[] = [{ id: 'a1', role: 'assistant', content: 'Here is the outline' }];
+  fakeBackend([agentsRoute, restoreRoute(stored)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  const gauge = () => container.querySelector('[aria-label$="%)"]')?.getAttribute('aria-label') ?? '';
+  stored.push({ id: 'a2', role: 'assistant', content: 'Continued by Deck Bot', context_tokens: 50000, context_window: 200000 });
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle(10);
+  });
+  assert.ok(gauge().includes('(25%)'), gauge());
+});
+
 test('reloading with no conversation on screen reads nothing', async () => {
   const requests = fakeBackend([agentsRoute, restoreRoute([])]);
   const ref = createRef<Handle>();
