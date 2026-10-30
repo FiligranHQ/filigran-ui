@@ -839,6 +839,11 @@ export interface ChatPanelHandle {
   startVoiceCall: () => boolean;
   /** Read the agent list again, keeping the agent picked unless it is gone. */
   reloadAgents: () => void;
+  /**
+   * Read the conversation on screen back again, for a change the host made to it. Not `selectConversation`,
+   * which does nothing for the id on screen, so a host's sync with its own state never resets it.
+   */
+  reloadConversation: () => void;
   /** Scroll to a message on screen (by its server id) and highlight it; false when it is not there. */
   scrollToMessage: (messageId: string) => boolean;
 }
