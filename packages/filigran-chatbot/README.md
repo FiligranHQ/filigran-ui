@@ -169,7 +169,7 @@ chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigatio
 | `stop()` | Same as the Stop button; during a voice call it also drops the question awaited and stops speaking |
 | `startVoiceCall()` | Starts a [voice call](#voice-call) over the panel; `false` when this browser has no speech recognition or the panel is `readOnly` |
 | `reloadAgents()` | Reads the agent list again, keeping the agent picked unless it is gone |
-| `reloadConversation()` | Reads the conversation on screen back from the server again, for a change the host made to it outside the panel (a message it stored, its agent changed): its latest messages and its agent, as when it was opened. The composer's draft is kept; while a turn runs, the read-back waits for it to end |
+| `reloadConversation()` | Reads the conversation on screen back from the server again, for a change the host made to it outside the panel (a message it stored, another agent taking it over). Its latest messages are merged into the thread on screen, which keeps what only the panel holds (earlier pages, a stopped answer, a send that failed) and the composer's draft, and the conversation's agent replaces one a turn transferred it to. While a turn runs in it, nothing is read until that turn ends. A read-back that fails leaves the thread as it is. Does nothing without a conversation, or without the REST sessions route (`legacy`, `ag-ui`, `singleEndpoint`, `sessions: null`) |
 | `scrollToMessage(id)` | Scrolls to a message by its server id and highlights it; `false` when it is not on screen |
 
 #### Host extensions

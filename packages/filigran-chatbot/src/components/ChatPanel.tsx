@@ -282,6 +282,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     conversationId,
     contextUsage,
     transferredAgent,
+    forgetTransfer,
     canSteer,
     pendingApprovals,
     isSubmittingApproval,
@@ -626,6 +627,23 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     };
   }, [restoreOwedId, conversationId, isLoading, reloadHistory]);
 
+  // A host's read-back (`reloadConversation`) of the conversation it was asked
+  // for, sent once no turn runs there: a history read mid-turn would land on
+  // the turn's answer. The restore effect takes `hostReloadRef` with it.
+  const [hostReloadOwedId, setHostReloadOwedId] = useState<string | null>(null);
+  const hostReloadRef = useRef(false);
+  useEffect(() => {
+    if (hostReloadOwedId === null) return;
+    if (hostReloadOwedId !== conversationId) {
+      setHostReloadOwedId(null);
+      return;
+    }
+    if (turnRunning) return;
+    setHostReloadOwedId(null);
+    hostReloadRef.current = true;
+    reloadHistory();
+  }, [hostReloadOwedId, conversationId, turnRunning, reloadHistory]);
+
   // A read-back refused for its credentials is tried again once the host's
   // credentials change (a token refreshed), or when the user asks.
   const headersKey = requestHeadersKey(requestHeaders);
@@ -953,6 +971,10 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     }
     historyLoadedRef.current = true;
     restoringIdRef.current = conversationId;
+    // A host's read-back of the thread on screen: merged into it, and a
+    // failure leaves it as it is.
+    const hostReload = hostReloadRef.current;
+    hostReloadRef.current = false;
     setHistorySettledId(null);
     const sessionsUrl = `${apiBaseUrl}${apiEndpoints?.sessions ?? '/chat/sessions'}`;
 
@@ -1004,7 +1026,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             });
           }
           if (BACKEND_DOWN_STATUSES.has(res.status)) setRestoreOwedId(requestedConversationId);
-          else updateConversationId(null);
+          else if (!hostReload) updateConversationId(null);
           return null;
         }
         restoreAttemptsRef.current = 0;
@@ -1029,6 +1051,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         // tell us. Both land on the selected-agent fallback, but only the
         // first is a deliberate answer.
         setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
+        // The agent read back is the conversation's, as when it is opened.
+        if (hostReload) forgetTransfer();
         const restored = parseRestoredMessages(data.messages);
         settleUnseenEndRef.current(readFor, restored);
         // Read back for a relayed turn the reopened event stream replayed: the
@@ -1040,7 +1064,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           setRestorePostponed({ conversationId: requestedConversationId, data });
           return;
         }
-        applyRestoredHistory(requestedConversationId, data, false);
+        applyRestoredHistory(requestedConversationId, data, hostReload);
       })
       // Unreachable: nothing is known of the conversation, whose id is kept.
       .catch(() => {
@@ -1072,6 +1096,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     setMessages,
     setContextUsage,
     updateConversationId,
+    forgetTransfer,
   ]);
 
   // A send from the handle runs against the render it lands in, not the one
@@ -1213,10 +1238,10 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       },
       startVoiceCall: () => !readOnlyRef.current && voice.start(),
       reloadAgents,
-      reloadConversation: () =>
-        enqueue(() => {
-          if (conversationIdRef.current) reloadHistory();
-        }),
+      reloadConversation: () => {
+        const id = conversationIdRef.current;
+        if (id) setHostReloadOwedId(id);
+      },
       scrollToMessage: (messageId) => {
         const target = [...(rootRef.current?.querySelectorAll<HTMLElement>('[data-message-id]') ?? [])].find(
           (el) => el.dataset.messageId === messageId,
@@ -1228,7 +1253,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         return true;
       },
     }),
-    // setInputValue, reloadAgents, reloadHistory and the voice call's controls are stable; everything else goes through a ref.
+    // setInputValue, reloadAgents and the voice call's controls are stable; everything else goes through a ref.
     [],
   );
 

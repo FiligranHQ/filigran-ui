@@ -426,6 +426,123 @@ test('reloading the conversation shows what the host changed in it, and keeps th
   assert.equal(ref.current!.getDraft(), 'and the speaker notes');
 });
 
+test('a reload asked during a turn reads nothing until the turn ends, then keeps its answer', async () => {
+  const stored: unknown[] = [
+    { id: 'm1', role: 'user', content: 'Draft the deck' },
+    { id: 'a1', role: 'assistant', content: 'Here is the outline' },
+  ];
+  const turn = sseStream();
+  const requests = fakeBackend([agentsRoute, restoreRoute(stored), (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  const sessions = () => requests.filter((r) => r.url === '/api/chat/sessions').length;
+  const opened = sessions();
+  await act(async () => {
+    void ref.current!.send('add a slide');
+    await settle();
+  });
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle();
+  });
+  assert.equal(sessions(), opened, 'nothing is read while the turn runs');
+  stored.push(
+    { id: 'm2', role: 'user', content: 'add a slide' },
+    { id: 'a2', role: 'assistant', content: 'Slide added' },
+    { id: 'a3', role: 'assistant', content: 'Continued by Deck Bot on 2026-10-30.' },
+  );
+  await act(async () => {
+    turn.send({ type: 'done', content: 'Slide added', message_id: 'a2' });
+    turn.close();
+    await settle(10);
+  });
+  assert.ok(sessions() > opened, 'read once the turn ended');
+  const answers = [...container.querySelectorAll('[data-testid="filigran-chat-assistant-message"]')].map((e) => e.textContent ?? '');
+  assert.equal(answers.filter((a) => a.includes('Slide added')).length, 1, answers.join(' | '));
+  assert.ok(text().includes('Continued by Deck Bot on 2026-10-30.'));
+});
+
+test("the conversation's agent read back replaces the one a turn transferred it to", async () => {
+  const session: Record<string, unknown> = { conversation_id: 'c1', messages: [], agent_name: 'Hunter' };
+  const turn = sseStream();
+  fakeBackend([
+    agentsRoute,
+    (req) => (req.url === '/api/chat/sessions' ? json(session) : undefined),
+    (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('escalate');
+    await settle();
+  });
+  await act(async () => {
+    turn.send({ type: 'done', content: 'Handing over', message_id: 'a2', transfer_agent_id: 'x9', transfer_agent_name: 'Escalation Desk' });
+    turn.close();
+    await settle(10);
+  });
+  assert.ok(text().includes('Escalation Desk'));
+  // The host handed the conversation to another agent.
+  session.agent_name = 'Deck Bot';
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle(10);
+  });
+  assert.ok(!text().includes('Escalation Desk'), 'the transfer the turn reported is forgotten');
+  assert.ok(text().includes('Deck Bot'));
+});
+
+test('a reload that fails leaves the thread, its draft and its conversation', async () => {
+  let failing = false;
+  const stored = [{ id: 'a1', role: 'assistant', content: 'Here is the outline' }];
+  const requests = fakeBackend([
+    agentsRoute,
+    (req) =>
+      req.url === '/api/chat/sessions' ? (failing ? json({ detail: 'boom' }, 500) : json({ conversation_id: 'c1', messages: stored })) : undefined,
+  ]);
+  const ref = createRef<Handle>();
+  const changes: (string | null)[] = [];
+  await render({ conversationId: 'c1', onConversationChange: (id) => changes.push(id) }, ref);
+  const sessions = () => requests.filter((r) => r.url === '/api/chat/sessions').length;
+  const opened = sessions();
+  act(() => ref.current!.setDraft('and the speaker notes'));
+  failing = true;
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle(10);
+  });
+  assert.equal(sessions(), opened + 1);
+  assert.deepEqual(changes, [], 'the conversation is kept');
+  assert.ok(text().includes('Here is the outline'));
+  assert.equal(ref.current!.getDraft(), 'and the speaker notes');
+});
+
+test('a reload keeps what only the panel holds: a stopped answer', async () => {
+  const turn = sseStream();
+  const stored = [{ id: 'a1', role: 'assistant', content: 'Here is the outline' }];
+  fakeBackend([agentsRoute, restoreRoute(stored), (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('go');
+    await settle();
+  });
+  await act(async () => {
+    ref.current!.stop();
+    turn.close();
+    await settle();
+  });
+  assert.ok(text().includes('Stopped'));
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle(10);
+  });
+  assert.ok(text().includes('Here is the outline'));
+  const asked = [...container.querySelectorAll('[data-testid="filigran-chat-user-message"]')].map((e) => e.textContent);
+  assert.deepEqual(asked, ['go']);
+  assert.ok(text().includes('Stopped'));
+});
+
 test('reloading with no conversation on screen reads nothing', async () => {
   const requests = fakeBackend([agentsRoute, restoreRoute([])]);
   const ref = createRef<Handle>();

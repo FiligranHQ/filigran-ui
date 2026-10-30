@@ -626,6 +626,8 @@ interface UseChatReturn {
    */
   contextUsage: ChatContextUsage | null;
   transferredAgent: TransferredAgent | null;
+  /** Forget the transfer a turn reported: the conversation's agent is read back from the server. */
+  forgetTransfer: () => void;
   /**
    * True while a response is streaming AND the typed text can be dispatched
    * immediately as a mid-run steering message (REST backend with a steer
@@ -1919,6 +1921,8 @@ export function useChat({
       outcome: (): ChatTurnOutcome => (ended === 'error' ? 'failed' : ended === null && answered ? 'answered' : 'stopped'),
     };
   };
+
+  const forgetTransfer = useCallback(() => setTransferredAgent(null), []);
 
   /** What a `done` changes beyond its answer: the conversation's id (own turns), the context gauge, a transfer. */
   const applyDoneEffects = (parsed: DoneAction, relayed: boolean) => {
@@ -3413,6 +3417,7 @@ export function useChat({
     conversationId,
     contextUsage,
     transferredAgent,
+    forgetTransfer,
     canSteer,
     pendingApprovals,
     isSubmittingApproval,
