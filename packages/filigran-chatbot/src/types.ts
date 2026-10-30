@@ -1141,6 +1141,8 @@ export interface ConsultStatus {
   status: string;
   /** Its tools, on `tool_start`. */
   tools?: string[];
+  /** The agent consulted writes its own answer (not a peer it consulted in turn). */
+  answering?: boolean;
   /** The consults running at once, this one included. */
   count: number;
   /** The agents they consult: one when every consult running asks the same agent. */

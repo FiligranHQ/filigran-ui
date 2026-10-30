@@ -12,18 +12,21 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Added
 
-- The status line follows a consult: `consult_progress` frames are read through
-  every consult level, as an agent consulted may consult its own peers. It
-  names the agent consulted and what the agent doing the work does
-  (`Consulting {agent}: {tool}…`, `Consulting {agent}: {tool} (+{count} more)…`,
-  `Consulting {agent}: writing the answer…`), or `Consulting {count} agents…`
-  while several run (`Consulting {agent}: {count} questions…` when they ask
-  one agent), and the consult's elapsed time runs on. Each consult is told
-  apart by the frame's `consult_id`, else by the agent consulted. The consults end
-  when the agent's own loop moves on, whether they answered or not. It said `Thinking...` for the whole consult. A host's
-  `statusLabel` reads the consult as `AgentStatusState.consult`
-  (`ConsultStatus`); a host translating the panel's keys translates the new
-  ones too.
+- The status line follows a consult: `consult_progress` frames are read
+  through every consult level, as an agent consulted may consult its own
+  peers. It names the agent consulted and what the agent doing the work does
+  (`Consulting {agent}: {tool}…`, `Consulting {agent}: {tool} (+{count}
+  more)…`, `Consulting {agent}: writing the answer…`), or `Consulting {count}
+  agents…` while several run (`Consulting {agent}: {count} questions…` when
+  they ask one agent), and the consult's elapsed time runs on. Each consult is
+  told apart by the frame's `consult_id`, else by the agent consulted. The
+  consults end when the agent's own loop moves on, whether they answered or
+  not, and a consult frame arriving after that is not shown. Only the agent
+  consulted's own answer reads `writing the answer`, and a consult of a peer
+  in turn shows as that peer's frames, not as `consult_agent`. It said
+  `Thinking...` for the whole consult. A host's `statusLabel` reads the
+  consult as `AgentStatusState.consult` (`ConsultStatus`); a host translating
+  the panel's keys translates the new ones too.
 
 ## 3.17.0 — unreleased
 

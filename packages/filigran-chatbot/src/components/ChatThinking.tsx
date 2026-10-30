@@ -72,22 +72,26 @@ function toolDisplayNames(rawNames: string[]): string[] {
   return Array.from(new Set(rawNames.map((n) => n.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))));
 }
 
+/** The tool an agent consults another with. */
+const CONSULT_TOOL = 'consult_agent';
+
 /** A consult's line: the agent consulted, and what the agent doing the work is doing. */
 function consultingLabel(consult: ConsultStatus, t: Translate): string {
   if (consult.agents > 1) return translate(t, 'Consulting {count} agents…', { count: consult.agents });
   const agent = consult.agentName;
   // Several consults of one agent: its questions, not its agents.
   if (consult.count > 1) return translate(t, 'Consulting {agent}: {count} questions…', { agent, count: consult.count });
-  if (consult.status === 'tool_start' && consult.tools?.length) {
+  // A consult of a peer in turn shows as that peer's frames, not as a tool.
+  const tools = consult.status === 'tool_start' ? (consult.tools ?? []).filter((name) => name !== CONSULT_TOOL) : [];
+  if (tools.length > 0) {
     // As the agent's own tools: the first, and how many more, so the line stays one line.
-    const [tool, ...more] = toolDisplayNames(consult.tools);
+    const [tool, ...more] = toolDisplayNames(tools);
     return more.length > 0
       ? translate(t, 'Consulting {agent}: {tool} (+{count} more)…', { agent, tool, count: more.length })
       : translate(t, 'Consulting {agent}: {tool}…', { agent, tool });
   }
-  if (consult.status === 'streaming' || consult.status === 'composing') {
-    return translate(t, 'Consulting {agent}: writing the answer…', { agent });
-  }
+  // Its own answer: a peer answering it is still the consult at work.
+  if (consult.answering) return translate(t, 'Consulting {agent}: writing the answer…', { agent });
   return translate(t, 'Consulting {agent}…', { agent });
 }
 

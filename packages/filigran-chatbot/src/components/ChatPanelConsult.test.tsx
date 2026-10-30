@@ -106,8 +106,15 @@ test('the consults end when the agent moves on, or its turn is replayed, however
 
 test('a peer the consulted agent consults in turn shows under the agent consulted, and its answer ends no consult', async () => {
   const { stream, send } = await consulting();
+  // The agent consulted consults its peer: the peer's frames say what it does, not the consult tool.
+  await send(consultFrame('Analyst', { status: 'tool_start', tools: ['consult_agent'] }));
+  assert.ok(text().includes('Consulting Analyst…') && !text().includes('Consult Agent'), text());
   await send(consultFrame('Analyst', { status: 'tool_start', tools: ['lookup_actor'] }, ['Researcher']));
   assert.ok(text().includes('Consulting Analyst: Lookup Actor…'), text());
+
+  // The peer writing its answer to the agent consulted: the agent consulted is not answering yet.
+  await send(consultFrame('Analyst', { status: 'streaming' }, ['Researcher']));
+  assert.ok(text().includes('Consulting Analyst…') && !text().includes('writing the answer'), text());
 
   // The peer answers the agent consulted, while a second consult runs.
   await send(consultFrame('Writer', { status: 'thinking' }), consultFrame('Analyst', { status: 'streaming' }, ['Researcher']));
@@ -160,5 +167,21 @@ test('two consults of one agent are two consults, each ending on its own answer'
   // One consult of the Analyst answers: the other still runs.
   await send(consultFrame('Analyst', { status: 'streaming' }, [], 'c-1'), consultFrame('Writer', { status: 'streaming' }, [], 'c-3'));
   assert.ok(text().includes('Consulting Analyst: Read Report…'), text());
+  await finish(stream);
+});
+
+test('a consult frame that arrives once the agent has moved on is not shown', async () => {
+  const { stream, send } = await consulting();
+  await send(consultFrame('Analyst', { status: 'tool_start', tools: ['search_iocs'] }));
+  assert.ok(text().includes('Consulting Analyst: Search Iocs…'), text());
+
+  // The agent's next step: a trailing frame of the consult does not bring its line back.
+  await send({ type: 'status', status: 'thinking' });
+  await send(consultFrame('Analyst', { status: 'tool_start', tools: ['read_report'] }), consultFrame('Analyst', { status: 'tool_heartbeat' }));
+  assert.ok(!text().includes('Consulting'), text());
+
+  // Its next batch of tools consults again.
+  await send({ type: 'status', status: 'tool_start', tools: ['consult_agent'] }, consultFrame('Writer', { status: 'thinking' }));
+  assert.ok(text().includes('Consulting Writer…'), text());
   await finish(stream);
 });

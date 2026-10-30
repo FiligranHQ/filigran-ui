@@ -179,6 +179,7 @@ function sameConsult(a: ConsultStatus | undefined, b: ConsultStatus): boolean {
     a.status === b.status &&
     a.count === b.count &&
     a.agents === b.agents &&
+    a.answering === b.answering &&
     (a.tools ?? []).join('\n') === (b.tools ?? []).join('\n')
   );
 }
@@ -1774,6 +1775,9 @@ export function useChat({
       consults.clear();
       answeredConsults.clear();
     };
+    // Whether the agent's tool calls run, where its consults do: once it has
+    // moved on, a consult frame still arriving is past and is not shown.
+    let consultsOpen = true;
 
     const deltas = createStreamDeltas((textChanged, thinking) => {
       if (textChanged) {
@@ -1826,7 +1830,13 @@ export function useChat({
       // before it.
       deltas.flush();
       const elapsedStartMs = typeof parsed.elapsedS === 'number' ? Date.now() - parsed.elapsedS * 1000 : undefined;
-      if (parsed.resumed || STATUSES_ENDING_CONSULTS.has(parsed.status)) endConsults();
+      if (parsed.resumed || STATUSES_ENDING_CONSULTS.has(parsed.status)) {
+        endConsults();
+        // A batch of tools may consult (the loop sends one `tool_start` per
+        // step, its whole batch), and a replay starts over; any other step is
+        // past its consults.
+        consultsOpen = parsed.resumed === true || parsed.status === 'tool_start';
+      }
       if (parsed.resumed) {
         // A re-attached turn is replayed from its start: what it had written
         // so far arrives again, whole, its consults included.
@@ -1851,7 +1861,7 @@ export function useChat({
         );
       } else if (parsed.status === 'consult_progress') {
         const consult = parsed.consult;
-        if (!consult) return;
+        if (!consult || !consultsOpen) return;
         const { consultId, agentId, agentName, status } = consult;
         if (consult.answering) {
           // Only the consulted agent's own answer ends its consult, not that of a peer it consulted in turn.
@@ -1869,7 +1879,7 @@ export function useChat({
           consults.set(consultId, { agentId, agentName, status: 'thinking' });
         }
         // The consult most recently active, or the one answering when it was the last.
-        let latest: Omit<ConsultStatus, 'count' | 'agents'> = { agentName, status: status ?? 'thinking' };
+        let latest: Omit<ConsultStatus, 'count' | 'agents'> = { agentName, status: status ?? 'thinking', answering: consult.answering };
         const agentsAsked = new Set<string>();
         for (const running of consults.values()) {
           latest = running;
@@ -1879,6 +1889,7 @@ export function useChat({
           agentName: latest.agentName,
           status: latest.status,
           tools: latest.tools,
+          answering: latest.answering,
           count: Math.max(consults.size, 1),
           agents: Math.max(agentsAsked.size, 1),
         };
