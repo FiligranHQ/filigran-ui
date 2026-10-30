@@ -1121,6 +1121,23 @@ export interface AgentStatusState {
   waitSeconds?: number;
   waitReason?: string;
   waitStartMs?: number;
+  /** `consulting`: the consult the agent is waiting on. */
+  consult?: ConsultStatus;
+}
+
+/**
+ * A consult the agent is waiting on, as the status line shows it. A consulted
+ * agent may consult its own peers: the name is the agent the conversation's
+ * agent consulted, the status and tools those of the agent doing the work.
+ */
+export interface ConsultStatus {
+  agentName: string;
+  /** The working agent's status: `thinking`, `tool_start`, `streaming`... */
+  status: string;
+  /** Its tools, on `tool_start`. */
+  tools?: string[];
+  /** The consults running at once, this one included. */
+  count: number;
 }
 
 export interface ChatFile {

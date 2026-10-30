@@ -19,6 +19,7 @@ export type {
   ChatCodeBlockContext,
   ChatCodeBlockRenderer,
   AgentStatusState,
+  ConsultStatus,
   BackendType,
   ChatPanelProps,
   ChatPanelTheme,

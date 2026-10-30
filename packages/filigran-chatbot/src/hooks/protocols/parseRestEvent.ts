@@ -13,7 +13,7 @@ import type {
   TransferChainEntry,
 } from '../../types';
 import type { PageAction } from '../../utils/pageActions';
-import type { ParsedAction, ProtocolContext } from './types';
+import type { ConsultProgress, ParsedAction, ProtocolContext } from './types';
 import { randomId } from '../../utils/randomId';
 
 /** Wire key → the breakdown field it populates. */
@@ -250,6 +250,35 @@ function parsePageAction(raw: unknown): PageAction {
 
 const optionalString = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined);
 
+const asRecord = (v: unknown): Record<string, unknown> | undefined =>
+  v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
+
+/** Most consult levels read through, past any chain of peers a backend lets consult each other. */
+const MAX_CONSULT_DEPTH = 8;
+
+/**
+ * A `consult_progress` frame read through its wrappers, one per consult level:
+ * the agent it names is the one the conversation's agent consulted, the status
+ * and tools those of the innermost frame. Undefined when it names no agent.
+ */
+function parseConsultProgress(evt: Record<string, unknown>): ConsultProgress | undefined {
+  const agentName = optionalString(evt.agent_name);
+  if (!agentName) return undefined;
+  const own = asRecord(evt.inner);
+  let current = own;
+  for (let depth = 0; current?.status === 'consult_progress' && depth < MAX_CONSULT_DEPTH; depth += 1) {
+    current = asRecord(current.inner);
+  }
+  const tools = Array.isArray(current?.tools) ? current.tools.filter((tool): tool is string => typeof tool === 'string') : undefined;
+  return {
+    agentId: optionalString(evt.agent_id) ?? agentName,
+    agentName,
+    status: optionalString(current?.status) ?? 'thinking',
+    tools,
+    answering: own?.status === 'streaming' || own?.status === 'composing',
+  };
+}
+
 /**
  * `answered_by`: an agent object (`agent_id`, `agent_name`, `agent_icon`), or
  * a bare name. Undefined when it names nothing.
@@ -333,6 +362,10 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
         pageAction,
         conversationId: typeof evt.conversation_id === 'string' ? evt.conversation_id : undefined,
       };
+    }
+    if (st === 'consult_progress') {
+      // Not the consulted agent's context: the gauge stays the conversation's.
+      return { action: 'status', status: st, consult: parseConsultProgress(evt) };
     }
     if (st === 'wait_start') {
       return {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AgentStatusState, IconProps, Translate } from '../types';
+import type { AgentStatusState, ConsultStatus, IconProps, Translate } from '../types';
 
 /** What a host can change of the status line and the waiting panel. */
 export interface ThinkingOverrides {
@@ -67,6 +67,24 @@ function collectingLabel(count: number, t: Translate): string {
   return count > 1 ? translate(t, 'Collecting results from {count} tasks…', { count }) : t('Collecting results from one task…');
 }
 
+/** Tool names as the status line writes them: `search_iocs` → `Search Iocs`, each once. */
+function toolDisplayNames(rawNames: string[]): string[] {
+  return Array.from(new Set(rawNames.map((n) => n.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))));
+}
+
+/** A consult's line: the agent consulted, and what the agent doing the work is doing. */
+function consultingLabel(consult: ConsultStatus, t: Translate): string {
+  if (consult.count > 1) return translate(t, 'Consulting {count} agents…', { count: consult.count });
+  const agent = consult.agentName;
+  if (consult.status === 'tool_start' && consult.tools?.length) {
+    return translate(t, 'Consulting {agent}: {tools}…', { agent, tools: toolDisplayNames(consult.tools).join(', ') });
+  }
+  if (consult.status === 'streaming' || consult.status === 'composing') {
+    return translate(t, 'Consulting {agent}: writing the answer…', { agent });
+  }
+  return translate(t, 'Consulting {agent}…', { agent });
+}
+
 function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate): StatusVisual {
   if (!agentStatus) {
     return { label: t('Thinking...'), StatusIcon: BrainIcon, showDots: false };
@@ -104,8 +122,7 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
       }
       let label: string;
       if (rawNames.length > 0) {
-        const display = rawNames.map((n) => n.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
-        const unique = Array.from(new Set(display));
+        const unique = toolDisplayNames(rawNames);
         label = unique.length === 1 ? `${unique[0]}…` : translate(t, '{tool} (+{count} more)…', { tool: unique[0], count: unique.length - 1 });
       } else {
         label = t('Using tools…');
@@ -133,6 +150,7 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
     case 'composing':
       return { label: t('Composing answer…'), StatusIcon: BrainIcon, showDots: true };
     case 'consulting': {
+      if (agentStatus.consult) return { label: consultingLabel(agentStatus.consult, t), StatusIcon: UserPlusIcon, showDots: false };
       const consultName = agentStatus.tools?.[0] ?? t('the agent');
       return { label: translate(t, 'Consulting {agent}…', { agent: consultName }), StatusIcon: UserPlusIcon, showDots: false };
     }

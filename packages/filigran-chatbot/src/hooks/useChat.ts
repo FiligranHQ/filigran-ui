@@ -13,6 +13,7 @@ import type {
   ChatFile,
   ChatMessage,
   ChatStreamEventInfo,
+  ConsultStatus,
   ToolApprovalDecision,
   ToolApprovalProposal,
 } from '../types';
@@ -152,6 +153,15 @@ const EVENTS_HEALTHY_MS = 5000;
 
 /** The statuses that do not end an agent's wait (`wait_start`). */
 const STATUSES_DURING_WAIT: ReadonlySet<string> = new Set(['wait_status', 'tool_progress', 'consult_progress']);
+
+/** A consulted agent's statuses that change nothing the status line shows: a running tool's reports, its reasoning. */
+const CONSULT_STATUSES_KEEPING_LABEL: ReadonlySet<string> = new Set(['tool_progress', 'tool_heartbeat', 'wait_status', 'thinking_text']);
+
+function sameConsult(a: ConsultStatus | undefined, b: ConsultStatus): boolean {
+  return (
+    !!a && a.agentName === b.agentName && a.status === b.status && a.count === b.count && (a.tools ?? []).join('\n') === (b.tools ?? []).join('\n')
+  );
+}
 
 /** The actions that belong to a turn, as opposed to the conversation. */
 const TURN_ACTIONS: ReadonlySet<ParsedAction['action']> = new Set(['status', 'stream', 'done', 'approval_required', 'error', 'cancelled']);
@@ -1731,6 +1741,8 @@ export function useChat({
     // An error, a stop or the session's end the stream reported: what it wrote must not be put back over it.
     let ended: 'error' | 'cancelled' | 'session' | null = null;
     const ctx: ProtocolContext = { hasUsedTools: false, activeNodeId: '' };
+    // The consults running, by the consulted agent's id: the status line counts them.
+    const consults = new Set<string>();
 
     const deltas = createStreamDeltas((textChanged, thinking) => {
       if (textChanged) {
@@ -1761,6 +1773,7 @@ export function useChat({
       doneReceived = false;
       answered = false;
       accumulated = '';
+      consults.clear();
       currentAssistantId = randomId();
       segmentIds.push(currentAssistantId);
       const segmentId = currentAssistantId;
@@ -1804,6 +1817,32 @@ export function useChat({
             ? { ...prev, elapsedS: parsed.elapsedS, elapsedStartMs }
             : { status: 'tool_start', tools: parsed.tools, elapsedS: parsed.elapsedS, elapsedStartMs },
         );
+      } else if (parsed.status === 'consult_progress') {
+        const consult = parsed.consult;
+        if (!consult) return;
+        // Only the consulted agent's own answer ends its consult, not that of a peer it consulted in turn.
+        if (consult.answering) consults.delete(consult.agentId);
+        else consults.add(consult.agentId);
+        if (CONSULT_STATUSES_KEEPING_LABEL.has(consult.status)) return;
+        const shown: ConsultStatus = {
+          agentName: consult.agentName,
+          status: consult.status,
+          tools: consult.tools,
+          count: Math.max(consults.size, 1),
+        };
+        // A consult is a long tool call: its elapsed time runs on, re-anchored by
+        // the heartbeats between these frames. An unchanged label keeps its
+        // object, so the frames of a long consult do not render the panel again.
+        setAgentStatus((prev) => {
+          if (prev?.status === 'wait_start' || (prev?.status === 'consulting' && sameConsult(prev.consult, shown))) return prev;
+          return {
+            status: 'consulting',
+            consult: shown,
+            thinkingContent: prev?.thinkingContent,
+            elapsedS: prev?.elapsedS,
+            elapsedStartMs: prev?.elapsedStartMs,
+          };
+        });
       } else if (parsed.status === 'wait_start') {
         setAgentStatus((prev) => ({
           status: 'wait_start',

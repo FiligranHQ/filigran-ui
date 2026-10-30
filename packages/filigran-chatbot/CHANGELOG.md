@@ -8,6 +8,20 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.18.0 — unreleased
+
+### Added
+
+- The status line follows a consult: `consult_progress` frames are read through
+  every consult level, as an agent consulted may consult its own peers. It
+  names the agent consulted and what the agent doing the work does
+  (`Consulting {agent}: {tools}…`, `Consulting {agent}: writing the answer…`),
+  or `Consulting {count} agents…` while several run, and the consult's elapsed
+  time runs on. It said `Thinking...` for the whole consult. A host's
+  `statusLabel` reads the consult as `AgentStatusState.consult`
+  (`ConsultStatus`); a host translating the panel's keys translates the new
+  ones too.
+
 ## 3.16.1 — unreleased
 
 ### Fixed
