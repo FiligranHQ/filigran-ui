@@ -1339,8 +1339,12 @@ export function useChat({
   const agentPendingRef = useRef(agentPending);
   agentPendingRef.current = agentPending;
   const agentWaitersRef = useRef<(() => void)[]>([]);
-  /** The own send waiting for its agent: nothing of it reached the backend yet. */
+  /**
+   * The own send waiting for its agent: nothing of it reached the backend yet,
+   * so a Stop has nothing to cancel and a later message nothing to steer.
+   */
   const sendAwaitingAgentRef = useRef<AbortController | null>(null);
+  const [sendAwaitingAgent, setSendAwaitingAgent] = useState(false);
   useEffect(() => {
     if (agentPending) return;
     for (const resume of agentWaitersRef.current.splice(0)) resume();
@@ -2138,6 +2142,7 @@ export function useChat({
       const uploaded = files.every((f) => f.uploadStatus === 'done');
       const canSteerThis =
         !windingDownNow &&
+        !sendAwaitingAgentRef.current &&
         !!getSteerUrl() &&
         !!conversationIdRef.current &&
         sentRefs.length === 0 &&
@@ -2297,11 +2302,15 @@ export function useChat({
       pageActionControllerRef.current = pageActions;
 
       sendAwaitingAgentRef.current = controller;
+      setSendAwaitingAgent(agentPendingRef.current);
       let sendSlug: string | null | undefined;
       try {
         sendSlug = await chosenAgentSlug(controller.signal);
       } finally {
-        if (sendAwaitingAgentRef.current === controller) sendAwaitingAgentRef.current = null;
+        if (sendAwaitingAgentRef.current === controller) {
+          sendAwaitingAgentRef.current = null;
+          setSendAwaitingAgent(false);
+        }
       }
       // Let go of meanwhile (a new chat run as the agent landed): it never leaves.
       if (controller.signal.aborted) return 'dropped';
@@ -2908,12 +2917,12 @@ export function useChat({
       stopLocally(false);
       return;
     }
+    stopRequestedRef.current = true;
     // A send still waiting for its agent reached nothing the backend could cancel.
     if (sendAwaitingAgentRef.current) {
       stopLocally();
       return;
     }
-    stopRequestedRef.current = true;
     const cancelUrl = getCancelUrl();
     const convId = conversationIdRef.current;
     // A turn awaited from the event stream has no stream of its own to end with
@@ -3462,7 +3471,7 @@ export function useChat({
   // be dispatched mid-run: a response is streaming (isLoading), the REST steer
   // endpoint is configured, and the conversation already has a server id (the
   // very first turn of a fresh conversation only receives its id on `done`).
-  const canSteer = isLoading && getSteerUrl() !== null && conversationId !== null;
+  const canSteer = isLoading && !sendAwaitingAgent && getSteerUrl() !== null && conversationId !== null;
 
   return {
     messages,

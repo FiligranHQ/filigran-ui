@@ -268,6 +268,61 @@ test('a new conversation the host asked for as the agents land lets go of the se
   assert.equal(sessions().length + messages().length, 0, 'nothing of the send reaches the new chat');
 });
 
+/** Type *value* during a turn and send it as the composer offers: steered, or held for the turn's end. */
+const typeAndSendDuringTurn = async (ref: React.RefObject<Handle | null>, value: string) => {
+  await act(async () => {
+    ref.current!.setDraft(value);
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send now"], button[aria-label="Send when the answer ends"]')!.click();
+    await settle();
+  });
+};
+
+test('a message held behind a send waiting for the agents comes back to the composer on Stop', async () => {
+  const { messages, releaseAgents, releaseSessions } = heldAgentsAndSessions();
+  const ref = createRef<Handle>();
+  await render({ initialAgent: 'hunter', holdSendsDuringTurn: true }, ref);
+  releaseSessions();
+  await typeAndSend(ref, 'first');
+  await typeAndSendDuringTurn(ref, 'second');
+  assert.ok(text().includes('Sends when the answer ends:'), 'held');
+  await act(async () => {
+    ref.current!.stop();
+    await settle(10);
+  });
+  await act(async () => {
+    releaseAgents();
+    await settle(10);
+  });
+  assert.equal(messages().length, 0);
+  assert.equal(container.querySelector('textarea')!.value, 'second');
+});
+
+test('a message sent behind a send waiting for the agents is held, not steered ahead of it', async () => {
+  const { requests, messages, stream, releaseAgents, releaseSessions } = heldAgentsAndSessions([
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'steered' }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ initialAgent: 'hunter', conversationId: 'c1', holdSendsDuringTurn: true }, ref);
+  await typeAndSend(ref, 'first');
+  await typeAndSendDuringTurn(ref, 'second');
+  assert.equal(container.querySelector('button[aria-label="Send now"]'), null, 'no steer offered');
+  assert.ok(text().includes('Sends when the answer ends:'), 'held');
+  await act(async () => {
+    releaseAgents();
+    releaseSessions();
+    await settle(10);
+  });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/messages/steer').length, 0);
+  assert.deepEqual(
+    messages().map((r) => (r.body as { content?: string }).content),
+    ['first'],
+  );
+  await finish(stream);
+});
+
 test('the send hook can take a send over, or reword it and add fields', async () => {
   const stream = sseStream();
   const requests = fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
