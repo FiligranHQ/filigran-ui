@@ -191,3 +191,44 @@ test('a page action frame carries the action to perform and its id (#5559)', () 
     conversationId: 'c-1',
   });
 });
+
+test('a consult frame is read through every consult level, under the agent consulted', () => {
+  const ctx = { hasUsedTools: true, activeNodeId: '' };
+  const wrap = (agent: string, inner: unknown) => ({ status: 'consult_progress', agent_id: `id-${agent}`, agent_name: agent, inner });
+  const frame = (inner: unknown) => parseRestEvent({ type: 'status', ...wrap('Analyst', inner) }, ctx);
+  const consult = (inner: unknown) => {
+    const parsed = frame(inner);
+    return parsed.action === 'status' ? parsed.consult : null;
+  };
+
+  assert.deepEqual(frame({ status: 'tool_start', tools: ['search', 7] }), {
+    action: 'status',
+    status: 'consult_progress',
+    consult: { consultId: 'id-Analyst', agentId: 'id-Analyst', agentName: 'Analyst', status: 'tool_start', tools: ['search'], answering: false },
+  });
+  // A peer the agent consulted, consulted in turn: its tools, the consulted agent's name.
+  assert.deepEqual(consult(wrap('Researcher', { status: 'tool_start', tools: ['lookup'] })), {
+    consultId: 'id-Analyst',
+    agentId: 'id-Analyst',
+    agentName: 'Analyst',
+    status: 'tool_start',
+    tools: ['lookup'],
+    answering: false,
+  });
+  // Only the consulted agent's own answer ends its consult.
+  assert.equal(consult({ status: 'streaming' })?.answering, true);
+  assert.equal(consult({ status: 'composing' })?.answering, true);
+  assert.equal(consult(wrap('Researcher', { status: 'streaming' }))?.answering, false);
+  // A frame with no status, or a wrapper with none under it: nothing to show.
+  assert.equal(consult({ type: 'agentic_action', actions: 1 })?.status, undefined);
+  assert.equal(consult(wrap('Researcher', 'nope'))?.status, undefined);
+  // A consult frame moves no gauge: the conversation's context is read from the agent's own frames.
+  const withContext = parseRestEvent({ type: 'status', ...wrap('Analyst', { status: 'thinking' }), context_tokens: 900, context_window: 1000 }, ctx);
+  assert.ok(!('contextUsage' in withContext));
+  // Each consult by its own id; without one (an older backend), by the agent it asks.
+  const identified = parseRestEvent({ type: 'status', ...wrap('Analyst', { status: 'thinking' }), consult_id: 'c-2' }, ctx);
+  assert.equal(identified.action === 'status' ? identified.consult?.consultId : null, 'c-2');
+  // A frame that names no agent has nothing to show.
+  const anonymous = parseRestEvent({ type: 'status', status: 'consult_progress', tools: ['Writer'] }, ctx);
+  assert.equal(anonymous.action === 'status' ? anonymous.consult : null, undefined);
+});

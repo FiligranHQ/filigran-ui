@@ -11,6 +11,24 @@ import type {
 import type { PageAction } from '../../utils/pageActions';
 
 /**
+ * A consulted agent's frame (`consult_progress`), read through its wrappers: a
+ * consulted agent may consult its own peers, each level wrapping the frame once
+ * more.
+ */
+export interface ConsultProgress {
+  /** This consult: its `consult_id`, else (a backend that sends none) the agent consulted's id. */
+  consultId: string;
+  /** The agent the conversation's agent consulted. */
+  agentId: string;
+  agentName: string;
+  /** The status and tools of the agent doing the work, however deep; none when its frame carries none. */
+  status?: string;
+  tools?: string[];
+  /** The consulted agent itself answers, not a peer it consulted: its consult is ending. */
+  answering: boolean;
+}
+
+/**
  * Normalized action produced by all protocol parsers.
  * The SSE read loop is protocol-agnostic — only the JSON-to-action mapping differs.
  */
@@ -33,6 +51,8 @@ export type ParsedAction =
       /** `wait_start`: how long the agent pauses, and why. */
       waitSeconds?: number;
       waitReason?: string;
+      /** `consult_progress`: what the consulted agent reported. */
+      consult?: ConsultProgress;
     }
   | { action: 'stream'; content: string }
   | {
