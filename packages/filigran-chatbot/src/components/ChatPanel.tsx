@@ -332,6 +332,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     apiEndpoints,
     backendType,
     agentSlug: selectedAgent?.slug,
+    agentPending: !agentsSettled,
     requestHeaders,
     pageContext,
     onRelativeLinkClick: onRelativeLinkClickProp ? onRelativeLinkClick : undefined,
@@ -1196,25 +1197,6 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   handleStopGeneratingRef.current = handleStopGenerating;
   const readOnlyRef = useRef(readOnly);
   readOnlyRef.current = readOnly;
-  // The composer's Send waits for the agent to be chosen: sent before, it would
-  // reach the backend's default agent. It waits for nothing else (a read-back
-  // does not hold it: the history goes above the turn), one at a time, and
-  // runs against the render the agent lands in, reading the composer and the
-  // agent as they are then.
-  const [composerSendOwed, setComposerSendOwed] = useState(false);
-  const handleComposerSend = () => {
-    if (agentsSettled) void handleSendMessage();
-    else setComposerSendOwed(true);
-  };
-  useEffect(() => {
-    if (!composerSendOwed || !agentsSettled) return;
-    setComposerSendOwed(false);
-    // A file attached meanwhile still uploading: the composer would not send
-    // it yet, so the send is let go of and the draft stays for the user to send.
-    if (readOnly || attachedFiles.some((f) => f.uploadStatus === 'pending')) return;
-    void handleSendMessage();
-    // Run once the agent lands; the send reads this render's composer.
-  }, [composerSendOwed, agentsSettled]);
   // The composer's text for `getDraft`: as last rendered, or as `setDraft` just set it.
   const draftRef = useRef(inputValue);
   draftRef.current = inputValue;
@@ -1541,7 +1523,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               agentMentions={agentMentionsEnabled && agents.length > 0 ? { agents, mentions: agentMentions, onPick: addAgentMention } : undefined}
               inputValue={inputValue}
               onInputChange={setInputValue}
-              onSend={handleComposerSend}
+              onSend={handleSendMessage}
               onStop={handleStopGenerating}
               isLoading={isLoading}
               canSteer={canSteer}

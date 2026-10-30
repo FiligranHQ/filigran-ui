@@ -451,6 +451,11 @@ interface UseChatOptions {
   apiEndpoints?: ApiEndpoints;
   backendType?: BackendType;
   agentSlug: string | null | undefined;
+  /**
+   * The agent is still being chosen: a conversation created or a message sent
+   * meanwhile waits for it, and names the agent chosen then.
+   */
+  agentPending?: boolean;
   requestHeaders?: Record<string, string>;
   /** Arbitrary host page/application context, sent as `context` on the REST message body. */
   pageContext?: Record<string, unknown>;
@@ -845,6 +850,7 @@ export function useChat({
   apiEndpoints,
   backendType = 'rest',
   agentSlug,
+  agentPending = false,
   requestHeaders,
   pageContext,
   onRelativeLinkClick,
@@ -1327,13 +1333,37 @@ export function useChat({
     [isControlled, conversationStorageKey],
   );
 
+  // Read when the agent is chosen, not when the send or upload began.
+  const agentSlugRef = useRef(agentSlug);
+  agentSlugRef.current = agentSlug;
+  const agentPendingRef = useRef(agentPending);
+  agentPendingRef.current = agentPending;
+  const agentWaitersRef = useRef<(() => void)[]>([]);
+  useEffect(() => {
+    if (agentPending) return;
+    for (const resume of agentWaitersRef.current.splice(0)) resume();
+  }, [agentPending]);
+  /** The agent to name, once chosen; rejected with an `AbortError` on *signal*. */
+  const chosenAgentSlug = (signal: AbortSignal): Promise<string | null | undefined> =>
+    new Promise((resolve, reject) => {
+      const resume = () => resolve(agentSlugRef.current);
+      if (!agentPendingRef.current) return resume();
+      const abort = () => {
+        agentWaitersRef.current = agentWaitersRef.current.filter((w) => w !== resume);
+        reject(new DOMException('Aborted', 'AbortError'));
+      };
+      if (signal.aborted) return abort();
+      signal.addEventListener('abort', abort, { once: true });
+      agentWaitersRef.current.push(resume);
+    });
+
   /**
    * Ensure a conversation exists. Concurrent callers of the same chat (e.g.
    * multiple files selected at once) share a single session creation, and a
    * creation answered after a new chat was started resolves to `null` without
    * touching the chat that replaced it.
    */
-  const ensureConversation = async (slug: string | null | undefined): Promise<string | null> => {
+  const ensureConversation = async (): Promise<string | null> => {
     // Fast path: already have one
     if (conversationIdRef.current) return conversationIdRef.current;
 
@@ -1344,6 +1374,8 @@ export function useChat({
     if (!sessionsUrl) return null;
 
     return sessionGate.run(async (isCurrent, signal) => {
+      const slug = await chosenAgentSlug(signal);
+      if (!isCurrent()) return null;
       const workspaceId = pendingWorkspaceRef.current;
       const res = await panelFetch(sessionsUrl, {
         method: 'POST',
@@ -1464,7 +1496,7 @@ export function useChat({
       for (const { file, tempId } of accepted) {
         (async () => {
           try {
-            const convId = await ensureConversation(agentSlug);
+            const convId = await ensureConversation();
             if (!convId) {
               setAttachedFiles((p) => p.map((f) => (f.fileId === tempId ? { ...f, uploadStatus: 'error' } : f)));
               return;
@@ -2262,6 +2294,7 @@ export function useChat({
       abortControllerRef.current = controller;
       pageActionControllerRef.current = pageActions;
 
+      const sendSlug = await chosenAgentSlug(controller.signal);
       // Collect file_ids from already-uploaded files (uploaded eagerly on selection)
       const fileIds = (userMsg.files ?? []).filter((f) => f.uploadStatus === 'done' && f.fileId).map((f) => f.fileId!);
 
@@ -2274,7 +2307,7 @@ export function useChat({
       const turnsOutliveStream = !!(getCancelUrl() || getSkipWaitUrl() || hasEvents);
       if (!conversationIdRef.current && (pendingWorkspaceRef.current || turnsOutliveStream)) {
         const generation = sessionGate.generation;
-        const created = await ensureConversation(agentSlug);
+        const created = await ensureConversation();
         // A new chat replaced this one meanwhile: the send went with it, and
         // the workspace now pending is the new chat's, not this send's.
         if (sessionGate.generation !== generation) return 'dropped';
@@ -2288,7 +2321,7 @@ export function useChat({
       const requestBody = buildRequestBody(backendType, text, {
         legacyChatId,
         conversationId: conversationIdRef.current,
-        agentSlug,
+        agentSlug: sendSlug,
         pageContext: pageContextRef.current,
         supportsToolApproval: getApproveUrl() !== null,
         referencedConversationIds: sentRefs.map((r) => r.conversationId),

@@ -109,56 +109,13 @@ test('the handle waits for the panel to be ready, which the host is told', async
   await finish(stream);
 });
 
-test("a composer send before the agents land waits for them, and leaves with the host's agent", async () => {
+/** A backend whose agents, and read-back of `c1` or new conversation, each answer once released. */
+function heldAgentsAndSessions(more: ((req: RecordedRequest) => Response | Promise<Response> | undefined)[] = []) {
   let releaseAgents!: () => void;
+  let releaseSessions!: () => void;
   const agentsReady = new Promise<void>((resolve) => (releaseAgents = resolve));
+  const sessionsReady = new Promise<void>((resolve) => (releaseSessions = resolve));
   const stream = sseStream();
-  const requests = fakeBackend([
-    async (req) => {
-      if (req.url !== '/api/chat/agents') return undefined;
-      await agentsReady;
-      return json([{ id: 'a0', name: 'Default Agent', slug: 'default', icon: null, description: null }, ...AGENTS]);
-    },
-    (req) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1' }) : undefined),
-    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
-  ]);
-  const ref = createRef<Handle>();
-  // With a cancel route the conversation is created before the message goes.
-  await render({ initialAgent: 'hunter', apiEndpoints: { cancel: '/chat/messages/cancel' } }, ref);
-  await act(async () => {
-    ref.current!.setDraft('hello');
-    await settle();
-  });
-  // Pressed twice while waiting: still one message.
-  for (let press = 0; press < 2; press += 1) {
-    await act(async () => {
-      container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!.click();
-      await settle();
-    });
-  }
-  const isSession = (r: RecordedRequest) => r.url === '/api/chat/sessions' && r.method === 'POST';
-  assert.equal(requests.filter((r) => isSession(r) || r.url === '/api/chat/messages').length, 0, 'nothing leaves before the agent is chosen');
-  await act(async () => {
-    releaseAgents();
-    await settle(10);
-  });
-  const session = requests.find(isSession);
-  const sent = requests.filter((r) => r.url === '/api/chat/messages');
-  assert.equal(sent.length, 1);
-  const message = sent[0];
-  assert.equal((session?.body as { agent_slug?: string })?.agent_slug, 'hunter');
-  assert.equal((message?.body as { agent_slug?: string })?.agent_slug, 'hunter');
-  assert.equal((message?.body as { content?: string })?.content, 'hello');
-  assert.equal(container.querySelector('textarea')!.value, '');
-  await finish(stream);
-});
-
-/** A backend whose agents and read-back of `c1` each answer once released. */
-function heldAgentsAndHistory(more: ((req: RecordedRequest) => Response | Promise<Response> | undefined)[]) {
-  let releaseAgents!: () => void;
-  let releaseHistory!: () => void;
-  const agentsReady = new Promise<void>((resolve) => (releaseAgents = resolve));
-  const historyReady = new Promise<void>((resolve) => (releaseHistory = resolve));
   const requests = fakeBackend([
     async (req) => {
       if (req.url !== '/api/chat/agents') return undefined;
@@ -167,13 +124,18 @@ function heldAgentsAndHistory(more: ((req: RecordedRequest) => Response | Promis
     },
     async (req) => {
       if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
-      await historyReady;
+      await sessionsReady;
       return json({ conversation_id: 'c1', messages: [] });
     },
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
     ...more,
   ]);
-  return { requests, releaseAgents, releaseHistory };
+  const sessions = () => requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST');
+  const messages = () => requests.filter((r) => r.url === '/api/chat/messages');
+  return { requests, sessions, messages, stream, releaseAgents, releaseSessions };
 }
+
+const slugOf = (req: RecordedRequest | undefined) => (req?.body as { agent_slug?: string } | undefined)?.agent_slug;
 
 const typeAndSend = async (ref: React.RefObject<Handle | null>, value: string) => {
   await act(async () => {
@@ -186,11 +148,33 @@ const typeAndSend = async (ref: React.RefObject<Handle | null>, value: string) =
   });
 };
 
+test("a composer send before the agents land shows at once, and leaves with the host's agent once they do", async () => {
+  const { sessions, messages, stream, releaseAgents, releaseSessions } = heldAgentsAndSessions();
+  const ref = createRef<Handle>();
+  // With a cancel route the conversation is created before the message goes.
+  await render({ initialAgent: 'hunter', apiEndpoints: { cancel: '/chat/messages/cancel' } }, ref);
+  releaseSessions();
+  await typeAndSend(ref, 'hello');
+  assert.deepEqual(
+    [...container.querySelectorAll('[data-testid="filigran-chat-user-message"]')].map((e) => e.textContent),
+    ['hello'],
+  );
+  assert.equal(container.querySelector('textarea')!.value, '');
+  assert.equal(sessions().length + messages().length, 0, 'nothing leaves before the agent is chosen');
+  await act(async () => {
+    releaseAgents();
+    await settle(10);
+  });
+  assert.equal(sessions().length, 1);
+  assert.equal(slugOf(sessions()[0]), 'hunter');
+  assert.equal(messages().length, 1);
+  assert.equal(slugOf(messages()[0]), 'hunter');
+  assert.equal((messages()[0].body as { content?: string }).content, 'hello');
+  await finish(stream);
+});
+
 test('a composer send waiting for the agents does not wait for the history read back after them', async () => {
-  const stream = sseStream();
-  const { requests, releaseAgents, releaseHistory } = heldAgentsAndHistory([
-    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
-  ]);
+  const { sessions, messages, stream, releaseAgents, releaseSessions } = heldAgentsAndSessions();
   const ref = createRef<Handle>();
   await render({ initialAgent: 'hunter', conversationId: 'c1' }, ref);
   await typeAndSend(ref, 'hello');
@@ -198,32 +182,22 @@ test('a composer send waiting for the agents does not wait for the history read 
     releaseAgents();
     await settle(10);
   });
-  assert.ok(
-    requests.some((r) => r.url === '/api/chat/sessions' && r.method === 'POST'),
-    'the read-back is under way',
-  );
-  const sent = requests.filter((r) => r.url === '/api/chat/messages');
-  assert.equal(sent.length, 1, 'the message left while the history is still read back');
-  assert.equal((sent[0].body as { agent_slug?: string }).agent_slug, 'hunter');
+  assert.equal(sessions().length, 1, 'the read-back is under way');
+  assert.equal(messages().length, 1, 'the message left while the history is still read back');
+  assert.equal(slugOf(messages()[0]), 'hunter');
   await act(async () => {
-    releaseHistory();
+    releaseSessions();
     await settle(10);
   });
   await finish(stream);
 });
 
-test('a file still uploading when the agents land lets go of the waiting send, the draft kept', async () => {
-  let uploaded!: () => void;
-  const stream = sseStream();
-  const { requests, releaseAgents, releaseHistory } = heldAgentsAndHistory([
-    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
-    (req) =>
-      req.url === '/api/chat/upload' ? new Promise<Response>((resolve) => (uploaded = () => resolve(json({ file_ids: ['f1'] })))) : undefined,
+test("a file attached before the agents land is uploaded into a conversation of the host's agent", async () => {
+  const { requests, sessions, releaseAgents, releaseSessions } = heldAgentsAndSessions([
+    (req) => (req.url === '/api/chat/upload' ? json({ file_ids: ['f1'] }) : undefined),
   ]);
-  const ref = createRef<Handle>();
-  await render({ initialAgent: 'hunter', conversationId: 'c1' }, ref);
-  await act(async () => releaseHistory());
-  await typeAndSend(ref, 'hello');
+  await render({ initialAgent: 'hunter' });
+  releaseSessions();
   const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
   await act(async () => {
     const file = new File(['x'], 'report.pdf', { type: 'application/pdf' });
@@ -231,26 +205,31 @@ test('a file still uploading when the agents land lets go of the waiting send, t
     input.dispatchEvent(new Event('change', { bubbles: true }));
     await settle(10);
   });
+  assert.equal(sessions().length, 0, 'no conversation before the agent is chosen');
   await act(async () => {
     releaseAgents();
     await settle(10);
   });
-  assert.equal(requests.filter((r) => r.url === '/api/chat/messages').length, 0, 'not sent without its file');
-  assert.equal(container.querySelector('textarea')!.value, 'hello');
-  assert.ok(text().includes('report.pdf'));
+  assert.equal(sessions().length, 1);
+  assert.equal(slugOf(sessions()[0]), 'hunter');
+  assert.equal(requests.filter((r) => r.url === '/api/chat/upload').length, 1);
+});
+
+test('a send stopped while it waits for the agents never leaves', async () => {
+  const { sessions, messages, releaseAgents, releaseSessions } = heldAgentsAndSessions();
+  const ref = createRef<Handle>();
+  await render({ initialAgent: 'hunter', apiEndpoints: { cancel: '/chat/messages/cancel' } }, ref);
+  releaseSessions();
+  await typeAndSend(ref, 'hello');
   await act(async () => {
-    uploaded();
-    await settle(10);
+    ref.current!.stop();
+    await settle();
   });
   await act(async () => {
-    container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!.click();
+    releaseAgents();
     await settle(10);
   });
-  const sent = requests.filter((r) => r.url === '/api/chat/messages');
-  assert.equal(sent.length, 1);
-  assert.deepEqual((sent[0].body as { file_ids?: string[] }).file_ids, ['f1']);
-  assert.equal((sent[0].body as { agent_slug?: string }).agent_slug, 'hunter');
-  await finish(stream);
+  assert.equal(sessions().length + messages().length, 0);
 });
 
 test('the send hook can take a send over, or reword it and add fields', async () => {
