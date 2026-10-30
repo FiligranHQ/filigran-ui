@@ -1197,23 +1197,24 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const readOnlyRef = useRef(readOnly);
   readOnlyRef.current = readOnly;
   // The composer's Send waits for the agent to be chosen: sent before, it would
-  // reach the backend's default agent. (A read-back alone does not hold it: the
-  // history goes above the turn.) Waiting, it joins the handle's calls and runs
-  // against the render it lands in, reading the composer and the agent as they
-  // are then; one waits at a time.
-  const composerSendQueuedRef = useRef(false);
+  // reach the backend's default agent. It waits for nothing else (a read-back
+  // does not hold it: the history goes above the turn), one at a time, and
+  // runs against the render the agent lands in, reading the composer and the
+  // agent as they are then.
+  const [composerSendOwed, setComposerSendOwed] = useState(false);
   const handleComposerSend = () => {
-    if (agentsSettled) {
-      void handleSendMessage();
-      return;
-    }
-    if (composerSendQueuedRef.current) return;
-    composerSendQueuedRef.current = true;
-    enqueue(() => {
-      composerSendQueuedRef.current = false;
-      if (!readOnlyRef.current) void handleSendMessageRef.current();
-    });
+    if (agentsSettled) void handleSendMessage();
+    else setComposerSendOwed(true);
   };
+  useEffect(() => {
+    if (!composerSendOwed || !agentsSettled) return;
+    setComposerSendOwed(false);
+    // A file attached meanwhile still uploading: the composer would not send
+    // it yet, so the send is let go of and the draft stays for the user to send.
+    if (readOnly || attachedFiles.some((f) => f.uploadStatus === 'pending')) return;
+    void handleSendMessage();
+    // Run once the agent lands; the send reads this render's composer.
+  }, [composerSendOwed, agentsSettled]);
   // The composer's text for `getDraft`: as last rendered, or as `setDraft` just set it.
   const draftRef = useRef(inputValue);
   draftRef.current = inputValue;

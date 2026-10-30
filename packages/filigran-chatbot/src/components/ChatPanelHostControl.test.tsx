@@ -153,6 +153,106 @@ test("a composer send before the agents land waits for them, and leaves with the
   await finish(stream);
 });
 
+/** A backend whose agents and read-back of `c1` each answer once released. */
+function heldAgentsAndHistory(more: ((req: RecordedRequest) => Response | Promise<Response> | undefined)[]) {
+  let releaseAgents!: () => void;
+  let releaseHistory!: () => void;
+  const agentsReady = new Promise<void>((resolve) => (releaseAgents = resolve));
+  const historyReady = new Promise<void>((resolve) => (releaseHistory = resolve));
+  const requests = fakeBackend([
+    async (req) => {
+      if (req.url !== '/api/chat/agents') return undefined;
+      await agentsReady;
+      return json([{ id: 'a0', name: 'Default Agent', slug: 'default', icon: null, description: null }, ...AGENTS]);
+    },
+    async (req) => {
+      if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+      await historyReady;
+      return json({ conversation_id: 'c1', messages: [] });
+    },
+    ...more,
+  ]);
+  return { requests, releaseAgents, releaseHistory };
+}
+
+const typeAndSend = async (ref: React.RefObject<Handle | null>, value: string) => {
+  await act(async () => {
+    ref.current!.setDraft(value);
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!.click();
+    await settle();
+  });
+};
+
+test('a composer send waiting for the agents does not wait for the history read back after them', async () => {
+  const stream = sseStream();
+  const { requests, releaseAgents, releaseHistory } = heldAgentsAndHistory([
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ initialAgent: 'hunter', conversationId: 'c1' }, ref);
+  await typeAndSend(ref, 'hello');
+  await act(async () => {
+    releaseAgents();
+    await settle(10);
+  });
+  assert.ok(
+    requests.some((r) => r.url === '/api/chat/sessions' && r.method === 'POST'),
+    'the read-back is under way',
+  );
+  const sent = requests.filter((r) => r.url === '/api/chat/messages');
+  assert.equal(sent.length, 1, 'the message left while the history is still read back');
+  assert.equal((sent[0].body as { agent_slug?: string }).agent_slug, 'hunter');
+  await act(async () => {
+    releaseHistory();
+    await settle(10);
+  });
+  await finish(stream);
+});
+
+test('a file still uploading when the agents land lets go of the waiting send, the draft kept', async () => {
+  let uploaded!: () => void;
+  const stream = sseStream();
+  const { requests, releaseAgents, releaseHistory } = heldAgentsAndHistory([
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) =>
+      req.url === '/api/chat/upload' ? new Promise<Response>((resolve) => (uploaded = () => resolve(json({ file_ids: ['f1'] })))) : undefined,
+  ]);
+  const ref = createRef<Handle>();
+  await render({ initialAgent: 'hunter', conversationId: 'c1' }, ref);
+  await act(async () => releaseHistory());
+  await typeAndSend(ref, 'hello');
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+  await act(async () => {
+    const file = new File(['x'], 'report.pdf', { type: 'application/pdf' });
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await settle(10);
+  });
+  await act(async () => {
+    releaseAgents();
+    await settle(10);
+  });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/messages').length, 0, 'not sent without its file');
+  assert.equal(container.querySelector('textarea')!.value, 'hello');
+  assert.ok(text().includes('report.pdf'));
+  await act(async () => {
+    uploaded();
+    await settle(10);
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!.click();
+    await settle(10);
+  });
+  const sent = requests.filter((r) => r.url === '/api/chat/messages');
+  assert.equal(sent.length, 1);
+  assert.deepEqual((sent[0].body as { file_ids?: string[] }).file_ids, ['f1']);
+  assert.equal((sent[0].body as { agent_slug?: string }).agent_slug, 'hunter');
+  await finish(stream);
+});
+
 test('the send hook can take a send over, or reword it and add fields', async () => {
   const stream = sseStream();
   const requests = fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
