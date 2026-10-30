@@ -19,8 +19,8 @@ export interface ConsultProgress {
   /** The agent the conversation's agent consulted. */
   agentId: string;
   agentName: string;
-  /** The status and tools of the agent doing the work, however deep. */
-  status: string;
+  /** The status and tools of the agent doing the work, however deep; none when its frame carries none. */
+  status?: string;
   tools?: string[];
   /** The consulted agent itself answers, not a peer it consulted: its consult is ending. */
   answering: boolean;

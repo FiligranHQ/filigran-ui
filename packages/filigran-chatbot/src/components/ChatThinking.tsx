@@ -77,7 +77,11 @@ function consultingLabel(consult: ConsultStatus, t: Translate): string {
   if (consult.count > 1) return translate(t, 'Consulting {count} agents…', { count: consult.count });
   const agent = consult.agentName;
   if (consult.status === 'tool_start' && consult.tools?.length) {
-    return translate(t, 'Consulting {agent}: {tools}…', { agent, tools: toolDisplayNames(consult.tools).join(', ') });
+    // As the agent's own tools: the first, and how many more, so the line stays one line.
+    const [tool, ...more] = toolDisplayNames(consult.tools);
+    return more.length > 0
+      ? translate(t, 'Consulting {agent}: {tool} (+{count} more)…', { agent, tool, count: more.length })
+      : translate(t, 'Consulting {agent}: {tool}…', { agent, tool });
   }
   if (consult.status === 'streaming' || consult.status === 'composing') {
     return translate(t, 'Consulting {agent}: writing the answer…', { agent });

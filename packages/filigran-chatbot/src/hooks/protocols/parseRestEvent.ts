@@ -260,6 +260,8 @@ const MAX_CONSULT_DEPTH = 8;
  * A `consult_progress` frame read through its wrappers, one per consult level:
  * the agent it names is the one the conversation's agent consulted, the status
  * and tools those of the innermost frame. Undefined when it names no agent.
+ * The wrapper carries no id of its own: two consults of one agent at once read
+ * as one.
  */
 function parseConsultProgress(evt: Record<string, unknown>): ConsultProgress | undefined {
   const agentName = optionalString(evt.agent_name);
@@ -273,7 +275,7 @@ function parseConsultProgress(evt: Record<string, unknown>): ConsultProgress | u
   return {
     agentId: optionalString(evt.agent_id) ?? agentName,
     agentName,
-    status: optionalString(current?.status) ?? 'thinking',
+    status: optionalString(current?.status),
     tools,
     answering: own?.status === 'streaming' || own?.status === 'composing',
   };

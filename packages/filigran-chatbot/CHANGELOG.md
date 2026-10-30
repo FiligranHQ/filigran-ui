@@ -15,9 +15,10 @@ This file starts at 3.10.0; earlier releases are on the
 - The status line follows a consult: `consult_progress` frames are read through
   every consult level, as an agent consulted may consult its own peers. It
   names the agent consulted and what the agent doing the work does
-  (`Consulting {agent}: {tools}…`, `Consulting {agent}: writing the answer…`),
-  or `Consulting {count} agents…` while several run, and the consult's elapsed
-  time runs on. It said `Thinking...` for the whole consult. A host's
+  (`Consulting {agent}: {tool}…`, `Consulting {agent}: {tool} (+{count} more)…`,
+  `Consulting {agent}: writing the answer…`), or `Consulting {count} agents…`
+  while several run, and the consult's elapsed time runs on. The consults end
+  when the agent's own loop moves on, whether they answered or not. It said `Thinking...` for the whole consult. A host's
   `statusLabel` reads the consult as `AgentStatusState.consult`
   (`ConsultStatus`); a host translating the panel's keys translates the new
   ones too.

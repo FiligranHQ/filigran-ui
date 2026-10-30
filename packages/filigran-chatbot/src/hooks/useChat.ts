@@ -152,10 +152,25 @@ const WIND_DOWN_MS = 5000;
 const EVENTS_HEALTHY_MS = 5000;
 
 /** The statuses that do not end an agent's wait (`wait_start`). */
-const STATUSES_DURING_WAIT: ReadonlySet<string> = new Set(['wait_status', 'tool_progress', 'consult_progress']);
+const STATUSES_DURING_WAIT: ReadonlySet<string> = new Set(['wait_status', 'tool_progress']);
 
 /** A consulted agent's statuses that change nothing the status line shows: a running tool's reports, its reasoning. */
 const CONSULT_STATUSES_KEEPING_LABEL: ReadonlySet<string> = new Set(['tool_progress', 'tool_heartbeat', 'wait_status', 'thinking_text']);
+
+/**
+ * The agent's own statuses that say its consults are over: its loop moved on
+ * (a new step, other tools, its answer), so whatever consult did not end with
+ * an answer (an error, a stop) ended with the tool call.
+ */
+const STATUSES_ENDING_CONSULTS: ReadonlySet<string> = new Set([
+  'thinking',
+  'analyzing',
+  'llm_step',
+  'tool_start',
+  'composing',
+  'streaming',
+  'stream_retract',
+]);
 
 function sameConsult(a: ConsultStatus | undefined, b: ConsultStatus): boolean {
   return (
@@ -1748,6 +1763,12 @@ export function useChat({
     // The consults running, by the consulted agent's id, each with what it last
     // showed; the most recently active last. The status line counts them.
     const consults = new Map<string, Omit<ConsultStatus, 'count'>>();
+    // The consults that answered: a late report or reasoning of theirs does not bring them back.
+    const answeredConsults = new Set<string>();
+    const endConsults = () => {
+      consults.clear();
+      answeredConsults.clear();
+    };
 
     const deltas = createStreamDeltas((textChanged, thinking) => {
       if (textChanged) {
@@ -1778,7 +1799,7 @@ export function useChat({
       doneReceived = false;
       answered = false;
       accumulated = '';
-      consults.clear();
+      endConsults();
       currentAssistantId = randomId();
       segmentIds.push(currentAssistantId);
       const segmentId = currentAssistantId;
@@ -1800,9 +1821,10 @@ export function useChat({
       // before it.
       deltas.flush();
       const elapsedStartMs = typeof parsed.elapsedS === 'number' ? Date.now() - parsed.elapsedS * 1000 : undefined;
+      if (parsed.resumed || STATUSES_ENDING_CONSULTS.has(parsed.status)) endConsults();
       if (parsed.resumed) {
         // A re-attached turn is replayed from its start: what it had written
-        // so far arrives again, whole.
+        // so far arrives again, whole, its consults included.
         accumulated = '';
         setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: '' } : m)));
         setAgentStatus({ status: 'thinking', elapsedS: parsed.elapsedS, elapsedStartMs });
@@ -1825,19 +1847,25 @@ export function useChat({
       } else if (parsed.status === 'consult_progress') {
         const consult = parsed.consult;
         if (!consult) return;
-        const { agentId, agentName } = consult;
+        const { agentId, agentName, status } = consult;
         if (consult.answering) {
           // Only the consulted agent's own answer ends its consult, not that of a peer it consulted in turn.
           consults.delete(agentId);
-        } else if (!CONSULT_STATUSES_KEEPING_LABEL.has(consult.status)) {
+          answeredConsults.add(agentId);
+        } else if (status && !CONSULT_STATUSES_KEEPING_LABEL.has(status)) {
+          // At work again, even after an answer (one retracted for more tools).
+          answeredConsults.delete(agentId);
           consults.delete(agentId);
-          consults.set(agentId, { agentName, status: consult.status, tools: consult.tools });
+          consults.set(agentId, { agentName, status, tools: consult.tools });
         } else if (!consults.has(agentId)) {
-          // A tool's report or the agent's reasoning: a consult running, with nothing more to show.
+          // A tool's report, the agent's reasoning or a frame with no status: a
+          // consult running, with nothing more to show, unless it answered.
+          if (answeredConsults.has(agentId)) return;
           consults.set(agentId, { agentName, status: 'thinking' });
         }
         // The consult most recently active, or the one answering when it was the last.
-        const latest = [...consults.values()].pop() ?? { agentName, status: consult.status };
+        let latest: Omit<ConsultStatus, 'count'> = { agentName, status: status ?? 'thinking' };
+        for (const running of consults.values()) latest = running;
         const shown: ConsultStatus = { ...latest, count: Math.max(consults.size, 1) };
         // A consult is a long tool call: its elapsed time runs on, re-anchored by
         // the heartbeats between these frames. An unchanged label keeps its

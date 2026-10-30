@@ -46,17 +46,50 @@ test('the status line names the agent consulted and what it does', async () => {
   assert.ok(text().includes('Consulting Analyst…'), text());
 
   await send(consultFrame('Analyst', { status: 'tool_start', tools: ['search_iocs', 'search_iocs', 'read_report'] }));
-  assert.ok(text().includes('Consulting Analyst: Search Iocs, Read Report…'), text());
+  assert.ok(text().includes('Consulting Analyst: Search Iocs (+1 more)…'), text());
 
   // A running tool's report and the consulted agent's reasoning leave the line as it is.
   await send(
     consultFrame('Analyst', { status: 'tool_progress', event: 'output' }),
     consultFrame('Analyst', { status: 'thinking_text', content: 'hmm' }),
   );
-  assert.ok(text().includes('Consulting Analyst: Search Iocs, Read Report…'), text());
+  assert.ok(text().includes('Consulting Analyst: Search Iocs (+1 more)…'), text());
 
   await send(consultFrame('Analyst', { status: 'streaming' }));
   assert.ok(text().includes('Consulting Analyst: writing the answer…'), text());
+
+  // A late report or reasoning of the consult that answered does not bring it back.
+  await send(
+    consultFrame('Analyst', { status: 'thinking_text', content: 'done' }),
+    consultFrame('Analyst', { status: 'tool_heartbeat', elapsed_s: 3 }),
+  );
+  assert.ok(text().includes('Consulting Analyst: writing the answer…'), text());
+  await finish(stream);
+});
+
+test('a frame of the consulted agent with no status leaves the line as it is', async () => {
+  const { stream, send } = await consulting();
+  await send(consultFrame('Analyst', { status: 'tool_start', tools: ['search_iocs'] }));
+  await send(consultFrame('Analyst', { type: 'agentic_action', actions: 1 }), consultFrame('Writer', { type: 'agentic_action', actions: 1 }));
+  assert.ok(text().includes('Consulting 2 agents…'), text());
+  await send(consultFrame('Writer', { status: 'streaming' }));
+  assert.ok(text().includes('Consulting Analyst: Search Iocs…'), text());
+  await finish(stream);
+});
+
+test('the consults end when the agent moves on, or its turn is replayed, however they ended', async () => {
+  const { stream, send } = await consulting();
+  // Two consults; the agent's next step comes with neither having answered (one failed, one was stopped).
+  await send(consultFrame('Analyst', { status: 'thinking' }), consultFrame('Writer', { status: 'thinking' }));
+  assert.ok(text().includes('Consulting 2 agents…'), text());
+  await send({ type: 'status', status: 'tool_start', tools: ['consult_agent'] }, consultFrame('Researcher', { status: 'thinking' }));
+  assert.ok(text().includes('Consulting Researcher…'), text());
+
+  // The turn re-attached is replayed from its start: the consults it had are its replay's.
+  await send(consultFrame('Writer', { status: 'thinking' }));
+  assert.ok(text().includes('Consulting 2 agents…'), text());
+  await send({ type: 'thinking', resumed: true, elapsed_s: 5 }, consultFrame('Writer', { status: 'thinking' }));
+  assert.ok(text().includes('Consulting Writer…'), text());
   await finish(stream);
 });
 

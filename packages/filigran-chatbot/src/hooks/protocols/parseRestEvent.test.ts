@@ -218,10 +218,12 @@ test('a consult frame is read through every consult level, under the agent consu
   assert.equal(consult({ status: 'streaming' })?.answering, true);
   assert.equal(consult({ status: 'composing' })?.answering, true);
   assert.equal(consult(wrap('Researcher', { status: 'streaming' }))?.answering, false);
-  // A wrapper with no frame under it: the agent consulted is still at work.
-  assert.equal(consult(wrap('Researcher', 'nope'))?.status, 'thinking');
-  // The consulted agent's context is not the conversation's: the gauge stays as it is.
-  assert.ok(!('contextUsage' in frame({ status: 'thinking', context_tokens: 900, context_window: 1000 })));
+  // A frame with no status, or a wrapper with none under it: nothing to show.
+  assert.equal(consult({ type: 'agentic_action', actions: 1 })?.status, undefined);
+  assert.equal(consult(wrap('Researcher', 'nope'))?.status, undefined);
+  // A consult frame moves no gauge: the conversation's context is read from the agent's own frames.
+  const withContext = parseRestEvent({ type: 'status', ...wrap('Analyst', { status: 'thinking' }), context_tokens: 900, context_window: 1000 }, ctx);
+  assert.ok(!('contextUsage' in withContext));
   // A frame that names no agent has nothing to show.
   const anonymous = parseRestEvent({ type: 'status', status: 'consult_progress', tools: ['Writer'] }, ctx);
   assert.equal(anonymous.action === 'status' ? anonymous.consult : null, undefined);
