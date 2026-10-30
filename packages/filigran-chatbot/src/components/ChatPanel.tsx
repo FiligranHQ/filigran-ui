@@ -577,15 +577,15 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
    * Put a conversation's history read back on screen: in place of what is
    * shown, or joined to it (*merge*, see `mergeReadBack`) after a turn ran
    * meanwhile (*afterTurn*: the turn set the gauge itself) or for a host
-   * (*host*: the earlier pages already loaded stay on offer as they were).
+   * (*keepEarlierOffer*: the earlier pages already loaded stay on offer as they were).
    */
   const applyRestoredHistory = (
     convId: string,
     data: RestoredHistory,
-    { merge, afterTurn, host }: { merge: boolean; afterTurn: boolean; host: boolean },
+    { merge, afterTurn, keepEarlierOffer }: { merge: boolean; afterTurn: boolean; keepEarlierOffer: boolean },
   ) => {
     setEventsReadyId(convId);
-    if (!host) setServerHasEarlier(!!messagesPageBase && data.has_more === true);
+    if (!keepEarlierOffer) setServerHasEarlier(!!messagesPageBase && data.has_more === true);
     if (!data.messages?.length) return;
     const restored = parseRestoredMessages(data.messages);
     if (merge) setMessages((prev) => mergeReadBack(prev, restored));
@@ -616,7 +616,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     if (!restorePostponed || isLoading) return;
     setRestorePostponed(null);
     if (restorePostponed.conversationId === conversationId) {
-      applyRestoredHistory(restorePostponed.conversationId, restorePostponed.data, { merge: true, afterTurn: true, host: restorePostponed.host });
+      applyRestoredHistory(restorePostponed.conversationId, restorePostponed.data, {
+        merge: true,
+        afterTurn: true,
+        keepEarlierOffer: restorePostponed.host,
+      });
     }
   }, [restorePostponed, isLoading, conversationId]);
   useEffect(() => {
@@ -1071,7 +1075,12 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           setRestorePostponed({ conversationId: requestedConversationId, data, host: asHost });
           return;
         }
-        applyRestoredHistory(requestedConversationId, data, { merge: asHost, afterTurn: false, host: asHost });
+        if (recreated) {
+          // A new conversation, often still empty: nothing of the old one stays.
+          setMessages([]);
+          setContextUsage(null);
+        }
+        applyRestoredHistory(requestedConversationId, data, { merge: asHost, afterTurn: false, keepEarlierOffer: asHost });
       })
       // Unreachable: nothing is known of the conversation, whose id is kept.
       .catch(() => {
@@ -1132,9 +1141,17 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     }
     if (!ready || turnRunning) return;
     setHostReloadOwedId(null);
-    hostReadBackRef.current = conversationId;
+    // An open that has not landed (owed, refused) is what the reload runs: the host's mode needs a thread on screen.
+    const openOwed =
+      (restoreOwed?.conversationId === conversationId && !restoreOwed.host) ||
+      (restoreRefused?.conversationId === conversationId && !restoreRefused.host);
+    if (openOwed) {
+      setRestoreOwed(null);
+      setRestoreRefused(null);
+    }
+    hostReadBackRef.current = openOwed ? null : conversationId;
     reloadHistory();
-  }, [hostReloadOwedId, conversationId, ready, turnRunning, reloadHistory]);
+  }, [hostReloadOwedId, conversationId, ready, turnRunning, restoreOwed, restoreRefused, reloadHistory]);
   const onReady = useLatestCallback(onReadyProp);
   const readyAnnouncedRef = useRef(false);
   useEffect(() => {

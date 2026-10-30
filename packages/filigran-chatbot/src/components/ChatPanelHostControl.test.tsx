@@ -666,15 +666,32 @@ test('a reload answered with a re-created conversation opens it, in place of the
   const changes: (string | null)[] = [];
   await render({ conversationId: 'c1', onConversationChange: (id) => changes.push(id) }, ref);
   assert.ok(text().includes('Here is the outline'));
-  // The backend no longer holds c1 and starts c2 in its place.
-  Object.assign(session, { conversation_id: 'c2', messages: [{ id: 'b1', role: 'assistant', content: 'A fresh start' }] });
+  // The backend no longer holds c1 and starts c2, still empty, in its place.
+  Object.assign(session, { conversation_id: 'c2', messages: [] });
   await act(async () => {
     ref.current!.reloadConversation();
     await settle(10);
   });
   assert.deepEqual(changes, ['c2']);
-  assert.ok(text().includes('A fresh start'));
-  assert.ok(!text().includes('Here is the outline'), 'not merged under the new conversation');
+  assert.ok(!text().includes('Here is the outline'), 'not left under the new conversation');
+});
+
+test('a reload asked after the open failed runs that open: a conversation gone since is dropped', async () => {
+  const statuses = [503, 404];
+  fakeBackend([
+    agentsRoute,
+    (req) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ detail: 'x' }, statuses.shift() ?? 404) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  const changes: (string | null)[] = [];
+  await render({ conversationId: 'c1', onConversationChange: (id) => changes.push(id) }, ref);
+  assert.deepEqual(changes, [], 'a backend down keeps the conversation, owed');
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle(10);
+  });
+  assert.equal(statuses.length, 0);
+  assert.deepEqual(changes, [null], 'read as the open, not as a host reload of a thread never shown');
 });
 
 test("a host read-back a turn overtook keeps the turn's context reading", async () => {
