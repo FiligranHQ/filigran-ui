@@ -1143,6 +1143,8 @@ export interface ConsultStatus {
   tools?: string[];
   /** The consults running at once, this one included. */
   count: number;
+  /** The agents they consult: one when every consult running asks the same agent. */
+  agents: number;
 }
 
 export interface ChatFile {

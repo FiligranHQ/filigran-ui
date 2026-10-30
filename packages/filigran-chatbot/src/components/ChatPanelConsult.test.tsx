@@ -12,13 +12,24 @@ import { agentsRoute, finish, mountPanels, restoreRoute, text, type Handle } fro
 
 const { render } = mountPanels();
 
-/** A frame of the consulted agent *agent*, wrapped once more for each peer of *peers* it consulted in turn. */
-function consultFrame(agent: string, inner: Record<string, unknown>, peers: string[] = []): Record<string, unknown> {
+/**
+ * A frame of the consulted agent *agent*, wrapped once more for each peer of
+ * *peers* it consulted in turn; *consultId* names the consult (none: a backend
+ * that sends no id).
+ */
+function consultFrame(agent: string, inner: Record<string, unknown>, peers: string[] = [], consultId?: string): Record<string, unknown> {
   const deepest = peers.reduceRight<Record<string, unknown>>(
     (frame, peer) => ({ status: 'consult_progress', agent_id: peer, agent_name: peer, inner: frame }),
     inner,
   );
-  return { type: 'status', status: 'consult_progress', agent_id: agent, agent_name: agent, inner: deepest };
+  return {
+    type: 'status',
+    status: 'consult_progress',
+    agent_id: agent,
+    agent_name: agent,
+    ...(consultId ? { consult_id: consultId } : {}),
+    inner: deepest,
+  };
 }
 
 async function consulting() {
@@ -132,5 +143,22 @@ test('a consult keeps the elapsed time its heartbeats report', async () => {
   await send(consultFrame('Analyst', { status: 'tool_start', tools: ['search_iocs'] }, ['Researcher']));
   assert.ok(text().includes('Consulting Analyst: Search Iocs…'), text());
   assert.match(text(), /4\ds/, 'the elapsed time runs on');
+  await finish(stream);
+});
+
+test('two consults of one agent are two consults, each ending on its own answer', async () => {
+  const { stream, send } = await consulting();
+  await send(
+    consultFrame('Analyst', { status: 'tool_start', tools: ['search_iocs'] }, [], 'c-1'),
+    consultFrame('Analyst', { status: 'tool_start', tools: ['read_report'] }, [], 'c-2'),
+  );
+  assert.ok(text().includes('Consulting Analyst: 2 questions…'), text());
+
+  await send(consultFrame('Writer', { status: 'thinking' }, [], 'c-3'));
+  assert.ok(text().includes('Consulting 2 agents…'), text());
+
+  // One consult of the Analyst answers: the other still runs.
+  await send(consultFrame('Analyst', { status: 'streaming' }, [], 'c-1'), consultFrame('Writer', { status: 'streaming' }, [], 'c-3'));
+  assert.ok(text().includes('Consulting Analyst: Read Report…'), text());
   await finish(stream);
 });

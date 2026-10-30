@@ -34,6 +34,7 @@ const es: Catalog = {
   'Connecting the dots': 'Atando cabos',
   'Consulting the sources': 'Consultando las fuentes',
   'Consulting {agent}…': 'Consultando a {agent}…',
+  'Consulting {agent}: {count} questions…': 'Consultando a {agent}: {count} preguntas…',
   'Consulting {agent}: {tool} (+{count} more)…': 'Consultando a {agent}: {tool} (+{count} más)…',
   'Consulting {agent}: {tool}…': 'Consultando a {agent}: {tool}…',
   'Consulting {agent}: writing the answer…': 'Consultando a {agent}: redactando la respuesta…',

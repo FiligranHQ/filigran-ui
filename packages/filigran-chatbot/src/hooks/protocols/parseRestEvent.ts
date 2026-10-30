@@ -259,9 +259,8 @@ const MAX_CONSULT_DEPTH = 8;
 /**
  * A `consult_progress` frame read through its wrappers, one per consult level:
  * the agent it names is the one the conversation's agent consulted, the status
- * and tools those of the innermost frame. Undefined when it names no agent.
- * The wrapper carries no id of its own: two consults of one agent at once read
- * as one.
+ * and tools those of the innermost frame, the consult its `consult_id`.
+ * Undefined when it names no agent.
  */
 function parseConsultProgress(evt: Record<string, unknown>): ConsultProgress | undefined {
   const agentName = optionalString(evt.agent_name);
@@ -272,8 +271,11 @@ function parseConsultProgress(evt: Record<string, unknown>): ConsultProgress | u
     current = asRecord(current.inner);
   }
   const tools = Array.isArray(current?.tools) ? current.tools.filter((tool): tool is string => typeof tool === 'string') : undefined;
+  const agentId = optionalString(evt.agent_id) ?? agentName;
   return {
-    agentId: optionalString(evt.agent_id) ?? agentName,
+    // A backend that sends no id: two consults of one agent at once read as one.
+    consultId: optionalString(evt.consult_id) ?? agentId,
+    agentId,
     agentName,
     status: optionalString(current?.status),
     tools,

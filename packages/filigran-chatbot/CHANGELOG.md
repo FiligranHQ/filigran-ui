@@ -17,7 +17,9 @@ This file starts at 3.10.0; earlier releases are on the
   names the agent consulted and what the agent doing the work does
   (`Consulting {agent}: {tool}…`, `Consulting {agent}: {tool} (+{count} more)…`,
   `Consulting {agent}: writing the answer…`), or `Consulting {count} agents…`
-  while several run, and the consult's elapsed time runs on. The consults end
+  while several run (`Consulting {agent}: {count} questions…` when they ask
+  one agent), and the consult's elapsed time runs on. Each consult is told
+  apart by the frame's `consult_id`, else by the agent consulted. The consults end
   when the agent's own loop moves on, whether they answered or not. It said `Thinking...` for the whole consult. A host's
   `statusLabel` reads the consult as `AgentStatusState.consult`
   (`ConsultStatus`); a host translating the panel's keys translates the new

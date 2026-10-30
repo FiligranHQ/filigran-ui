@@ -174,7 +174,12 @@ const STATUSES_ENDING_CONSULTS: ReadonlySet<string> = new Set([
 
 function sameConsult(a: ConsultStatus | undefined, b: ConsultStatus): boolean {
   return (
-    !!a && a.agentName === b.agentName && a.status === b.status && a.count === b.count && (a.tools ?? []).join('\n') === (b.tools ?? []).join('\n')
+    !!a &&
+    a.agentName === b.agentName &&
+    a.status === b.status &&
+    a.count === b.count &&
+    a.agents === b.agents &&
+    (a.tools ?? []).join('\n') === (b.tools ?? []).join('\n')
   );
 }
 
@@ -1760,9 +1765,9 @@ export function useChat({
     // An error, a stop or the session's end the stream reported: what it wrote must not be put back over it.
     let ended: 'error' | 'cancelled' | 'session' | null = null;
     const ctx: ProtocolContext = { hasUsedTools: false, activeNodeId: '' };
-    // The consults running, by the consulted agent's id, each with what it last
-    // showed; the most recently active last. The status line counts them.
-    const consults = new Map<string, Omit<ConsultStatus, 'count'>>();
+    // The consults running, by consult, each with the agent it asks and what it
+    // last showed; the most recently active last. The status line counts them.
+    const consults = new Map<string, Omit<ConsultStatus, 'count' | 'agents'> & { agentId: string }>();
     // The consults that answered: a late report or reasoning of theirs does not bring them back.
     const answeredConsults = new Set<string>();
     const endConsults = () => {
@@ -1847,26 +1852,36 @@ export function useChat({
       } else if (parsed.status === 'consult_progress') {
         const consult = parsed.consult;
         if (!consult) return;
-        const { agentId, agentName, status } = consult;
+        const { consultId, agentId, agentName, status } = consult;
         if (consult.answering) {
           // Only the consulted agent's own answer ends its consult, not that of a peer it consulted in turn.
-          consults.delete(agentId);
-          answeredConsults.add(agentId);
+          consults.delete(consultId);
+          answeredConsults.add(consultId);
         } else if (status && !CONSULT_STATUSES_KEEPING_LABEL.has(status)) {
           // At work again, even after an answer (one retracted for more tools).
-          answeredConsults.delete(agentId);
-          consults.delete(agentId);
-          consults.set(agentId, { agentName, status, tools: consult.tools });
-        } else if (!consults.has(agentId)) {
+          answeredConsults.delete(consultId);
+          consults.delete(consultId);
+          consults.set(consultId, { agentId, agentName, status, tools: consult.tools });
+        } else if (!consults.has(consultId)) {
           // A tool's report, the agent's reasoning or a frame with no status: a
           // consult running, with nothing more to show, unless it answered.
-          if (answeredConsults.has(agentId)) return;
-          consults.set(agentId, { agentName, status: 'thinking' });
+          if (answeredConsults.has(consultId)) return;
+          consults.set(consultId, { agentId, agentName, status: 'thinking' });
         }
         // The consult most recently active, or the one answering when it was the last.
-        let latest: Omit<ConsultStatus, 'count'> = { agentName, status: status ?? 'thinking' };
-        for (const running of consults.values()) latest = running;
-        const shown: ConsultStatus = { ...latest, count: Math.max(consults.size, 1) };
+        let latest: Omit<ConsultStatus, 'count' | 'agents'> = { agentName, status: status ?? 'thinking' };
+        const agentsAsked = new Set<string>();
+        for (const running of consults.values()) {
+          latest = running;
+          agentsAsked.add(running.agentId);
+        }
+        const shown: ConsultStatus = {
+          agentName: latest.agentName,
+          status: latest.status,
+          tools: latest.tools,
+          count: Math.max(consults.size, 1),
+          agents: Math.max(agentsAsked.size, 1),
+        };
         // A consult is a long tool call: its elapsed time runs on, re-anchored by
         // the heartbeats between these frames. An unchanged label keeps its
         // object, so the frames of a long consult do not render the panel again.

@@ -16,6 +16,8 @@ import type { PageAction } from '../../utils/pageActions';
  * more.
  */
 export interface ConsultProgress {
+  /** This consult: its `consult_id`, else (a backend that sends none) the agent consulted's id. */
+  consultId: string;
   /** The agent the conversation's agent consulted. */
   agentId: string;
   agentName: string;

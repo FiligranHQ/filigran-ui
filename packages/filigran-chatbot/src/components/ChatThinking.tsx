@@ -74,8 +74,10 @@ function toolDisplayNames(rawNames: string[]): string[] {
 
 /** A consult's line: the agent consulted, and what the agent doing the work is doing. */
 function consultingLabel(consult: ConsultStatus, t: Translate): string {
-  if (consult.count > 1) return translate(t, 'Consulting {count} agents…', { count: consult.count });
+  if (consult.agents > 1) return translate(t, 'Consulting {count} agents…', { count: consult.agents });
   const agent = consult.agentName;
+  // Several consults of one agent: its questions, not its agents.
+  if (consult.count > 1) return translate(t, 'Consulting {agent}: {count} questions…', { agent, count: consult.count });
   if (consult.status === 'tool_start' && consult.tools?.length) {
     // As the agent's own tools: the first, and how many more, so the line stays one line.
     const [tool, ...more] = toolDisplayNames(consult.tools);

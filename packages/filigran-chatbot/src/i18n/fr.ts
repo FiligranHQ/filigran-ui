@@ -35,6 +35,7 @@ const fr: Catalog = {
   'Connecting the dots': 'Relier les points',
   'Consulting the sources': 'Consulter les sources',
   'Consulting {agent}…': 'Consultation de {agent}…',
+  'Consulting {agent}: {count} questions…': 'Consultation de {agent} : {count} questions…',
   'Consulting {agent}: {tool} (+{count} more)…': 'Consultation de {agent} : {tool} (+{count} autres)…',
   'Consulting {agent}: {tool}…': 'Consultation de {agent} : {tool}…',
   'Consulting {agent}: writing the answer…': 'Consultation de {agent} : rédaction de la réponse…',
