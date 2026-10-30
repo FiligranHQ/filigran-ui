@@ -1196,6 +1196,24 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   handleStopGeneratingRef.current = handleStopGenerating;
   const readOnlyRef = useRef(readOnly);
   readOnlyRef.current = readOnly;
+  // The composer's Send waits for the agent to be chosen: sent before, it would
+  // reach the backend's default agent. (A read-back alone does not hold it: the
+  // history goes above the turn.) Waiting, it joins the handle's calls and runs
+  // against the render it lands in, reading the composer and the agent as they
+  // are then; one waits at a time.
+  const composerSendQueuedRef = useRef(false);
+  const handleComposerSend = () => {
+    if (agentsSettled) {
+      void handleSendMessage();
+      return;
+    }
+    if (composerSendQueuedRef.current) return;
+    composerSendQueuedRef.current = true;
+    enqueue(() => {
+      composerSendQueuedRef.current = false;
+      if (!readOnlyRef.current) void handleSendMessageRef.current();
+    });
+  };
   // The composer's text for `getDraft`: as last rendered, or as `setDraft` just set it.
   const draftRef = useRef(inputValue);
   draftRef.current = inputValue;
@@ -1522,7 +1540,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               agentMentions={agentMentionsEnabled && agents.length > 0 ? { agents, mentions: agentMentions, onPick: addAgentMention } : undefined}
               inputValue={inputValue}
               onInputChange={setInputValue}
-              onSend={handleSendMessage}
+              onSend={handleComposerSend}
               onStop={handleStopGenerating}
               isLoading={isLoading}
               canSteer={canSteer}

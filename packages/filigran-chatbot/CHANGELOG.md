@@ -23,6 +23,13 @@ This file starts at 3.10.0; earlier releases are on the
   that fails, retried or not, leaves the thread as it is. `selectConversation`
   with the id on screen still does nothing.
 
+### Fixed
+
+- A message sent from the composer before the panel's agents have loaded waits
+  for them, then goes to the agent the host asked for (`initialAgent`); it went
+  with no agent before, and the backend answered with the user's default one.
+  Pressed again while it waits, it is still sent once.
+
 ## 3.16.1 — 2026-10-29
 
 ### Fixed

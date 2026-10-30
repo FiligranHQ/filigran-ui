@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { act, createRef, StrictMode, useEffect, useLayoutEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { fakeBackend, json, settle, sseStream } from '../../test/dom.ts';
+import { fakeBackend, json, settle, sseStream, type RecordedRequest } from '../../test/dom.ts';
 import { AGENTS, agentsRoute, BASE_PROPS, container, eventsRoute, finish, mountPanels, restoreRoute, text, type Handle } from '../../test/panel.tsx';
 
 const { render, unmount } = mountPanels({ ...BASE_PROPS, onClose: () => undefined, onModeChange: () => undefined });
@@ -106,6 +106,50 @@ test('the handle waits for the panel to be ready, which the host is told', async
   assert.equal(readyCalls, 1);
   const message = requests.find((r) => r.url === '/api/chat/messages');
   assert.equal((message?.body as { agent_slug?: string })?.agent_slug, 'hunter');
+  await finish(stream);
+});
+
+test("a composer send before the agents land waits for them, and leaves with the host's agent", async () => {
+  let releaseAgents!: () => void;
+  const agentsReady = new Promise<void>((resolve) => (releaseAgents = resolve));
+  const stream = sseStream();
+  const requests = fakeBackend([
+    async (req) => {
+      if (req.url !== '/api/chat/agents') return undefined;
+      await agentsReady;
+      return json([{ id: 'a0', name: 'Default Agent', slug: 'default', icon: null, description: null }, ...AGENTS]);
+    },
+    (req) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1' }) : undefined),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  // With a cancel route the conversation is created before the message goes.
+  await render({ initialAgent: 'hunter', apiEndpoints: { cancel: '/chat/messages/cancel' } }, ref);
+  await act(async () => {
+    ref.current!.setDraft('hello');
+    await settle();
+  });
+  // Pressed twice while waiting: still one message.
+  for (let press = 0; press < 2; press += 1) {
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!.click();
+      await settle();
+    });
+  }
+  const isSession = (r: RecordedRequest) => r.url === '/api/chat/sessions' && r.method === 'POST';
+  assert.equal(requests.filter((r) => isSession(r) || r.url === '/api/chat/messages').length, 0, 'nothing leaves before the agent is chosen');
+  await act(async () => {
+    releaseAgents();
+    await settle(10);
+  });
+  const session = requests.find(isSession);
+  const sent = requests.filter((r) => r.url === '/api/chat/messages');
+  assert.equal(sent.length, 1);
+  const message = sent[0];
+  assert.equal((session?.body as { agent_slug?: string })?.agent_slug, 'hunter');
+  assert.equal((message?.body as { agent_slug?: string })?.agent_slug, 'hunter');
+  assert.equal((message?.body as { content?: string })?.content, 'hello');
+  assert.equal(container.querySelector('textarea')!.value, '');
   await finish(stream);
 });
 
