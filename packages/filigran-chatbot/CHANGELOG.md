@@ -8,7 +8,22 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
-## 3.16.1 — unreleased
+## 3.17.0 — unreleased
+
+### Added
+
+- `reloadConversation()` on the handle reads the conversation on screen back
+  from the server again, for a change the host made to it outside the panel (a
+  message it stored, another agent taking it over). The messages it added are
+  merged into the thread on screen, which keeps the composer's draft and what
+  only the panel holds; one it edited or deleted shows as it was until the
+  conversation is opened again. The conversation's agent replaces one a turn
+  transferred it to, and the context gauge takes the newest reading. Nothing
+  is read before the conversation is, nor while a turn runs in it; a read-back
+  that fails, retried or not, leaves the thread as it is. `selectConversation`
+  with the id on screen still does nothing.
+
+## 3.16.1 — 2026-10-29
 
 ### Fixed
 

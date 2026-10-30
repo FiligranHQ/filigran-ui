@@ -163,12 +163,13 @@ chat.current?.send('Summarize this report', { extras: { mode: 'deep_investigatio
 | --- | --- |
 | `send(text, { extras, displayText })` | Sends *text* as the user, leaving the composer's draft alone; `extras` join that one message's body, and the user's bubble shows `displayText` in place of *text* (as `onBeforeSend`'s `displayText`, which wins when it gives one). Resolves to `'sent'` (once the backend takes it), `'steered'` (joined the running turn), `'held'` (sent when the turn ends - also, with or without `holdSendsDuringTurn`, while a turn ended provisionally winds down, after `onTurnRunningChange(false)`), `'dropped'` (empty, taken over by `onBeforeSend`, `readOnly`, or the panel unmounted first) or `'failed'` (the backend refused it) |
 | `newConversation({ workspaceId, agent })` | Starts a new chat, in a workspace and with an agent (id or slug) if given |
-| `selectConversation(id)` | Opens a conversation |
+| `selectConversation(id)` | Opens a conversation; the one on screen is left as it is |
 | `setDraft(text)` / `focusComposer()` | Fills / focuses the composer |
 | `getDraft()` | The composer's text as it stands (typed by the user, or set by `setDraft`), e.g. for `onBeforeSend` taking over a held message (`draft.held`) to tell whether the composer still holds what was typed for it |
 | `stop()` | Same as the Stop button; during a voice call it also drops the question awaited and stops speaking |
 | `startVoiceCall()` | Starts a [voice call](#voice-call) over the panel; `false` when this browser has no speech recognition or the panel is `readOnly` |
 | `reloadAgents()` | Reads the agent list again, keeping the agent picked unless it is gone |
+| `reloadConversation()` | Reads the conversation on screen back from the server again, for a change the host made to it outside the panel (a message it stored, another agent taking it over). The messages it added are merged into the thread on screen, which keeps what only the panel holds (earlier pages, a stopped answer, a send that failed) and the composer's draft; one it edited or deleted shows as it was until the conversation is opened again. The conversation's agent replaces one a turn transferred it to, and the context gauge takes the newest reading. Nothing is read before the conversation is, nor while a turn runs in it; a read-back retried after the backend was down or the credentials were refused is the host's too, one that fails leaves the thread as it is, and one answered with a re-created conversation opens that one instead. Does nothing without a conversation, or without the REST sessions route (`legacy`, `ag-ui`, `singleEndpoint`, `sessions: null`) |
 | `scrollToMessage(id)` | Scrolls to a message by its server id and highlights it; `false` when it is not on screen |
 
 #### Host extensions
