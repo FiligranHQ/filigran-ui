@@ -332,6 +332,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     apiEndpoints,
     backendType,
     agentSlug: selectedAgent?.slug,
+    agentPending: !agentsSettled,
     requestHeaders,
     pageContext,
     onRelativeLinkClick: onRelativeLinkClickProp ? onRelativeLinkClick : undefined,
