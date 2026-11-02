@@ -116,7 +116,8 @@ import { ChatPanel } from '@filigran/chatbot';
 | `headerActions` / `banner` / `composerHeader` / `transcriptFooter` / `welcome` | `React.ReactNode` | — | The host's content in the header, above the thread, above the composer, after the last message, or in place of the welcome screen |
 | `renderMessageExtras` / `messageFooterActions` | `(message, { streaming }) => React.ReactNode` | — | The host's content under a message, and controls in a finished answer's footer; `streaming` while the message is the answer still being written. `message.raw` holds the backend's own fields — see [Host extensions](#host-extensions) |
 | `sidebarRowActions` | `(conversation) => React.ReactNode`       | —            | The host's controls on a row of the conversation list |
-| `sidebarHeaderActions` / `sidebarSections` | `React.ReactNode`  | —            | The host's controls beside New conversation, and sections under the list |
+| `sidebarHeaderActions` | `React.ReactNode`  | —            | The host's controls beside New conversation |
+| `sidebarSections` | `React.ReactNode \| ((search: ChatSidebarSearch) => React.ReactNode)` | — | Sections under the list; a function draws them from the list's search (`query`, trimmed), again when the search or the function changes (pass a stable one, and put hooks in a component it returns), and offers the search box whatever the number of conversations |
 | `statusLabel`       | `(status: AgentStatusState) => string \| undefined` | — | The status line's text for a status, over the built-in one |
 | `waitingMessages`   | `string[]`                                | built-in     | The waiting panel's rotating messages, already translated |
 | `renderWaitingPanel` | `() => React.ReactNode`                  | —            | Replaces the waiting panel's content (its messages and the invitation to play) |
