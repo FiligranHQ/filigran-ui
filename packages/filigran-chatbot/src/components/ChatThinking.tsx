@@ -9,6 +9,8 @@ export interface ThinkingOverrides {
   waitingMessages?: string[];
   /** Replaces the waiting panel's content. */
   renderWaitingPanel?: () => React.ReactNode;
+  /** An action in the reasoning window's corner, shown while the window is. */
+  renderReasoningAction?: () => React.ReactNode;
 }
 import {
   AlertTriangleIcon,
@@ -272,7 +274,7 @@ function reasoningWindowText(content: string): string {
  * `reasoningWindowText`; the glow lives on `.filigran-chat-reasoning` so
  * reduced motion can stop it.
  */
-function ThinkingTextBubble({ text }: { text: string }) {
+function ThinkingTextBubble({ text, action }: { text: string; action?: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
@@ -284,7 +286,10 @@ function ThinkingTextBubble({ text }: { text: string }) {
   }, [text]);
 
   return (
-    <div className="filigran-chat-reasoning ml-11 mt-2.5 max-w-[75%] rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] py-2 pl-3 pr-3">
+    <div
+      className={`filigran-chat-reasoning relative ml-11 mt-2.5 max-w-[75%] rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] py-2 pl-3 ${action ? 'pr-9' : 'pr-3'}`}
+    >
+      {action && <div className="absolute top-1 right-1">{action}</div>}
       <div
         ref={ref}
         className={`max-h-40 overflow-hidden${
@@ -361,6 +366,7 @@ export const ChatThinking = ({
   statusLabel,
   waitingMessages,
   renderWaitingPanel,
+  renderReasoningAction,
 }: ChatThinkingProps) => {
   const visual = resolveStatusVisual(agentStatus, t);
   const { StatusIcon, showDots } = visual;
@@ -454,7 +460,7 @@ export const ChatThinking = ({
           content={renderWaitingPanel?.()}
         />
       ) : showReasoning ? (
-        <ThinkingTextBubble text={reasoningText} />
+        <ThinkingTextBubble text={reasoningText} action={renderReasoningAction?.()} />
       ) : null}
     </>
   );

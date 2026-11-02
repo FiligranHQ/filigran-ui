@@ -106,6 +106,27 @@ test('a reader who scrolls up is left there, and followed again once back near t
   assert.equal(box.scrollTop, 800);
 });
 
+test('each change of following is told, once: leaving, coming back near the bottom, and a reveal', () => {
+  const box = makeBox(1000);
+  const changes: boolean[] = [];
+  const follower = createScrollFollower(
+    () => box,
+    makeTimers(),
+    (following) => changes.push(following),
+  );
+  follower.onScroll();
+  box.scrollTop = 300;
+  follower.leave();
+  follower.onScroll();
+  assert.deepEqual(changes, [false]);
+  box.scrollTop = 1000 - 400 - FOLLOW_THRESHOLD_PX;
+  follower.onScroll();
+  assert.deepEqual(changes, [false, true]);
+  follower.leave();
+  follower.reveal();
+  assert.deepEqual(changes, [false, true, false, true]);
+});
+
 test('a list that got shorter leaves the view at its new end, still following', () => {
   const box = makeBox(1000);
   const follower = followerFor(box);
@@ -404,6 +425,7 @@ test('what grows after its message rendered is kept up with: each child, and eac
   let grew = 0;
   const stop = watchContentGrowth(container, () => (grew += 1), fake.observers);
   assert.ok(fake.watched.has(first));
+  assert.ok(fake.watched.has(container), 'the box itself, which shrinks when the composer grows');
   const later = { nodeType: 1 };
   fake.add(later);
   assert.ok(fake.watched.has(later), 'a message added later is watched too');

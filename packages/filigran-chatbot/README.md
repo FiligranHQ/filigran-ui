@@ -120,6 +120,8 @@ import { ChatPanel } from '@filigran/chatbot';
 | `statusLabel`       | `(status: AgentStatusState) => string \| undefined` | — | The status line's text for a status, over the built-in one |
 | `waitingMessages`   | `string[]`                                | built-in     | The waiting panel's rotating messages, already translated |
 | `renderWaitingPanel` | `() => React.ReactNode`                  | —            | Replaces the waiting panel's content (its messages and the invitation to play) |
+| `renderReasoningAction` | `() => React.ReactNode`               | —            | An action in the reasoning window's corner (a game to play while the agent works), shown while the window is |
+| `collapseUnnamedFiles` | `boolean \| (attachment, message) => boolean` | `false` | Puts the files a reply does not name behind one collapsed `Working files (N)` line, with a thumbnail for each picture once opened: all of them, or those the predicate picks |
 | `fontFamily`        | `string`                                  | —            | Font of the panel's text |
 | `theme`             | `ChatPanelTheme`                          | —            | The host's colours, type and shapes; see [Custom Theme](#custom-theme) |
 | `agentMentions`     | `boolean`                                 | `false`      | `@` also mentions agents of the agent list; the message carries their ids as `mentioned_agent_ids` |

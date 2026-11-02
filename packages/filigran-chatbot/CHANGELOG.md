@@ -8,6 +8,37 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.19.0 — unreleased
+
+### Added
+
+- `collapseUnnamedFiles`: the files a reply carries but whose markers it does
+  not name go behind one collapsed `Working files ({count})` line, all of them
+  (`true`) or those a predicate picks, instead of one card each. Opened, each
+  is listed with its card, after a thumbnail for a picture (fetched only once
+  the list opens; the picture icon when there is no URL, the fetch fails or
+  the bytes do not decode), and from 8 files a `Show less` closes it from its
+  end. Off unless the host asks.
+- `renderReasoningAction`: a host's action in the corner of the reasoning
+  window, shown while the window is and gone with it.
+- An image's lightbox has a Download action when the panel can download the
+  file, so a user's uploaded picture, which replaces its download card, can be
+  downloaded.
+- A `Scroll to bottom` button shows once the reader has scrolled up, and
+  brings the view back to the end, following it again.
+- Older messages load as the reader scrolling up nears the top, at most once
+  a second, never while the view follows the end, and only where the button
+  would load them. The button reads `Loading earlier messages…` while they
+  load.
+
+### Fixed
+
+- The view keeps the last line in view when the thread's own box shrinks
+  while following the end (the composer growing to several lines, a tray
+  opening); only growth inside the thread was followed.
+- Earlier messages already loaded, shown by the button, leave the reader
+  where they were in every browser, as older messages fetched do.
+
 ## 3.18.1 — unreleased
 
 ### Fixed

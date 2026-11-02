@@ -154,6 +154,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     statusLabel,
     waitingMessages: waitingMessagesProp,
     renderWaitingPanel,
+    renderReasoningAction,
+    collapseUnnamedFiles: collapseUnnamedFilesProp,
     fontFamily,
     theme,
     onReady: onReadyProp,
@@ -192,6 +194,9 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const onTurnRunningChange = useLatestCallback(onTurnRunningChangeProp);
   // A click handler, not content: held stable so a host's inline one spares every row.
   const onArtifactOpen = useLatestCallback(onArtifactOpenProp);
+  // A predicate is held stable too: a host's inline one must not re-render every row.
+  const collapseUnnamedFilesWith = useLatestCallback(typeof collapseUnnamedFilesProp === 'function' ? collapseUnnamedFilesProp : undefined);
+  const collapseUnnamedFiles = collapseUnnamedFilesWith ?? collapseUnnamedFilesProp === true;
   const rootRef = useRef<HTMLDivElement>(null);
   const { fetch: panelFetch, sessionEnded } = usePanelRequests();
   // The panel's own catalog in `locale`, under whatever the host translates itself.
@@ -210,7 +215,10 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     ),
   );
   const markerKindList = useShallowStable(useMemo(() => markerKinds(markerRenderers && Object.keys(markerRenderers)), [markerRenderers]));
-  const thinking = useMemo(() => ({ statusLabel, waitingMessages, renderWaitingPanel }), [statusLabel, waitingMessages, renderWaitingPanel]);
+  const thinking = useMemo(
+    () => ({ statusLabel, waitingMessages, renderWaitingPanel, renderReasoningAction }),
+    [statusLabel, waitingMessages, renderWaitingPanel, renderReasoningAction],
+  );
   // Inline mode is laid out like fullscreen, inside the host's container.
   const isWide = mode === 'fullscreen' || mode === 'inline';
 
@@ -1504,6 +1512,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               messageFooterActions={messageFooterActions}
               transcriptFooter={transcriptFooter}
               onLoadEarlier={serverHasEarlier ? loadEarlier : undefined}
+              collapseUnnamedFiles={collapseUnnamedFiles}
               ttsRoute={ttsRoute}
               thinking={thinking}
               t={t}
