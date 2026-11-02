@@ -23,13 +23,19 @@ test("without a detail, a refusal's error is read when a string", () => {
   assert.equal(refusalDetail({ error: 'x'.repeat(501) }), null);
 });
 
-test("an error that is a code or reason phrase is not read: the panel's own message shows", () => {
+test("the products' proxies' error is read, beside a status or not", () => {
+  // OpenCTI's proxy.
+  assert.equal(refusalDetail({ status: 'error', error: 'Agent not found.' }), 'Agent not found.');
+  assert.equal(refusalDetail({ status: 503, error: 'XTM One is unreachable.' }), 'XTM One is unreachable.');
+  // OpenCRQ's.
+  assert.equal(refusalDetail({ error: 'XTM One is not configured' }), 'XTM One is not configured');
+});
+
+test("an error that is a code is not read: the panel's own message shows", () => {
   assert.equal(refusalDetail({ error: 'invalid_token' }), null);
-  assert.equal(refusalDetail({ error: 'Unauthorized', status: 401 }), null);
-  assert.equal(refusalDetail({ error: 'Not Found', status: 404, path: '/x' }), null);
-  assert.equal(refusalDetail({ error: 'invalid_token', error_description: 'The access token expired' }), null);
-  assert.equal(refusalDetail({ detail: 'From detail.', error: 'Unauthorized', status: 401 }), 'From detail.');
-  assert.equal(refusalDetail({ statusCode: 429, error: 'Too Many Requests' }), null);
+  assert.equal(refusalDetail({ error: 'Unauthorized' }), null);
+  assert.equal(refusalDetail({ status: 401, error: 'Unauthorized' }), null);
+  assert.equal(refusalDetail({ detail: 'From detail.', error: 'Unauthorized' }), 'From detail.');
 });
 
 test('an error sentence is read in any script, not only one with spaces', () => {
@@ -37,28 +43,10 @@ test('an error sentence is read in any script, not only one with spaces', () => 
   assert.equal(refusalDetail({ error: 'クォータを超えました。' }), 'クォータを超えました。');
 });
 
-test("without a detail, a body's own message beside its statusCode is read before its error", () => {
-  const fastify = { statusCode: 429, error: 'Too Many Requests', message: 'Rate limit exceeded, retry in 1 minute' };
-  assert.equal(refusalDetail(fastify), 'Rate limit exceeded, retry in 1 minute');
-  assert.equal(refusalDetail({ statusCode: 403, message: 'From message.', error: 'Forbidden' }), 'From message.');
-  assert.equal(refusalDetail({ detail: 'From detail.', statusCode: 403, message: 'From message.' }), 'From detail.');
-  assert.equal(refusalDetail({ status: 500, error: 'Internal Server Error', message: '' }), null);
-});
-
-test("a message that is a gateway's reason phrase, or has no statusCode beside it, is not read", () => {
-  // AWS API Gateway and Kong.
+test('a top-level message is not read: a gateway answers a reason phrase there, a handler its internal error', () => {
   assert.equal(refusalDetail({ message: 'Unauthorized' }), null);
-  assert.equal(refusalDetail({ message: 'Too Many Requests' }), null);
-  // NestJS, and Boom without a message of its own.
-  assert.equal(refusalDetail({ statusCode: 401, message: 'Unauthorized' }), null);
-  assert.equal(refusalDetail({ statusCode: 429, message: 'Too Many Requests' }), null);
-  assert.equal(refusalDetail({ statusCode: 404, error: 'Not Found', message: 'Not Found' }), null);
-  // An Express handler's `{ message: err.message }`.
-  assert.equal(refusalDetail({ message: 'connect ECONNREFUSED 10.0.3.4:5432' }), null);
-  // A sentence `error` beside a message that is not read still is.
-  assert.equal(refusalDetail({ message: 'Unauthorized', error: 'Quota exceeded.' }), 'Quota exceeded.');
-  // A reason phrase is not an error sentence either.
-  assert.equal(refusalDetail({ error: 'Service Unavailable' }), null);
+  assert.equal(refusalDetail({ statusCode: 500, message: 'connect ECONNREFUSED 10.0.3.4:5432' }), null);
+  assert.equal(refusalDetail({ statusCode: 404, message: 'Cannot POST /api/chat/cancel' }), null);
 });
 
 test('a body that is not JSON has no detail', async () => {

@@ -662,17 +662,12 @@ the next message never targets a dead conversation id.
 ### A refusal's reason
 
 Where the panel shows why the backend refused a request, it reads the JSON body
-of the non-2xx answer, in this order:
-
-1. `detail` when a string, or the `message` (or `detail`) of a `detail` object;
-2. `message` beside a `statusCode` (Fastify, Boom, NestJS), unless it is a code
-   (`Unauthorized`) or an HTTP reason phrase (`Too Many Requests`);
-3. `error` when it is a sentence: not a code or reason phrase, and with no
-   `error_description`, `status` or `statusCode` beside it (a proxy's
-   `{ "error": "..." }`, but not OAuth's `invalid_token`).
-
-Anything else (a gateway's `{ "message": "Unauthorized" }`, a string over 500
-characters, a body that is not JSON) shows the panel's own, translated message.
+of the non-2xx answer: its `detail` when a string, or the `message` (or
+`detail`) of a `detail` object, as XTM One answers; else its `error` when that
+is a sentence, as the products' proxies answer (`{ "error": "..." }`, beside a
+`status` or not). A code (`invalid_token`, `Unauthorized`), anything else in
+the body (a top-level `message` included), a string over 500 characters or a
+body that is not JSON shows the panel's own, translated message.
 
 ### `POST {apiBaseUrl}/chat/messages`
 
