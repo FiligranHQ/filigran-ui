@@ -119,6 +119,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `sidebarHeaderActions` | `React.ReactNode`  | —            | The host's controls beside New conversation |
 | `sidebarSections` | `React.ReactNode \| ((search: ChatSidebarSearch) => React.ReactNode)` | — | Sections under the list; a function draws them from the list's search (`query`, trimmed), again when the search or the function changes (pass a stable one, and put hooks in a component it returns), and offers the search box whatever the number of conversations |
 | `statusLabel`       | `(status: AgentStatusState) => string \| undefined` | — | The status line's text for a status, over the built-in one |
+| `toolLabels`        | `Record<string, string> \| ((toolName: string) => string \| undefined)` | — | Tool names as the status line and the reasoning details show them, by the tool's raw name; a name it does not give keeps the built-in one (`search_iocs` → `Search Iocs`). A new function redraws every message: keep one across renders unless its labels change |
 | `waitingMessages`   | `string[]`                                | built-in     | The waiting panel's rotating messages, already translated |
 | `renderWaitingPanel` | `() => React.ReactNode`                  | —            | Replaces the waiting panel's content (its messages and the invitation to play) |
 | `fontFamily`        | `string`                                  | —            | Font of the panel's text |

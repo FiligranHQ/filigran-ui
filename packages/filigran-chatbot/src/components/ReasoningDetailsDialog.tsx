@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { ChatMessage, ToolCallTraceEntry } from '../types';
+import type { ChatMessage, ChatToolLabels, ToolCallTraceEntry } from '../types';
 import {
   AlertTriangleIcon,
   ArrowRightLeftIcon,
@@ -12,7 +12,7 @@ import {
   WrenchIcon,
   XCircleIcon,
 } from './icons';
-import { cleanReasoningText } from './ChatThinking';
+import { cleanReasoningText, hostToolLabel } from './ChatThinking';
 import { findChatbotRoot, translate } from '../utils';
 
 /** Trace values longer than this are shown raw instead of pretty-printed JSON. */
@@ -32,12 +32,22 @@ function prettyTraceValue(raw: string | undefined): string {
   }
 }
 
-function toolDisplayName(name: string): string {
-  return name.replace(/_/g, ' ');
+function toolDisplayName(name: string, toolLabels: ChatToolLabels | undefined): string {
+  return hostToolLabel(name, toolLabels) ?? name.replace(/_/g, ' ');
 }
 
 /** Expandable row for a single tool call in the reasoning-details dialog. */
-const ToolCallRow = ({ entry, index, t }: { entry: ToolCallTraceEntry; index: number; t: (key: string) => string }) => {
+const ToolCallRow = ({
+  entry,
+  index,
+  toolLabels,
+  t,
+}: {
+  entry: ToolCallTraceEntry;
+  index: number;
+  toolLabels: ChatToolLabels | undefined;
+  t: (key: string) => string;
+}) => {
   const [expanded, setExpanded] = useState(false);
 
   const inputDisplay = useMemo(() => prettyTraceValue(entry.input), [entry.input]);
@@ -60,7 +70,9 @@ const ToolCallRow = ({ entry, index, t }: { entry: ToolCallTraceEntry; index: nu
         ) : (
           <XCircleIcon size={12} className="shrink-0 text-red-500 dark:text-red-400" />
         )}
-        <span className="flex-1 min-w-0 text-[0.8125rem] chat-text-secondary-700/80 truncate font-mono">{toolDisplayName(entry.name)}</span>
+        <span className="flex-1 min-w-0 text-[0.8125rem] chat-text-secondary-700/80 truncate font-mono">
+          {toolDisplayName(entry.name, toolLabels)}
+        </span>
         <ChevronDownIcon size={14} className={`shrink-0 chat-text-muted-400/50 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
       </button>
 
@@ -89,6 +101,8 @@ const ToolCallRow = ({ entry, index, t }: { entry: ToolCallTraceEntry; index: nu
 interface ReasoningDetailsDialogProps {
   msg: ChatMessage;
   onClose: () => void;
+  /** The host's names of the tools, over the raw ones. */
+  toolLabels?: ChatToolLabels;
   t: (key: string) => string;
 }
 
@@ -99,7 +113,7 @@ interface ReasoningDetailsDialogProps {
  * covering the chatbot panel so it works in every mode and host without
  * depending on the host app's stacking order.
  */
-export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDialogProps) => {
+export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: ReasoningDetailsDialogProps) => {
   const hostRef = useRef<HTMLSpanElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -211,6 +225,16 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
                   </div>
                 )}
 
+                {msg.interrupted && (
+                  <div className="flex items-start gap-2.5 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 text-[0.72rem] text-amber-600 dark:text-amber-300/90">
+                    <AlertTriangleIcon size={14} className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" />
+                    <span>
+                      <span className="font-semibold">{t('Interrupted by a server restart.')}</span>{' '}
+                      {t('The server restarted while this turn was running, so it stopped before it could finish.')}
+                    </span>
+                  </div>
+                )}
+
                 {reasoning && (
                   <div>
                     <div className="flex items-center gap-1.5 mb-1.5">
@@ -228,7 +252,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
                 {trace.length > 0 ? (
                   <div className="flex flex-col gap-1.5">
                     {trace.map((entry, i) => (
-                      <ToolCallRow key={`${entry.name}-${i}`} entry={entry} index={i} t={t} />
+                      <ToolCallRow key={`${entry.name}-${i}`} entry={entry} index={i} toolLabels={toolLabels} t={t} />
                     ))}
                   </div>
                 ) : (
@@ -242,7 +266,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, t }: ReasoningDetailsDial
                             {i + 1}
                           </span>
                           <WrenchIcon size={12} className="shrink-0 chat-text-muted-400/50" />
-                          <span className="text-[0.8125rem] chat-text-secondary-700/80 truncate font-mono">{toolDisplayName(tn)}</span>
+                          <span className="text-[0.8125rem] chat-text-secondary-700/80 truncate font-mono">{toolDisplayName(tn, toolLabels)}</span>
                         </div>
                       ))}
                     </div>
