@@ -12,22 +12,25 @@ const usable = (value: unknown): string | null => {
   return text && text.length <= MAX_DETAIL_LENGTH ? text : null;
 };
 
+/** An identifier, as a code is written (`invalid_token`, `Unauthorized`); a sentence in any script is not one. */
+const IDENTIFIER = /^[\w.-]+$/;
+
 /**
  * A body's `error` when it is a sentence (a host's proxy answering
- * `{ "error": "..." }`), not a code or reason phrase: one word
- * (`invalid_token`, `Unauthorized`), or beside an `error_description` or
- * `status` (OAuth's and Spring Boot's error bodies).
+ * `{ "error": "..." }`), not a code or reason phrase: an identifier, or beside
+ * an `error_description`, `status` or `statusCode` (the error bodies of OAuth,
+ * Spring Boot, Fastify and Boom, whose `error` names the HTTP status).
  */
 function errorSentence(body: Record<string, unknown>): string | null {
-  if ('error_description' in body || 'status' in body) return null;
+  if ('error_description' in body || 'status' in body || 'statusCode' in body) return null;
   const text = usable(body.error);
-  return text && /\s/.test(text) ? text : null;
+  return text && !IDENTIFIER.test(text) ? text : null;
 }
 
 /**
  * The message of a refusal body: its `detail` when a string, or that object's
- * `message` (or `detail`); else its `error` when a sentence; null when there
- * is none worth showing.
+ * `message` (or `detail`); else its own `message`; else its `error` when a
+ * sentence; null when there is none worth showing.
  */
 export function refusalDetail(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null;
@@ -35,9 +38,9 @@ export function refusalDetail(body: unknown): string | null {
   const { detail } = fields;
   if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
     const inner = detail as Record<string, unknown>;
-    return usable(inner.message) ?? usable(inner.detail) ?? errorSentence(fields);
+    return usable(inner.message) ?? usable(inner.detail) ?? usable(fields.message) ?? errorSentence(fields);
   }
-  return usable(detail) ?? errorSentence(fields);
+  return usable(detail) ?? usable(fields.message) ?? errorSentence(fields);
 }
 
 /** The message of a refused response's JSON body, null when it has none (or is not JSON). */

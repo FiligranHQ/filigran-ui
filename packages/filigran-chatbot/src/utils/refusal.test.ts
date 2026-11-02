@@ -29,6 +29,20 @@ test("an error that is a code or reason phrase is not read: the panel's own mess
   assert.equal(refusalDetail({ error: 'Not Found', status: 404, path: '/x' }), null);
   assert.equal(refusalDetail({ error: 'invalid_token', error_description: 'The access token expired' }), null);
   assert.equal(refusalDetail({ detail: 'From detail.', error: 'Unauthorized', status: 401 }), 'From detail.');
+  assert.equal(refusalDetail({ statusCode: 429, error: 'Too Many Requests' }), null);
+});
+
+test('an error sentence is read in any script, not only one with spaces', () => {
+  assert.equal(refusalDetail({ error: '配额已用完。' }), '配额已用完。');
+  assert.equal(refusalDetail({ error: 'クォータを超えました。' }), 'クォータを超えました。');
+});
+
+test("without a detail, a body's own message is read before its error", () => {
+  const fastify = { statusCode: 429, error: 'Too Many Requests', message: 'Rate limit exceeded, retry in 1 minute' };
+  assert.equal(refusalDetail(fastify), 'Rate limit exceeded, retry in 1 minute');
+  assert.equal(refusalDetail({ message: 'From message.', error: 'From error.' }), 'From message.');
+  assert.equal(refusalDetail({ detail: 'From detail.', message: 'From message.' }), 'From detail.');
+  assert.equal(refusalDetail({ status: 500, error: 'Internal Server Error', message: '' }), null);
 });
 
 test('a body that is not JSON has no detail', async () => {
