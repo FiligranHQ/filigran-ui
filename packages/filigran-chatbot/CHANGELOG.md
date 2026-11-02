@@ -8,6 +8,16 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.20.0 — unreleased
+
+### Changed
+
+- The agent picker follows the conversation on screen: opening a conversation
+  of another agent, or reading back one the host continued with another agent,
+  picks that agent, so a new chat starts with it, and `onAgentChange` is called.
+  An agent picked in the menu meanwhile stays picked. The picker kept the agent
+  last picked in the menu, while the header named the conversation's.
+
 ## 3.19.1 — unreleased
 
 ### Added
