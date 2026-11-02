@@ -254,7 +254,7 @@ const fr: Catalog = {
   today: 'aujourd’hui',
   'unknown tool': 'outil inconnu',
   '{agent} has finished': '{agent} a terminé',
-  '{agent} is answering…': '{agent} répond…',
+  '{agent} is answering…': 'Réponse de {agent} en cours…',
   '{agent}: {status}': '{agent} : {status}',
   '{counts} tokens': '{counts} tokens',
   '{count} iterations': '{count} itérations',

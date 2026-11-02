@@ -254,7 +254,7 @@ const it: Catalog = {
   today: 'oggi',
   'unknown tool': 'strumento sconosciuto',
   '{agent} has finished': '{agent} ha terminato',
-  '{agent} is answering…': '{agent} sta rispondendo…',
+  '{agent} is answering…': 'Sta rispondendo {agent}…',
   '{agent}: {status}': '{agent}: {status}',
   '{counts} tokens': '{counts} token',
   '{count} iterations': '{count} iterazioni',
