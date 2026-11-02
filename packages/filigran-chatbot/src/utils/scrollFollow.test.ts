@@ -137,6 +137,18 @@ test('something the reader opened that pushed the end out of view keeps the view
   assert.deepEqual(box.scrolls, []);
 });
 
+test('something the reader opened while a smooth scroll to the end runs keeps following', () => {
+  const box = makeBox(1000);
+  const follower = followerFor(box);
+  // Up the thread, then a send: the smooth scroll to the end is on its way.
+  box.scrollTop = 0;
+  follower.onScroll();
+  follower.reveal();
+  assert.equal(box.scrollTop, 0, 'not there yet');
+  follower.stay();
+  assert.equal(follower.following, true, 'the scroll on its way still catches up');
+});
+
 test('something the reader opened with the end still in view keeps following', () => {
   const box = makeBox(300);
   const follower = followerFor(box);

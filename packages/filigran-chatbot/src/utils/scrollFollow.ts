@@ -166,7 +166,9 @@ export function createScrollFollower(
     },
     stay: () => {
       const box = getBox();
-      if (!box || box.scrollHeight - box.scrollTop - box.clientHeight <= 1) return;
+      // A smooth scroll of ours still on its way has not reached the end yet:
+      // the reader is following, and its arrival catches up.
+      if (!box || smooth || box.scrollHeight - box.scrollTop - box.clientHeight <= 1) return;
       setFollowing(false);
       stopWaiting();
     },

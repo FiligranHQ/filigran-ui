@@ -1025,7 +1025,10 @@ export const ChatMessages = ({
     scrollHeight: number;
     scrollTop: number;
   } | null>(null);
-  const [loadingEarlier, setLoadingEarlier] = useState(false);
+  // The conversation older messages are being fetched for: a fetch still on
+  // its way for one left since leaves the next one free to load.
+  const [loadingEarlierFor, setLoadingEarlierFor] = useState<string | null | undefined>(undefined);
+  const loadingEarlier = loadingEarlierFor !== undefined && loadingEarlierFor === (conversationId ?? null);
   useLayoutEffect(() => {
     const prepended = prependedRef.current;
     // Counted from where the old first message landed: one appended meanwhile is no older one.
@@ -1049,7 +1052,7 @@ export const ChatMessages = ({
   // asks for nothing more. One that brought nothing (a backend failing) stops
   // them until the conversation is opened again (`visit`); the button stays
   // to try again.
-  const autoEarlierRef = useRef({ running: false, settledAt: 0, stopped: false, visit: 0 });
+  const autoEarlierRef = useRef({ runningIn: -1, settledAt: 0, stopped: false, visit: 0 });
   useEffect(() => {
     const auto = autoEarlierRef.current;
     auto.visit += 1;
@@ -1071,7 +1074,8 @@ export const ChatMessages = ({
       return RENDER_WINDOW_STEP;
     }
     if (!onLoadEarlier || loadingEarlier) return undefined;
-    setLoadingEarlier(true);
+    const loadingFor = conversationId ?? null;
+    setLoadingEarlierFor(loadingFor);
     prependedRef.current = {
       firstId: messages[0]?.id,
       visible: Math.min(messages.length, renderWindow),
@@ -1086,7 +1090,7 @@ export const ChatMessages = ({
       else autoEarlierRef.current.stopped = false;
       return count;
     } finally {
-      setLoadingEarlier(false);
+      setLoadingEarlierFor((current) => (current === loadingFor ? undefined : current));
     }
   };
 
@@ -1133,18 +1137,19 @@ export const ChatMessages = ({
     follower.onScroll();
     const el = scrollRef.current;
     const auto = autoEarlierRef.current;
-    if (!el || follower.following || auto.running || auto.stopped || el.scrollTop > LOAD_EARLIER_THRESHOLD_PX) return;
+    // A load still on its way for a conversation left since holds nothing back.
+    if (!el || follower.following || auto.runningIn === auto.visit || auto.stopped || el.scrollTop > LOAD_EARLIER_THRESHOLD_PX) return;
     if (Date.now() - auto.settledAt < LOAD_EARLIER_COOLDOWN_MS) return;
-    auto.running = true;
     const { visit } = auto;
+    auto.runningIn = visit;
     void showEarlier()
       .then((shown) => {
         // Nothing for a conversation no longer shown says nothing of the one that is.
         if (shown === 0 && visit === auto.visit) auto.stopped = true;
       })
       .finally(() => {
-        auto.running = false;
-        auto.settledAt = Date.now();
+        if (auto.runningIn === visit) auto.runningIn = -1;
+        if (visit === auto.visit) auto.settledAt = Date.now();
       });
   };
 

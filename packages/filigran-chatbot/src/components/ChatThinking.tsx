@@ -412,7 +412,7 @@ export const ChatThinking = ({
   // The corner is taken only by an action to show. One that throws takes only itself down.
   const reasoningActionNode = showReasoning && !showWaiting ? askHost(renderReasoningAction) : null;
   const reasoningAction =
-    reasoningActionNode === null || reasoningActionNode === undefined || reasoningActionNode === false ? null : (
+    reasoningActionNode == null || reasoningActionNode === false ? null : (
       <HostRenderBoundary label="A reasoning window action" resetKey="" fallback={null}>
         {reasoningActionNode}
       </HostRenderBoundary>

@@ -621,3 +621,23 @@ test('a load that ends after its conversation was left stops nothing in the next
   await view.scrollTo(100);
   assert.equal(calls, 2);
 });
+
+test("a load still on its way for the conversation left holds back no load in the next one", async (t) => {
+  const view = layOutTranscript(t);
+  clock(t);
+  const show = await mountThread(t);
+  let calls = 0;
+  const load = () => {
+    calls += 1;
+    return calls === 1 ? new Promise<number>(() => undefined) : Promise.resolve(1);
+  };
+  await show('c1', load);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(calls, 1, 'c1 asks, and its answer never comes');
+  await show('c2', load);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(calls, 2, 'c2 loads at once');
+});
+
