@@ -36,6 +36,7 @@ export type {
   ChatConversationRef,
   ChatConversationReferenceCandidate,
   ChatConversationSummary,
+  ChatSidebarSearch,
   ChatWorkspace,
   ChatFile,
   ChatPromptTemplate,

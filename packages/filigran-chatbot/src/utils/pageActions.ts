@@ -106,7 +106,7 @@ export function isSecretField(el: Element): boolean {
 }
 
 /** Set *text* the way a user's typing does, so a React-controlled field sees it. */
-function setValue(el: Element, text: string): void {
+export function setValue(el: Element, text: string): void {
   const view = el.ownerDocument.defaultView as (Window & typeof globalThis) | null;
   if (view && (el instanceof view.HTMLInputElement || el instanceof view.HTMLTextAreaElement)) {
     // React tracks the value it last rendered on the element itself; only the
