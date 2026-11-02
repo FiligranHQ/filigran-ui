@@ -15,17 +15,18 @@ export interface AttachmentLimits {
  * The MIME types of extensions some browsers leave untyped (Chrome on Windows
  * for `.md`, `.yaml`), so a MIME token can still judge such a file.
  */
-const UNTYPED_EXTENSION_TYPES: Readonly<Record<string, readonly string[]>> = {
-  md: ['text/markdown'],
-  markdown: ['text/markdown'],
-  yaml: ['application/yaml', 'application/x-yaml', 'text/yaml'],
-  yml: ['application/yaml', 'application/x-yaml', 'text/yaml'],
-  csv: ['text/csv'],
-  tsv: ['text/tab-separated-values'],
-  txt: ['text/plain'],
-  log: ['text/plain'],
-  json: ['application/json'],
-};
+// A Map: an extension such as `constructor` must find nothing, not an inherited property.
+const UNTYPED_EXTENSION_TYPES: ReadonlyMap<string, readonly string[]> = new Map([
+  ['md', ['text/markdown']],
+  ['markdown', ['text/markdown']],
+  ['yaml', ['application/yaml', 'application/x-yaml', 'text/yaml']],
+  ['yml', ['application/yaml', 'application/x-yaml', 'text/yaml']],
+  ['csv', ['text/csv']],
+  ['tsv', ['text/tab-separated-values']],
+  ['txt', ['text/plain']],
+  ['log', ['text/plain']],
+  ['json', ['application/json']],
+]);
 
 /**
  * Whether *file* is of a type *accept* names, read as the file input reads it:
@@ -42,7 +43,7 @@ export function acceptsFile(accept: string | undefined, file: { name: string; ty
   const name = file.name.toLowerCase();
   if (tokens.some((token) => token.startsWith('.') && name.endsWith(token))) return true;
   const dot = name.lastIndexOf('.');
-  const types = file.type ? [file.type.toLowerCase()] : dot >= 0 ? (UNTYPED_EXTENSION_TYPES[name.slice(dot + 1)] ?? []) : [];
+  const types = file.type ? [file.type.toLowerCase()] : dot >= 0 ? (UNTYPED_EXTENSION_TYPES.get(name.slice(dot + 1)) ?? []) : [];
   return tokens.some(
     (token) => !token.startsWith('.') && types.some((type) => (token.endsWith('/*') ? type.startsWith(token.slice(0, -1)) : type === token)),
   );

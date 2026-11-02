@@ -36,6 +36,12 @@ test('a file the browser gave no type is judged by the type its extension stands
   assert.ok(!acceptsFile('text/markdown', file('notes.md', 1, 'application/octet-stream')));
 });
 
+test('an untyped file named after an object property finds no type, and is refused without a throw', () => {
+  for (const name of ['x.constructor', 'x.__proto__', 'x.tostring', 'x.hasownproperty']) {
+    assert.equal(acceptsFile('text/*', file(name, 1, '')), false, name);
+  }
+});
+
 test('each file refused says why, and one too large for the room left keeps no smaller one after it out', () => {
   const attached = [{ name: 'a', type: '', size: 40 }] as ChatFile[];
   const incoming = [file('big', 70), file('small', 50), file('one-more', 1), file('past-count', 1)];
