@@ -1,0 +1,224 @@
+{
+  "$comment": "What a paste into the composer attaches, read by src/utils/clipboard.test.ts (clipboardFiles) and src/components/ChatPanelComposer.test.tsx (the composer's paste). Each case is the clipboard as Chromium hands it to the page: `data` are the string entries (text/plain, text/html, ...), `files` the file entries, in that order; `attached` the file names the paste attaches. An office app copies a selection as its text, its HTML and a picture of it: that picture is a rendering of the text, never attached, and the text is pasted.",
+  "cases": [
+    {
+      "name": "a screenshot (Print Screen, Win+Shift+S, Cmd+Ctrl+Shift+4): the image alone",
+      "data": {},
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": ["image.png"]
+    },
+    {
+      "name": "cells copied in Excel on Windows: their text, the HTML table and a picture of the cells",
+      "data": {
+        "text/plain": "Region\tQ3\r\nEMEA\t1.2M\r\n",
+        "text/html": "<html xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns=\"http://www.w3.org/TR/REC-html40\"><head><meta http-equiv=Content-Type content=\"text/html; charset=utf-8\"><meta name=ProgId content=Excel.Sheet><meta name=Generator content=\"Microsoft Excel 15\"><link id=Main-File rel=Main-File href=\"file:///C:/Users/sam/AppData/Local/Temp/msohtmlclip1/01/clip.htm\"><style><!--table {mso-displayed-decimal-separator:\"\\.\";} .xl65 {mso-number-format:\"\\@\";} --></style></head><body link=\"#0563C1\" vlink=\"#954F72\"><table border=0 cellpadding=0 cellspacing=0 width=128 style='border-collapse:collapse;width:96pt'><!--StartFragment--><col width=64 span=2 style='width:48pt'><tr height=20 style='height:15.0pt'><td height=20 width=64 style='height:15.0pt;width:48pt'>Region</td><td width=64 style='width:48pt'>Q3</td></tr><tr height=20 style='height:15.0pt'><td height=20 style='height:15.0pt'>EMEA</td><td class=xl65>1.2M</td></tr><!--EndFragment--></table></body></html>",
+        "text/rtf": "{\\rtf1\\ansi\\ansicpg1252 Region\\tab Q3\\par EMEA\\tab 1.2M}"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": []
+    },
+    {
+      "name": "cells copied in Excel on macOS (or Numbers): the text, Cocoa HTML and a picture of the cells",
+      "data": {
+        "text/plain": "Control\tStatus\nMFA\tDone\n",
+        "text/html": "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"><meta name=\"Generator\" content=\"Cocoa HTML Writer\"><style type=\"text/css\">td.td1 {border-style: solid; border-width: 1.0px}</style></head><body><table cellspacing=\"0\" cellpadding=\"0\" class=\"t1\"><tbody><tr><td class=\"td1\"><p class=\"p1\">Control</p></td><td class=\"td1\"><p class=\"p1\">Status</p></td></tr><tr><td class=\"td1\"><p class=\"p1\">MFA</p></td><td class=\"td1\"><p class=\"p1\">Done</p></td></tr></tbody></table></body></html>"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": []
+    },
+    {
+      "name": "a paragraph copied in Word: its text, the Office HTML and a picture of it",
+      "data": {
+        "text/plain": "Quarterly review: detections are up 12% in EMEA.\r\n",
+        "text/html": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:w=\"urn:schemas-microsoft-com:office:word\" xmlns=\"http://www.w3.org/TR/REC-html40\"><head><meta name=Generator content=\"Microsoft Word 15\"><style><!-- p.MsoNormal {margin:0cm; font-size:11.0pt; font-family:\"Calibri\",sans-serif;} --></style><!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/></o:OfficeDocumentSettings></xml><![endif]--></head><body lang=EN-US style='tab-interval:36.0pt'><!--StartFragment--><p class=MsoNormal>Quarterly review: detections are up 12% in EMEA.<o:p></o:p></p><!--EndFragment--></body></html>",
+        "text/rtf": "{\\rtf1\\ansi Quarterly review: detections are up 12% in EMEA.\\par}"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": []
+    },
+    {
+      "name": "notes copied in OneNote: their text, the HTML and a picture of them",
+      "data": {
+        "text/plain": "Action items from the call\r\n",
+        "text/html": "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"><meta name=Generator content=\"Microsoft OneNote 15\"></head><body lang=en-US style='font-family:Calibri;font-size:11.0pt'><!--StartFragment--><div style='direction:ltr'><p style='margin:0in;font-family:Calibri;font-size:11.0pt'>Action items from the call</p></div><!--EndFragment--></body></html>"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": []
+    },
+    {
+      "name": "a text box copied in PowerPoint: its text, the HTML and a picture of the shape",
+      "data": {
+        "text/plain": "Threat landscape 2026",
+        "text/html": "<html xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:p=\"urn:schemas-microsoft-com:office:powerpoint\"><head><meta name=Generator content=\"Microsoft PowerPoint 15\"><style>v\\:* {behavior:url(#default#VML);}</style></head><body lang=EN-US><!--StartFragment--><div v:shape=\"_x0000_s1026\"><p class=MsoNormal><span lang=EN-US>Threat landscape 2026</span></p></div><!--EndFragment--></body></html>"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": []
+    },
+    {
+      "name": "cells copied in LibreOffice Calc: their text, the HTML table and a picture of the cells",
+      "data": {
+        "text/plain": "Asset\tOwner\nsrv-01\tIT\n",
+        "text/html": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\"><html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"/><title></title><meta name=\"generator\" content=\"LibreOffice 7.6.4.1 (Linux)\"/><style type=\"text/css\">body,div,table,thead,tbody,tfoot,tr,th,td,p { font-family:\"Liberation Sans\"; font-size:x-small }</style></head><body><table cellspacing=\"0\" border=\"0\"><colgroup width=\"85\"></colgroup><tr><td height=\"17\" align=\"left\">Asset</td><td align=\"left\">Owner</td></tr><tr><td height=\"17\" align=\"left\">srv-01</td><td align=\"left\">IT</td></tr></table></body></html>"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": []
+    },
+    {
+      "name": "cells copied in Google Sheets: the text and the HTML table, no picture",
+      "data": {
+        "text/plain": "Indicator\t1.2.3.4",
+        "text/html": "<google-sheets-html-origin><style type=\"text/css\"><!--td {border: 1px solid #cccccc;}br {mso-data-placement:same-cell;}--></style><table xmlns=\"http://www.w3.org/1999/xhtml\" cellspacing=\"0\" cellpadding=\"0\" dir=\"ltr\" border=\"1\" data-sheets-root=\"1\"><colgroup><col width=\"100\"/><col width=\"100\"/></colgroup><tbody><tr style=\"height:21px;\"><td style=\"overflow:hidden;padding:2px 3px 2px 3px;vertical-align:bottom;\">Indicator</td><td style=\"overflow:hidden;padding:2px 3px 2px 3px;vertical-align:bottom;\">1.2.3.4</td></tr></tbody></table>"
+      },
+      "files": [],
+      "attached": []
+    },
+    {
+      "name": "a message copied in Slack or Teams: the text and its HTML, no picture",
+      "data": {
+        "text/plain": "Deploy is green, merging now",
+        "text/html": "<meta charset='utf-8'><div class=\"p-rich_text_section\">Deploy is green, merging now</div>"
+      },
+      "files": [],
+      "attached": []
+    },
+    {
+      "name": "plain text",
+      "data": {
+        "text/plain": "What does slide 4 say?"
+      },
+      "files": [],
+      "attached": []
+    },
+    {
+      "name": "Copy image in Chrome or Edge: the picture and an HTML <img>, no text",
+      "data": {
+        "text/html": "<html><body>\r\n<!--StartFragment--><img src=\"https://filigran.io/logo.png\" alt=\"Filigran\"/><!--EndFragment-->\r\n</body>\r\n</html>"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": ["image.png"]
+    },
+    {
+      "name": "Copy image in Firefox: the picture, an HTML <img> and the image address as text",
+      "data": {
+        "text/plain": "https://filigran.io/logo.png",
+        "text/html": "<html><body>\r\n<!--StartFragment--><img src=\"https://filigran.io/logo.png\" alt=\"Filigran logo\"><!--EndFragment-->\r\n</body>\r\n</html>"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": ["image.png"]
+    },
+    {
+      "name": "Copy image in Firefox of a picture whose alt text holds a >: the picture, an HTML <img> and the image address as text",
+      "data": {
+        "text/plain": "https://example.test/chart.png",
+        "text/html": "<html><body>\r\n<!--StartFragment--><img src=\"https://example.test/chart.png\" alt=\"Revenue > costs\"><!--EndFragment-->\r\n</body>\r\n</html>"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": ["image.png"]
+    },
+    {
+      "name": "a picture copied in Word: an HTML <img> with its VML shape, no text",
+      "data": {
+        "text/plain": "\r\n",
+        "text/html": "<html xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:w=\"urn:schemas-microsoft-com:office:word\"><head><meta name=Generator content=\"Microsoft Word 15\"><style><!-- p.MsoNormal {margin:0cm;} --></style></head><body lang=EN-US><!--StartFragment--><p class=MsoNormal><!--[if gte vml 1]><v:shape id=\"Picture_x0020_1\" type=\"#_x0000_t75\" style='width:320pt;height:160pt'><v:imagedata src=\"file:///C:/Users/sam/AppData/Local/Temp/msohtmlclip1/01/clip_image001.png\" o:title=\"\"/></v:shape><![endif]--><![if !vml]><img width=427 height=213 src=\"file:///C:/Users/sam/AppData/Local/Temp/msohtmlclip1/01/clip_image002.png\" v:shapes=\"Picture_x0020_1\"><![endif]><o:p>&nbsp;</o:p></p><!--EndFragment--></body></html>"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": ["image.png"]
+    },
+    {
+      "name": "an image file copied in Finder: the file and its name as text, no HTML",
+      "data": {
+        "text/plain": "photo.png"
+      },
+      "files": [
+        {
+          "name": "photo.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": ["photo.png"]
+    },
+    {
+      "name": "a file copied in Files (GNOME) or Dolphin: the file and its path as text",
+      "data": {
+        "text/plain": "/home/sam/Documents/brief.pdf"
+      },
+      "files": [
+        {
+          "name": "brief.pdf",
+          "type": "application/pdf"
+        }
+      ],
+      "attached": ["brief.pdf"]
+    },
+    {
+      "name": "files copied in Windows Explorer: the files alone",
+      "data": {},
+      "files": [
+        {
+          "name": "brief.pdf",
+          "type": "application/pdf"
+        },
+        {
+          "name": "photo.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": ["brief.pdf", "photo.png"]
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import { useMentionMenu } from '../hooks/useMentionMenu';
 import { useDictation } from '../hooks/useDictation';
 import { referencedConversations } from '../utils/conversationRefs';
 import { hasFailedUpload } from '../utils/failedUpload';
+import { isComposing } from '../utils/keyboard';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
 import { MentionMenu } from './MentionMenu';
 import { PromptPicker } from './PromptPicker';
@@ -234,6 +235,8 @@ export const ChatInput = ({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // The mention menu's keys too belong to a composing input method.
+    if (isComposing(e)) return;
     // The menu's keys first (arrows, Enter / Tab, Escape) while it is open.
     if (mentionMenu.onKeyDown(e)) return;
     if (e.key === 'Enter' && !e.shiftKey) {
