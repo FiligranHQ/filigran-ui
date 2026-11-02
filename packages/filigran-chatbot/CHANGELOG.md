@@ -8,6 +8,15 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.20.0 — unreleased
+
+### Added
+
+- `ChatMarkerRenderer.standalone`: an answer that is the renderer's marker and
+  nothing else shows the card alone, without the agent's name, the time or the
+  actions, as a note between messages (a change of agent, for instance). Each
+  answer showed its marker's card inside the answer's frame.
+
 ## 3.19.1 — unreleased
 
 ### Added
