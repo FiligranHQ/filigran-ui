@@ -25,12 +25,13 @@ This file starts at 3.10.0; earlier releases are on the
 - Enter while an input method composes a word (Chinese, Japanese, Korean)
   confirms the word instead of sending the half-typed message, renaming a
   conversation or naming a workspace, and Escape then cancels the composition
-  without stopping the turn or closing the field.
+  without stopping the turn, closing the field or clearing a search.
 - A file dropped on the panel where it attaches none (a `readOnly` panel, one
   with `disableFileManagement` or no upload route, or the header and the
   conversation list of any panel) leaves the page where it is; the browser
   opened it in the tab, away from the chat. A host's own drop zone around the
-  panel still receives the drop.
+  panel still receives the drop, and a picture or link dragged from a page
+  still goes into a text field as its address.
 - The composer's draft is written when the page goes away (`pagehide`) or is
   hidden, so a reload right after typing keeps it; a keystroke within the
   300 ms the draft waits before being written was lost. Two panels on one

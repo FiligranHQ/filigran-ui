@@ -2,6 +2,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import type { ChatArtifact, ChatArtifactKind, ChatAttachment, ChatPanelHandle, ChatPanelProps, ChatSendOutcome, Translate } from '../types';
 import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
 import { speakableText } from '../utils/speech';
+import { dropsAsText } from '../utils/drop';
 import { optInRoute } from '../utils/routes';
 import { themeVariables } from '../utils/theme';
 import { createTranslate } from '../i18n';
@@ -709,14 +710,16 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     : {};
   // A file dropped anywhere else on the panel would open in the tab, leaving
   // the chat. The thread's drop zone, when there is one, has taken it already.
+  // The drop effect is left alone, so a host's drop zone around the panel
+  // still gets the drop; a link or picture dragged with its address goes into
+  // a text field as text.
+  const leavesFileDrop = (e: React.DragEvent) => !carriesFiles(e) || e.isDefaultPrevented() || dropsAsText(e.dataTransfer.types, e.target);
   const noDropHandlers = {
     onDragOver: (e: React.DragEvent) => {
-      if (!carriesFiles(e) || e.isDefaultPrevented()) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'none';
+      if (!leavesFileDrop(e)) e.preventDefault();
     },
     onDrop: (e: React.DragEvent) => {
-      if (carriesFiles(e)) e.preventDefault();
+      if (!leavesFileDrop(e)) e.preventDefault();
     },
   };
 

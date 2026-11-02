@@ -123,11 +123,7 @@ test('a file dropped on a read-only panel leaves the page where it is', async ()
   fakeBackend([agentsRoute]);
   await render({ readOnly: true, readOnlyNotice: <span data-testid="notice">Read only</span> });
   const notice = container.querySelector('[data-testid="notice"]')!;
-  assert.deepEqual(
-    await dragOnto(notice, ['Files']),
-    { over: true, drop: true, dropEffect: 'none' },
-    'the browser neither offers to open it nor opens it',
-  );
+  assert.deepEqual(await dragOnto(notice, ['Files']), { over: true, drop: true, dropEffect: 'move' }, 'the browser does not open it');
   assert.deepEqual(
     await dragOnto(notice, ['text/plain']),
     { over: false, drop: false, dropEffect: 'move' },
@@ -138,13 +134,43 @@ test('a file dropped on a read-only panel leaves the page where it is', async ()
 test('a file dropped on a panel that takes no files leaves the page where it is', async () => {
   fakeBackend([agentsRoute]);
   await render({ disableFileManagement: true });
-  assert.deepEqual(await dragOnto(textarea(), ['Files']), { over: true, drop: true, dropEffect: 'none' });
+  assert.deepEqual(await dragOnto(textarea(), ['Files']), { over: true, drop: true, dropEffect: 'move' });
+});
+
+test('a picture or link dragged from a page goes into a text field as its address, on a panel that takes no files', async () => {
+  fakeBackend([agentsRoute]);
+  await render({ disableFileManagement: true });
+  const picture = ['Files', 'text/uri-list', 'text/html'];
+  assert.deepEqual(await dragOnto(textarea(), picture), { over: false, drop: false, dropEffect: 'move' }, 'the composer takes its address');
+  assert.deepEqual(await dragOnto(header(), picture), { over: true, drop: true, dropEffect: 'move' }, 'elsewhere it is not opened');
+});
+
+test("a host's drop zone around the panel still gets a file dropped on it", async () => {
+  fakeBackend([agentsRoute]);
+  await render({ readOnly: true });
+  const dropped: string[] = [];
+  const hostOver = (e: Event) => e.preventDefault();
+  const hostDrop = (e: Event) => {
+    e.preventDefault();
+    dropped.push((e as DragEvent).dataTransfer!.dropEffect);
+  };
+  container.addEventListener('dragover', hostOver);
+  container.addEventListener('drop', hostDrop);
+  try {
+    const dataTransfer = { types: ['Files'], files: [] as File[], dropEffect: 'copy' };
+    await fire(header(), new window.Event('dragover', { bubbles: true, cancelable: true }) as unknown as Event, { dataTransfer });
+    await fire(header(), new window.Event('drop', { bubbles: true, cancelable: true }) as unknown as Event, { dataTransfer });
+    assert.deepEqual(dropped, ['copy'], 'the drop effect the host chose stands');
+  } finally {
+    container.removeEventListener('dragover', hostOver);
+    container.removeEventListener('drop', hostDrop);
+  }
 });
 
 test('a file dropped outside the thread leaves the page where it is; the thread still takes it', async () => {
   const requests = fakeBackend([agentsRoute]);
   await render({});
-  assert.deepEqual(await dragOnto(header(), ['Files']), { over: true, drop: true, dropEffect: 'none' }, 'the header');
+  assert.deepEqual(await dragOnto(header(), ['Files']), { over: true, drop: true, dropEffect: 'move' }, 'the header');
   assert.equal(requests.filter((r) => r.method === 'POST').length, 0, 'nothing is attached from the header');
   const { over, dropEffect } = await dragOnto(textarea(), ['Files']);
   assert.deepEqual({ over, dropEffect }, { over: true, dropEffect: 'copy' }, 'the thread offers to attach it');

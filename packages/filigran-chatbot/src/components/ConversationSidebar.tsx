@@ -264,7 +264,7 @@ export const ConversationSidebar = ({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Escape') setQuery('');
+                if (e.key === 'Escape' && !isComposing(e)) setQuery('');
               }}
               placeholder={t('Search conversations...')}
               aria-label={t('Search conversations...')}

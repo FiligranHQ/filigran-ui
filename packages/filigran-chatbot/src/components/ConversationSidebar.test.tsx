@@ -118,3 +118,44 @@ test('Enter while an input method composes does not commit a rename', async () =
   await act(async () => root.unmount());
   container.remove();
 });
+
+test('Escape while an input method composes does not clear the conversation search', async () => {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const conversations = Array.from({ length: 8 }, (_, i) => ({ conversationId: `c${i}`, title: `Conversation ${i}` }));
+  await act(async () => {
+    root.render(
+      <ConversationSidebar
+        conversations={conversations}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onNewChat={() => undefined}
+        t={(key) => key}
+      />,
+    );
+    await settle();
+  });
+  const search = container.querySelector<HTMLInputElement>('input[aria-label="Search conversations..."]')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(search), 'value')!.set!.call(search, 'とう');
+    search.dispatchEvent(new window.Event('input', { bubbles: true }) as unknown as Event);
+    await settle();
+  });
+  const escape = (init: Record<string, unknown>) =>
+    act(async () => {
+      search.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true, ...init }) as unknown as Event);
+      await settle();
+    });
+  await escape({ isComposing: true });
+  await escape({ keyCode: 229 });
+  assert.equal(search.value, 'とう', 'the composition is cancelled, not the search');
+  await escape({});
+  assert.equal(search.value, '');
+  await act(async () => root.unmount());
+  container.remove();
+});
