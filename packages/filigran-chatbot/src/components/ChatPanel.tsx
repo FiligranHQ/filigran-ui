@@ -28,7 +28,7 @@ import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
-import { statusLineText } from './ChatThinking';
+import { statusSentence } from './ChatThinking';
 import { ChatVoiceCall } from './ChatVoiceCall';
 import { waitingGameUrl } from './ChatWaitingPanel';
 import { ChatWelcome } from './ChatWelcome';
@@ -153,6 +153,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     sidebarHeaderActions,
     sidebarSections,
     statusLabel,
+    toolLabels: toolLabelsProp,
     waitingMessages: waitingMessagesProp,
     renderWaitingPanel,
     renderReasoningAction,
@@ -213,9 +214,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     ),
   );
   const markerKindList = useShallowStable(useMemo(() => markerKinds(markerRenderers && Object.keys(markerRenderers)), [markerRenderers]));
+  // Read while rendering: a new function redraws the messages, so labels that change (a new language) show at once.
+  const toolLabels = useShallowStable(toolLabelsProp);
   const thinking = useMemo(
-    () => ({ statusLabel, waitingMessages, renderWaitingPanel, renderReasoningAction }),
-    [statusLabel, waitingMessages, renderWaitingPanel, renderReasoningAction],
+    () => ({ statusLabel, waitingMessages, renderWaitingPanel, renderReasoningAction, toolLabels }),
+    [statusLabel, waitingMessages, renderWaitingPanel, renderReasoningAction, toolLabels],
   );
   // Inline mode is laid out like fullscreen, inside the host's container.
   const isWide = mode === 'fullscreen' || mode === 'inline';
@@ -1573,7 +1576,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           call={voice.snapshot}
           agentName={agentName}
           logoIcon={resolvedLogo}
-          processingLabel={statusLineText(agentStatus, t, statusLabel)}
+          processingLabel={statusSentence(agentStatus, t, statusLabel, toolLabels)}
           onInterrupt={voice.interrupt}
           onToggleMute={voice.toggleMute}
           onEnd={voice.end}

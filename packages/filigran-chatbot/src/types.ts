@@ -684,6 +684,13 @@ export interface ChatPanelProps {
   sidebarSections?: React.ReactNode | ((search: ChatSidebarSearch) => React.ReactNode);
   /** The status line's text for a status, over the built-in one; `undefined` keeps it. */
   statusLabel?: (status: AgentStatusState) => string | undefined;
+  /**
+   * Tool names as the status line and the reasoning details show them, over
+   * the raw name: by name, or a function of it (`undefined` keeps the raw name).
+   * A new function redraws every message: keep one across renders unless its
+   * labels change.
+   */
+  toolLabels?: ChatToolLabels;
   /** The rotating messages of the waiting panel, already translated. */
   waitingMessages?: string[];
   /** Replaces the waiting panel's content (its messages and the invitation to play). */
@@ -804,6 +811,9 @@ export interface ChatCodeBlockContext {
   /** The answer is still streaming: the block may not be complete yet. */
   streaming: boolean;
 }
+
+/** Tool names as a person reads them, by the tool's raw name (see `ChatPanelProps.toolLabels`). */
+export type ChatToolLabels = Readonly<Record<string, string>> | ((toolName: string) => string | undefined);
 
 /** Renders one fenced code block of a language (see `ChatPanelProps.codeBlockRenderers`); *code* is the block's text. `null` keeps the block as code. */
 export type ChatCodeBlockRenderer = (code: string, context: ChatCodeBlockContext) => React.ReactNode;
@@ -1035,6 +1045,12 @@ export interface ChatMessage {
    */
   isTruncated?: boolean;
   /**
+   * True when the server restarted while the turn ran, so the answer stopped
+   * before it could finish (`interrupted` on the stored message): marked as a
+   * truncated answer is.
+   */
+  interrupted?: boolean;
+  /**
    * The backend's own fields for the message, as it sent them: the restored
    * (or paged, or relayed) entry, or the `done` frame - or the stored end -
    * that closed a live answer. A plain copy, whose fields are the backend's to
@@ -1149,6 +1165,17 @@ export interface AgentStatusState {
   waitStartMs?: number;
   /** `consulting`: the consult the agent is waiting on. */
   consult?: ConsultStatus;
+  /** `preparing`: the setup step running (`history`, `compaction`, `memory`, `integrations`, `tools`). */
+  phase?: string;
+  /** `analyzing`: the agent's step, from 1. */
+  iteration?: number;
+  /** `transferring`: the agent the conversation goes to; `mention_answering`: the mentioned agent answering. */
+  agentName?: string;
+  /**
+   * The mentioned agent answering now, on every status of its run: a turn
+   * that answers several mentioned agents runs one after the other.
+   */
+  answeringAgentName?: string;
 }
 
 /**

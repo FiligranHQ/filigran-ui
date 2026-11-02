@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AgentStatusState, ConsultStatus, IconProps, Translate } from '../types';
+import type { AgentStatusState, ChatToolLabels, ConsultStatus, IconProps, Translate } from '../types';
+import { askHost } from '../utils/askHost';
 
 /** What a host can change of the status line and the waiting panel. */
 export interface ThinkingOverrides {
@@ -11,6 +12,8 @@ export interface ThinkingOverrides {
   renderWaitingPanel?: () => React.ReactNode;
   /** An action in the reasoning window's corner, shown while the window is. */
   renderReasoningAction?: () => React.ReactNode;
+  /** The host's names of the tools, over the raw ones. */
+  toolLabels?: ChatToolLabels;
 }
 import {
   AlertTriangleIcon,
@@ -28,7 +31,6 @@ import {
 import { translate } from '../utils';
 import { ChatWaitingPanel } from './ChatWaitingPanel';
 import { HostRenderBoundary } from './HostRenderBoundary';
-import { askHost } from '../utils/askHost';
 
 interface ChatThinkingProps extends ThinkingOverrides {
   agentStatus: AgentStatusState | null;
@@ -71,16 +73,45 @@ function collectingLabel(count: number, t: Translate): string {
   return count > 1 ? translate(t, 'Collecting results from {count} tasks…', { count }) : t('Collecting results from one task…');
 }
 
-/** Tool names as the status line writes them: `search_iocs` → `Search Iocs`, each once. */
-function toolDisplayNames(rawNames: string[]): string[] {
-  return Array.from(new Set(rawNames.map((n) => n.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))));
+/** The host's name for the tool *name* (`toolLabels`), or undefined when it gives none. */
+export function hostToolLabel(name: string, toolLabels: ChatToolLabels | undefined): string | undefined {
+  const label =
+    typeof toolLabels === 'function'
+      ? askHost(toolLabels, name)
+      : toolLabels && Object.prototype.hasOwnProperty.call(toolLabels, name)
+        ? toolLabels[name]
+        : undefined;
+  return typeof label === 'string' && label.trim() ? label : undefined;
+}
+
+/** Tool names as the status line writes them: the host's, else `search_iocs` → `Search Iocs`; each once. */
+function toolDisplayNames(rawNames: string[], toolLabels: ChatToolLabels | undefined): string[] {
+  return Array.from(new Set(rawNames.map((n) => hostToolLabel(n, toolLabels) ?? n.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))));
+}
+
+/** The setup steps of `preparing`, by `phase`. */
+function preparingLabel(phase: string | undefined, t: Translate): string {
+  switch (phase) {
+    case 'history':
+      return t('Loading conversation history…');
+    case 'compaction':
+      return t('Summarizing earlier conversation…');
+    case 'memory':
+      return t('Recalling memory…');
+    case 'integrations':
+      return t('Connecting integrations…');
+    case 'tools':
+      return t('Preparing tools…');
+    default:
+      return t('Preparing…');
+  }
 }
 
 /** The tool an agent consults another with. */
 const CONSULT_TOOL = 'consult_agent';
 
 /** A consult's line: the agent consulted, and what the agent doing the work is doing. */
-function consultingLabel(consult: ConsultStatus, t: Translate): string {
+function consultingLabel(consult: ConsultStatus, t: Translate, toolLabels: ChatToolLabels | undefined): string {
   if (consult.agents > 1) return translate(t, 'Consulting {count} agents…', { count: consult.agents });
   const agent = consult.agentName;
   // Several consults of one agent: its questions, not its agents.
@@ -89,7 +120,7 @@ function consultingLabel(consult: ConsultStatus, t: Translate): string {
   const tools = consult.status === 'tool_start' ? (consult.tools ?? []).filter((name) => name !== CONSULT_TOOL) : [];
   if (tools.length > 0) {
     // As the agent's own tools: the first, and how many more, so the line stays one line.
-    const [tool, ...more] = toolDisplayNames(tools);
+    const [tool, ...more] = toolDisplayNames(tools, toolLabels);
     return more.length > 0
       ? translate(t, 'Consulting {agent}: {tool} (+{count} more)…', { agent, tool, count: more.length })
       : translate(t, 'Consulting {agent}: {tool}…', { agent, tool });
@@ -99,7 +130,7 @@ function consultingLabel(consult: ConsultStatus, t: Translate): string {
   return translate(t, 'Consulting {agent}…', { agent });
 }
 
-function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate): StatusVisual {
+function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate, toolLabels?: ChatToolLabels): StatusVisual {
   if (!agentStatus) {
     return { label: t('Thinking...'), StatusIcon: BrainIcon, showDots: false };
   }
@@ -136,7 +167,7 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
       }
       let label: string;
       if (rawNames.length > 0) {
-        const unique = toolDisplayNames(rawNames);
+        const unique = toolDisplayNames(rawNames, toolLabels);
         label = unique.length === 1 ? `${unique[0]}…` : translate(t, '{tool} (+{count} more)…', { tool: unique[0], count: unique.length - 1 });
       } else {
         label = t('Using tools…');
@@ -157,14 +188,28 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
       return { label: agentStatus.waitReason || t('Waiting before continuing…'), StatusIcon: SparklesIcon, showDots: false };
     case 'acting_on_page':
       return { label: t('Acting on the page…'), StatusIcon: SparklesIcon, showDots: true };
-    case 'analyzing':
-      return { label: t('Analyzing results…'), StatusIcon: SparklesIcon, showDots: false };
+    case 'analyzing': {
+      // The first step has no results to analyze; a later one says which it is, so a long turn shows it moves on.
+      const step = agentStatus.iteration;
+      const label = step && step > 1 ? translate(t, 'Analyzing results (step {step})…', { step }) : t('Analyzing results…');
+      return { label, StatusIcon: SparklesIcon, showDots: false };
+    }
+    case 'preparing':
+      return { label: preparingLabel(agentStatus.phase, t), StatusIcon: BrainIcon, showDots: false };
+    case 'context_compaction':
+      return { label: t('Compacting conversation context…'), StatusIcon: SparklesIcon, showDots: false };
+    case 'persisting':
+      return { label: t('Saving response…'), StatusIcon: DatabaseIcon, showDots: false };
+    case 'mention_answering': {
+      const name = agentStatus.agentName ?? t('the agent');
+      return { label: translate(t, '{agent} is answering…', { agent: name }), StatusIcon: UserPlusIcon, showDots: true };
+    }
     case 'steering':
       return { label: t('Incorporating your message…'), StatusIcon: SparklesIcon, showDots: true };
     case 'composing':
       return { label: t('Composing answer…'), StatusIcon: BrainIcon, showDots: true };
     case 'consulting': {
-      if (agentStatus.consult) return { label: consultingLabel(agentStatus.consult, t), StatusIcon: UserPlusIcon, showDots: false };
+      if (agentStatus.consult) return { label: consultingLabel(agentStatus.consult, t, toolLabels), StatusIcon: UserPlusIcon, showDots: false };
       const consultName = agentStatus.tools?.[0] ?? t('the agent');
       return { label: translate(t, 'Consulting {agent}…', { agent: consultName }), StatusIcon: UserPlusIcon, showDots: false };
     }
@@ -181,7 +226,7 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
       return { label: collectingLabel(fetchCount, t), StatusIcon: SparklesIcon, showDots: false };
     }
     case 'transferring': {
-      const targetName = agentStatus.tools?.[0] ?? t('the agent');
+      const targetName = agentStatus.agentName ?? agentStatus.tools?.[0] ?? t('the agent');
       return { label: translate(t, 'Transferring to {agent}…', { agent: targetName }), StatusIcon: ExternalLinkIcon, showDots: false };
     }
     case 'thinking':
@@ -191,8 +236,33 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate)
 }
 
 /** The status line's text for *agentStatus*: the host's (`statusLabel`), else the built-in one. */
-export function statusLineText(agentStatus: AgentStatusState | null, t: Translate, statusLabel?: ThinkingOverrides['statusLabel']): string {
-  return (agentStatus && statusLabel?.(agentStatus)) || resolveStatusVisual(agentStatus, t).label;
+export function statusLineText(
+  agentStatus: AgentStatusState | null,
+  t: Translate,
+  statusLabel?: ThinkingOverrides['statusLabel'],
+  toolLabels?: ChatToolLabels,
+): string {
+  return (agentStatus && statusLabel?.(agentStatus)) || resolveStatusVisual(agentStatus, t, toolLabels).label;
+}
+
+/** The mentioned agent whose run *agentStatus* describes, when its own text does not name it. */
+function answeringAgentOf(agentStatus: AgentStatusState | null): string | undefined {
+  return agentStatus?.status === 'mention_answering' ? undefined : agentStatus?.answeringAgentName;
+}
+
+/** *status* with the answering *agent*'s name first, as the locale writes it; *status* alone without one. */
+function withAgent(t: Translate, agent: string | undefined, status: string): string {
+  return agent ? translate(t, '{agent}: {status}', { agent, status }) : status;
+}
+
+/** The status line as one text, the answering agent's name first: where the line cannot set the name apart. */
+export function statusSentence(
+  agentStatus: AgentStatusState | null,
+  t: Translate,
+  statusLabel?: ThinkingOverrides['statusLabel'],
+  toolLabels?: ChatToolLabels,
+): string {
+  return withAgent(t, answeringAgentOf(agentStatus), statusLineText(agentStatus, t, statusLabel, toolLabels));
 }
 
 /**
@@ -368,10 +438,12 @@ export const ChatThinking = ({
   waitingMessages,
   renderWaitingPanel,
   renderReasoningAction,
+  toolLabels,
 }: ChatThinkingProps) => {
-  const visual = resolveStatusVisual(agentStatus, t);
+  const visual = resolveStatusVisual(agentStatus, t, toolLabels);
   const { StatusIcon, showDots } = visual;
-  const label = statusLineText(agentStatus, t, statusLabel);
+  const label = statusLineText(agentStatus, t, statusLabel, toolLabels);
+  const answeringAgentName = answeringAgentOf(agentStatus);
   const thinkingContent = agentStatus?.thinkingContent;
 
   // Tick the elapsed counter every second. The backend only reports a fresh
@@ -440,7 +512,18 @@ export const ChatThinking = ({
             ) : (
               <StatusIcon size={14} className="text-[var(--chat-accent)] animate-pulse transition-all duration-300" />
             )}
-            <span className="text-sm chat-text-secondary-500/50 transition-all duration-300">{label}</span>
+            {answeringAgentName && (
+              <>
+                {/* Read as the locale's sentence, as the voice call says it, not the two run together. */}
+                <span className="sr-only">{withAgent(t, answeringAgentName, label)}</span>
+                <span aria-hidden="true" className="text-xs font-medium text-[var(--chat-accent)]/80 shrink-0">
+                  {answeringAgentName}
+                </span>
+              </>
+            )}
+            <span aria-hidden={answeringAgentName ? true : undefined} className="text-sm chat-text-secondary-500/50 transition-all duration-300">
+              {label}
+            </span>
             {waitLeftS !== undefined ? (
               <span className="text-xs chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(Math.ceil(waitLeftS))}</span>
             ) : (

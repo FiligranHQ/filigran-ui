@@ -53,6 +53,12 @@ export type ParsedAction =
       waitReason?: string;
       /** `consult_progress`: what the consulted agent reported. */
       consult?: ConsultProgress;
+      /** `preparing`: the setup step running. */
+      phase?: string;
+      /** `analyzing`: the agent's step, from 1. */
+      iteration?: number;
+      /** `transferring`, `mention_answering`: the agent the status names. */
+      agentName?: string;
     }
   | { action: 'stream'; content: string }
   | {

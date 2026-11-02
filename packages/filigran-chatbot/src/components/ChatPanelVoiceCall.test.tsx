@@ -458,3 +458,26 @@ test('a host transform that throws on the answer neither hides its frame from th
     await settle();
   });
 });
+
+test("a voice call's status names the mentioned agent answering", async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({}, ref);
+  await act(async () => {
+    ref.current!.startVoiceCall();
+    await settle();
+  });
+  await say('What is APT28');
+  await act(async () => {
+    stream.send({ type: 'status', status: 'mention_answering', agent_id: 'a2', agent_name: 'Analyst', position: 1, total: 2 });
+    stream.send({ type: 'status', status: 'tool_start', tools: ['search_iocs'] });
+    await settle(10);
+  });
+  assert.ok(overlay()!.textContent?.includes('Analyst: Search Iocs…'), overlay()!.textContent ?? '');
+  await act(async () => {
+    (overlay()!.querySelector('button[aria-label="End voice call"]') as HTMLButtonElement).click();
+    stream.close();
+    await settle();
+  });
+});

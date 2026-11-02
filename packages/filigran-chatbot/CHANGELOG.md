@@ -32,6 +32,9 @@ This file starts at 3.10.0; earlier releases are on the
   only where the button would load them. A load that brings nothing (the
   backend failing) stops them until the conversation is opened again; the
   button still tries again. The button reads `Loading earlier messages…` while they load.
+- `toolLabels`: the host's names for its tools, by raw name or as a function
+  of it, in the status line (a consult's tools too) and the reasoning details.
+  A name it does not give keeps the built-in one.
 - `sidebarSections` also takes a function of the conversation list's search,
   `(search: ChatSidebarSearch) => ReactNode`, given what the search box holds,
   trimmed (`''` when empty). It is drawn again when the search or the function
@@ -48,6 +51,25 @@ This file starts at 3.10.0; earlier releases are on the
   opening); only growth inside the thread was followed.
 - Earlier messages already loaded, shown by the button, leave the reader
   where they were in every browser, as older messages fetched do.
+- The status line says what the turn does where it said `Thinking...`:
+  `{agent} is answering…` for each mentioned agent of a turn, with that
+  agent's name before the statuses of its run, in the voice call too
+  (`AgentStatusState.answeringAgentName`);
+  `Transferring to {agent}…` on `transfer_start`; the setup step of
+  `preparing` by its `phase` (`Loading conversation history…`, `Summarizing
+  earlier conversation…`, `Recalling memory…`, `Connecting integrations…`,
+  `Preparing tools…`, else `Preparing…`); `Compacting conversation context…`;
+  `Saving response…` on `persisting`; and `Analyzing results (step {step})…`
+  from the frame's `iteration` after the first step. A host's `statusLabel`
+  reads them as `AgentStatusState.agentName`, `phase` and `iteration`.
+- While mentioned agents answer, a message does not steer: it would reach
+  whichever of them runs. It waits for the turn, held with
+  `holdSendsDuringTurn`, as a message that cannot steer does.
+- A stored answer the server's restart cut short (`interrupted: true`,
+  `ChatMessage.interrupted`) is marked as a truncated one is, and its reasoning
+  details say why.
+- A finished answer with no text and no files says `No response was
+  generated. Please try again.`; it showed `...`.
 - A paste from an office suite or a spreadsheet (Excel, Word, PowerPoint,
   OneNote, LibreOffice, Numbers) puts the copied text in the composer. These
   apps copy a selection as its text, its HTML and a picture of it, and the
