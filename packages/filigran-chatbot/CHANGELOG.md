@@ -32,6 +32,14 @@ This file starts at 3.10.0; earlier releases are on the
   only where the button would load them. A load that brings nothing (the
   backend failing) stops them until the conversation is opened again; the
   button still tries again. The button reads `Loading earlier messages…` while they load.
+- `sidebarSections` also takes a function of the conversation list's search,
+  `(search: ChatSidebarSearch) => ReactNode`, given what the search box holds,
+  trimmed (`''` when empty). It is drawn again when the search or the function
+  changes, so a host passes a stable one, and puts hooks in a component the
+  function returns. With it the search box shows whatever the number of
+  conversations, and a search no conversation of the user's own matches says
+  "None of your conversations matches". Sections given as an element show as
+  they are.
 
 ### Fixed
 
@@ -40,6 +48,9 @@ This file starts at 3.10.0; earlier releases are on the
   opening); only growth inside the thread was followed.
 - Earlier messages already loaded, shown by the button, leave the reader
   where they were in every browser, as older messages fetched do.
+- A search box hidden as the list shrinks below its threshold clears its
+  query: the list stayed filtered by a search the user could neither see nor
+  clear.
 
 ## 3.18.1 — unreleased
 
