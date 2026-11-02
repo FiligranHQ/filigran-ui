@@ -13,7 +13,14 @@ export function inPlaceHref(raw: string | undefined, pageHref: string): string |
   const page = new URL(pageHref);
   // An opaque origin ("null": file://, a srcdoc frame) equals every other one:
   // the origins say nothing there, and the path rule below decides.
-  if (page.origin !== 'null') return new URL(href, page).origin === page.origin ? href : undefined;
+  if (page.origin !== 'null') {
+    try {
+      return new URL(href, page).origin === page.origin ? href : undefined;
+    } catch {
+      // A path the browser reads as a malformed host (`//[`): nothing to follow.
+      return undefined;
+    }
+  }
   // A path stays on the page unless the browser reads it as another host.
   return /^\/(?![/\\])/.test(href) ? href : undefined;
 }

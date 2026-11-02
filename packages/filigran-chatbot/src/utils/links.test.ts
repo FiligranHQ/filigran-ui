@@ -32,3 +32,9 @@ test('a page with an opaque origin still follows its paths, and still refuses an
     assert.equal(inPlaceHref('/\\evil.example', page), undefined, page);
   }
 });
+
+test('a path the browser reads as a malformed host links nothing, and throws nothing', () => {
+  for (const raw of ['//[', '//a b/x', '/\\[']) {
+    assert.equal(inPlaceHref(raw, PAGE), undefined, JSON.stringify(raw));
+  }
+});
