@@ -791,8 +791,9 @@ const MessageRow = memo(
     const speechKey = feedbackKeyOf(msg);
 
     // A finished answer that is a standalone marker alone, with nothing attached: the card is the whole row.
+    // A stopped or cut-short one keeps its frame, which says so.
     const standalone =
-      isAssistant && !isStreaming && !msg.attachments?.length && !msg.artifacts?.length
+      isAssistant && !isStreaming && !msg.stopped && !cutShort && !msg.attachments?.length && !msg.artifacts?.length
         ? standaloneMarker(content, markerRenderers, markerKindList)
         : null;
     if (standalone) {
