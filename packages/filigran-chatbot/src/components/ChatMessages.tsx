@@ -1,6 +1,7 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type {
   AgentStatusState,
+  ChatToolLabels,
   ChatMarkerRenderer,
   ChatCodeBlockRenderer,
   ChatArtifact,
@@ -438,6 +439,8 @@ interface MessageRowProps {
   onArtifactOpen?: (artifact: ChatArtifact) => void;
   renderMessageExtras?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   messageFooterActions?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
+  /** The host's names of the tools, in the reasoning details. */
+  toolLabels?: ChatToolLabels;
   t: (key: string) => string;
 }
 
@@ -481,6 +484,7 @@ const MessageRow = memo(
     onArtifactOpen,
     renderMessageExtras,
     messageFooterActions,
+    toolLabels,
     t,
   }: MessageRowProps) => {
     const [showReasoning, setShowReasoning] = useState(false);
@@ -649,13 +653,13 @@ const MessageRow = memo(
         }
       });
 
-      // An assistant reply that is *only* a file marker leaves no prose; show a
-      // subtle ellipsis (not an empty padded bubble) when nothing else rendered
-      // and we're not still streaming.
+      // A finished reply that shows nothing: one with no text and no files says
+      // so; one whose markers the host does not draw shows an ellipsis.
       if (blocks.length === 0 && !isStreaming && !msg.stopped) {
+        const generatedNothing = !content.trim() && !msg.attachments?.length && !msg.artifacts?.length;
         blocks.push(
           <span key="empty" className="pl-1 text-[0.8125rem] chat-text-muted-400/40 italic">
-            ...
+            {generatedNothing ? t('No response was generated. Please try again.') : '...'}
           </span>,
         );
       }
@@ -735,7 +739,15 @@ const MessageRow = memo(
       !!(msg.reasoning ?? '').trim() ||
       (msg.toolCallTrace && msg.toolCallTrace.length > 0) ||
       (msg.transferChain && msg.transferChain.length > 0) ||
-      msg.isTruncated;
+      msg.isTruncated ||
+      msg.interrupted;
+    // A reply cut short is marked at a glance, not only on hover.
+    const cutShort = !!(msg.isTruncated || msg.interrupted);
+    const reasoningLabel = msg.interrupted
+      ? t('Reasoning details — interrupted by a server restart')
+      : msg.isTruncated
+        ? t('Reasoning details — turn limit reached')
+        : t('Reasoning details');
 
     // Actions only make sense on a finished answer, so they stay hidden while
     // the message is still streaming.
@@ -797,45 +809,45 @@ const MessageRow = memo(
           </div>
         )}
 
-        {showActions && (
+        {/* A reply cut short keeps its warning even with no text to act on. */}
+        {(showActions || (isAssistant && !isStreaming && cutShort)) && (
           <div className="mt-0.5 flex flex-wrap items-center gap-0.5 chat-text-muted-400/40">
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
             {hasReasoningDetails && (
-              <Tooltip title={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}>
+              <Tooltip title={reasoningLabel}>
                 <button
                   type="button"
                   onClick={() => setShowReasoning((v) => !v)}
                   className={`${FOOTER_BUTTON} ${
-                    msg.isTruncated
-                      ? // A truncated turn must be visible at a glance (not gated
-                        // on hover) so the user notices the warning — mirrors the
-                        // XTM One web chat affordance.
-                        'opacity-100 text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
-                      : DIMMED_BUTTON
+                    cutShort ? 'opacity-100 text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300' : DIMMED_BUTTON
                   }`}
-                  aria-label={msg.isTruncated ? t('Reasoning details — turn limit reached') : t('Reasoning details')}
+                  aria-label={reasoningLabel}
                   aria-haspopup="dialog"
                   aria-expanded={showReasoning}
                 >
-                  {msg.isTruncated ? <AlertTriangleIcon size={14} /> : <InfoIcon size={14} />}
+                  {cutShort ? <AlertTriangleIcon size={14} /> : <InfoIcon size={14} />}
                 </button>
               </Tooltip>
             )}
-            <MessageCopyButton text={plainText} label={t('Copy response')} t={t} />
-            {feedbackMode && (
-              <MessageFeedbackButtons
-                value={shown.value}
-                locked={shown.locked}
-                pending={!!feedback?.pending}
-                onChange={(next) => onRate(msg, next, feedback)}
-                downRef={downRef}
-                t={t}
-              />
+            {showActions && (
+              <>
+                <MessageCopyButton text={plainText} label={t('Copy response')} t={t} />
+                {feedbackMode && (
+                  <MessageFeedbackButtons
+                    value={shown.value}
+                    locked={shown.locked}
+                    pending={!!feedback?.pending}
+                    onChange={(next) => onRate(msg, next, feedback)}
+                    downRef={downRef}
+                    t={t}
+                  />
+                )}
+                {speechDocuments && hasSpeakableWords(speechDocuments) && (
+                  <ReadAloudButton speaking={isSpeaking} onToggle={() => onToggleSpeech(speechKey, speechDocuments)} t={t} />
+                )}
+                {messageFooterActions?.(msg, { streaming: isStreaming })}
+              </>
             )}
-            {speechDocuments && hasSpeakableWords(speechDocuments) && (
-              <ReadAloudButton speaking={isSpeaking} onToggle={() => onToggleSpeech(speechKey, speechDocuments)} t={t} />
-            )}
-            {messageFooterActions?.(msg, { streaming: isStreaming })}
           </div>
         )}
         {showActions && feedback?.commentOpen && (
@@ -851,7 +863,7 @@ const MessageRow = memo(
             {feedback.error}
           </p>
         )}
-        {showReasoning && <ReasoningDetailsDialog msg={msg} onClose={() => setShowReasoning(false)} t={t} />}
+        {showReasoning && <ReasoningDetailsDialog msg={msg} onClose={() => setShowReasoning(false)} toolLabels={toolLabels} t={t} />}
       </div>
     );
   },
@@ -1184,6 +1196,7 @@ export const ChatMessages = ({
             onArtifactOpen={onArtifactOpen}
             renderMessageExtras={renderMessageExtras}
             messageFooterActions={messageFooterActions}
+            toolLabels={thinking?.toolLabels}
             t={t}
           />
         );

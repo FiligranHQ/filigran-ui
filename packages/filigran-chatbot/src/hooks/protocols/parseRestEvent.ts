@@ -367,6 +367,14 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
         conversationId: typeof evt.conversation_id === 'string' ? evt.conversation_id : undefined,
       };
     }
+    if (st === 'transfer_start' || st === 'mention_answering') {
+      return {
+        action: 'status',
+        status: st === 'transfer_start' ? 'transferring' : st,
+        agentName: optionalString(evt.agent_name),
+        contextUsage: parseContextUsage(evt),
+      };
+    }
     if (st === 'consult_progress') {
       // Not the consulted agent's context: the gauge stays the conversation's.
       return { action: 'status', status: st, consult: parseConsultProgress(evt) };
@@ -394,10 +402,11 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
     // gauge climbs during a long turn. Read before the `analyzing` relabel
     // below, which rewrites the status but not what the frame carries.
     const contextUsage = parseContextUsage(evt);
+    const iteration = typeof evt.iteration === 'number' && Number.isInteger(evt.iteration) && evt.iteration > 0 ? evt.iteration : undefined;
     if (st === 'thinking' && ctx.hasUsedTools) {
-      return { action: 'status', status: 'analyzing', contextUsage };
+      return { action: 'status', status: 'analyzing', contextUsage, iteration };
     }
-    return { action: 'status', status: st, tools: evt.tools as string[] | undefined, contextUsage };
+    return { action: 'status', status: st, tools: evt.tools as string[] | undefined, contextUsage, phase: optionalString(evt.phase), iteration };
   }
 
   // The turn has paused on a gated tool call. Deliberately NOT terminal: the
@@ -519,6 +528,7 @@ export function parseRestoredMessages(raw: unknown): ChatMessage[] {
       toolCallTrace: parseToolCallTrace(m.tool_call_trace),
       transferChain: parseTransferChain(m.transfer_chain),
       isTruncated: m.is_truncated === true || undefined,
+      interrupted: m.role === 'assistant' && m.interrupted === true ? true : undefined,
       // What the backend stores beyond what the panel reads, for the host.
       raw: { ...m },
     });

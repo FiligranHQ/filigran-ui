@@ -18,6 +18,7 @@ export type {
   ChatMarkerRenderer,
   ChatCodeBlockContext,
   ChatCodeBlockRenderer,
+  ChatToolLabels,
   AgentStatusState,
   ConsultStatus,
   BackendType,

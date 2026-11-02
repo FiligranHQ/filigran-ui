@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AgentStatusState,
   ApiEndpoints,
@@ -188,6 +188,8 @@ const STATUSES_ENDING_CONSULTS: ReadonlySet<string> = new Set([
   'composing',
   'streaming',
   'stream_retract',
+  'mention_answering',
+  'transferring',
 ]);
 
 function sameConsult(a: ConsultStatus | undefined, b: ConsultStatus): boolean {
@@ -255,6 +257,7 @@ const STORED_ANSWER_FIELDS = [
   'toolCallTrace',
   'transferChain',
   'isTruncated',
+  'interrupted',
   'agentName',
   'answeredBy',
   'mentionFailed',
@@ -929,6 +932,21 @@ export function useChat({
   const [isLoading, setIsLoading] = useState(false);
   const [turnEnd, setTurnEnd] = useState<ChatTurnOutcome | null>(null);
   const [agentStatus, setAgentStatus] = useState<AgentStatusState | null>(null);
+  // The mentioned agent answering now: its run's own statuses do not name it.
+  const [answeringAgentName, setAnsweringAgentName] = useState<string | undefined>(undefined);
+  // Mentioned agents answer the turn one after the other, from its first
+  // `mention_answering` on: a steer would reach whichever of them runs.
+  const [mentionsAnswering, setMentionsAnswering] = useState(false);
+  const mentionsAnsweringRef = useRef(false);
+  const showMentionAnswering = (agent: string | undefined, answering: boolean) => {
+    setAnsweringAgentName(agent);
+    mentionsAnsweringRef.current = answering;
+    setMentionsAnswering(answering);
+  };
+  const shownAgentStatus = useMemo(
+    () => (agentStatus && answeringAgentName ? { ...agentStatus, answeringAgentName } : agentStatus),
+    [agentStatus, answeringAgentName],
+  );
   const isControlled = controlledConversationId !== undefined;
   const conversationStorageKey = storageKey(storageKeyPrefix, STORAGE_KEYS.conversationId);
   const legacyChatIdStorageKey = storageKey(storageKeyPrefix, STORAGE_KEYS.legacyChatId);
@@ -1119,6 +1137,9 @@ export function useChat({
     if (isLoadingRef.current) setTurnEnd(ended);
     isLoadingRef.current = false;
     setIsLoading(false);
+    // The mention phase lasts until the turn ends: a replay of the turn, or its
+    // next stream after a handover, is the same turn and still answered by them.
+    showMentionAnswering(undefined, false);
     if (!noticeUntilSendRef.current) setNotice(null);
   };
   // Ref mirror of pageContext so the value sent reflects the page the user is
@@ -1901,6 +1922,9 @@ export function useChat({
         // past its consults.
         consultsOpen = parsed.resumed === true || parsed.status === 'tool_start';
       }
+      // A replay keeps the name: its journal may have dropped the mention's
+      // own frame, and replays it otherwise.
+      if (parsed.status === 'mention_answering') showMentionAnswering(parsed.agentName, true);
       if (parsed.resumed) {
         // A re-attached turn is replayed from its start: what it had written
         // so far arrives again, whole, its consults included.
@@ -1985,7 +2009,14 @@ export function useChat({
         setAgentStatus((prev) =>
           prev?.status === 'wait_start' && STATUSES_DURING_WAIT.has(parsed.status)
             ? prev
-            : { status: parsed.status, tools: parsed.tools, thinkingContent: prev?.thinkingContent },
+            : {
+                status: parsed.status,
+                tools: parsed.tools,
+                thinkingContent: prev?.thinkingContent,
+                ...(parsed.phase ? { phase: parsed.phase } : {}),
+                ...(parsed.iteration ? { iteration: parsed.iteration } : {}),
+                ...(parsed.agentName ? { agentName: parsed.agentName } : {}),
+              },
         );
       }
     };
@@ -2262,11 +2293,13 @@ export function useChat({
       // Mid-run steering. References, mentions and the host's own fields never
       // steer: a steer reaches the loop as text alone, and the agent would
       // never read them. Attachments steer only where the host says the steer
-      // route takes them, once uploaded.
+      // route takes them, once uploaded. Nothing steers while mentioned agents
+      // answer.
       const uploaded = files.every((f) => f.uploadStatus === 'done');
       const canSteerThis =
         !windingDownNow &&
         !sendAwaitingAgentRef.current &&
+        !mentionsAnsweringRef.current &&
         !!getSteerUrl() &&
         !!conversationIdRef.current &&
         sentRefs.length === 0 &&
@@ -3605,10 +3638,11 @@ export function useChat({
   }, [isResumingAfterDecision, resumeTick, reloadHistory]);
 
   // Steering affordances are only advertised when the typed text can actually
-  // be dispatched mid-run: a response is streaming (isLoading), the REST steer
-  // endpoint is configured, and the conversation already has a server id (the
-  // very first turn of a fresh conversation only receives its id on `done`).
-  const canSteer = isLoading && !sendAwaitingAgent && getSteerUrl() !== null && conversationId !== null;
+  // be dispatched mid-run: a response is streaming (isLoading), no mentioned
+  // agents are answering, the REST steer endpoint is configured, and the
+  // conversation already has a server id (the very first turn of a fresh
+  // conversation only receives its id on `done`).
+  const canSteer = isLoading && !sendAwaitingAgent && !mentionsAnswering && getSteerUrl() !== null && conversationId !== null;
 
   return {
     messages,
@@ -3618,7 +3652,7 @@ export function useChat({
     turnRunning: isLoading || turnWithdrawn,
     sendsHeld: !isLoading && (windingDown || turnWithdrawn),
     turnEnd,
-    agentStatus,
+    agentStatus: shownAgentStatus,
     attachedFiles,
     conversationId,
     contextUsage,
