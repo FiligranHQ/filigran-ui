@@ -127,6 +127,16 @@ test('each change of following is told, once: leaving, coming back near the bott
   assert.deepEqual(changes, [false, true, false, true]);
 });
 
+test('the reader opening something in the thread keeps the view where it is as it grows', () => {
+  const box = makeBox(1000);
+  const follower = followerFor(box);
+  follower.stay();
+  assert.equal(follower.following, false);
+  box.scrollHeight = 1400;
+  follower.keepUp();
+  assert.deepEqual(box.scrolls, []);
+});
+
 test('a list that got shorter leaves the view at its new end, still following', () => {
   const box = makeBox(1000);
   const follower = followerFor(box);

@@ -91,6 +91,24 @@ test("a host's predicate picks the unnamed files to collapse", async () => {
   assert.equal(button('Show less')?.textContent?.trim(), 'Show less', 'from eight files');
 });
 
+test("a host's new predicate re-renders the replies", async () => {
+  restoreFiles();
+  await render({ conversationId: 'c1', collapseUnnamedFiles: (att) => att.fileTag === 'working_file' });
+  assert.ok(button('Working files (8)'));
+  await render({ conversationId: 'c1', collapseUnnamedFiles: () => true });
+  assert.ok(button('Working files (9)'));
+});
+
+test('opening the list stops following the end, so what was opened stays in view', async (t) => {
+  const view = layOutTranscript(t);
+  restoreFiles();
+  await render({ conversationId: 'c1', collapseUnnamedFiles: true });
+  await view.scrollTo(1600);
+  assert.equal(button('Scroll to bottom'), undefined, 'following');
+  await click(button('Working files (9)'));
+  assert.ok(button('Scroll to bottom'), 'no longer following');
+});
+
 test('a thumbnail with no picture to show is the picture icon, in the same box', async () => {
   restoreFiles();
   await render({ conversationId: 'c1', collapseUnnamedFiles: true });
@@ -132,6 +150,61 @@ test("a user's uploaded picture is downloaded from its lightbox", async () => {
   assert.ok(container.querySelector('[role="dialog"]'), 'the lightbox is open');
   await click(button('Download'));
   assert.equal(requests.filter((r) => r.url === '/api/chat/files/up1/download').length, 1);
+});
+
+test('new request headers fetch a picture again with the picture still shown', async () => {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'look', attachments: [{ file_id: 'up1', filename: 'shot.png', content_type: 'image/png' }] },
+      { id: 'm2', role: 'assistant', content: 'Seen.' },
+    ]),
+    async (req) => {
+      if (req.url !== '/api/chat/files/up1/download') return undefined;
+      if (req.headers.authorization === 'Bearer b') await held;
+      return new Response(new Blob(['png'], { type: 'image/png' }));
+    },
+  ]);
+  await render({ conversationId: 'c1', requestHeaders: { Authorization: 'Bearer a' } });
+  const shown = () => container.querySelector('img[alt="shot.png"]')?.getAttribute('src');
+  assert.match(shown() ?? '', /^blob:/);
+  await render({ conversationId: 'c1', requestHeaders: { Authorization: 'Bearer b' } });
+  assert.ok(requests.some((r) => r.url === '/api/chat/files/up1/download' && r.headers.authorization === 'Bearer b'));
+  assert.match(shown() ?? '', /^blob:/, 'not the placeholder while it is fetched again');
+  await act(async () => {
+    release();
+    await settle();
+  });
+  assert.match(shown() ?? '', /^blob:/);
+});
+
+test('a reasoning window action that throws leaves the window and the panel on screen', async (t) => {
+  t.mock.method(console, 'error', () => undefined);
+  const stream = sseStream();
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render(
+    {
+      conversationId: 'c1',
+      renderReasoningAction: () => {
+        throw new Error('broken action');
+      },
+    },
+    ref,
+  );
+  try {
+    await act(async () => {
+      void ref.current!.send('go');
+      await settle();
+      stream.send({ type: 'status', status: 'thinking_text', content: 'Weighing the indicators first.' });
+      await settle(10);
+    });
+    assert.ok(text().includes('Weighing the indicators first.'));
+  } finally {
+    await finish(stream);
+  }
 });
 
 test("the reasoning window holds the host's action while it shows, and drops it with the window", async () => {
@@ -258,9 +331,12 @@ test('a reader who scrolled up gets a way back to the end, which follows again',
   const back = button('Scroll to bottom');
   assert.ok(back);
   view.scrolls.length = 0;
+  back.focus();
   await click(back);
   assert.deepEqual(view.scrolls, [{ top: 2000, behavior: 'smooth' }]);
   assert.equal(button('Scroll to bottom'), undefined, 'following again');
+  const transcript = container.querySelector('[data-testid="filigran-chat-transcript"]');
+  assert.ok(document.activeElement === transcript, 'the focus goes to the thread, not the page');
 });
 
 test('older messages load as the reader nears the top, never while the view follows the end, and the button says so meanwhile', async (t) => {
@@ -325,4 +401,63 @@ test('nearing the top asks nothing of a host that offers no older messages', asy
   await view.scrollTo(100);
   assert.equal(olderPages(requests), 0);
   assert.equal(button('Load earlier messages'), undefined);
+});
+
+/** `Date.now` as the test sets it. */
+function clock(t: { mock: { method: (object: DateConstructor, name: 'now', implementation: () => number) => unknown } }) {
+  let now = 1_000_000;
+  t.mock.method(Date, 'now', () => now);
+  return { advance: (ms: number) => (now += ms) };
+}
+
+test('a failing backend stops the loads the scroll asks for; the button still tries again', async (t) => {
+  const view = layOutTranscript(t);
+  const time = clock(t);
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute([{ id: 'm3', role: 'assistant', content: 'newest answer' }], { has_more: true }),
+    (req) => (req.url.startsWith('/api/chat/sessions/c1/messages?') ? json({ detail: 'down' }, 500) : undefined),
+  ]);
+  await render({ conversationId: 'c1', apiEndpoints: { messagesPage: '/chat/sessions' } });
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(olderPages(requests), 1);
+  time.advance(5000);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(olderPages(requests), 1, 'not again on its own');
+  await click(button('Load earlier messages'));
+  assert.equal(olderPages(requests), 2);
+});
+
+test('the cooldown runs from when a load settles: a slow page puts the reader back without asking for the next', async (t) => {
+  const view = layOutTranscript(t);
+  const time = clock(t);
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute([{ id: 'm3', role: 'assistant', content: 'newest answer' }], { has_more: true }),
+    async (req) => {
+      if (!req.url.startsWith('/api/chat/sessions/c1/messages?')) return undefined;
+      const page = olderPages(requests);
+      if (page === 1) await held;
+      return json({ messages: [{ id: `old${page}`, role: 'user', content: `older ${page}` }], has_more: true });
+    },
+  ]);
+  await render({ conversationId: 'c1', apiEndpoints: { messagesPage: '/chat/sessions' } });
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(olderPages(requests), 1);
+  time.advance(1500);
+  await act(async () => {
+    release();
+    await settle();
+  });
+  // The scroll event of putting the reader back where they were.
+  await view.scrollTo(90);
+  assert.equal(olderPages(requests), 1);
+  time.advance(1500);
+  await view.scrollTo(80);
+  assert.equal(olderPages(requests), 2, 'once the cooldown has run');
 });

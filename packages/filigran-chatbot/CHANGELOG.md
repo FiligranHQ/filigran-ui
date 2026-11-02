@@ -18,7 +18,8 @@ This file starts at 3.10.0; earlier releases are on the
   is listed with its card, after a thumbnail for a picture (fetched only once
   the list opens; the picture icon when there is no URL, the fetch fails or
   the bytes do not decode), and from 8 files a `Show less` closes it from its
-  end. Off unless the host asks.
+  end. Opening it stops following the end, so the list stays in view. Off
+  unless the host asks.
 - `renderReasoningAction`: a host's action in the corner of the reasoning
   window, shown while the window is and gone with it.
 - An image's lightbox has a Download action when the panel can download the
@@ -26,10 +27,11 @@ This file starts at 3.10.0; earlier releases are on the
   downloaded.
 - A `Scroll to bottom` button shows once the reader has scrolled up, and
   brings the view back to the end, following it again.
-- Older messages load as the reader scrolling up nears the top, at most once
-  a second, never while the view follows the end, and only where the button
-  would load them. The button reads `Loading earlier messages…` while they
-  load.
+- Older messages load as the reader scrolling up nears the top, a second at
+  least after the last load ended, never while the view follows the end, and
+  only where the button would load them. A load that brings nothing (the
+  backend failing) stops them for the conversation; the button still tries
+  again. The button reads `Loading earlier messages…` while they load.
 
 ### Fixed
 

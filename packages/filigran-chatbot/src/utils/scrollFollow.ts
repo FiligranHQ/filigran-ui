@@ -60,6 +60,12 @@ export interface ScrollFollower {
    * frame committed before it would pull the view back down first.
    */
   leave: () => void;
+  /**
+   * The reader opened something inside the thread (a list of files): the view
+   * stays where it is while it grows, rather than jumping to the end and
+   * taking what was opened out of sight.
+   */
+  stay: () => void;
 }
 
 const browserTimers: ScrollFollowTimers = {
@@ -154,6 +160,10 @@ export function createScrollFollower(
       // With nothing above to scroll to (a thread that fits), the reader is
       // still at the end whatever the gesture.
       if (!box || box.scrollTop <= 0) return;
+      setFollowing(false);
+      stopWaiting();
+    },
+    stay: () => {
       setFollowing(false);
       stopWaiting();
     },

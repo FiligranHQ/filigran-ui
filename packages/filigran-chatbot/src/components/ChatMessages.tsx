@@ -9,6 +9,7 @@ import type {
   ChatConversationRef,
   ChatMessage,
   ChatMessageSlotContext,
+  ChatPanelProps,
   MessageFeedback,
   ToolApprovalDecision,
   ToolApprovalProposal,
@@ -55,7 +56,7 @@ import { MarkdownMessage } from './MarkdownMessage';
 import { ReasoningDetailsDialog } from './ReasoningDetailsDialog';
 import { Tooltip } from './Tooltip';
 import { askHost } from '../utils/askHost';
-import { WorkingFiles, type WorkingFile } from './WorkingFiles';
+import { KeepViewContext, WorkingFiles, type WorkingFile } from './WorkingFiles';
 
 /**
  * Windowed thread rendering: only the most recent slice of the thread is
@@ -166,8 +167,8 @@ interface ChatMessagesProps {
   ttsRoute?: TtsRoute;
   /** Fetches older messages from the backend; resolves to how many arrived. Omitted when there are none. */
   onLoadEarlier?: () => Promise<number>;
-  /** Which files a reply does not name go behind one collapsed line (`ChatPanelProps.collapseUnnamedFiles`). */
-  collapseUnnamedFiles?: boolean | ((attachment: ChatAttachment, message: ChatMessage) => boolean);
+  /** Which files a reply does not name go behind one collapsed line. */
+  collapseUnnamedFiles?: ChatPanelProps['collapseUnnamedFiles'];
   /** The host's overrides of the status line and the waiting panel. */
   thinking?: ThinkingOverrides;
   t: (key: string) => string;
@@ -444,7 +445,7 @@ interface MessageRowProps {
   onArtifactOpen?: (artifact: ChatArtifact) => void;
   renderMessageExtras?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   messageFooterActions?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
-  collapseUnnamedFiles?: boolean | ((attachment: ChatAttachment, message: ChatMessage) => boolean);
+  collapseUnnamedFiles?: ChatPanelProps['collapseUnnamedFiles'];
   t: (key: string) => string;
 }
 
@@ -1043,7 +1044,13 @@ export const ChatMessages = ({
     const el = scrollRef.current;
     if (el) el.scrollTop = prepended.scrollTop + (el.scrollHeight - prepended.scrollHeight);
   });
-  const showEarlier = async () => {
+  // Loads the scroll asks for (`handleScroll`). Their cooldown runs from when
+  // a load settles, so the scroll that puts the reader back where they were
+  // asks for nothing more. One that brought nothing (a backend failing) stops
+  // them for the conversation; the button stays to try again.
+  const autoEarlierRef = useRef<{ running: boolean; settledAt: number; stoppedIn?: string | null }>({ running: false, settledAt: 0 });
+  /** How many messages it showed, `undefined` when it asked for none. */
+  const showEarlier = async (): Promise<number | undefined> => {
     const el = scrollRef.current;
     // Shown above the thread, they leave the reader where they were, as older messages fetched do.
     if (messages.length > renderWindow) {
@@ -1055,9 +1062,9 @@ export const ChatMessages = ({
         scrollTop: el?.scrollTop ?? 0,
       };
       setRenderWindow(renderWindow + RENDER_WINDOW_STEP);
-      return;
+      return RENDER_WINDOW_STEP;
     }
-    if (!onLoadEarlier || loadingEarlier) return;
+    if (!onLoadEarlier || loadingEarlier) return undefined;
     setLoadingEarlier(true);
     prependedRef.current = {
       firstId: messages[0]?.id,
@@ -1067,7 +1074,11 @@ export const ChatMessages = ({
       scrollTop: el?.scrollTop ?? 0,
     };
     try {
-      if ((await onLoadEarlier()) === 0) prependedRef.current = null;
+      const count = await onLoadEarlier();
+      if (count === 0) prependedRef.current = null;
+      // One the reader asked for that brought some lets the scroll load again.
+      else autoEarlierRef.current.stoppedIn = undefined;
+      return count;
     } finally {
       setLoadingEarlier(false);
     }
@@ -1112,15 +1123,22 @@ export const ChatMessages = ({
   // button, from a backend only where the host offers them (`showEarlier`).
   // Never while the view follows the end: a conversation just opened scrolls
   // down from its top.
-  const lastEarlierLoadRef = useRef(0);
   const handleScroll = () => {
     follower.onScroll();
     const el = scrollRef.current;
-    if (!el || follower.following || loadingEarlier || el.scrollTop > LOAD_EARLIER_THRESHOLD_PX) return;
-    const now = Date.now();
-    if (now - lastEarlierLoadRef.current < LOAD_EARLIER_COOLDOWN_MS) return;
-    lastEarlierLoadRef.current = now;
-    void showEarlier();
+    const auto = autoEarlierRef.current;
+    if (!el || follower.following || auto.running || el.scrollTop > LOAD_EARLIER_THRESHOLD_PX) return;
+    if (auto.stoppedIn !== undefined && auto.stoppedIn === (conversationId ?? null)) return;
+    if (Date.now() - auto.settledAt < LOAD_EARLIER_COOLDOWN_MS) return;
+    auto.running = true;
+    void showEarlier()
+      .then((shown) => {
+        if (shown === 0) auto.stoppedIn = conversationId ?? null;
+      })
+      .finally(() => {
+        auto.running = false;
+        auto.settledAt = Date.now();
+      });
   };
 
   // Reading aloud is about the message on screen: it stops when the user
@@ -1185,70 +1203,72 @@ export const ChatMessages = ({
         </div>
       )}
 
-      {visibleMessages.map((msg) => {
-        const isStreamingMessage = msg.id === streamingMessageId;
-        // An assistant message with no content yet is the "agent is working"
-        // placeholder, replaced by the live status bubble.
-        if (msg.role === 'assistant' && !msg.content && isStreamingMessage) {
-          // A turn paused for approval is not working, it is waiting on the
-          // person reading it — so the progress bubble (and the waiting game
-          // it grows into) gives way to the prompt rendered below.
-          if (awaitingApproval) return null;
-          return (
-            <div key={msg.id}>
-              <ChatThinking
-                agentStatus={agentStatus}
-                logoIcon={logoIcon}
-                t={t}
-                miniGameEnabled={miniGameEnabled}
-                onPlayWaitingGame={onPlayWaitingGame}
-                waitingGameUrl={waitingGameUrl}
-                keepEndInView={follower.keepUp}
-                onSkipWait={onSkipWait}
-                {...thinking}
-              />
-            </div>
-          );
-        }
+      <KeepViewContext.Provider value={follower.stay}>
+        {visibleMessages.map((msg) => {
+          const isStreamingMessage = msg.id === streamingMessageId;
+          // An assistant message with no content yet is the "agent is working"
+          // placeholder, replaced by the live status bubble.
+          if (msg.role === 'assistant' && !msg.content && isStreamingMessage) {
+            // A turn paused for approval is not working, it is waiting on the
+            // person reading it — so the progress bubble (and the waiting game
+            // it grows into) gives way to the prompt rendered below.
+            if (awaitingApproval) return null;
+            return (
+              <div key={msg.id}>
+                <ChatThinking
+                  agentStatus={agentStatus}
+                  logoIcon={logoIcon}
+                  t={t}
+                  miniGameEnabled={miniGameEnabled}
+                  onPlayWaitingGame={onPlayWaitingGame}
+                  waitingGameUrl={waitingGameUrl}
+                  keepEndInView={follower.keepUp}
+                  onSkipWait={onSkipWait}
+                  {...thinking}
+                />
+              </div>
+            );
+          }
 
-        return (
-          <MessageRow
-            key={msg.id}
-            msg={msg}
-            isStreaming={isStreamingMessage}
-            agentName={agentName}
-            logoIcon={logoIcon}
-            onRelativeLinkClick={onRelativeLinkClick}
-            onDownloadFile={onDownloadFile}
-            resolveAttachmentUrl={resolveAttachmentUrl}
-            onDownloadArtifact={onDownloadArtifact}
-            onRefreshArtifact={onRefreshArtifact}
-            requestHeaders={requestHeaders}
-            feedbackMode={msg.role === 'assistant' ? feedbackModeOf(msg.serverId, feedbackUrl, conversationId, !!onMessageFeedback) : null}
-            feedback={feedbackEntries[feedbackKeyOf(msg)]}
-            onRate={rate}
-            onSaveComment={saveComment}
-            onSkipComment={skipComment}
-            locale={locale}
-            canSpeak={speech.supported}
-            isSpeaking={speakingId === feedbackKeyOf(msg)}
-            onToggleSpeech={speech.toggle}
-            // Only to a row that needs them: a new list of openable
-            // conversations must not re-render every row of the thread.
-            openableConversationIds={msg.conversationRefs?.length ? openableConversationIds : undefined}
-            onOpenConversation={msg.conversationRefs?.length ? onOpenConversation : undefined}
-            markerRenderers={markerRenderers}
-            markerKindList={markerKindList}
-            codeBlockRenderers={codeBlockRenderers}
-            transformMessageText={transformMessageText}
-            onArtifactOpen={onArtifactOpen}
-            renderMessageExtras={renderMessageExtras}
-            messageFooterActions={messageFooterActions}
-            collapseUnnamedFiles={collapseUnnamedFiles}
-            t={t}
-          />
-        );
-      })}
+          return (
+            <MessageRow
+              key={msg.id}
+              msg={msg}
+              isStreaming={isStreamingMessage}
+              agentName={agentName}
+              logoIcon={logoIcon}
+              onRelativeLinkClick={onRelativeLinkClick}
+              onDownloadFile={onDownloadFile}
+              resolveAttachmentUrl={resolveAttachmentUrl}
+              onDownloadArtifact={onDownloadArtifact}
+              onRefreshArtifact={onRefreshArtifact}
+              requestHeaders={requestHeaders}
+              feedbackMode={msg.role === 'assistant' ? feedbackModeOf(msg.serverId, feedbackUrl, conversationId, !!onMessageFeedback) : null}
+              feedback={feedbackEntries[feedbackKeyOf(msg)]}
+              onRate={rate}
+              onSaveComment={saveComment}
+              onSkipComment={skipComment}
+              locale={locale}
+              canSpeak={speech.supported}
+              isSpeaking={speakingId === feedbackKeyOf(msg)}
+              onToggleSpeech={speech.toggle}
+              // Only to a row that needs them: a new list of openable
+              // conversations must not re-render every row of the thread.
+              openableConversationIds={msg.conversationRefs?.length ? openableConversationIds : undefined}
+              onOpenConversation={msg.conversationRefs?.length ? onOpenConversation : undefined}
+              markerRenderers={markerRenderers}
+              markerKindList={markerKindList}
+              codeBlockRenderers={codeBlockRenderers}
+              transformMessageText={transformMessageText}
+              onArtifactOpen={onArtifactOpen}
+              renderMessageExtras={renderMessageExtras}
+              messageFooterActions={messageFooterActions}
+              collapseUnnamedFiles={collapseUnnamedFiles}
+              t={t}
+            />
+          );
+        })}
+      </KeepViewContext.Provider>
       {/* Not tied to a placeholder message like the streaming indicator: a
           restore replaces the whole transcript on every poll, so there is no
           bubble of ours left to hang it on. */}
@@ -1284,7 +1304,11 @@ export const ChatMessages = ({
         {!following && (
           <button
             type="button"
-            onClick={follower.reveal}
+            onClick={() => {
+              // The button goes once the view follows: the focus moves to the thread, not to the page.
+              scrollRef.current?.focus({ preventScroll: true });
+              follower.reveal();
+            }}
             aria-label={t('Scroll to bottom')}
             title={t('Scroll to bottom')}
             className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full border chat-border-200/10 chat-menu-surface p-1.5 chat-text-secondary-500/50 shadow-md transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"

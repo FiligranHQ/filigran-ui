@@ -27,6 +27,7 @@ import {
 } from './icons';
 import { translate } from '../utils';
 import { ChatWaitingPanel } from './ChatWaitingPanel';
+import { HostRenderBoundary, HostRendered } from './HostRenderBoundary';
 
 interface ChatThinkingProps extends ThinkingOverrides {
   agentStatus: AgentStatusState | null;
@@ -460,7 +461,17 @@ export const ChatThinking = ({
           content={renderWaitingPanel?.()}
         />
       ) : showReasoning ? (
-        <ThinkingTextBubble text={reasoningText} action={renderReasoningAction?.()} />
+        <ThinkingTextBubble
+          text={reasoningText}
+          action={
+            renderReasoningAction && (
+              // An action that throws takes only itself down: the corner stays empty.
+              <HostRenderBoundary label="A reasoning window action" resetKey="" fallback={null}>
+                <HostRendered draw={renderReasoningAction} />
+              </HostRenderBoundary>
+            )
+          }
+        />
       ) : null}
     </>
   );

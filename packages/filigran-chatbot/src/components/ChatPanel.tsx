@@ -155,7 +155,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     waitingMessages: waitingMessagesProp,
     renderWaitingPanel,
     renderReasoningAction,
-    collapseUnnamedFiles: collapseUnnamedFilesProp,
+    collapseUnnamedFiles,
     fontFamily,
     theme,
     onReady: onReadyProp,
@@ -194,9 +194,6 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const onTurnRunningChange = useLatestCallback(onTurnRunningChangeProp);
   // A click handler, not content: held stable so a host's inline one spares every row.
   const onArtifactOpen = useLatestCallback(onArtifactOpenProp);
-  // A predicate is held stable too: a host's inline one must not re-render every row.
-  const collapseUnnamedFilesWith = useLatestCallback(typeof collapseUnnamedFilesProp === 'function' ? collapseUnnamedFilesProp : undefined);
-  const collapseUnnamedFiles = collapseUnnamedFilesWith ?? collapseUnnamedFilesProp === true;
   const rootRef = useRef<HTMLDivElement>(null);
   const { fetch: panelFetch, sessionEnded } = usePanelRequests();
   // The panel's own catalog in `locale`, under whatever the host translates itself.

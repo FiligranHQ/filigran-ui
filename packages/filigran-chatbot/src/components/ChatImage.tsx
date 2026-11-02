@@ -106,17 +106,16 @@ export function useImageSrc(
   requestHeaders: Record<string, string> | undefined,
 ): { src: string | null; status: 'loading' | 'ready' | 'failed' } {
   const needsAuth = !!src && !!requestHeaders && Object.keys(requestHeaders).length > 0 && isRelativeUrl(src);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [errored, setErrored] = useState(false);
+  // The bytes fetched last and the URL they are of: new headers (a refreshed
+  // token) fetch again with the picture still shown, a new URL starts over.
+  const [fetched, setFetched] = useState<{ src: string; url: string } | null>(null);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const shownRef = useRef<string | null>(null);
   const panelFetch = usePanelFetch();
 
   useEffect(() => {
     if (!needsAuth || !src) return;
     let cancelled = false;
-    let objectUrl: string | null = null;
-    setBlobUrl(null);
-    setErrored(false);
-
     panelFetch(src, { credentials: 'include', headers: { ...requestHeaders } })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -124,25 +123,30 @@ export function useImageSrc(
       })
       .then((blob) => {
         if (cancelled) return;
-        objectUrl = URL.createObjectURL(blob);
-        setBlobUrl(objectUrl);
+        const previous = shownRef.current;
+        shownRef.current = URL.createObjectURL(blob);
+        setFetched({ src, url: shownRef.current });
+        if (previous) URL.revokeObjectURL(previous);
       })
       .catch(() => {
-        if (!cancelled) setErrored(true);
+        if (!cancelled) setFailedSrc(src);
       });
-
     return () => {
       cancelled = true;
-      // Revoking on teardown (rather than on unmount only) keeps a src change
-      // from leaking the previous blob.
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [needsAuth, src, requestHeaders]);
+  useEffect(
+    () => () => {
+      if (shownRef.current) URL.revokeObjectURL(shownRef.current);
+    },
+    [],
+  );
 
   if (!src) return { src: null, status: 'failed' };
   if (!needsAuth) return { src, status: 'ready' };
-  if (errored) return { src: null, status: 'failed' };
-  return blobUrl ? { src: blobUrl, status: 'ready' } : { src: null, status: 'loading' };
+  if (fetched?.src === src) return { src: fetched.url, status: 'ready' };
+  if (failedSrc === src) return { src: null, status: 'failed' };
+  return { src: null, status: 'loading' };
 }
 
 interface ChatImageProps {
