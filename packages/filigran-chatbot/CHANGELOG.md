@@ -55,10 +55,7 @@ This file starts at 3.10.0; earlier releases are on the
   once, with the time and its text as the preview; it stayed where it was
   until the turn ended and the list was read again.
 - A read-only panel showed the welcome screen's "Suggestions" heading over no
-  suggestions, and offered New conversation, which opened a blank read-only
-  chat: the heading is gone, and New conversation (in the header, its history
-  menu, the conversation list and each workspace) is disabled, with the
-  read-only notice (when a string) as its tooltip.
+  suggestions: nothing can be sent there, so the section is left out.
 
 ## 3.18.1 — unreleased
 

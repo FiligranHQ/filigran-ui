@@ -190,7 +190,6 @@ const es: Catalog = {
   'Thinking it through': 'Reflexionando sobre ello',
   'Thinking...': 'Pensando...',
   'This conversation could not be loaded.': 'No se ha podido cargar esta conversación.',
-  'This conversation is read-only': 'Esta conversación es de solo lectura',
   'This decision could not be sent. Reload the chat and try again.': 'No se ha podido enviar esta decisión. Actualice el chat e inténtelo de nuevo.',
   'This message waits for the current response': 'Este mensaje espera la respuesta actual',
   'This message will be read with your next one.': 'Este mensaje se leerá con su próximo mensaje.',

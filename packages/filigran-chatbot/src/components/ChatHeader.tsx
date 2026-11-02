@@ -67,8 +67,6 @@ interface ChatHeaderProps {
    * does instead (`onClick`); the chevron beside it opens the picker then.
    */
   agentLink?: { href?: string; onClick?: () => void };
-  /** Why no conversation can be started (a read-only panel): New chat is disabled, with this as its tooltip. */
-  newChatDisabledReason?: string;
   t: Translate;
 }
 
@@ -172,7 +170,6 @@ export const ChatHeader = ({
   title,
   subtitle,
   agentLink,
-  newChatDisabledReason,
   t,
 }: ChatHeaderProps) => {
   const agentAnchorRef = useRef<HTMLButtonElement>(null);
@@ -441,9 +438,7 @@ export const ChatHeader = ({
                 onHistoryMenuClose?.();
                 onNewChat();
               }}
-              disabled={!!newChatDisabledReason}
-              title={newChatDisabledReason}
-              className="w-full flex items-center gap-2 px-4 py-2 text-left hover:chat-surface-hover-100/10 transition-colors disabled:opacity-40"
+              className="w-full flex items-center gap-2 px-4 py-2 text-left hover:chat-surface-hover-100/10 transition-colors"
             >
               <EditIcon size={16} className="chat-text-muted-400/40 shrink-0" />
               <span className="text-[0.8125rem] chat-text-secondary-700/70">{t('New conversation')}</span>
@@ -466,14 +461,8 @@ export const ChatHeader = ({
 
       {actions}
 
-      <Tooltip title={newChatDisabledReason || t('New chat')}>
-        <button
-          type="button"
-          onClick={onNewChat}
-          disabled={!!newChatDisabledReason}
-          aria-label={t('New chat')}
-          className={`${headerButton} disabled:opacity-40 disabled:pointer-events-none`}
-        >
+      <Tooltip title={t('New chat')}>
+        <button type="button" onClick={onNewChat} aria-label={t('New chat')} className={headerButton}>
           <EditIcon size={18} />
         </button>
       </Tooltip>

@@ -191,7 +191,6 @@ const ja: Catalog = {
   'Thinking it through': 'じっくり考えています',
   'Thinking...': '考え中...',
   'This conversation could not be loaded.': 'この会話を読み込めませんでした。',
-  'This conversation is read-only': 'この会話は読み取り専用です',
   'This decision could not be sent. Reload the chat and try again.':
     'この決定を送信できませんでした。チャットを再読み込みして、もう一度お試しください。',
   'This message waits for the current response': 'このメッセージは、現在の応答を待機します',

@@ -191,7 +191,6 @@ const fr: Catalog = {
   'Thinking it through': 'Réfléchir à la question',
   'Thinking...': 'Je réfléchis...',
   'This conversation could not be loaded.': 'Impossible de charger cette conversation.',
-  'This conversation is read-only': 'Cette conversation est en lecture seule',
   'This decision could not be sent. Reload the chat and try again.': 'Cette décision n’a pas pu être envoyée. Actualisez le chat et réessayez.',
   'This message waits for the current response': 'Ce message attend la réponse en cours',
   'This message will be read with your next one.': 'Ce message sera lu avec votre prochain message.',

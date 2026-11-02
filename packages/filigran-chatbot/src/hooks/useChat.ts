@@ -512,7 +512,7 @@ interface UseChatOptions {
   onSessionEnded?: (reason: string | undefined) => void;
   /** A conversation was retitled (`conversation_title`). */
   onConversationTitle?: (conversationId: string | null, title: string) => void;
-  /** A message starts a turn in a conversation that exists already, with the text its bubble shows. */
+  /** The backend took a message in a conversation that exists already, with the text its bubble shows. */
   onMessageSent?: (conversationId: string, text: string) => void;
   /**
    * The conversation whose history is on screen: its event stream is followed
@@ -2321,7 +2321,6 @@ export function useChat({
     const assistantId = randomId();
     setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
     clearComposer();
-    if (conversationIdRef.current) askHost(onMessageSentRef.current, conversationIdRef.current, shownText);
     isLoadingRef.current = true;
     setIsLoading(true);
     setAgentStatus({ status: 'thinking' });
@@ -2478,6 +2477,7 @@ export function useChat({
       }
       accepted = true;
       override?.onSent?.();
+      if (conversationIdRef.current) askHost(onMessageSentRef.current, conversationIdRef.current, shownText);
 
       const parseEvent = getParser(backendType);
       await readSseEvents(

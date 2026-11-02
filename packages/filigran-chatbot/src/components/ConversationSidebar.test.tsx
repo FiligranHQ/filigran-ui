@@ -34,7 +34,7 @@ async function renderEmptyWorkspace(t: (key: string) => string) {
           onCreate: async () => ({ ok: true }),
           onRename: async () => ({ ok: true }),
           onDelete: async () => ({ ok: true }),
-          onMove: async () => null,
+          onMove: async () => undefined,
           onNewChat: () => undefined,
         }}
         t={t}

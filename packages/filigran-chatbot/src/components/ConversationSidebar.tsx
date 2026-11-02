@@ -37,8 +37,8 @@ export interface SidebarWorkspaces {
   onCreate: (name: string) => Promise<WorkspaceWriteResult>;
   onRename: (id: string, name: string) => Promise<WorkspaceWriteResult>;
   onDelete: (id: string) => Promise<WorkspaceWriteResult>;
-  /** Resolves to `null` on success, or the backend's reason. */
-  onMove: (conversationId: string, workspaceId: string | null) => Promise<string | null>;
+  /** Files the conversation, saying itself what failed. */
+  onMove: (conversationId: string, workspaceId: string | null) => Promise<void>;
   onNewChat: (workspaceId: string) => void;
 }
 
@@ -70,10 +70,10 @@ interface ConversationSidebarProps {
   searchThreshold?: number;
   /** The host's names of the channels a conversation was started in (see `channelLabel` on the panel). */
   channelLabel?: (channel: string) => string | null | undefined;
-  /** Why no conversation can be started (a read-only panel): New conversation is disabled, with this as its tooltip. */
-  newChatDisabledReason?: string;
-  /** What the panel has to say about the list (a failed delete, rename or Clear all). */
+  /** What failed in the list, said under it. */
   notice?: string | null;
+  /** Says what failed in the list (`notice` shows it). */
+  onNotice?: (text: string) => void;
   t: (key: string) => string;
 }
 
@@ -123,8 +123,8 @@ export const ConversationSidebar = ({
   clearAllAction,
   searchThreshold = SEARCH_THRESHOLD,
   channelLabel,
-  newChatDisabledReason,
   notice,
+  onNotice,
   t,
 }: ConversationSidebarProps) => {
   const [query, setQuery] = useState('');
@@ -137,14 +137,6 @@ export const ConversationSidebar = ({
   const collapsedKey = storageKey(storageKeyPrefix, STORAGE_KEYS.collapsedWorkspaces);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => readCollapsed(collapsedKey));
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // A refusal is said, then goes: it is about the action just tried.
-  useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(() => setError(null), 6000);
-    return () => clearTimeout(timer);
-  }, [error]);
 
   const startRename = (id: string, current: string) => {
     settledRef.current = false;
@@ -178,14 +170,13 @@ export const ConversationSidebar = ({
     });
   };
 
-  const say = (reason: string | null, fallback: string) => setError(reason || t(fallback));
+  const say = (reason: string | null, fallback: string) => onNotice?.(reason || t(fallback));
 
   const move = async (conversationId: string, workspaceId: string | null) => {
     // A drop on the group the row is already in (or an unfiled row on "Not in
     // a workspace") is no move: the row menu disables it, the drop ignores it.
     if (!workspaces || isNoopMove(conversations, conversationId, workspaceId)) return;
-    const refusal = await workspaces.onMove(conversationId, workspaceId);
-    if (refusal !== null) say(refusal, 'The conversation could not be moved');
+    await workspaces.onMove(conversationId, workspaceId);
   };
 
   const q = query.trim().toLowerCase();
@@ -212,13 +203,12 @@ export const ConversationSidebar = ({
             <SidebarIcon size={17} />
           </button>
         </Tooltip>
-        <Tooltip title={newChatDisabledReason || t('New conversation')}>
+        <Tooltip title={t('New conversation')}>
           <button
             type="button"
             onClick={() => onNewChat()}
-            disabled={!!newChatDisabledReason}
             aria-label={t('New conversation')}
-            className="w-8 h-8 flex items-center justify-center rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            className="w-8 h-8 flex items-center justify-center rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
           >
             <EditIcon size={17} />
           </button>
@@ -251,18 +241,14 @@ export const ConversationSidebar = ({
   return (
     <div className="w-64 shrink-0 flex flex-col border-r chat-border-200/10">
       <div className="flex items-center gap-1 px-3 py-3">
-        {/* A disabled button takes no pointer: its wrapper shows why it is. */}
-        <Tooltip title={newChatDisabledReason ?? ''} className="flex flex-1 min-w-0">
-          <button
-            type="button"
-            onClick={() => onNewChat()}
-            disabled={!!newChatDisabledReason}
-            className="flex-1 flex items-center gap-2 rounded-lg border chat-border-200/10 px-3 py-1.5 text-[0.8125rem] chat-text-secondary-700/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors disabled:opacity-40 disabled:pointer-events-none"
-          >
-            <EditIcon size={15} />
-            {t('New conversation')}
-          </button>
-        </Tooltip>
+        <button
+          type="button"
+          onClick={() => onNewChat()}
+          className="flex-1 flex items-center gap-2 rounded-lg border chat-border-200/10 px-3 py-1.5 text-[0.8125rem] chat-text-secondary-700/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
+        >
+          <EditIcon size={15} />
+          {t('New conversation')}
+        </button>
         {headerActions}
         <Tooltip title={t('Hide conversations')}>
           <button
@@ -336,7 +322,7 @@ export const ConversationSidebar = ({
                 toggleable={groupCanToggle(group, activeConversationId, !!q)}
                 pending={!!group.workspace && workspaces.pendingWorkspaceId === group.workspace.id && !activeConversationId}
                 onToggle={() => toggleGroup(group.key)}
-                onNewChat={newChatDisabledReason ? undefined : workspaces.onNewChat}
+                onNewChat={workspaces.onNewChat}
                 onRename={async (id, name) => {
                   const result = await workspaces.onRename(id, name);
                   if (!result.ok) say(result.error, 'The workspace could not be renamed');
@@ -382,9 +368,9 @@ export const ConversationSidebar = ({
         )}
       </div>
 
-      {(error || notice) && (
+      {notice && (
         <p role="alert" className="mx-3 mb-3 rounded-md bg-red-500/10 px-2.5 py-1.5 text-[0.7rem] text-red-600 dark:text-red-400">
-          {error || notice}
+          {notice}
         </p>
       )}
     </div>
@@ -532,8 +518,7 @@ const WorkspaceGroupSection = ({
   /** A new conversation is about to be created in this workspace. */
   pending: boolean;
   onToggle: () => void;
-  /** Omitted when no conversation can be started. */
-  onNewChat?: (workspaceId: string) => void;
+  onNewChat: (workspaceId: string) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   onDropConversation: (conversationId: string) => void;
@@ -597,18 +582,16 @@ const WorkspaceGroupSection = ({
               </>
             ) : (
               <>
-                {onNewChat && (
-                  <Tooltip title={t('New conversation in this workspace')}>
-                    <button
-                      type="button"
-                      onClick={() => onNewChat(workspace.id)}
-                      aria-label={t('New conversation in this workspace')}
-                      className={iconButton}
-                    >
-                      <EditIcon size={13} />
-                    </button>
-                  </Tooltip>
-                )}
+                <Tooltip title={t('New conversation in this workspace')}>
+                  <button
+                    type="button"
+                    onClick={() => onNewChat(workspace.id)}
+                    aria-label={t('New conversation in this workspace')}
+                    className={iconButton}
+                  >
+                    <EditIcon size={13} />
+                  </button>
+                </Tooltip>
                 <Tooltip title={t('Rename workspace')}>
                   <button type="button" onClick={() => setRenaming(true)} aria-label={t('Rename workspace')} className={iconButton}>
                     <PencilIcon size={13} />

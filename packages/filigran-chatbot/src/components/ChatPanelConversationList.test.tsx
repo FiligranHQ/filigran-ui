@@ -5,7 +5,7 @@
  * Clear all's wording, the read-only panel, the header's title, subtitle and
  * agent link, and the agent picker's badges.
  */
-import { afterEach, beforeEach, test } from 'node:test';
+import { afterEach, beforeEach, mock, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, createRef } from 'react';
 
@@ -18,7 +18,7 @@ const { createRoot } = await import('react-dom/client');
 const { ChatPanel } = await import('./ChatPanel.tsx');
 
 const AGENTS = [
-  { id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null, badges: ['Company'] },
+  { id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null, badges: ['Company', ' Company ', 3, ''] },
   { id: 'a2', name: 'Scout', slug: 'scout', icon: null, description: null },
 ];
 const agentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(AGENTS) : undefined);
@@ -252,14 +252,14 @@ test('a failure said while the list is hidden shows under the header', async () 
   assert.equal(alertText(), 'The conversation could not be deleted');
 });
 
-test('a read-only panel offers no suggestions heading, and no new conversation', async () => {
+test('a read-only panel offers no suggestions heading, and still a new conversation: read-only is the conversation’s', async () => {
   fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'One' }])]);
   await render({ readOnly: true, readOnlyNotice: 'Shared with you to read' });
   assert.ok(text().includes('How can'), 'the welcome screen');
   assert.ok(!text().includes('Suggestions'));
   const sidebarNew = buttons().find((b) => b.textContent === 'New conversation');
-  assert.equal(sidebarNew?.disabled, true);
-  assert.equal(button('New chat')?.disabled, true);
+  assert.equal(sidebarNew?.disabled, false);
+  assert.equal(button('New chat')?.disabled, false);
 });
 
 test('the header shows the title and subtitle the host draws from the conversation, and links the agent', async () => {
@@ -286,12 +286,14 @@ test('the header shows the title and subtitle the host draws from the conversati
   assert.ok(document.body.textContent?.includes('Scout'), 'the chevron opens the picker');
 });
 
-test("a restored conversation whose agent is not in the list links no agent, never the one picked", async () => {
+test('a restored conversation whose agent is not in the list links no agent, never the one picked', async () => {
   fakeBackend([
     agentsRoute,
     listRoute([{ conversation_id: 'c1', title: 'Old hunt' }]),
     (req) =>
-      req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', agent_name: 'Retired Bot', messages: [] }) : undefined,
+      req.url === '/api/chat/sessions' && req.method === 'POST'
+        ? json({ conversation_id: 'c1', agent_name: 'Retired Bot', messages: [] })
+        : undefined,
   ]);
   const subtitles: (string | null)[] = [];
   await render({
@@ -306,6 +308,87 @@ test("a restored conversation whose agent is not in the list links no agent, nev
   assert.equal(subtitles.at(-1), null, 'the subtitle is given no agent');
 });
 
+test('an agent path that leaves the origin once the browser drops its tab links nothing', async () => {
+  fakeBackend([agentsRoute]);
+  await render({ agentHref: () => '/\t/evil.example' });
+  assert.equal(container.querySelector('a'), null);
+});
+
+test('a header title or subtitle that throws takes only itself down', async () => {
+  fakeBackend([agentsRoute]);
+  const original = console.error;
+  console.error = () => undefined;
+  try {
+    await render({
+      headerTitle: () => {
+        throw new Error('boom');
+      },
+      headerSubtitle: () => {
+        throw new Error('boom');
+      },
+    });
+  } finally {
+    console.error = original;
+  }
+  assert.ok(text().includes('Hunter'), 'the panel is still there');
+  assert.equal(container.querySelector('[data-testid="filigran-chat-header-title"]'), null);
+});
+
+test('a message the backend refuses leaves its conversation where it was', async () => {
+  const list = listRoute([
+    { conversation_id: 'c2', title: 'Newer' },
+    { conversation_id: 'c1', title: 'Older', last_message_preview: 'old words' },
+  ]);
+  let reads = 0;
+  fakeBackend([
+    agentsRoute,
+    // Read once: the read-back at the turn's end would put the rows back where the backend has them.
+    (req) => {
+      const answer = list(req);
+      if (!answer) return undefined;
+      reads += 1;
+      return reads === 1 ? answer : new Promise<Response>(() => undefined);
+    },
+    restoreRoute,
+    (req) => (req.url === '/api/chat/messages' ? json({ detail: 'Quota reached' }, 429) : undefined),
+  ]);
+  const ref = createRef<ChatPanelHandle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('never sent');
+    await settle(10);
+  });
+  assert.ok(rows()[0].textContent?.startsWith('Newer'));
+  assert.ok(rows()[1].textContent?.includes('old words'));
+});
+
+test('the same failure said again stays for its own time', async () => {
+  failingDelete();
+  await render({});
+  // Timers are the test's here: the request settles through I/O turns.
+  const flush = () =>
+    act(async () => {
+      for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve));
+    });
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    await act(async () => button('Delete conversation')!.click());
+    await flush();
+    assert.equal(alertText(), 'The conversation could not be deleted');
+    mock.timers.tick(4000);
+    await act(async () => button('Delete conversation')!.click());
+    await flush();
+    mock.timers.tick(4000);
+    await flush();
+    assert.equal(alertText(), 'The conversation could not be deleted', 'said 4 s ago: still there');
+    mock.timers.tick(2500);
+    await flush();
+    assert.equal(alertText(), null);
+  } finally {
+    mock.timers.reset();
+  }
+});
+
 test('an agent address that is not http(s) or a path links nothing, and no option keeps the header as it was', async () => {
   fakeBackend([agentsRoute]);
   await render({ agentHref: () => 'javascript:alert(1)' });
@@ -314,7 +397,7 @@ test('an agent address that is not http(s) or a path links nothing, and no optio
   assert.equal(container.querySelector('[data-testid="filigran-chat-header-title"]'), null);
 });
 
-test("the agent picker shows an agent's badges, and none for an agent without", async () => {
+test("the agent picker shows an agent's badges, each once and strings only, and none for an agent without", async () => {
   fakeBackend([agentsRoute]);
   await render({});
   await click(buttons().find((b) => b.textContent?.includes('Hunter')));

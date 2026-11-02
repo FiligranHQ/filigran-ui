@@ -117,22 +117,28 @@ test('a search matches the last message and the agent too', async () => {
   await unmount();
 });
 
-test('with no conversation to start, New conversation is disabled, and the workspaces offer none', async () => {
+test("a failed workspace action is said through the panel's notice, the list keeping none of its own", async () => {
+  const said: string[] = [];
   const { container, unmount } = await renderSidebar([], {
-    newChatDisabledReason: 'Read only',
+    onNotice: (text) => void said.push(text),
     workspaces: {
       list: [{ id: 'w1', name: 'Hunts', isOwn: true, isDefault: false, canManage: true }],
       pendingWorkspaceId: null,
       onCreate: async () => ({ ok: true }),
       onRename: async () => ({ ok: true }),
-      onDelete: async () => ({ ok: true }),
-      onMove: async () => null,
+      onDelete: async () => ({ ok: false, error: 'The workspace is in use' }),
+      onMove: async () => undefined,
       onNewChat: () => undefined,
     },
   });
-  const newChat = [...container.querySelectorAll('button')].find((b) => b.textContent === 'New conversation');
-  assert.equal(newChat?.disabled, true);
-  assert.equal(container.querySelector('button[aria-label="New conversation in this workspace"]'), null);
+  for (let i = 0; i < 2; i += 1) {
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('button[aria-label="Delete workspace"]')!.click();
+      await settle();
+    });
+  }
+  assert.deepEqual(said, ['The workspace is in use']);
+  assert.equal(container.querySelector('[role="alert"]'), null, 'shown where the panel puts its notice');
   await unmount();
 });
 

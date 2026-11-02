@@ -56,11 +56,12 @@ function parseAgents(data: unknown): XtmAgent[] {
   return rawList.filter((raw): raw is XtmAgent => !!raw && typeof raw === 'object' && typeof (raw as XtmAgent).id === 'string').map(withBadges);
 }
 
-/** *agent* with its `badges` kept to non-empty strings, and left off when none is. */
+/** *agent* with its `badges` kept to distinct non-empty strings, and left off when none is. */
 function withBadges(agent: XtmAgent): XtmAgent {
   const raw: unknown = (agent as { badges?: unknown }).badges;
   if (raw === undefined) return agent;
-  const badges = Array.isArray(raw) ? raw.filter((b): b is string => typeof b === 'string' && !!b.trim()).map((b) => b.trim()) : [];
+  // Each once: the picker keys its pills by their text.
+  const badges = Array.isArray(raw) ? [...new Set(raw.filter((b): b is string => typeof b === 'string' && !!b.trim()).map((b) => b.trim()))] : [];
   const kept: XtmAgent = { ...agent, badges };
   if (badges.length === 0) delete kept.badges;
   return kept;

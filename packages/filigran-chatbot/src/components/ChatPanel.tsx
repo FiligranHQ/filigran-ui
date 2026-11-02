@@ -22,6 +22,7 @@ import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
 import { parseArtifact, parseContextUsage, parseRestoredMessages, storedMessageId } from '../hooks/protocols/parseRestEvent';
 import { mergeReadBack, useChat } from '../hooks/useChat';
 import { askHost } from '../utils/askHost';
+import { inPlaceHref } from '../utils/links';
 import { findAgent, useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
 import { useWorkspaces } from '../hooks/useWorkspaces';
@@ -48,6 +49,8 @@ const FLOATING_HEIGHT = 560;
 const SIDEBAR_GAP = 6;
 /** How long a message jumped to stays highlighted. */
 const HIGHLIGHT_MS = 2000;
+/** How long a failure in the conversation list stays said. */
+const LIST_NOTICE_MS = 6000;
 /** What the restore route answers, as far as the panel reads it. */
 interface RestoredHistory {
   conversation_id?: unknown;
@@ -180,7 +183,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     channelLabel,
     headerTitle,
     headerSubtitle,
-    agentHref,
+    agentHref: agentHrefProp,
     onAgentNameClick: onAgentNameClickProp,
     clearAllAction,
   },
@@ -211,6 +214,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const onTurnRunningChange = useLatestCallback(onTurnRunningChangeProp);
   const onBeforeMove = useLatestCallback(onBeforeMoveProp);
   const onConversationActionFailed = useLatestCallback(onConversationActionFailedProp);
+  const agentHref = useLatestCallback(agentHrefProp);
+  const onAgentNameClick = useLatestCallback(onAgentNameClickProp);
   // A click handler, not content: held stable so a host's inline one spares every row.
   const onArtifactOpen = useLatestCallback(onArtifactOpenProp);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -734,13 +739,14 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       }
     : {};
 
-  // A failed delete, rename or Clear all, said under the list (or the
-  // header) unless the host says it itself; it goes after a while, being
-  // about the action just tried.
-  const [listNotice, setListNotice] = useState<string | null>(null);
+  // What failed in the list - a conversation or workspace action - said
+  // under it (or the header), then gone: it is about the action just tried.
+  // Each saying is its own, so the same failure again shows for its own time.
+  const [listNotice, setListNotice] = useState<{ text: string } | null>(null);
+  const sayListNotice = useCallback((text: string) => setListNotice({ text }), []);
   useEffect(() => {
     if (!listNotice) return;
-    const timer = setTimeout(() => setListNotice(null), 6000);
+    const timer = setTimeout(() => setListNotice(null), LIST_NOTICE_MS);
     return () => clearTimeout(timer);
   }, [listNotice]);
   /** Tell the host of a failed *action* on conversation *id*; true when it told the user itself. */
@@ -749,7 +755,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     return askHost(onConversationActionFailed, action, conversation, reason || null) === true;
   };
   const sayActionFailed = (action: ChatConversationAction, id: string | null, reason: string, fallback: string) => {
-    if (!conversationActionFailed(action, id, reason)) setListNotice(reason || fallback);
+    if (!conversationActionFailed(action, id, reason)) sayListNotice(reason || fallback);
   };
 
   const handleClearAll = async () => {
@@ -783,12 +789,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     if (refusal !== null) sayActionFailed('rename', id, refusal, t('The conversation could not be renamed'));
   };
 
-  /**
-   * File a conversation, once the host agreed: resolves to the refusal the
-   * list says, `null` when there is nothing to say (moved, declined, or the
-   * host said it itself).
-   */
-  const handleMoveConversation = async (id: string, workspaceId: string | null): Promise<string | null> => {
+  /** File a conversation, once the host agreed. */
+  const handleMoveConversation = async (id: string, workspaceId: string | null): Promise<void> => {
     const conversation = conversations.find((c) => c.conversationId === id);
     if (onBeforeMove && conversation) {
       const workspace = workspaceId ? (workspaces.find((w) => w.id === workspaceId) ?? null) : null;
@@ -798,19 +800,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       } catch (err) {
         console.error('A chat panel host callback threw', err);
       }
-      if (!allowed) return null;
+      if (!allowed) return;
     }
     const refusal = await moveConversation(id, workspaceId);
-    if (refusal === null) return null;
-    return conversationActionFailed('move', id, refusal) ? null : refusal;
+    if (refusal !== null) sayActionFailed('move', id, refusal, t('The conversation could not be moved'));
   };
-
-  // A read-only panel starts no conversation: one would be read-only too.
-  const newChatDisabledReason = readOnly
-    ? typeof readOnlyNotice === 'string' && readOnlyNotice.trim()
-      ? readOnlyNotice
-      : t('This conversation is read-only')
-    : undefined;
 
   const { sidebarWidth, handleResizeStart, defaultWidth, isResizing } = useSidebarResize({
     mode,
@@ -1296,26 +1290,24 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // answer is read off its streams. A question addresses the conversation's
   // agent: the one it was transferred to, the restored conversation's, or the
   // one picked.
-  const addressedAgentId =
-    transferredAgent?.id ??
-    (conversationAgentName ? agents.find((a) => a.name === conversationAgentName)?.id : undefined) ??
-    selectedAgent?.id ??
-    null;
-  // The header's agent, its link, and what its title and subtitle are given:
-  // the agent the header names. A restored conversation's agent missing from
-  // the list is none, never the one picked, which the header does not name.
-  const headerAgentId =
-    transferredAgent?.id ??
-    (conversationAgentName ? (agents.find((a) => a.name === conversationAgentName)?.id ?? null) : (selectedAgent?.id ?? null));
-  const headerAgent = (headerAgentId && agents.find((a) => a.id === headerAgentId)) || null;
+  //
+  // The header's agent (linked, and given to its title and subtitle) is the
+  // one it names: a restored conversation's agent missing from the list is
+  // none there, never the one picked, which the header does not name.
+  const conversationAgent = conversationAgentName ? (agents.find((a) => a.name === conversationAgentName) ?? null) : null;
+  const headerAgent = transferredAgent
+    ? (agents.find((a) => a.id === transferredAgent.id) ?? null)
+    : conversationAgentName
+      ? conversationAgent
+      : selectedAgent;
+  const addressedAgentId = transferredAgent?.id ?? conversationAgent?.id ?? selectedAgent?.id ?? null;
   const agentLink = useMemo(() => {
-    if (!headerAgent || (!agentHref && !onAgentNameClickProp)) return undefined;
-    const raw = askHost(agentHref, headerAgent)?.trim();
-    // Followed in place: only an http(s) URL or a path of the host's own origin.
-    const href = raw && (/^https?:\/\//i.test(raw) || /^\/(?![/\\])/.test(raw)) ? raw : undefined;
-    const onClick = onAgentNameClickProp ? () => askHost(onAgentNameClickProp, headerAgent) : undefined;
+    if (!headerAgent || (!agentHref && !onAgentNameClick)) return undefined;
+    // Followed in place: an http(s) URL, or a path of the page's own origin.
+    const href = inPlaceHref(askHost(agentHref, headerAgent), window.location.origin);
+    const onClick = onAgentNameClick ? () => askHost(onAgentNameClick, headerAgent) : undefined;
     return href || onClick ? { href, onClick } : undefined;
-  }, [headerAgent, agentHref, onAgentNameClickProp]);
+  }, [headerAgent, agentHref, onAgentNameClick]);
   const headerContext: ChatHeaderContext = {
     conversation: (conversationId && conversations.find((c) => c.conversationId === conversationId)) || null,
     agent: headerAgent,
@@ -1474,15 +1466,14 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         onDeleteConversation={(id) => void handleDeleteConversation(id)}
         onClearAll={clearConversations ? () => void handleClearAll() : undefined}
         clearAllAction={clearAllAction}
-        title={typeof headerTitle === 'function' ? headerTitle(headerContext) : headerTitle}
-        subtitle={typeof headerSubtitle === 'function' ? headerSubtitle(headerContext) : headerSubtitle}
+        title={typeof headerTitle === 'function' ? askHost(headerTitle, headerContext) : headerTitle}
+        subtitle={typeof headerSubtitle === 'function' ? askHost(headerSubtitle, headerContext) : headerSubtitle}
         agentLink={agentLink}
-        newChatDisabledReason={newChatDisabledReason}
         t={t}
       />
       {listNotice && (!showConversationSidebar || sidebarCollapsed) && (
         <p role="alert" className="mx-3 mt-2 shrink-0 rounded-md bg-red-500/10 px-2.5 py-1.5 text-[0.7rem] text-red-600 dark:text-red-400">
-          {listNotice}
+          {listNotice.text}
         </p>
       )}
       {/* Fullscreen puts the conversation list beside the thread. The header
@@ -1536,8 +1527,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             clearAllAction={clearAllAction}
             searchThreshold={sidebarSearchThreshold}
             channelLabel={channelLabel}
-            newChatDisabledReason={newChatDisabledReason}
-            notice={listNotice}
+            notice={listNotice?.text ?? null}
+            onNotice={sayListNotice}
             t={t}
           />
         )}
