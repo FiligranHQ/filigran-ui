@@ -16,6 +16,10 @@ This file starts at 3.10.0; earlier releases are on the
   files, as a host with a per-file limit only passes it (XTM One's web chat and
   Office add-in). The panel read a value that is not finite as invalid and kept
   its 50 MB default total.
+- A message sent from a new chat no longer comes back as the next new chat's
+  draft: the draft leaves the conversation it was typed in as it is sent. The
+  write of the emptied composer could land on the conversation the send
+  created, leaving the sent text under the new chat's draft.
 
 ## 3.19.1 — 2026-11-02
 

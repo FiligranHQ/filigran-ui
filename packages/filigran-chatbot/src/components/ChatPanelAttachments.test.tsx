@@ -85,6 +85,24 @@ test('a maxTotalSize that is not a positive number keeps the 50 MB default', asy
   assert.deepEqual(refused, [['b.pdf', 'total-size']]);
 });
 
+test("a new chat's draft is gone once it is sent, not left as the next new chat's", async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({}, ref);
+  await act(async () => ref.current!.setDraft('the question'));
+  await act(async () => {
+    window.dispatchEvent(new window.Event('pagehide'));
+  });
+  assert.equal(sessionStorage.getItem('filigranChatDraft:new'), 'the question', 'the draft as the page left it');
+  await act(async () => {
+    sendButton().click();
+    await settle();
+  });
+  assert.equal(sessionStorage.getItem('filigranChatDraft:new'), null);
+  await finish(stream);
+});
+
 test('acceptFileTypes filters the picker and refuses a file of another type', async () => {
   const requests = fakeBackend([agentsRoute, restoreRoute(), uploadRoute]);
   const refused: [string, ChatFileRefusal][] = [];

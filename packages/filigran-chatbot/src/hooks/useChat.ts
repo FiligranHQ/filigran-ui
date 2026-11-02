@@ -2307,6 +2307,10 @@ export function useChat({
       setConversationRefs([]);
       setAgentMentions([]);
       setAttachedFiles([]);
+      // The draft sent leaves the conversation it was typed in at once: the
+      // debounced write would land on the conversation a new chat's send
+      // creates, and leave the text as the next new chat's draft.
+      persistDraft(writtenDraftRef, storageKeyPrefix, conversationIdRef.current, '', []);
     };
     if (isLoadingRef.current || windingDownNow) {
       // Mid-run steering. References, mentions and the host's own fields never
