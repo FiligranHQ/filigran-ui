@@ -60,6 +60,13 @@ export interface ScrollFollower {
    * frame committed before it would pull the view back down first.
    */
   leave: () => void;
+  /**
+   * The reader opened something inside the thread (a list of files), which
+   * has just grown: when it pushed the end out of view, the view stays where
+   * it is rather than jumping to the end and taking what was opened out of
+   * sight. With the end still in view it keeps following.
+   */
+  stay: () => void;
 }
 
 const browserTimers: ScrollFollowTimers = {
@@ -67,8 +74,21 @@ const browserTimers: ScrollFollowTimers = {
   clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
 };
 
-export function createScrollFollower(getBox: () => ScrollBox | null, timers: ScrollFollowTimers = browserTimers): ScrollFollower {
+/**
+ * *onFollowingChange* hears each change of `following`, for what the view
+ * shows of it (a button back to the end).
+ */
+export function createScrollFollower(
+  getBox: () => ScrollBox | null,
+  timers: ScrollFollowTimers = browserTimers,
+  onFollowingChange?: (following: boolean) => void,
+): ScrollFollower {
   let following = true;
+  const setFollowing = (value: boolean) => {
+    if (value === following) return;
+    following = value;
+    onFollowingChange?.(value);
+  };
   // Where the view was last seen, which tells the reader scrolling up apart
   // from the view being moved down by a scroll of ours.
   let lastTop = 0;
@@ -103,7 +123,7 @@ export function createScrollFollower(getBox: () => ScrollBox | null, timers: Scr
     reveal: () => {
       const box = getBox();
       if (!box) return;
-      following = true;
+      setFollowing(true);
       stopWaiting();
       const target = Math.max(0, box.scrollHeight - box.clientHeight);
       box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
@@ -128,9 +148,9 @@ export function createScrollFollower(getBox: () => ScrollBox | null, timers: Scr
       if (movedUp) {
         // The reader scrolled up — or the browser moved the view to the new end
         // of a list that got shorter, which leaves it at the bottom.
-        following = distance <= 1;
+        setFollowing(distance <= 1);
       } else if (movedDown && distance <= FOLLOW_THRESHOLD_PX) {
-        following = true;
+        setFollowing(true);
       }
       // Ours only goes down: it is over once the view reaches where it was sent
       // or the end, and a move up is the reader taking over.
@@ -141,7 +161,15 @@ export function createScrollFollower(getBox: () => ScrollBox | null, timers: Scr
       // With nothing above to scroll to (a thread that fits), the reader is
       // still at the end whatever the gesture.
       if (!box || box.scrollTop <= 0) return;
-      following = false;
+      setFollowing(false);
+      stopWaiting();
+    },
+    stay: () => {
+      const box = getBox();
+      // A smooth scroll of ours still on its way has not reached the end yet:
+      // the reader is following, and its arrival catches up.
+      if (!box || smooth || box.scrollHeight - box.scrollTop - box.clientHeight <= 1) return;
+      setFollowing(false);
       stopWaiting();
     },
   };
@@ -157,13 +185,16 @@ export interface GrowthObservers {
  * Call *onGrow* whenever what *container* holds changes size: an image, a
  * chart or a file card that takes its height after the message that carries
  * it was rendered, which no change of the messages announces. Each child is
- * watched, and so is each child added later. Returns the cleanup; a no-op
- * where the browser has no `ResizeObserver`.
+ * watched, and so is each child added later. So is *container* itself: a box
+ * that shrinks (the composer growing below it) hides its last lines as surely
+ * as content that grows. Returns the cleanup; a no-op where the browser has no
+ * `ResizeObserver`.
  */
 export function watchContentGrowth(container: Element, onGrow: () => void, observers: GrowthObservers = globalThis as GrowthObservers): () => void {
   const { ResizeObserver: Resize, MutationObserver: Mutation } = observers;
   if (!Resize) return () => undefined;
   const sizes = new Resize(() => onGrow());
+  sizes.observe(container);
   for (const child of Array.from(container.children)) sizes.observe(child);
   const children = Mutation
     ? new Mutation((records) => {

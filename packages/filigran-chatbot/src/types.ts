@@ -719,6 +719,17 @@ export interface ChatPanelProps {
   waitingMessages?: string[];
   /** Replaces the waiting panel's content (its messages and the invitation to play). */
   renderWaitingPanel?: () => React.ReactNode;
+  /**
+   * An action in the corner of the reasoning window (a game to play while the
+   * agent works), shown while the window is and gone with it.
+   */
+  renderReasoningAction?: () => React.ReactNode;
+  /**
+   * Files a reply carries but whose markers it does not name go behind one
+   * collapsed "Working files (N)" line instead of one card each: all of them
+   * (`true`), or those the predicate picks. Default: one card each.
+   */
+  collapseUnnamedFiles?: boolean | ((attachment: ChatAttachment, message: ChatMessage) => boolean);
   /** Font of the panel's text; the package's own otherwise. */
   fontFamily?: string;
   /**

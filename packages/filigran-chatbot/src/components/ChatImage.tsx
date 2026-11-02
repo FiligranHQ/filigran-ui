@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CloseIcon, ImageIcon, MaximizeIcon } from './icons';
+import { CloseIcon, DownloadIcon, ImageIcon, MaximizeIcon } from './icons';
 import { findChatbotRoot } from '../utils';
 import { usePanelFetch } from '../hooks/usePanelRequests';
 
@@ -8,6 +8,8 @@ interface ImageLightboxProps {
   src: string;
   alt: string;
   onClose: () => void;
+  /** Offered beside Close when the picture is a file the host can download. */
+  onDownload?: () => void;
   t: (key: string) => string;
 }
 
@@ -16,7 +18,7 @@ interface ImageLightboxProps {
  * so it inherits the panel's stacking context and can never be painted under —
  * or over — unrelated host chrome, matching the reasoning-details dialog.
  */
-const ImageLightbox = ({ src, alt, onClose, t }: ImageLightboxProps) => {
+const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps) => {
   const hostRef = useRef<HTMLSpanElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [root, setRoot] = useState<HTMLElement | null>(null);
@@ -53,15 +55,30 @@ const ImageLightbox = ({ src, alt, onClose, t }: ImageLightboxProps) => {
             aria-modal="true"
             aria-label={t('Image preview')}
           >
-            <button
-              ref={closeButtonRef}
-              type="button"
-              onClick={onClose}
-              aria-label={t('Close')}
-              className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
-            >
-              <CloseIcon size={20} />
-            </button>
+            <div className="absolute top-4 right-4 flex gap-2">
+              {onDownload && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDownload();
+                  }}
+                  aria-label={t('Download')}
+                  className="rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+                >
+                  <DownloadIcon size={20} />
+                </button>
+              )}
+              <button
+                ref={closeButtonRef}
+                type="button"
+                onClick={onClose}
+                aria-label={t('Close')}
+                className="rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+              >
+                <CloseIcon size={20} />
+              </button>
+            </div>
             <img src={src} alt={alt} className="max-h-[90%] max-w-[90%] rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
           </div>,
           root,
@@ -78,6 +95,55 @@ const ImageLightbox = ({ src, alt, onClose, t }: ImageLightboxProps) => {
  */
 const isRelativeUrl = (src: string): boolean => !src.startsWith('//') && !/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(src);
 
+/**
+ * What an `<img>` can show of *src*: the URL itself, or, for a host-relative
+ * one fetched with *requestHeaders*, an object URL of its bytes (a browser
+ * never sends custom headers on an `<img>` request). `null` *src* fetches
+ * nothing.
+ */
+export function useImageSrc(
+  src: string | null,
+  requestHeaders: Record<string, string> | undefined,
+): { src: string | null; status: 'loading' | 'ready' | 'failed' } {
+  const needsAuth = !!src && !!requestHeaders && Object.keys(requestHeaders).length > 0 && isRelativeUrl(src);
+  // The bytes fetched last and the URL they are of: new headers (a refreshed
+  // token) fetch again with the picture still shown, a new URL starts over.
+  const [fetched, setFetched] = useState<{ src: string; url: string } | null>(null);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const panelFetch = usePanelFetch();
+
+  useEffect(() => {
+    if (!needsAuth || !src) return;
+    let cancelled = false;
+    panelFetch(src, { credentials: 'include', headers: { ...requestHeaders } })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (!cancelled) setFetched({ src, url: URL.createObjectURL(blob) });
+      })
+      .catch(() => {
+        if (!cancelled) setFailedSrc(src);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [needsAuth, src, requestHeaders]);
+  // Revoked once the next one is on screen, or on unmount: never under an <img> still showing it.
+  useEffect(() => {
+    if (!fetched) return;
+    const { url } = fetched;
+    return () => URL.revokeObjectURL(url);
+  }, [fetched]);
+
+  if (!src) return { src: null, status: 'failed' };
+  if (!needsAuth) return { src, status: 'ready' };
+  if (fetched?.src === src) return { src: fetched.url, status: 'ready' };
+  if (failedSrc === src) return { src: null, status: 'failed' };
+  return { src: null, status: 'loading' };
+}
+
 interface ChatImageProps {
   src: string;
   alt: string;
@@ -91,6 +157,8 @@ interface ChatImageProps {
   requestHeaders?: Record<string, string>;
   /** Cap the inline thumbnail height. Full size is always available via the lightbox. */
   maxHeightClass?: string;
+  /** Downloads the file the picture is, from its lightbox. */
+  onDownload?: () => void;
   t: (key: string) => string;
 }
 
@@ -100,43 +168,14 @@ interface ChatImageProps {
  * `data:image/*` charts from a code interpreter, host-relative API-served
  * images needing auth headers, and ordinary absolute URLs.
  */
-export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[400px]', t }: ChatImageProps) => {
-  const needsAuth = !!requestHeaders && Object.keys(requestHeaders).length > 0 && isRelativeUrl(src);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [errored, setErrored] = useState(false);
+export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[400px]', onDownload, t }: ChatImageProps) => {
+  const fetched = useImageSrc(src, requestHeaders);
+  // The URL whose bytes did not decode; a new one (bytes fetched again) gets its own try.
+  const [undecodable, setUndecodable] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const panelFetch = usePanelFetch();
+  const displaySrc = fetched.src;
 
-  useEffect(() => {
-    if (!needsAuth) return;
-    let cancelled = false;
-    let objectUrl: string | null = null;
-
-    panelFetch(src, { credentials: 'include', headers: { ...requestHeaders } })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(blob);
-        setBlobUrl(objectUrl);
-      })
-      .catch(() => {
-        if (!cancelled) setErrored(true);
-      });
-
-    return () => {
-      cancelled = true;
-      // Revoking on teardown (rather than on unmount only) keeps a src change
-      // from leaking the previous blob.
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [needsAuth, src, requestHeaders]);
-
-  const displaySrc = needsAuth ? blobUrl : src;
-
-  if (errored) {
+  if (fetched.status === 'failed' || (displaySrc !== null && undecodable === displaySrc)) {
     return <p className="my-2 text-[0.75rem] italic chat-text-muted-400/40">{t('Image could not be loaded')}</p>;
   }
 
@@ -157,7 +196,7 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
           alt={alt}
           loading="lazy"
           onClick={() => setExpanded(true)}
-          onError={() => setErrored(true)}
+          onError={() => setUndecodable(displaySrc)}
           className={`max-w-full cursor-zoom-in rounded-md object-contain ${maxHeightClass}`}
         />
         <button
@@ -169,7 +208,7 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
           <MaximizeIcon size={14} />
         </button>
       </span>
-      {expanded && <ImageLightbox src={displaySrc} alt={alt} onClose={() => setExpanded(false)} t={t} />}
+      {expanded && <ImageLightbox src={displaySrc} alt={alt} onClose={() => setExpanded(false)} onDownload={onDownload} t={t} />}
     </>
   );
 };

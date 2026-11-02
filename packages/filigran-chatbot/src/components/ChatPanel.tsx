@@ -173,6 +173,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     toolLabels: toolLabelsProp,
     waitingMessages: waitingMessagesProp,
     renderWaitingPanel,
+    renderReasoningAction,
+    collapseUnnamedFiles,
     fontFamily,
     theme,
     onReady: onReadyProp,
@@ -245,8 +247,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // Read while rendering: a new function redraws the messages, so labels that change (a new language) show at once.
   const toolLabels = useShallowStable(toolLabelsProp);
   const thinking = useMemo(
-    () => ({ statusLabel, waitingMessages, renderWaitingPanel, toolLabels }),
-    [statusLabel, waitingMessages, renderWaitingPanel, toolLabels],
+    () => ({ statusLabel, waitingMessages, renderWaitingPanel, renderReasoningAction, toolLabels }),
+    [statusLabel, waitingMessages, renderWaitingPanel, renderReasoningAction, toolLabels],
   );
   // Inline mode is laid out like fullscreen, inside the host's container.
   const isWide = mode === 'fullscreen' || mode === 'inline';
@@ -1655,6 +1657,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               messageFooterActions={messageFooterActions}
               transcriptFooter={transcriptFooter}
               onLoadEarlier={serverHasEarlier ? loadEarlier : undefined}
+              collapseUnnamedFiles={collapseUnnamedFiles}
               ttsRoute={ttsRoute}
               thinking={thinking}
               t={t}

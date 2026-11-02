@@ -106,6 +106,57 @@ test('a reader who scrolls up is left there, and followed again once back near t
   assert.equal(box.scrollTop, 800);
 });
 
+test('each change of following is told, once: leaving, coming back near the bottom, and a reveal', () => {
+  const box = makeBox(1000);
+  const changes: boolean[] = [];
+  const follower = createScrollFollower(
+    () => box,
+    makeTimers(),
+    (following) => changes.push(following),
+  );
+  follower.onScroll();
+  box.scrollTop = 300;
+  follower.leave();
+  follower.onScroll();
+  assert.deepEqual(changes, [false]);
+  box.scrollTop = 1000 - 400 - FOLLOW_THRESHOLD_PX;
+  follower.onScroll();
+  assert.deepEqual(changes, [false, true]);
+  follower.leave();
+  follower.reveal();
+  assert.deepEqual(changes, [false, true, false, true]);
+});
+
+test('something the reader opened that pushed the end out of view keeps the view where it is', () => {
+  const box = makeBox(1000);
+  const follower = followerFor(box);
+  box.scrollHeight = 1400;
+  follower.stay();
+  assert.equal(follower.following, false);
+  follower.keepUp();
+  assert.deepEqual(box.scrolls, []);
+});
+
+test('something the reader opened while a smooth scroll to the end runs keeps following', () => {
+  const box = makeBox(1000);
+  const follower = followerFor(box);
+  // Up the thread, then a send: the smooth scroll to the end is on its way.
+  box.scrollTop = 0;
+  follower.onScroll();
+  follower.reveal();
+  assert.equal(box.scrollTop, 0, 'not there yet');
+  follower.stay();
+  assert.equal(follower.following, true, 'the scroll on its way still catches up');
+});
+
+test('something the reader opened with the end still in view keeps following', () => {
+  const box = makeBox(300);
+  const follower = followerFor(box);
+  box.scrollHeight = 380;
+  follower.stay();
+  assert.equal(follower.following, true);
+});
+
 test('a list that got shorter leaves the view at its new end, still following', () => {
   const box = makeBox(1000);
   const follower = followerFor(box);
@@ -404,6 +455,7 @@ test('what grows after its message rendered is kept up with: each child, and eac
   let grew = 0;
   const stop = watchContentGrowth(container, () => (grew += 1), fake.observers);
   assert.ok(fake.watched.has(first));
+  assert.ok(fake.watched.has(container), 'the box itself, which shrinks when the composer grows');
   const later = { nodeType: 1 };
   fake.add(later);
   assert.ok(fake.watched.has(later), 'a message added later is watched too');
