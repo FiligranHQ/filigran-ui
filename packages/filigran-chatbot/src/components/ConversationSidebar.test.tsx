@@ -77,7 +77,7 @@ const MANY = Array.from({ length: 8 }, (_, i) => ({ conversationId: `c${i}`, tit
 
 type Sections = ReactNode | ((search: { query: string }) => ReactNode);
 
-async function renderWithSections(sections: Sections, props: { conversations?: typeof MANY; collapsed?: boolean } = {}) {
+async function renderWithSections(sections: Sections, props: { conversations?: typeof MANY; collapsed?: boolean; workspaces?: boolean } = {}) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -94,6 +94,19 @@ async function renderWithSections(sections: Sections, props: { conversations?: t
           onDelete={() => undefined}
           onNewChat={() => undefined}
           sections={next}
+          workspaces={
+            props.workspaces
+              ? {
+                  list: [WORKSPACE],
+                  pendingWorkspaceId: null,
+                  onCreate: async () => ({ ok: true }),
+                  onRename: async () => ({ ok: true }),
+                  onDelete: async () => ({ ok: true }),
+                  onMove: async () => null,
+                  onNewChat: () => undefined,
+                }
+              : undefined
+          }
           t={(key) => key}
         />,
       );
@@ -184,11 +197,14 @@ test('sections that follow the search offer the box whatever the number of conve
 });
 
 test("with sections that follow the search, no match among the user's own does not claim none at all", async () => {
-  const { container, search, unmount } = await renderWithSections(sharedSection(['Acme intrusion']));
-  await search('acme');
-  assert.ok(container.textContent?.includes('None of your conversations matches'));
-  assert.ok(!container.textContent?.includes('No conversation matches'));
-  await unmount();
+  for (const workspaces of [false, true]) {
+    const { container, search, unmount } = await renderWithSections(sharedSection(['Acme intrusion']), { workspaces });
+    await search('acme');
+    const layout = workspaces ? 'grouped by workspace' : 'flat';
+    assert.ok(container.textContent?.includes('None of your conversations matches'), layout);
+    assert.ok(!container.textContent?.includes('No conversation matches'), layout);
+    await unmount();
+  }
 });
 
 test('a search box that hides takes its query with it', async () => {

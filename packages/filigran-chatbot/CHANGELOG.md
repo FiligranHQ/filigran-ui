@@ -14,9 +14,9 @@ This file starts at 3.10.0; earlier releases are on the
 
 - `sidebarSections` also takes a function of the conversation list's search,
   `(search: ChatSidebarSearch) => ReactNode`, given what the search box holds,
-  trimmed (`''` when empty). It is drawn as a component of its own (it may use
-  hooks), again when the search or the function changes, so a host passes a
-  stable one. With it the search box shows whatever the number of
+  trimmed (`''` when empty). It is drawn again when the search or the function
+  changes, so a host passes a stable one, and puts hooks in a component the
+  function returns. With it the search box shows whatever the number of
   conversations, and a search no conversation of the user's own matches says
   "None of your conversations matches". Sections given as an element show as
   they are.

@@ -673,9 +673,11 @@ export interface ChatPanelProps {
   /**
    * Sections added under the conversation list (conversations shared with the
    * user). A function draws them from the list's search, so they filter on
-   * what is typed, as the list does. It is drawn as a component of its own (it
-   * may use hooks) and again only when the search or the function changes:
-   * pass a stable one (`useCallback`). With it, the search box shows whatever
+   * what is typed, as the list does. It is drawn again only when the search or
+   * the function changes: pass a stable one (`useCallback`). Hooks go in a
+   * component it returns (`({ query }) => <Shared query={query} />`): hook
+   * calls in the function itself break once it draws another branch. With it,
+   * the search box shows whatever
    * the number of conversations, and a search with no match among the user's
    * own says so ("None of your conversations matches").
    */

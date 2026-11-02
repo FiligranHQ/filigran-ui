@@ -69,9 +69,9 @@ interface ConversationSidebarProps {
 const SEARCH_THRESHOLD = 7;
 
 /**
- * A host's sections drawn from the search, as a component of their own: their
- * hooks are theirs, and they are drawn again only when the search or the
- * function changes, not on each of the list's own updates.
+ * A host's sections drawn from the search, as a component of their own: drawn
+ * again only when the search or the function changes, not on each of the
+ * list's own updates, and apart from the list's hooks.
  */
 const HostSections = memo(function HostSections({ draw, query }: { draw: (search: ChatSidebarSearch) => ReactNode; query: string }) {
   return <>{draw({ query })}</>;
