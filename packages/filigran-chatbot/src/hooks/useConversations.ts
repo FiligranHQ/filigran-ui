@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { ApiEndpoints, BackendType, ChatConversationSummary } from '../types';
 import { readRefusalDetail } from '../utils/refusal';
+import { revertRename, touchConversation } from '../utils/conversationList';
 import { revertMove } from '../utils/workspaces';
 import { usePanelFetch } from './usePanelRequests';
 
@@ -18,18 +19,23 @@ interface UseConversationsReturn {
   conversationsLoading: boolean;
   /** Fetch (or re-fetch) the conversation list. No-ops when history is disabled. */
   refreshConversations: () => Promise<void>;
-  /** Delete a conversation server-side. Returns true on success. */
-  deleteConversation: (id: string) => Promise<boolean>;
-  /** Rename a conversation server-side. Returns true on success. */
-  renameConversation: (id: string, title: string) => Promise<boolean>;
+  /**
+   * Delete a conversation server-side. Resolves to `null` on success, or the
+   * backend's reason (an empty string when it gave none).
+   */
+  deleteConversation: (id: string) => Promise<string | null>;
+  /** Rename a conversation server-side; resolves as `deleteConversation`. */
+  renameConversation: (id: string, title: string) => Promise<string | null>;
   /**
    * File a conversation into a workspace (`null` takes it out of one) with
    * `PATCH {history}/{id}`. Resolves to `null` on success, or the backend's
    * reason (an empty string when it gave none).
    */
   moveConversation: (id: string, workspaceId: string | null) => Promise<string | null>;
-  /** Delete every conversation (`apiEndpoints.clearAll`); `null` when the host offers no route. */
-  clearConversations: (() => Promise<boolean>) | null;
+  /** Delete every conversation (`apiEndpoints.clearAll`), resolving as `deleteConversation`; `null` when the host offers no route. */
+  clearConversations: (() => Promise<string | null>) | null;
+  /** Put a conversation just written in first, with *preview* as its last message, ahead of the list's read-back. */
+  touchConversation: (id: string, preview: string) => void;
 }
 
 /**
@@ -51,7 +57,11 @@ function parseConversation(raw: unknown): ChatConversationSummary | null {
   const agentName = typeof c.agent_name === 'string' && c.agent_name ? c.agent_name : undefined;
   // Present (string or null) only when the backend reports filing at all.
   const workspaceId = typeof c.workspace_id === 'string' && c.workspace_id ? c.workspace_id : c.workspace_id === null ? null : undefined;
-  return { conversationId: id, title, updatedAt, messageCount, agentName, workspaceId };
+  const summary: ChatConversationSummary = { conversationId: id, title, updatedAt, messageCount, agentName, workspaceId };
+  // Left off when absent, so a backend without them renders its rows as before.
+  if (typeof c.last_message_preview === 'string' && c.last_message_preview.trim()) summary.lastMessagePreview = c.last_message_preview.trim();
+  if (typeof c.channel === 'string' && c.channel) summary.channel = c.channel;
+  return summary;
 }
 
 /**
@@ -105,46 +115,48 @@ export function useConversations({
   }, [historyEnabled, sessionsUrl, requestHeaders]);
 
   const deleteConversation = useCallback(
-    async (id: string): Promise<boolean> => {
-      if (!historyEnabled) return false;
+    async (id: string): Promise<string | null> => {
+      if (!historyEnabled) return '';
       try {
         const res = await panelFetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
           method: 'DELETE',
           headers: { ...(requestHeaders ?? {}) },
         });
-        if (!res.ok) return false;
+        if (!res.ok) return (await readRefusalDetail(res)) ?? '';
         setConversations((prev) => prev.filter((c) => c.conversationId !== id));
-        return true;
+        return null;
       } catch {
-        return false;
+        return '';
       }
     },
     [historyEnabled, sessionsUrl, requestHeaders],
   );
 
   const clearAllUrl = historyEnabled && apiEndpoints?.clearAll ? `${apiBaseUrl}${apiEndpoints.clearAll}` : null;
-  const clearConversations = useCallback(async (): Promise<boolean> => {
-    if (!clearAllUrl) return false;
+  const clearConversations = useCallback(async (): Promise<string | null> => {
+    if (!clearAllUrl) return '';
     try {
       const res = await panelFetch(clearAllUrl, { method: 'DELETE', headers: { ...(requestHeaders ?? {}) } });
-      if (!res.ok) return false;
+      if (!res.ok) return (await readRefusalDetail(res)) ?? '';
       setConversations([]);
-      return true;
+      return null;
     } catch {
-      return false;
+      return '';
     }
   }, [clearAllUrl, requestHeaders]);
 
   const renameConversation = useCallback(
-    async (id: string, title: string): Promise<boolean> => {
+    async (id: string, title: string): Promise<string | null> => {
       const trimmed = title.trim();
       // An empty title is a no-op rather than an error: the backend would name
       // the conversation from its first message anyway, and silently wiping a
       // title because the user cleared the field and hit Enter is worse.
-      if (!historyEnabled || !trimmed) return false;
+      if (!historyEnabled || !trimmed) return null;
       // Optimistic: the row is being edited in place, so waiting for the
-      // round-trip would make it flicker back to the old title first.
-      const previous = conversations;
+      // round-trip would make it flicker back to the old title first. Undone
+      // on this row only: other rows may have changed while it was in flight.
+      const previous = conversations.find((c) => c.conversationId === id)?.title ?? '';
+      const revert = () => setConversations((prev) => revertRename(prev, id, trimmed, previous));
       setConversations((prev) => prev.map((c) => (c.conversationId === id ? { ...c, title: trimmed } : c)));
       try {
         const res = await panelFetch(`${sessionsUrl}/${encodeURIComponent(id)}`, {
@@ -153,13 +165,13 @@ export function useConversations({
           body: JSON.stringify({ title: trimmed }),
         });
         if (!res.ok) {
-          setConversations(previous);
-          return false;
+          revert();
+          return (await readRefusalDetail(res)) ?? '';
         }
-        return true;
+        return null;
       } catch {
-        setConversations(previous);
-        return false;
+        revert();
+        return '';
       }
     },
     [historyEnabled, sessionsUrl, requestHeaders, conversations],
@@ -194,6 +206,10 @@ export function useConversations({
     [historyEnabled, sessionsUrl, requestHeaders, conversations],
   );
 
+  const touch = useCallback((id: string, preview: string) => {
+    setConversations((prev) => touchConversation(prev, id, preview, new Date()));
+  }, []);
+
   return {
     historyEnabled,
     conversations,
@@ -203,5 +219,6 @@ export function useConversations({
     renameConversation,
     moveConversation,
     clearConversations: clearAllUrl ? clearConversations : null,
+    touchConversation: touch,
   };
 }

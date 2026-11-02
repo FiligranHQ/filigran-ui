@@ -54,10 +54,24 @@ interface ChatHeaderProps {
   onDeleteConversation?: (id: string) => void;
   /** Offers "Clear all conversations" under the history menu, confirmed first. */
   onClearAll?: () => void;
+  /** What Clear all does, for its wording. */
+  clearAllAction?: 'delete' | 'archive';
   /** The host's controls, before New chat. */
   actions?: React.ReactNode;
+  /** Beside the agent's name. */
+  title?: React.ReactNode;
+  /** Under the agent's name. */
+  subtitle?: React.ReactNode;
+  /**
+   * Where the agent's name leads (`href`, already checked) and what its click
+   * does instead (`onClick`); the chevron beside it opens the picker then.
+   */
+  agentLink?: { href?: string; onClick?: () => void };
   t: Translate;
 }
+
+const headerButton =
+  'w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors';
 
 /** An agent's own icon when it has one the panel can draw, the panel's logo otherwise. */
 const AgentIcon = ({ icon, fallback }: { icon: string | null | undefined; fallback: React.ReactNode }) => {
@@ -76,6 +90,50 @@ const modeOptions: { mode: ChatMode; label: (t: Translate) => string; getIcon: (
   { mode: 'sidebar', label: (t) => t('Sidebar'), getIcon: (p) => <SidebarIcon {...p} /> },
   { mode: 'fullscreen', label: (t) => t('Full screen'), getIcon: (p) => <FullscreenIcon {...p} /> },
 ];
+
+/**
+ * The header's agent name as a link: followed in place, unless the host takes
+ * a plain click itself (`onClick`); a click with a modifier key opens the
+ * address as the browser does.
+ */
+const AgentNameLink = ({
+  link,
+  logoIcon,
+  agentName,
+}: {
+  link: { href?: string; onClick?: () => void };
+  logoIcon: React.ReactNode;
+  agentName: string;
+}) => {
+  const className =
+    'flex min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1 py-1 rounded-lg hover:chat-surface-hover-100/10 hover:underline transition-colors';
+  const content = (
+    <>
+      <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
+      <span className="min-w-0 truncate">{agentName}</span>
+    </>
+  );
+  if (!link.href) {
+    return (
+      <button type="button" onClick={link.onClick} className={className}>
+        {content}
+      </button>
+    );
+  }
+  return (
+    <a
+      href={link.href}
+      onClick={(e) => {
+        if (!link.onClick || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        link.onClick();
+      }}
+      className={className}
+    >
+      {content}
+    </a>
+  );
+};
 
 export const ChatHeader = ({
   mode,
@@ -107,7 +165,11 @@ export const ChatHeader = ({
   onSelectConversation,
   onDeleteConversation,
   onClearAll,
+  clearAllAction,
   actions,
+  title,
+  subtitle,
+  agentLink,
   t,
 }: ChatHeaderProps) => {
   const agentAnchorRef = useRef<HTMLButtonElement>(null);
@@ -140,19 +202,53 @@ export const ChatHeader = ({
       className={`flex items-center px-3 py-2 min-h-[48px] border-b chat-border-200/10 chat-header-surface ${mode === 'floating' ? 'rounded-t-xl' : ''}`}
     >
       <div className="min-w-0">
-        <button
-          ref={agentAnchorRef}
-          type="button"
-          onClick={onAgentMenuToggle}
-          className="flex max-w-full items-center gap-1.5 text-sm font-semibold chat-text-900/100 px-2 py-1 rounded-lg hover:chat-surface-hover-100/10 transition-colors"
-        >
-          <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
-          <span className="min-w-0 truncate">{agentName}</span>
-          <ChevronDownIcon size={16} className="shrink-0 chat-text-muted-400/30" />
-        </button>
+        <div className="flex min-w-0 items-center gap-1">
+          {agentLink ? (
+            // The name leads to the agent; the chevron alone opens the picker.
+            <>
+              <AgentNameLink link={agentLink} logoIcon={logoIcon} agentName={agentName} />
+              <button
+                ref={agentAnchorRef}
+                type="button"
+                onClick={onAgentMenuToggle}
+                aria-label={t('Switch to another agent')}
+                aria-expanded={agentMenuOpen}
+                className="shrink-0 p-1 rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
+              >
+                <ChevronDownIcon size={16} />
+              </button>
+            </>
+          ) : (
+            <button
+              ref={agentAnchorRef}
+              type="button"
+              onClick={onAgentMenuToggle}
+              className="flex max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 px-2 py-1 rounded-lg hover:chat-surface-hover-100/10 transition-colors"
+            >
+              <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
+              <span className="min-w-0 truncate">{agentName}</span>
+              <ChevronDownIcon size={16} className="shrink-0 chat-text-muted-400/30" />
+            </button>
+          )}
+          {title && (
+            <>
+              <span aria-hidden className="shrink-0 chat-text-muted-400/30">
+                /
+              </span>
+              <span data-testid="filigran-chat-header-title" className="min-w-0 truncate px-1 text-[0.8125rem] chat-text-secondary-700/70">
+                {title}
+              </span>
+            </>
+          )}
+        </div>
         {transferredFrom && (
           <div className="pl-10 pr-2 text-[0.6rem] font-normal chat-text-muted-400/30">
             {translate(t, 'Transferred from {agent}', { agent: transferredFrom })}
+          </div>
+        )}
+        {subtitle && (
+          <div data-testid="filigran-chat-header-subtitle" className="truncate pl-10 pr-2 text-[0.6rem] font-normal chat-text-muted-400/40">
+            {subtitle}
           </div>
         )}
       </div>
@@ -228,7 +324,17 @@ export const ChatHeader = ({
                     <AgentIcon icon={agent.icon} fallback={logoIcon} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[0.8125rem] font-medium chat-text-900/100 truncate">{agent.name}</div>
+                    <div className="flex min-w-0 items-center gap-1">
+                      <span className="text-[0.8125rem] font-medium chat-text-900/100 truncate">{agent.name}</span>
+                      {agent.badges?.map((badge) => (
+                        <span
+                          key={badge}
+                          className="shrink-0 rounded bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] leading-4 text-[var(--chat-accent)]"
+                        >
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
                     {agent.description && <div className="text-[0.7rem] chat-text-secondary-500/40 truncate">{agent.description}</div>}
                   </div>
                 </button>
@@ -343,6 +449,7 @@ export const ChatHeader = ({
                   onHistoryMenuClose?.();
                   onClearAll();
                 }}
+                action={clearAllAction}
                 className="px-3 pb-2"
                 iconButtonClass="p-1 rounded-md chat-text-muted-400/40 hover:chat-surface-hover-100/10 transition-colors"
                 t={t}
@@ -355,11 +462,7 @@ export const ChatHeader = ({
       {actions}
 
       <Tooltip title={t('New chat')}>
-        <button
-          type="button"
-          onClick={onNewChat}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
-        >
+        <button type="button" onClick={onNewChat} aria-label={t('New chat')} className={headerButton}>
           <EditIcon size={18} />
         </button>
       </Tooltip>

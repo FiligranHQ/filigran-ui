@@ -136,6 +136,14 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onBeforeSend`      | `(draft) => false \| { text?, displayText?, extras? } \| void` | — | Sees every non-empty send first and takes it over (`false`), rewords it, shows the user's bubble other words or adds body fields (a message with fields of its own is held with `holdSendsDuringTurn`) — see [Host extensions](#host-extensions) |
 | `hideConversationList` | `boolean`                              | `false`      | Hides the conversation list of fullscreen and inline modes, for a rail or a task pane (usable from 320 px wide); the header's history menu stands in for it — see [Host extensions](#host-extensions) |
 | `holdSendsDuringTurn` | `boolean`                               | `false`      | A message that cannot steer is held and sent when the turn ends, instead of waiting in the composer. A turn winding down after a provisional end (until its stored end or its stream's close, at most 5 s) holds sends with or without it |
+| `onBeforeMove`      | `(conversation, workspace \| null) => boolean \| Promise<boolean>` | — | Asked before a drag or a row's Move menu files a conversation into a workspace (`null`: out of one); `false` leaves it where it was |
+| `onConversationActionFailed` | `(action, conversation \| null, error \| null) => boolean \| void` | — | A failed `'delete'`, `'rename'`, `'move'` or `'clearAll'`, with the backend's reason; return `true` when the host told the user itself, and the panel says nothing |
+| `sidebarSearchThreshold` | `number`                             | `7`          | The conversation list's search box shows above this many conversations; `0` shows it from the first |
+| `channelLabel`      | `(channel: string) => string \| null \| undefined` | — | Names the channel a row's conversation was started in (`Started in {channel}`); `null` shows nothing, `undefined` keeps the panel's names (Slack, Teams, WhatsApp, Telegram, Discord, Google Chat) |
+| `headerTitle` / `headerSubtitle` | `React.ReactNode \| ((context: ChatHeaderContext) => React.ReactNode)` | — | A title beside the header's agent name and a line under it, or functions of the conversation on screen (as the list holds it) and the agent |
+| `agentHref`         | `(agent: XtmAgent) => string \| undefined` | —          | Links the header's agent name to this address (http(s) or a path of the host's origin), in place; the chevron beside it opens the picker |
+| `onAgentNameClick`  | `(agent: XtmAgent) => void`               | —            | Takes a plain click on the header's agent name (over `agentHref`); the chevron beside it opens the picker |
+| `clearAllAction`    | `'delete' \| 'archive'`                   | `'delete'`   | What Clear all does, for its wording (`Archive all conversations`) |
 
 Plain-data props (`requestHeaders`, `apiEndpoints`, `pageContext`, `promptSuggestions`) are compared by content and callback props are called
 through a stable wrapper, so building them inline is fine. `t` and `logoIcon` are used as given: keep them stable (`useCallback` / `useMemo`),
@@ -446,10 +454,14 @@ Returns available AI agents.
     "name": "General Assistant",
     "slug": "general",
     "icon": null,
-    "description": "A helpful general-purpose assistant"
+    "description": "A helpful general-purpose assistant",
+    "badges": ["Company"]
   }
 ]
 ```
+
+`badges` is optional: short labels, already translated, shown after the
+agent's name in the agent picker. Anything but strings is ignored.
 
 ### `POST {apiBaseUrl}/chat/sessions`
 
@@ -542,10 +554,16 @@ Lists the user's past conversations for the history menu in the chat header.
     "conversation_id": "uuid-here",
     "title": "What is the weather?",
     "updated_at": "2026-06-10T08:30:00Z",
-    "message_count": 12
+    "message_count": 12,
+    "last_message_preview": "It is sunny in Paris.",
+    "channel": "slack"
   }
 ]
 ```
+
+`last_message_preview` and `channel` are optional: a row shows the preview
+under its title, and names a messaging channel the conversation was started
+in (see `channelLabel`).
 
 Selecting a conversation restores it through the existing
 `POST /chat/sessions` contract above. The endpoint is fetched lazily when the

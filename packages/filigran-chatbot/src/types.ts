@@ -800,6 +800,65 @@ export interface ChatPanelProps {
    * `sidebar*` slots render nothing meanwhile. Default: false.
    */
   hideConversationList?: boolean;
+  /**
+   * Asked before a conversation is filed into a workspace (`null`: taken out
+   * of its workspace), by a drag or the row's Move menu: `false` (or a promise
+   * of it) leaves it where it is, e.g. once the user declined to share it with
+   * a workspace's members. One that throws or rejects refuses the move.
+   */
+  onBeforeMove?: (conversation: ChatConversationSummary, workspace: ChatWorkspace | null) => boolean | Promise<boolean>;
+  /**
+   * Told when deleting, renaming, moving or clearing conversations fails, with
+   * the backend's reason when it gave one (`conversation` is `null` for
+   * `clearAll`). The panel says it under the conversation list (or the
+   * header) unless this returns `true`: the host told the user itself.
+   */
+  onConversationActionFailed?: (action: ChatConversationAction, conversation: ChatConversationSummary | null, error: string | null) => boolean | void;
+  /**
+   * The conversation list's search box shows once the list holds more than
+   * this many conversations; `0` shows it from the first one. Default: 7.
+   */
+  sidebarSearchThreshold?: number;
+  /**
+   * Names the channel a conversation was started in, on its row (`Started in
+   * {channel}`): a string names it, `null` shows nothing, `undefined` keeps
+   * the panel's own name (Slack, Teams, WhatsApp, Telegram, Discord, Google
+   * Chat; no other channel is shown).
+   */
+  channelLabel?: (channel: string) => string | null | undefined;
+  /** A title beside the agent's name in the header (the conversation's, say), or a function of what is on screen. */
+  headerTitle?: React.ReactNode | ((context: ChatHeaderContext) => React.ReactNode);
+  /** A line under the agent's name in the header (`Agent · Slack`, say), or a function of what is on screen. */
+  headerSubtitle?: React.ReactNode | ((context: ChatHeaderContext) => React.ReactNode);
+  /**
+   * Links the header's agent name to this address (an http(s) URL or a path
+   * of the host's own origin), opened in place; the chevron beside the name
+   * opens the agent picker then. `undefined` links nothing.
+   */
+  agentHref?: (agent: XtmAgent) => string | undefined;
+  /**
+   * Called on a click of the header's agent name, over following `agentHref`
+   * (a click with a modifier key still follows it): a host routes to the
+   * agent's page itself. The chevron beside the name opens the agent picker then.
+   */
+  onAgentNameClick?: (agent: XtmAgent) => void;
+  /**
+   * What Clear all does to the conversations, for its wording: `'archive'`
+   * says "Archive all conversations". Default: `'delete'`. A host words it
+   * otherwise through `t`.
+   */
+  clearAllAction?: 'delete' | 'archive';
+}
+
+/** A conversation action of the list, as `onConversationActionFailed` names it. */
+export type ChatConversationAction = 'delete' | 'rename' | 'move' | 'clearAll';
+
+/** What the header's `headerTitle` and `headerSubtitle` functions are given. */
+export interface ChatHeaderContext {
+  /** The conversation on screen as the conversation list holds it; `null` for a new chat, or before the list is read. */
+  conversation: ChatConversationSummary | null;
+  /** The agent the header names, when the agent list holds it. */
+  agent: XtmAgent | null;
 }
 
 /** What a marker card is drawn from. */
@@ -1263,6 +1322,10 @@ export interface ChatConversationSummary {
    * backend reports it. Undefined on backends that do not.
    */
   workspaceId?: string | null;
+  /** The last message's text, shortened by the backend (`last_message_preview`), when it sends one. */
+  lastMessagePreview?: string;
+  /** Where the conversation was started (`channel`: `slack`, `teams`, `web`, …), when the backend reports it. */
+  channel?: string;
 }
 
 /**
@@ -1308,6 +1371,8 @@ export interface XtmAgent {
   description: string | null;
   /** The heading the agent picker lists it under; ungrouped agents come first. */
   group?: string;
+  /** Short labels shown after its name in the agent picker (`Company`), already translated. */
+  badges?: string[];
 }
 
 export interface IconProps {
