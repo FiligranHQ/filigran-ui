@@ -152,6 +152,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     sidebarHeaderActions,
     sidebarSections,
     statusLabel,
+    toolLabels: toolLabelsProp,
     waitingMessages: waitingMessagesProp,
     renderWaitingPanel,
     fontFamily,
@@ -210,7 +211,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     ),
   );
   const markerKindList = useShallowStable(useMemo(() => markerKinds(markerRenderers && Object.keys(markerRenderers)), [markerRenderers]));
-  const thinking = useMemo(() => ({ statusLabel, waitingMessages, renderWaitingPanel }), [statusLabel, waitingMessages, renderWaitingPanel]);
+  const toolLabels = useShallowStable(toolLabelsProp);
+  const thinking = useMemo(
+    () => ({ statusLabel, waitingMessages, renderWaitingPanel, toolLabels }),
+    [statusLabel, waitingMessages, renderWaitingPanel, toolLabels],
+  );
   // Inline mode is laid out like fullscreen, inside the host's container.
   const isWide = mode === 'fullscreen' || mode === 'inline';
 
@@ -1552,7 +1557,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           call={voice.snapshot}
           agentName={agentName}
           logoIcon={resolvedLogo}
-          processingLabel={statusLineText(agentStatus, t, statusLabel)}
+          processingLabel={statusLineText(agentStatus, t, statusLabel, toolLabels)}
           onInterrupt={voice.interrupt}
           onToggleMute={voice.toggleMute}
           onEnd={voice.end}

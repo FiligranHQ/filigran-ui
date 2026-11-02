@@ -8,6 +8,35 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.19.0 — unreleased
+
+### Added
+
+- `toolLabels`: the host's names for its tools, by raw name or as a function
+  of it, in the status line (a consult's tools too) and the reasoning details.
+  A name it does not give keeps the built-in one.
+
+### Fixed
+
+- The status line says what the turn does where it said `Thinking...`:
+  `{agent} is answering…` for each mentioned agent of a turn, with that
+  agent's name before the statuses of its run (`AgentStatusState.answeringAgentName`);
+  `Transferring to {agent}…` on `transfer_start`; the setup step of
+  `preparing` by its `phase` (`Loading conversation history…`, `Summarizing
+  earlier conversation…`, `Recalling memory…`, `Connecting integrations…`,
+  `Preparing tools…`, else `Preparing…`); `Compacting conversation context…`;
+  `Saving response…` on `persisting`; and `Analyzing results (step {step})…`
+  from the frame's `iteration` after the first step. A host's `statusLabel`
+  reads them as `AgentStatusState.agentName`, `phase` and `iteration`.
+- While mentioned agents answer, a message does not steer: it would reach
+  whichever of them runs. It waits for the turn, held with
+  `holdSendsDuringTurn`, as a message that cannot steer does.
+- A stored answer the server's restart cut short (`interrupted: true`,
+  `ChatMessage.interrupted`) is marked as a truncated one is, and its reasoning
+  details say why.
+- A finished answer with no text and no files says `No response was
+  generated. Please try again.`; it showed `...`.
+
 ## 3.18.1 — unreleased
 
 ### Fixed

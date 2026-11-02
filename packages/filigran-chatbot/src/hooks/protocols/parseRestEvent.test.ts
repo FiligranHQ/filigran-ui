@@ -232,3 +232,36 @@ test('a consult frame is read through every consult level, under the agent consu
   const anonymous = parseRestEvent({ type: 'status', status: 'consult_progress', tools: ['Writer'] }, ctx);
   assert.equal(anonymous.action === 'status' ? anonymous.consult : null, undefined);
 });
+
+test('a transfer, a mentioned agent answering, a setup step and the agent step are read with what they name', () => {
+  const ctx = () => ({ hasUsedTools: false, activeNodeId: '' });
+  assert.deepEqual(parseRestEvent({ type: 'status', status: 'transfer_start', agent_id: 'a2', agent_name: 'Analyst' }, ctx()), {
+    action: 'status',
+    status: 'transferring',
+    agentName: 'Analyst',
+  });
+  assert.deepEqual(
+    parseRestEvent({ type: 'status', status: 'mention_answering', agent_id: 'a2', agent_name: 'Analyst', position: 1, total: 2 }, ctx()),
+    { action: 'status', status: 'mention_answering', agentName: 'Analyst' },
+  );
+  const preparing = parseRestEvent({ type: 'status', status: 'preparing', phase: 'memory' }, ctx());
+  assert.equal(preparing.action === 'status' && preparing.phase, 'memory');
+
+  const afterTools = { hasUsedTools: true, activeNodeId: '' };
+  const analyzing = parseRestEvent({ type: 'status', status: 'thinking', iteration: 4 }, afterTools);
+  assert.equal(analyzing.action === 'status' && analyzing.status, 'analyzing');
+  assert.equal(analyzing.action === 'status' && analyzing.iteration, 4);
+  const noStep = parseRestEvent({ type: 'status', status: 'thinking', iteration: 'four' }, afterTools);
+  assert.equal(noStep.action === 'status' && noStep.iteration, undefined);
+});
+
+test('a restored answer cut by a server restart says so', () => {
+  const [cut, whole, user] = parseRestoredMessages([
+    { role: 'assistant', content: 'I was checking', interrupted: true },
+    { role: 'assistant', content: 'Done.', interrupted: null },
+    { role: 'user', content: 'go', interrupted: true },
+  ]);
+  assert.equal(cut.interrupted, true);
+  assert.equal(whole.interrupted, undefined);
+  assert.equal(user.interrupted, undefined);
+});
