@@ -247,6 +247,11 @@ function answeringAgentOf(agentStatus: AgentStatusState | null): string | undefi
   return agentStatus?.status === 'mention_answering' ? undefined : agentStatus?.answeringAgentName;
 }
 
+/** *status* with the answering *agent*'s name first, as the locale writes it; *status* alone without one. */
+function withAgent(t: Translate, agent: string | undefined, status: string): string {
+  return agent ? translate(t, '{agent}: {status}', { agent, status }) : status;
+}
+
 /** The status line as one text, the answering agent's name first: where the line cannot set the name apart. */
 export function statusSentence(
   agentStatus: AgentStatusState | null,
@@ -254,9 +259,7 @@ export function statusSentence(
   statusLabel?: ThinkingOverrides['statusLabel'],
   toolLabels?: ChatToolLabels,
 ): string {
-  const status = statusLineText(agentStatus, t, statusLabel, toolLabels);
-  const agent = answeringAgentOf(agentStatus);
-  return agent ? translate(t, '{agent}: {status}', { agent, status }) : status;
+  return withAgent(t, answeringAgentOf(agentStatus), statusLineText(agentStatus, t, statusLabel, toolLabels));
 }
 
 /**
@@ -498,7 +501,7 @@ export const ChatThinking = ({
             {answeringAgentName && (
               <>
                 {/* Read as the locale's sentence, as the voice call says it, not the two run together. */}
-                <span className="sr-only">{translate(t, '{agent}: {status}', { agent: answeringAgentName, status: label })}</span>
+                <span className="sr-only">{withAgent(t, answeringAgentName, label)}</span>
                 <span aria-hidden="true" className="text-xs font-medium text-[var(--chat-accent)]/80 shrink-0">
                   {answeringAgentName}
                 </span>
