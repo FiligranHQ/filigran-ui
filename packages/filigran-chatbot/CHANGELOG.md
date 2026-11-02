@@ -8,6 +8,16 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.19.0 — unreleased
+
+### Added
+
+- `sidebarSections` also takes a function of the conversation list's search,
+  `(search: ChatSidebarSearch) => ReactNode`, called again on each change of
+  it with what the search box holds, trimmed (`''` when empty). A host's
+  sections filter on what is typed, as the list does; sections given as an
+  element show as they are.
+
 ## 3.18.1 — unreleased
 
 ### Fixed

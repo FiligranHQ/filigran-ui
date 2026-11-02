@@ -670,8 +670,12 @@ export interface ChatPanelProps {
   sidebarRowActions?: (conversation: ChatConversationSummary) => React.ReactNode;
   /** Controls added beside New conversation, atop the conversation list. */
   sidebarHeaderActions?: React.ReactNode;
-  /** Sections added under the conversation list (conversations shared with the user). */
-  sidebarSections?: React.ReactNode;
+  /**
+   * Sections added under the conversation list (conversations shared with the
+   * user). A function is called with the list's search on each change of it,
+   * so the sections filter on what is typed, as the list does.
+   */
+  sidebarSections?: React.ReactNode | ((search: ChatSidebarSearch) => React.ReactNode);
   /** The status line's text for a status, over the built-in one; `undefined` keeps it. */
   statusLabel?: (status: AgentStatusState) => string | undefined;
   /** The rotating messages of the waiting panel, already translated. */
@@ -1159,6 +1163,12 @@ export interface ChatFile {
   fileId?: string;
   /** Upload status: 'pending' while uploading, 'done' when uploaded, 'error' on failure. */
   uploadStatus?: 'pending' | 'done' | 'error';
+}
+
+/** The conversation list's search, as a host's sections read it (`sidebarSections`). */
+export interface ChatSidebarSearch {
+  /** What the search box holds, trimmed; `''` when it holds nothing. */
+  query: string;
 }
 
 /**

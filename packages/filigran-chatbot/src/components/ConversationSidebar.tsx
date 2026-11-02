@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import type { ChatConversationSummary, ChatWorkspace } from '../types';
+import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translateAround } from '../utils';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
@@ -58,8 +58,8 @@ interface ConversationSidebarProps {
   rowActions?: (conversation: ChatConversationSummary) => ReactNode;
   /** The host's controls beside New conversation. */
   headerActions?: ReactNode;
-  /** The host's sections under the list. */
-  sections?: ReactNode;
+  /** The host's sections under the list; a function follows the search. */
+  sections?: ReactNode | ((search: ChatSidebarSearch) => ReactNode);
   /** Deletes every conversation, after a confirmation; omitted when the host offers no route. */
   onClearAll?: () => void;
   t: (key: string) => string;
@@ -353,7 +353,7 @@ export const ConversationSidebar = ({
             {filtered.map(renderRow)}
           </>
         )}
-        {sections}
+        {typeof sections === 'function' ? sections({ query: query.trim() }) : sections}
         {onClearAll && conversations.length > 0 && !q && (
           <ClearAllConversations onClear={onClearAll} className="px-2 pt-3" iconButtonClass={iconButton} t={t} />
         )}
