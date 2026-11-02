@@ -47,7 +47,7 @@ const restoreFiles = () => fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', r
 test('unnamed files are one card each unless the host collapses them', async () => {
   restoreFiles();
   await render({ conversationId: 'c1' });
-  assert.equal(button('Working files (9)'), undefined);
+  assert.ok(!button('Working files (9)'));
   assert.ok(text().includes('run.log'));
   assert.equal(container.querySelectorAll('img').length, 8, 'each picture previewed');
 });
@@ -99,14 +99,25 @@ test("a host's new predicate re-renders the replies", async () => {
   assert.ok(button('Working files (9)'));
 });
 
-test('opening the list stops following the end, so what was opened stays in view', async (t) => {
+test('opening the list stops following the end once it pushed the end out of view, so what was opened stays in view', async (t) => {
   const view = layOutTranscript(t);
   restoreFiles();
   await render({ conversationId: 'c1', collapseUnnamedFiles: true });
   await view.scrollTo(1600);
-  assert.equal(button('Scroll to bottom'), undefined, 'following');
+  assert.ok(!button('Scroll to bottom'), 'following');
+  // The height the opened list gives the thread, read as it opens.
+  view.setHeight(2400);
   await click(button('Working files (9)'));
   assert.ok(button('Scroll to bottom'), 'no longer following');
+});
+
+test('opening the list in a thread that still fits keeps following the end', async (t) => {
+  const view = layOutTranscript(t);
+  view.setHeight(400);
+  restoreFiles();
+  await render({ conversationId: 'c1', collapseUnnamedFiles: true });
+  await click(button('Working files (9)'));
+  assert.ok(!button('Scroll to bottom'));
 });
 
 test('a thumbnail with no picture to show is the picture icon, in the same box', async () => {
@@ -180,6 +191,49 @@ test('new request headers fetch a picture again with the picture still shown', a
   assert.match(shown() ?? '', /^blob:/);
 });
 
+test('a picture fetched again is shown again, though the bytes before did not decode', async () => {
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'look', attachments: [{ file_id: 'up1', filename: 'shot.png', content_type: 'image/png' }] },
+      { id: 'm2', role: 'assistant', content: 'Seen.' },
+    ]),
+    (req) => (req.url === '/api/chat/files/up1/download' ? new Response(new Blob(['png'], { type: 'image/png' })) : undefined),
+  ]);
+  await render({ conversationId: 'c1', requestHeaders: { Authorization: 'Bearer a' } });
+  await act(async () => {
+    container.querySelector('img[alt="shot.png"]')!.dispatchEvent(new Event('error'));
+    await settle();
+  });
+  assert.ok(text().includes('Image could not be loaded'));
+  await render({ conversationId: 'c1', requestHeaders: { Authorization: 'Bearer b' } });
+  assert.match(container.querySelector('img[alt="shot.png"]')?.getAttribute('src') ?? '', /^blob:/);
+});
+
+test('the bytes a picture showed are released once the next ones are on screen, never under it', async (t) => {
+  const shownAtRevoke: (string | null | undefined)[] = [];
+  const revoked: string[] = [];
+  const revoke = URL.revokeObjectURL.bind(URL);
+  t.mock.method(URL, 'revokeObjectURL', (url: string) => {
+    revoked.push(url);
+    shownAtRevoke.push(container.querySelector('img[alt="shot.png"]')?.getAttribute('src'));
+    revoke(url);
+  });
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'look', attachments: [{ file_id: 'up1', filename: 'shot.png', content_type: 'image/png' }] },
+      { id: 'm2', role: 'assistant', content: 'Seen.' },
+    ]),
+    (req) => (req.url === '/api/chat/files/up1/download' ? new Response(new Blob(['png'], { type: 'image/png' })) : undefined),
+  ]);
+  await render({ conversationId: 'c1', requestHeaders: { Authorization: 'Bearer a' } });
+  const first = container.querySelector('img[alt="shot.png"]')!.getAttribute('src');
+  await render({ conversationId: 'c1', requestHeaders: { Authorization: 'Bearer b' } });
+  assert.ok(revoked.includes(first!), 'the first bytes are released');
+  assert.notEqual(shownAtRevoke[revoked.indexOf(first!)], first, 'with the next ones already shown');
+});
+
 test('a reasoning window action that throws leaves the window and the panel on screen', async (t) => {
   t.mock.method(console, 'error', () => undefined);
   const stream = sseStream();
@@ -207,6 +261,27 @@ test('a reasoning window action that throws leaves the window and the panel on s
   }
 });
 
+test('an action of nothing takes no corner of the reasoning window', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', renderReasoningAction: () => null }, ref);
+  try {
+    await act(async () => {
+      void ref.current!.send('go');
+      await settle();
+      stream.send({ type: 'status', status: 'thinking_text', content: 'Weighing the indicators first.' });
+      await settle(10);
+    });
+    const bubble = container.querySelector('.filigran-chat-reasoning')!;
+    assert.ok(bubble);
+    assert.equal(bubble.children.length, 1, 'the text window alone');
+    assert.ok(!bubble.className.includes('pr-9'));
+  } finally {
+    await finish(stream);
+  }
+});
+
 test("the reasoning window holds the host's action while it shows, and drops it with the window", async () => {
   const stream = sseStream();
   fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
@@ -222,13 +297,13 @@ test("the reasoning window holds the host's action while it shows, and drops it 
       void ref.current!.send('go');
       await settle();
     });
-    assert.equal(button('Play'), undefined, 'no reasoning, no window');
+    assert.ok(!button('Play'), 'no reasoning, no window');
     await send({ type: 'status', status: 'thinking_text', content: 'Weighing the indicators first.' });
     const play = button('Play');
     assert.ok(play?.closest('.filigran-chat-reasoning'), "in the reasoning window's corner");
     await send({ type: 'stream', content: 'The answer.' });
     assert.ok(text().includes('The answer.'));
-    assert.equal(button('Play'), undefined, 'gone with the window once the answer streams');
+    assert.ok(!button('Play'), 'gone with the window once the answer streams');
   } finally {
     await finish(stream);
   }
@@ -250,7 +325,8 @@ function layOutTranscript(t: { after: (fn: () => void) => void }) {
   const isTranscript = (el: Element) => el.getAttribute('data-testid') === 'filigran-chat-transcript';
   const scrolls: ScrollToOptions[] = [];
   let top = 0;
-  const clamp = (value: number) => Math.max(0, Math.min(value, 1600));
+  let height = 2000;
+  const clamp = (value: number) => Math.max(0, Math.min(value, height - 400));
   Object.defineProperties(proto, {
     scrollTop: {
       configurable: true,
@@ -265,7 +341,7 @@ function layOutTranscript(t: { after: (fn: () => void) => void }) {
     scrollHeight: {
       configurable: true,
       get() {
-        return isTranscript(this) ? 2000 : descriptors.scrollHeight?.get?.call(this);
+        return isTranscript(this) ? height : descriptors.scrollHeight?.get?.call(this);
       },
     },
     clientHeight: {
@@ -293,6 +369,11 @@ function layOutTranscript(t: { after: (fn: () => void) => void }) {
   const transcript = () => container.querySelector('[data-testid="filigran-chat-transcript"]') as HTMLElement;
   return {
     scrolls,
+    /** The thread is now *px* tall. */
+    setHeight: (px: number) => {
+      height = px;
+      top = clamp(top);
+    },
     /** The view moves to *to*, and the transcript hears of it. */
     scrollTo: (to: number) =>
       act(async () => {
@@ -326,7 +407,7 @@ test('a reader who scrolled up gets a way back to the end, which follows again',
   olderHistoryBackend();
   await render({ conversationId: 'c1', apiEndpoints: { messagesPage: '/chat/sessions' } });
   await view.scrollTo(1600);
-  assert.equal(button('Scroll to bottom'), undefined, 'at the end, following');
+  assert.ok(!button('Scroll to bottom'), 'at the end, following');
   await view.scrollTo(900);
   const back = button('Scroll to bottom');
   assert.ok(back);
@@ -334,7 +415,7 @@ test('a reader who scrolled up gets a way back to the end, which follows again',
   back.focus();
   await click(back);
   assert.deepEqual(view.scrolls, [{ top: 2000, behavior: 'smooth' }]);
-  assert.equal(button('Scroll to bottom'), undefined, 'following again');
+  assert.ok(!button('Scroll to bottom'), 'following again');
   const transcript = container.querySelector('[data-testid="filigran-chat-transcript"]');
   assert.ok(document.activeElement === transcript, 'the focus goes to the thread, not the page');
 });
@@ -400,7 +481,7 @@ test('nearing the top asks nothing of a host that offers no older messages', asy
   await view.scrollTo(1600);
   await view.scrollTo(100);
   assert.equal(olderPages(requests), 0);
-  assert.equal(button('Load earlier messages'), undefined);
+  assert.ok(!button('Load earlier messages'));
 });
 
 /** `Date.now` as the test sets it. */
@@ -460,4 +541,83 @@ test('the cooldown runs from when a load settles: a slow page puts the reader ba
   time.advance(1500);
   await view.scrollTo(80);
   assert.equal(olderPages(requests), 2, 'once the cooldown has run');
+});
+
+/**
+ * The thread alone, mounted beside the test's panel container: switching its
+ * conversation keeps it mounted, which the panel does not (it reads the next
+ * one back behind a skeleton).
+ */
+async function mountThread(t: { after: (fn: () => Promise<void>) => void }) {
+  const { ChatMessages } = await import('./ChatMessages.tsx');
+  const { createRoot } = await import('react-dom/client');
+  const host = document.createElement('div');
+  container.appendChild(host);
+  const root = createRoot(host);
+  t.after(() => act(async () => root.unmount()));
+  return (conversationId: string, onLoadEarlier: () => Promise<number>) =>
+    act(async () => {
+      root.render(
+        <ChatMessages
+          messages={[{ id: `${conversationId}-m`, role: 'assistant', content: `answer of ${conversationId}`, timestamp: new Date(0) }]}
+          isLoading={false}
+          agentStatus={null}
+          agentName="Hunter"
+          logoIcon={null}
+          conversationId={conversationId}
+          onLoadEarlier={onLoadEarlier}
+          t={(key) => key}
+        />,
+      );
+      await settle();
+    });
+}
+
+test('a failure stops the scroll loading for that visit only: the conversation opened again loads on scroll', async (t) => {
+  const view = layOutTranscript(t);
+  const time = clock(t);
+  const show = await mountThread(t);
+  let calls = 0;
+  const failing = async () => {
+    calls += 1;
+    return 0;
+  };
+  await show('c1', failing);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(calls, 1);
+  time.advance(5000);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(calls, 1, 'stopped after the failure');
+  await show('c2', failing);
+  await show('c1', failing);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(calls, 2);
+});
+
+test('a load that ends after its conversation was left stops nothing in the next one', async (t) => {
+  const view = layOutTranscript(t);
+  const time = clock(t);
+  const show = await mountThread(t);
+  let release!: (count: number) => void;
+  let calls = 0;
+  const load = () => {
+    calls += 1;
+    return calls === 1 ? new Promise<number>((resolve) => (release = resolve)) : Promise.resolve(0);
+  };
+  await show('c1', load);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(calls, 1);
+  await show('c2', load);
+  await act(async () => {
+    release(0);
+    await settle();
+  });
+  time.advance(5000);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(calls, 2);
 });

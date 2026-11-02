@@ -61,9 +61,10 @@ export interface ScrollFollower {
    */
   leave: () => void;
   /**
-   * The reader opened something inside the thread (a list of files): the view
-   * stays where it is while it grows, rather than jumping to the end and
-   * taking what was opened out of sight.
+   * The reader opened something inside the thread (a list of files), which
+   * has just grown: when it pushed the end out of view, the view stays where
+   * it is rather than jumping to the end and taking what was opened out of
+   * sight. With the end still in view it keeps following.
    */
   stay: () => void;
 }
@@ -164,6 +165,8 @@ export function createScrollFollower(
       stopWaiting();
     },
     stay: () => {
+      const box = getBox();
+      if (!box || box.scrollHeight - box.scrollTop - box.clientHeight <= 1) return;
       setFollowing(false);
       stopWaiting();
     },

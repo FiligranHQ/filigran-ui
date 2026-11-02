@@ -1047,8 +1047,14 @@ export const ChatMessages = ({
   // Loads the scroll asks for (`handleScroll`). Their cooldown runs from when
   // a load settles, so the scroll that puts the reader back where they were
   // asks for nothing more. One that brought nothing (a backend failing) stops
-  // them for the conversation; the button stays to try again.
-  const autoEarlierRef = useRef<{ running: boolean; settledAt: number; stoppedIn?: string | null }>({ running: false, settledAt: 0 });
+  // them until the conversation is opened again (`visit`); the button stays
+  // to try again.
+  const autoEarlierRef = useRef({ running: false, settledAt: 0, stopped: false, visit: 0 });
+  useEffect(() => {
+    const auto = autoEarlierRef.current;
+    auto.visit += 1;
+    auto.stopped = false;
+  }, [conversationId]);
   /** How many messages it showed, `undefined` when it asked for none. */
   const showEarlier = async (): Promise<number | undefined> => {
     const el = scrollRef.current;
@@ -1077,7 +1083,7 @@ export const ChatMessages = ({
       const count = await onLoadEarlier();
       if (count === 0) prependedRef.current = null;
       // One the reader asked for that brought some lets the scroll load again.
-      else autoEarlierRef.current.stoppedIn = undefined;
+      else autoEarlierRef.current.stopped = false;
       return count;
     } finally {
       setLoadingEarlier(false);
@@ -1127,13 +1133,14 @@ export const ChatMessages = ({
     follower.onScroll();
     const el = scrollRef.current;
     const auto = autoEarlierRef.current;
-    if (!el || follower.following || auto.running || el.scrollTop > LOAD_EARLIER_THRESHOLD_PX) return;
-    if (auto.stoppedIn !== undefined && auto.stoppedIn === (conversationId ?? null)) return;
+    if (!el || follower.following || auto.running || auto.stopped || el.scrollTop > LOAD_EARLIER_THRESHOLD_PX) return;
     if (Date.now() - auto.settledAt < LOAD_EARLIER_COOLDOWN_MS) return;
     auto.running = true;
+    const { visit } = auto;
     void showEarlier()
       .then((shown) => {
-        if (shown === 0) auto.stoppedIn = conversationId ?? null;
+        // Nothing for a conversation no longer shown says nothing of the one that is.
+        if (shown === 0 && visit === auto.visit) auto.stopped = true;
       })
       .finally(() => {
         auto.running = false;

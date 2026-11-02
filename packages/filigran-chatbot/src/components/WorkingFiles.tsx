@@ -1,4 +1,4 @@
-import { createContext, useContext, useId, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { Translate } from '../types';
 import { translate } from '../utils';
 import { useImageSrc } from './ChatImage';
@@ -13,7 +13,7 @@ export interface WorkingFile {
   imageUrl?: string;
 }
 
-/** Called as the list opens: the thread keeps the view where it is instead of following its end. */
+/** Called once the list has opened: the thread keeps the view where it is if the list pushed its end out of view. */
 export const KeepViewContext = createContext<() => void>(() => undefined);
 
 /** From this many files, the opened list repeats its toggle at its end. */
@@ -59,6 +59,10 @@ export function WorkingFiles({ files, requestHeaders, t }: { files: WorkingFile[
   const listId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
   const keepView = useContext(KeepViewContext);
+  // Before the thread hears the list grew, which would take it to its end.
+  useLayoutEffect(() => {
+    if (open) keepView();
+  }, [open, keepView]);
 
   return (
     <div className="pl-1">
@@ -68,7 +72,6 @@ export function WorkingFiles({ files, requestHeaders, t }: { files: WorkingFile[
         aria-expanded={open}
         aria-controls={listId}
         onClick={() => {
-          if (!open) keepView();
           setOpen(!open);
           setOpened(true);
         }}

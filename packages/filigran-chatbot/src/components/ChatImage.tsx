@@ -110,7 +110,6 @@ export function useImageSrc(
   // token) fetch again with the picture still shown, a new URL starts over.
   const [fetched, setFetched] = useState<{ src: string; url: string } | null>(null);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const shownRef = useRef<string | null>(null);
   const panelFetch = usePanelFetch();
 
   useEffect(() => {
@@ -122,11 +121,7 @@ export function useImageSrc(
         return res.blob();
       })
       .then((blob) => {
-        if (cancelled) return;
-        const previous = shownRef.current;
-        shownRef.current = URL.createObjectURL(blob);
-        setFetched({ src, url: shownRef.current });
-        if (previous) URL.revokeObjectURL(previous);
+        if (!cancelled) setFetched({ src, url: URL.createObjectURL(blob) });
       })
       .catch(() => {
         if (!cancelled) setFailedSrc(src);
@@ -135,12 +130,12 @@ export function useImageSrc(
       cancelled = true;
     };
   }, [needsAuth, src, requestHeaders]);
-  useEffect(
-    () => () => {
-      if (shownRef.current) URL.revokeObjectURL(shownRef.current);
-    },
-    [],
-  );
+  // Revoked once the next one is on screen, or on unmount: never under an <img> still showing it.
+  useEffect(() => {
+    if (!fetched) return;
+    const { url } = fetched;
+    return () => URL.revokeObjectURL(url);
+  }, [fetched]);
 
   if (!src) return { src: null, status: 'failed' };
   if (!needsAuth) return { src, status: 'ready' };
@@ -175,11 +170,12 @@ interface ChatImageProps {
  */
 export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[400px]', onDownload, t }: ChatImageProps) => {
   const fetched = useImageSrc(src, requestHeaders);
-  const [undecodable, setUndecodable] = useState(false);
+  // The URL whose bytes did not decode; a new one (bytes fetched again) gets its own try.
+  const [undecodable, setUndecodable] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const displaySrc = fetched.src;
 
-  if (fetched.status === 'failed' || undecodable) {
+  if (fetched.status === 'failed' || (displaySrc !== null && undecodable === displaySrc)) {
     return <p className="my-2 text-[0.75rem] italic chat-text-muted-400/40">{t('Image could not be loaded')}</p>;
   }
 
@@ -200,7 +196,7 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
           alt={alt}
           loading="lazy"
           onClick={() => setExpanded(true)}
-          onError={() => setUndecodable(true)}
+          onError={() => setUndecodable(displaySrc)}
           className={`max-w-full cursor-zoom-in rounded-md object-contain ${maxHeightClass}`}
         />
         <button

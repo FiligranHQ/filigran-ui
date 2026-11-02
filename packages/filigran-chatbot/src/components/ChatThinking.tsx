@@ -27,7 +27,8 @@ import {
 } from './icons';
 import { translate } from '../utils';
 import { ChatWaitingPanel } from './ChatWaitingPanel';
-import { HostRenderBoundary, HostRendered } from './HostRenderBoundary';
+import { HostRenderBoundary } from './HostRenderBoundary';
+import { askHost } from '../utils/askHost';
 
 interface ChatThinkingProps extends ThinkingOverrides {
   agentStatus: AgentStatusState | null;
@@ -287,10 +288,9 @@ function ThinkingTextBubble({ text, action }: { text: string; action?: React.Rea
   }, [text]);
 
   return (
-    <div
-      className={`filigran-chat-reasoning relative ml-11 mt-2.5 max-w-[75%] rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] py-2 pl-3 ${action ? 'pr-9' : 'pr-3'}`}
-    >
-      {action && <div className="absolute top-1 right-1">{action}</div>}
+    <div className="filigran-chat-reasoning ml-11 mt-2.5 max-w-[75%] rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] py-2 pl-3 pr-3">
+      {/* A float, so one whose content fell back to nothing takes no room from the text. */}
+      {action && <div className="float-right -mr-2 -mt-1 ml-2">{action}</div>}
       <div
         ref={ref}
         className={`max-h-40 overflow-hidden${
@@ -409,6 +409,14 @@ export const ChatThinking = ({
   const waitedWithoutReasoning = useSustained(miniGameEnabled && !showReasoning, WAITING_GAME_DELAY_MS);
   const reasoningWentQuiet = useSustained(miniGameEnabled && showReasoning, QUIET_REASONING_GAME_DELAY_MS, thinkingContent?.length ?? 0);
   const showWaiting = showReasoning ? reasoningWentQuiet : waitedWithoutReasoning;
+  // The corner is taken only by an action to show. One that throws takes only itself down.
+  const reasoningActionNode = showReasoning && !showWaiting ? askHost(renderReasoningAction) : null;
+  const reasoningAction =
+    reasoningActionNode === null || reasoningActionNode === undefined || reasoningActionNode === false ? null : (
+      <HostRenderBoundary label="A reasoning window action" resetKey="" fallback={null}>
+        {reasoningActionNode}
+      </HostRenderBoundary>
+    );
 
   return (
     <>
@@ -461,17 +469,7 @@ export const ChatThinking = ({
           content={renderWaitingPanel?.()}
         />
       ) : showReasoning ? (
-        <ThinkingTextBubble
-          text={reasoningText}
-          action={
-            renderReasoningAction && (
-              // An action that throws takes only itself down: the corner stays empty.
-              <HostRenderBoundary label="A reasoning window action" resetKey="" fallback={null}>
-                <HostRendered draw={renderReasoningAction} />
-              </HostRenderBoundary>
-            )
-          }
-        />
+        <ThinkingTextBubble text={reasoningText} action={reasoningAction} />
       ) : null}
     </>
   );
