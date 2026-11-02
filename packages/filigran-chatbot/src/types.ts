@@ -670,8 +670,18 @@ export interface ChatPanelProps {
   sidebarRowActions?: (conversation: ChatConversationSummary) => React.ReactNode;
   /** Controls added beside New conversation, atop the conversation list. */
   sidebarHeaderActions?: React.ReactNode;
-  /** Sections added under the conversation list (conversations shared with the user). */
-  sidebarSections?: React.ReactNode;
+  /**
+   * Sections added under the conversation list (conversations shared with the
+   * user). A function draws them from the list's search, so they filter on
+   * what is typed, as the list does. It is drawn again only when the search or
+   * the function changes: pass a stable one (`useCallback`). Hooks go in a
+   * component it returns (`({ query }) => <Shared query={query} />`): hook
+   * calls in the function itself break once it draws another branch. With it,
+   * the search box shows whatever the number of conversations, and a search
+   * with no match among the user's own says so ("None of your conversations
+   * matches").
+   */
+  sidebarSections?: React.ReactNode | ((search: ChatSidebarSearch) => React.ReactNode);
   /** The status line's text for a status, over the built-in one; `undefined` keeps it. */
   statusLabel?: (status: AgentStatusState) => string | undefined;
   /** The rotating messages of the waiting panel, already translated. */
@@ -1218,6 +1228,12 @@ export interface ChatFile {
   fileId?: string;
   /** Upload status: 'pending' while uploading, 'done' when uploaded, 'error' on failure. */
   uploadStatus?: 'pending' | 'done' | 'error';
+}
+
+/** The conversation list's search, as a host's sections read it (`sidebarSections`). */
+export interface ChatSidebarSearch {
+  /** What the search box holds, trimmed; `''` when it holds nothing. */
+  query: string;
 }
 
 /**

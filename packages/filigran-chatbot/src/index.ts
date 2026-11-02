@@ -37,6 +37,7 @@ export type {
   ChatConversationSummary,
   ChatConversationAction,
   ChatHeaderContext,
+  ChatSidebarSearch,
   ChatWorkspace,
   ChatFile,
   ChatPromptTemplate,

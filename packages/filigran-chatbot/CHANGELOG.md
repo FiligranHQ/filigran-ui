@@ -41,6 +41,14 @@ This file starts at 3.10.0; earlier releases are on the
   conversations`).
 - `XtmAgent.badges`: short labels the agents list may send (`badges`, strings
   only), shown after the agent's name in the agent picker.
+- `sidebarSections` also takes a function of the conversation list's search,
+  `(search: ChatSidebarSearch) => ReactNode`, given what the search box holds,
+  trimmed (`''` when empty). It is drawn again when the search or the function
+  changes, so a host passes a stable one, and puts hooks in a component the
+  function returns. With it the search box shows whatever the number of
+  conversations, and a search no conversation of the user's own matches says
+  "None of your conversations matches". Sections given as an element show as
+  they are.
 
 ### Fixed
 
@@ -56,6 +64,9 @@ This file starts at 3.10.0; earlier releases are on the
   until the turn ended and the list was read again.
 - A read-only panel showed the welcome screen's "Suggestions" heading over no
   suggestions: nothing can be sent there, so the section is left out.
+- A search box hidden as the list shrinks below its threshold clears its
+  query: the list stayed filtered by a search the user could neither see nor
+  clear.
 
 ## 3.18.1 — unreleased
 

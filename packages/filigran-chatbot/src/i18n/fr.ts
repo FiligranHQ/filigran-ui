@@ -112,6 +112,7 @@ const fr: Catalog = {
   'New workspace': 'Nouvel espace de travail',
   No: 'Non',
   'No agent matches': 'Aucun agent ne correspond',
+  'None of your conversations matches': 'Aucune de vos conversations ne correspond',
   'No conversation matches': 'Aucune conversation ne correspond',
   'No conversations yet': 'Aucune conversation pour l’instant',
   'No prompt matches': 'Aucun prompt ne correspond',

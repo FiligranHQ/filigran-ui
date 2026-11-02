@@ -111,6 +111,7 @@ const es: Catalog = {
   'New workspace': 'Nuevo espacio de trabajo',
   No: 'No',
   'No agent matches': 'No hay ningún agente que coincida',
+  'None of your conversations matches': 'Ninguna de sus conversaciones coincide',
   'No conversation matches': 'No hay conversaciones que coincidan',
   'No conversations yet': 'Aún no hay conversaciones',
   'No prompt matches': 'No hay ningún prompt que coincida',
