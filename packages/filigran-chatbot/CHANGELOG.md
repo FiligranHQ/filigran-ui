@@ -8,6 +8,23 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.19.1 — unreleased
+
+### Added
+
+- The panel speaks German, Italian, Korean, Russian and Simplified Chinese on
+  its own: a catalog for each, picked from `locale` by its language whatever
+  the region (`de-de`, `it-it`, `ko-kr`, `ru-ru`, `zh-cn`). Those languages
+  showed in English unless the host translated every key through `t`.
+
+### Fixed
+
+- A refusal whose body has no `detail` shows its `error` when that is a string
+  (a proxy answering `{ "error": "..." }`): above the composer, in place of the
+  answer, on a failed upload's chip, under the conversation list and on a
+  conversation that could not be loaded. The panel showed its generic message
+  instead.
+
 ## 3.19.0 — unreleased
 
 ### Added
