@@ -676,3 +676,34 @@ test("a load of the conversation left, ending with nothing, keeps the next one's
   );
 });
 
+test('a load of the conversation left, ending in any way, never lets a stopped one load on scroll again', async (t) => {
+  const view = layOutTranscript(t);
+  const time = clock(t);
+  const show = await mountThread(t);
+  const releases: ((count: number) => void)[] = [];
+  let failures = 0;
+  const slow = () => new Promise<number>((resolve) => releases.push(resolve));
+  const failing = async () => {
+    failures += 1;
+    return 0;
+  };
+  // Two loads of c1 still on their way: one will find nothing, one some.
+  await show('c1', slow);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  await show('c2', failing);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(failures, 1, 'c2 fails, and its scroll loads stop');
+  for (const count of [0, 3]) {
+    await act(async () => {
+      releases.shift()?.(count);
+      await settle();
+    });
+  }
+  time.advance(5000);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  assert.equal(failures, 1, 'still stopped');
+});
+

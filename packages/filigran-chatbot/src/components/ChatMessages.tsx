@@ -1084,12 +1084,16 @@ export const ChatMessages = ({
       scrollTop: el?.scrollTop ?? 0,
     };
     prependedRef.current = prepended;
+    const { visit } = autoEarlierRef.current;
     try {
       const count = await onLoadEarlier();
-      // Only its own record: a load of the next conversation may have set one since.
-      if (count === 0 && prependedRef.current === prepended) prependedRef.current = null;
-      // One the reader asked for that brought some lets the scroll load again.
-      else autoEarlierRef.current.stopped = false;
+      if (count === 0) {
+        // Only its own record: a load of the next conversation may have set one since.
+        if (prependedRef.current === prepended) prependedRef.current = null;
+      } else if (visit === autoEarlierRef.current.visit) {
+        // One that brought some lets the scroll load again, in the visit it was asked in.
+        autoEarlierRef.current.stopped = false;
+      }
       return count;
     } finally {
       setLoadingEarlierFor((current) => (current === loadingFor ? undefined : current));
