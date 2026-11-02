@@ -1291,9 +1291,10 @@ both. The same variables may be set in CSS on an ancestor instead.
 
 ### Internationalization
 
-The panel speaks English, French, Spanish and Japanese on its own: it ships a
-catalog for each and picks one from `locale` (`fr-FR` reads French; English, or
-a language it lacks, is its own keys). A host in another language translates
+The panel speaks English, French, German, Italian, Spanish, Japanese, Korean,
+Russian and Simplified Chinese on its own: it ships a catalog for each and
+picks one from `locale` by its language, whatever the region (`fr-FR` reads
+French, `zh-cn` Chinese; English, or a language it lacks, is its own keys). A host in another language translates
 through `t`. A host with nothing to add only passes `locale`:
 
 ```tsx

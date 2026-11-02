@@ -23,7 +23,7 @@ test('the source translates a known set of keys', () => {
 });
 
 test('the panel speaks the language of every catalog', () => {
-  assert.ok(languages.includes('fr'), `found ${languages.join()}`);
+  for (const language of ['de', 'es', 'fr', 'it', 'ja', 'ko', 'ru', 'zh']) assert.ok(languages.includes(language), `found ${languages.join()}`);
   for (const language of languages) assert.ok(catalogFor(language), language);
 });
 
@@ -56,6 +56,28 @@ test('a locale picks its language, whatever its region', () => {
   assert.equal(catalogFor('ja_JP'), catalogFor('ja'));
   assert.equal(catalogFor('en-US'), undefined);
   assert.equal(catalogFor('pt-BR'), undefined);
+});
+
+test("the products' locales pick their catalogs", () => {
+  const picked = {
+    'de-de': 'de',
+    'es-es': 'es',
+    'fr-fr': 'fr',
+    'it-it': 'it',
+    'ja-jp': 'ja',
+    'ko-kr': 'ko',
+    'ru-ru': 'ru',
+    'zh-cn': 'zh',
+    'zh-CN': 'zh',
+    ko_KR: 'ko',
+  };
+  for (const [locale, language] of Object.entries(picked)) {
+    assert.ok(catalogFor(locale), locale);
+    assert.equal(catalogFor(locale), catalogFor(language), locale);
+  }
+  assert.notEqual(catalogFor('de-de'), catalogFor('fr-fr'));
+  assert.equal(createTranslate(undefined, 'zh-cn')('Send'), '发送');
+  assert.equal(createTranslate(undefined, 'de-de')('Send'), 'Senden');
 });
 
 test("the host's translation wins; a key it returns unchanged falls back to the catalog", () => {
