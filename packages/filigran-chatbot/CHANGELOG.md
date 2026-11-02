@@ -20,12 +20,14 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Fixed
 
-- A refusal whose body has no `detail` shows its `message`, else its `error`
-  when that is a sentence (a proxy answering `{ "error": "..." }`, but not an
-  `invalid_token`, nor the `Too Many Requests` beside a `statusCode`): above
-  the composer, in place of the answer, on a failed upload's chip, under the
-  conversation list and on a conversation that could not be loaded. The panel
-  showed its generic message instead.
+- A refusal whose body has no `detail` shows its `message` beside a
+  `statusCode` (Fastify, Boom, NestJS), else its `error` when that is a
+  sentence (a proxy answering `{ "error": "..." }`); never a code or an HTTP
+  reason phrase (`invalid_token`, `Unauthorized`, `Too Many Requests`), nor a
+  gateway's bare `{ "message": ... }`. It shows above the composer, in place
+  of the answer, on a failed upload's chip, under the conversation list and on
+  a conversation that could not be loaded. The panel showed its generic
+  message instead.
 - The status line has its own wording when it has no agent's name (`The agent
   is answering…`, `Consulting an agent…`, `Transferring to another agent…`),
   where it filled the name with a lowercase `the agent`: `the agent is

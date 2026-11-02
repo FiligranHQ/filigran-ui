@@ -37,12 +37,28 @@ test('an error sentence is read in any script, not only one with spaces', () => 
   assert.equal(refusalDetail({ error: 'クォータを超えました。' }), 'クォータを超えました。');
 });
 
-test("without a detail, a body's own message is read before its error", () => {
+test("without a detail, a body's own message beside its statusCode is read before its error", () => {
   const fastify = { statusCode: 429, error: 'Too Many Requests', message: 'Rate limit exceeded, retry in 1 minute' };
   assert.equal(refusalDetail(fastify), 'Rate limit exceeded, retry in 1 minute');
-  assert.equal(refusalDetail({ message: 'From message.', error: 'From error.' }), 'From message.');
-  assert.equal(refusalDetail({ detail: 'From detail.', message: 'From message.' }), 'From detail.');
+  assert.equal(refusalDetail({ statusCode: 403, message: 'From message.', error: 'Forbidden' }), 'From message.');
+  assert.equal(refusalDetail({ detail: 'From detail.', statusCode: 403, message: 'From message.' }), 'From detail.');
   assert.equal(refusalDetail({ status: 500, error: 'Internal Server Error', message: '' }), null);
+});
+
+test("a message that is a gateway's reason phrase, or has no statusCode beside it, is not read", () => {
+  // AWS API Gateway and Kong.
+  assert.equal(refusalDetail({ message: 'Unauthorized' }), null);
+  assert.equal(refusalDetail({ message: 'Too Many Requests' }), null);
+  // NestJS, and Boom without a message of its own.
+  assert.equal(refusalDetail({ statusCode: 401, message: 'Unauthorized' }), null);
+  assert.equal(refusalDetail({ statusCode: 429, message: 'Too Many Requests' }), null);
+  assert.equal(refusalDetail({ statusCode: 404, error: 'Not Found', message: 'Not Found' }), null);
+  // An Express handler's `{ message: err.message }`.
+  assert.equal(refusalDetail({ message: 'connect ECONNREFUSED 10.0.3.4:5432' }), null);
+  // A sentence `error` beside a message that is not read still is.
+  assert.equal(refusalDetail({ message: 'Unauthorized', error: 'Quota exceeded.' }), 'Quota exceeded.');
+  // A reason phrase is not an error sentence either.
+  assert.equal(refusalDetail({ error: 'Service Unavailable' }), null);
 });
 
 test('a body that is not JSON has no detail', async () => {

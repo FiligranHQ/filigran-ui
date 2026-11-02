@@ -520,8 +520,8 @@ conversation. If the endpoint responds with a non-2xx status, the component
 silently resets the stored id and starts fresh on the next message, except
 when it says nothing of the conversation: a `502`, `503` or `504` (or no
 answer at all) keeps the id and reads it back once the backend answers, and a
-`401` or `403` (expired credentials) keeps it, shows the response's `detail`
-or `error` (or "This conversation could not be loaded.") with a Retry button, and reads
+`401` or `403` (expired credentials) keeps it, shows the response's
+[reason](#a-refusals-reason) (or "This conversation could not be loaded.") with a Retry button, and reads
 it back as soon as `requestHeaders` change.
 
 Assistant history messages **should echo the same `attachments[]` array** that
@@ -583,7 +583,7 @@ the row reverts to its previous title.
 
 With [workspaces](#workspaces) on, the same route files a conversation:
 `{ "workspace_id": "uuid" }`, or `{ "workspace_id": null }` to take it out of
-its workspace. A refusal's `detail` (or `error`) is shown under the list.
+its workspace. A refusal's [reason](#a-refusals-reason) is shown under the list.
 
 ### Workspaces
 
@@ -659,6 +659,21 @@ Deletes a conversation from the history menu. Any 2xx response counts as
 success; deleting the active conversation resets the panel to a fresh chat so
 the next message never targets a dead conversation id.
 
+### A refusal's reason
+
+Where the panel shows why the backend refused a request, it reads the JSON body
+of the non-2xx answer, in this order:
+
+1. `detail` when a string, or the `message` (or `detail`) of a `detail` object;
+2. `message` beside a `statusCode` (Fastify, Boom, NestJS), unless it is a code
+   (`Unauthorized`) or an HTTP reason phrase (`Too Many Requests`);
+3. `error` when it is a sentence: not a code or reason phrase, and with no
+   `error_description`, `status` or `statusCode` beside it (a proxy's
+   `{ "error": "..." }`, but not OAuth's `invalid_token`).
+
+Anything else (a gateway's `{ "message": "Unauthorized" }`, a string over 500
+characters, a body that is not JSON) shows the panel's own, translated message.
+
 ### `POST {apiBaseUrl}/chat/messages`
 
 Sends a message and streams the response via SSE.
@@ -686,8 +701,7 @@ It must be JSON-serializable — a non-serializable value (circular reference,
 
 A refusal before the stream (a non-2xx answer: a rate limit, a refused
 option, an unknown conversation) shows the response's `detail` in place of the
-answer - a string, or the `message` (or `detail`) of an object - else its
-`error` when a string (a proxy's `{ "error": "..." }`), and
+answer ([its reason](#a-refusals-reason)), and
 "Unable to connect. Please check the configuration." when it has none; the
 handle's `send` resolves `'failed'`.
 
@@ -821,7 +835,7 @@ until the next send. On a non-2xx
 response or a network error nothing was stored: the optimistic user bubble is
 rolled back, the text is restored into the composer (prepended on its own line
 if the user already typed something new), the send resolves `'failed'` and the
-refusal's `detail` (or `error`), when there is one, shows above the composer — so a backend
+refusal's [reason](#a-refusals-reason), when there is one, shows above the composer — so a backend
 without steering support degrades gracefully and the message is never silently
 lost. A `409` means no turn is running any more, an ordinary race: no notice
 shows, and with `holdSendsDuringTurn` the message is held and sent as the next
@@ -837,7 +851,7 @@ mentions or body fields of its own (`send`'s `extras`, `onBeforeSend`'s
 for the turn to end (`holdSendsDuringTurn`), and `onBeforeSend` is asked again,
 with `turnRunning: false`, before it goes out. A file that failed to upload
 neither steers nor waits, nor goes without that file: its chip says why (the
-upload's `detail` or `error`), and the composer offers no send, and says why, until the
+upload's [reason](#a-refusals-reason)), and the composer offers no send, and says why, until the
 user removes it. `send` and a voice
 call attach no files, so this never holds them. Esc stops generating.
 
@@ -1045,7 +1059,7 @@ chat) opts into six more routes, none with a default:
 
 | `apiEndpoints` key | Request | What it does |
 | --- | --- | --- |
-| `cancel` | `POST {cancel}` with `{ conversation_id }` | Stop asks the backend to end the turn; the panel keeps reading until the stream's `cancelled` frame (or lets go after 10 s, or at once on a network error or an answer of `{ "turn": "none" }`, reading the conversation back for an end it had not read yet). A Stop pressed before the panel's own send started its turn (its stream delivered nothing yet) carries `"awaiting_send": true`, and its `none` says nothing of that turn: the Stop stays pending and is sent again, without the flag, as the turn starts (or as the answer comes, the turn started meanwhile); any other answer reached a turn, and nothing goes again. A backend may keep a Stop with that flag for the send's turn, and must then take a second cancel of one turn; a Stop without it says nothing of a later send. A refusal (non-2xx) keeps the turn running and shows its `detail` (or `error`) above the composer |
+| `cancel` | `POST {cancel}` with `{ conversation_id }` | Stop asks the backend to end the turn; the panel keeps reading until the stream's `cancelled` frame (or lets go after 10 s, or at once on a network error or an answer of `{ "turn": "none" }`, reading the conversation back for an end it had not read yet). A Stop pressed before the panel's own send started its turn (its stream delivered nothing yet) carries `"awaiting_send": true`, and its `none` says nothing of that turn: the Stop stays pending and is sent again, without the flag, as the turn starts (or as the answer comes, the turn started meanwhile); any other answer reached a turn, and nothing goes again. A backend may keep a Stop with that flag for the send's turn, and must then take a second cancel of one turn; a Stop without it says nothing of a later send. A refusal (non-2xx) keeps the turn running and shows its [reason](#a-refusals-reason) above the composer |
 | `skipWait` | `POST {skipWait}` with `{ conversation_id }` | `Continue now` on `status: wait_start` (`{ seconds, reason }`), for as long as the pause lasts (see the status values) |
 | `events` | `GET {events}/{conversation_id}/events?client_id=<id>` → SSE | Turns this panel did not start (another tab, a reload mid-turn), `user_message`, `conversation_title`, `approval_resolved`; every frame of a turn names it (`turn_id`, below) |
 | `messagesPage` | `GET {messagesPage}/{conversation_id}/messages?before=<message id>&limit=50&supports_artifacts=true` → `{ messages, has_more }` | "Load earlier messages" past the restored ones, offered when the restore answers `has_more: true` |
