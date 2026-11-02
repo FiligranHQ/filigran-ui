@@ -24,7 +24,8 @@ function htmlCarriesText(html: string): boolean {
   const text = html
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(head|style|script|title|template|xml)\b[\s\S]*?<\/\1\s*>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
+    // A quoted attribute may hold a `>` (`alt="Revenue > costs"`).
+    .replace(/<(?:"[^"]*"|'[^']*'|[^'">])*>/g, ' ')
     .replace(/&(nbsp|#160|#xa0);/gi, ' ');
   return /\S/.test(text);
 }

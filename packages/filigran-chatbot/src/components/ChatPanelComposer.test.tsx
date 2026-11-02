@@ -90,6 +90,24 @@ test('Enter while an input method composes does not send', async () => {
   assert.equal(messages(requests).length, 1, 'Enter once the composition ends sends');
 });
 
+test('Enter while an input method composes leaves the mention menu alone', async () => {
+  fakeBackend([agentsRoute]);
+  await render({ agentMentions: true });
+  // Typed in the focused field, the caret after `@`: the menu reads the caret.
+  await act(async () => {
+    textarea().focus();
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(textarea()), 'value')?.set?.call(textarea(), '@');
+    textarea().setSelectionRange(1, 1);
+    textarea().dispatchEvent(new window.Event('input', { bubbles: true }));
+    textarea().dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await settle();
+  });
+  assert.ok(container.querySelector('[role="listbox"] [role="option"]'), 'the mention menu is open');
+  const enter = new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }) as unknown as Event;
+  assert.equal(await fire(textarea(), enter, { keyCode: 229 }), false, 'the composition takes Enter');
+  assert.equal(textarea().value, '@', 'no agent is inserted into the unfinished word');
+});
+
 test('a file dropped on a read-only panel leaves the page where it is', async () => {
   fakeBackend([agentsRoute]);
   await render({ readOnly: true, readOnlyNotice: <span data-testid="notice">Read only</span> });

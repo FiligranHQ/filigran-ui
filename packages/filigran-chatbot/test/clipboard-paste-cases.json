@@ -152,6 +152,20 @@
       "attached": ["image.png"]
     },
     {
+      "name": "Copy image in Firefox of a picture whose alt text holds a >: the picture, an HTML <img> and the image address as text",
+      "data": {
+        "text/plain": "https://example.test/chart.png",
+        "text/html": "<html><body>\r\n<!--StartFragment--><img src=\"https://example.test/chart.png\" alt=\"Revenue > costs\"><!--EndFragment-->\r\n</body>\r\n</html>"
+      },
+      "files": [
+        {
+          "name": "image.png",
+          "type": "image/png"
+        }
+      ],
+      "attached": ["image.png"]
+    },
+    {
       "name": "a picture copied in Word: an HTML <img> with its VML shape, no text",
       "data": {
         "text/plain": "\r\n",

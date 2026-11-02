@@ -193,11 +193,12 @@ export const ChatInput = ({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // An input method composing (CJK) takes Enter to confirm the word and
+    // Escape to cancel it, the mention menu's keys included; 229 is the
+    // keyCode browsers report meanwhile.
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     // The menu's keys first (arrows, Enter / Tab, Escape) while it is open.
     if (mentionMenu.onKeyDown(e)) return;
-    // An input method composing (CJK) takes Enter to confirm the word and
-    // Escape to cancel it; 229 is the keyCode browsers report meanwhile.
-    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send();
