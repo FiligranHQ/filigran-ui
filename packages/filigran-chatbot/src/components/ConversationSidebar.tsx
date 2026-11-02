@@ -1,7 +1,8 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
-import { timeAgo, translateAround } from '../utils';
+import { timeAgo, translate, translateAround } from '../utils';
+import { channelName, conversationMatches } from '../utils/conversationList';
 import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
@@ -13,6 +14,7 @@ import {
   ChevronRightIcon,
   CloseIcon,
   EditIcon,
+  MessageSquareIcon,
   FolderIcon,
   FolderInputIcon,
   FolderPlusIcon,
@@ -36,8 +38,8 @@ export interface SidebarWorkspaces {
   onCreate: (name: string) => Promise<WorkspaceWriteResult>;
   onRename: (id: string, name: string) => Promise<WorkspaceWriteResult>;
   onDelete: (id: string) => Promise<WorkspaceWriteResult>;
-  /** Resolves to `null` on success, or the backend's reason. */
-  onMove: (conversationId: string, workspaceId: string | null) => Promise<string | null>;
+  /** Files the conversation, saying itself what failed. */
+  onMove: (conversationId: string, workspaceId: string | null) => Promise<void>;
   onNewChat: (workspaceId: string) => void;
 }
 
@@ -63,6 +65,16 @@ interface ConversationSidebarProps {
   sections?: ReactNode | ((search: ChatSidebarSearch) => ReactNode);
   /** Deletes every conversation, after a confirmation; omitted when the host offers no route. */
   onClearAll?: () => void;
+  /** What Clear all does, for its wording. */
+  clearAllAction?: 'delete' | 'archive';
+  /** The search box shows above this many conversations. */
+  searchThreshold?: number;
+  /** The host's names of the channels a conversation was started in (see `channelLabel` on the panel). */
+  channelLabel?: (channel: string) => string | null | undefined;
+  /** What failed in the list, said under it. */
+  notice?: string | null;
+  /** Says what failed in the list (`notice` shows it). */
+  onNotice?: (text: string) => void;
   t: (key: string) => string;
 }
 
@@ -118,6 +130,11 @@ export const ConversationSidebar = ({
   headerActions,
   sections,
   onClearAll,
+  clearAllAction,
+  searchThreshold = SEARCH_THRESHOLD,
+  channelLabel,
+  notice,
+  onNotice,
   t,
 }: ConversationSidebarProps) => {
   const [query, setQuery] = useState('');
@@ -130,14 +147,6 @@ export const ConversationSidebar = ({
   const collapsedKey = storageKey(storageKeyPrefix, STORAGE_KEYS.collapsedWorkspaces);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => readCollapsed(collapsedKey));
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // A refusal is said, then goes: it is about the action just tried.
-  useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(() => setError(null), 6000);
-    return () => clearTimeout(timer);
-  }, [error]);
 
   const startRename = (id: string, current: string) => {
     settledRef.current = false;
@@ -171,20 +180,19 @@ export const ConversationSidebar = ({
     });
   };
 
-  const say = (reason: string | null, fallback: string) => setError(reason || t(fallback));
+  const say = (reason: string | null, fallback: string) => onNotice?.(reason || t(fallback));
 
   const move = async (conversationId: string, workspaceId: string | null) => {
     // A drop on the group the row is already in (or an unfiled row on "Not in
     // a workspace") is no move: the row menu disables it, the drop ignores it.
     if (!workspaces || isNoopMove(conversations, conversationId, workspaceId)) return;
-    const refusal = await workspaces.onMove(conversationId, workspaceId);
-    if (refusal !== null) say(refusal, 'The conversation could not be moved');
+    await workspaces.onMove(conversationId, workspaceId);
   };
 
   // Sections that follow the search make it worth offering whatever the
   // number of conversations: what the user looks for may be among theirs.
   const sectionsSearch = typeof sections === 'function';
-  const searchOffered = sectionsSearch || conversations.length > SEARCH_THRESHOLD;
+  const searchOffered = sectionsSearch || conversations.length > searchThreshold;
   // A box that hides takes its query with it: nothing stays filtered out of sight.
   useEffect(() => {
     if (!searchOffered) setQuery('');
@@ -193,7 +201,7 @@ export const ConversationSidebar = ({
   const q = search.toLowerCase();
   // With the host's sections searched too, only the user's own conversations are known to match nothing.
   const noMatch = sectionsSearch ? t('None of your conversations matches') : t('No conversation matches');
-  const matches = useMemo(() => (q ? (c: ChatConversationSummary) => (c.title || '').toLowerCase().includes(q) : undefined), [q]);
+  const matches = useMemo(() => (q ? (c: ChatConversationSummary) => conversationMatches(c, q) : undefined), [q]);
   const filtered = useMemo(() => (matches ? conversations.filter(matches) : conversations), [conversations, matches]);
   const grouped = useMemo(
     () => (workspaces ? groupConversations(conversations, workspaces.list, { matches }) : null),
@@ -246,6 +254,7 @@ export const ConversationSidebar = ({
       fileable={workspaces ? fileable : undefined}
       onMove={move}
       actions={rowActions}
+      channel={channelName(c.channel, channelLabel)}
       t={t}
     />
   );
@@ -368,21 +377,19 @@ export const ConversationSidebar = ({
         ) : (
           <>
             {!loading && conversations.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{t('No conversations yet')}</p>}
-            {conversations.length > 0 && filtered.length === 0 && (
-              <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>
-            )}
+            {conversations.length > 0 && filtered.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>}
             {filtered.map(renderRow)}
           </>
         )}
         {typeof sections === 'function' ? <HostSections draw={sections} query={search} /> : sections}
         {onClearAll && conversations.length > 0 && !q && (
-          <ClearAllConversations onClear={onClearAll} className="px-2 pt-3" iconButtonClass={iconButton} t={t} />
+          <ClearAllConversations onClear={onClearAll} action={clearAllAction} className="px-2 pt-3" iconButtonClass={iconButton} t={t} />
         )}
       </div>
 
-      {error && (
+      {notice && (
         <p role="alert" className="mx-3 mb-3 rounded-md bg-red-500/10 px-2.5 py-1.5 text-[0.7rem] text-red-600 dark:text-red-400">
-          {error}
+          {notice}
         </p>
       )}
     </div>
@@ -657,6 +664,7 @@ const ConversationRow = ({
   fileable,
   onMove,
   actions,
+  channel,
   t,
 }: {
   conversation: ChatConversationSummary;
@@ -673,6 +681,8 @@ const ConversationRow = ({
   fileable?: ChatWorkspace[];
   onMove: (conversationId: string, workspaceId: string | null) => void;
   actions?: (conversation: ChatConversationSummary) => ReactNode;
+  /** The channel the conversation was started in, when the row names it. */
+  channel: string | null;
   t: (key: string) => string;
 }) => {
   const [moveOpen, setMoveOpen] = useState(false);
@@ -744,11 +754,23 @@ const ConversationRow = ({
           when the backend does not report it, rather than padded with
           a placeholder.
         */}
-        {(c.agentName || c.updatedAt) && !isEditing && (
-          <span className="block text-[0.65rem] chat-text-muted-400/30 truncate">
-            {c.agentName}
-            {c.agentName && c.updatedAt ? ' · ' : ''}
-            {c.updatedAt ? timeAgo(c.updatedAt, t) : ''}
+        {c.lastMessagePreview && !isEditing && (
+          <span className="block truncate text-[0.7rem] chat-text-secondary-500/50">{c.lastMessagePreview}</span>
+        )}
+        {(c.agentName || c.updatedAt || channel) && !isEditing && (
+          <span className="flex min-w-0 items-center gap-1 text-[0.65rem] chat-text-muted-400/30">
+            {channel && (
+              <Tooltip title={translate(t, 'Started in {channel}', { channel })}>
+                <span role="img" aria-label={translate(t, 'Started in {channel}', { channel })} className="flex shrink-0">
+                  <MessageSquareIcon size={10} />
+                </span>
+              </Tooltip>
+            )}
+            <span className="truncate">
+              {c.agentName}
+              {c.agentName && c.updatedAt ? ' · ' : ''}
+              {c.updatedAt ? timeAgo(c.updatedAt, t) : ''}
+            </span>
           </span>
         )}
       </span>

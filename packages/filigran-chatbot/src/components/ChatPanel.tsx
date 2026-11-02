@@ -1,5 +1,15 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import type { ChatArtifact, ChatArtifactKind, ChatAttachment, ChatPanelHandle, ChatPanelProps, ChatSendOutcome, Translate } from '../types';
+import type {
+  ChatArtifact,
+  ChatArtifactKind,
+  ChatAttachment,
+  ChatConversationAction,
+  ChatHeaderContext,
+  ChatPanelHandle,
+  ChatPanelProps,
+  ChatSendOutcome,
+  Translate,
+} from '../types';
 import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
 import { speakableText } from '../utils/speech';
 import { dropsAsText } from '../utils/drop';
@@ -13,6 +23,7 @@ import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
 import { parseArtifact, parseContextUsage, parseRestoredMessages, storedMessageId } from '../hooks/protocols/parseRestEvent';
 import { mergeReadBack, useChat } from '../hooks/useChat';
 import { askHost } from '../utils/askHost';
+import { inPlaceHref } from '../utils/links';
 import { findAgent, useAgents } from '../hooks/useAgents';
 import { useConversations } from '../hooks/useConversations';
 import { useWorkspaces } from '../hooks/useWorkspaces';
@@ -39,6 +50,8 @@ const FLOATING_HEIGHT = 560;
 const SIDEBAR_GAP = 6;
 /** How long a message jumped to stays highlighted. */
 const HIGHLIGHT_MS = 2000;
+/** How long a failure in the conversation list stays said. */
+const LIST_NOTICE_MS = 6000;
 /** What the restore route answers, as far as the panel reads it. */
 interface RestoredHistory {
   conversation_id?: unknown;
@@ -166,6 +179,15 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     holdSendsDuringTurn = false,
     agentMentions: agentMentionsEnabled = false,
     hideConversationList = false,
+    onBeforeMove: onBeforeMoveProp,
+    onConversationActionFailed: onConversationActionFailedProp,
+    sidebarSearchThreshold,
+    channelLabel,
+    headerTitle,
+    headerSubtitle,
+    agentHref: agentHrefProp,
+    onAgentNameClick: onAgentNameClickProp,
+    clearAllAction,
   },
   ref,
 ) {
@@ -192,6 +214,9 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const onHeldSendSettled = useLatestCallback(onHeldSendSettledProp);
   const onStreamEvent = useLatestCallback(onStreamEventProp);
   const onTurnRunningChange = useLatestCallback(onTurnRunningChangeProp);
+  const onBeforeMove = useLatestCallback(onBeforeMoveProp);
+  const onConversationActionFailed = useLatestCallback(onConversationActionFailedProp);
+  const onAgentNameClick = useLatestCallback(onAgentNameClickProp);
   // A click handler, not content: held stable so a host's inline one spares every row.
   const onArtifactOpen = useLatestCallback(onArtifactOpenProp);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -275,6 +300,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const hostReadBackRef = useRef<string | null>(null);
   // Retitled elsewhere, or by the backend after the first answer.
   const refreshConversationsRef = useRef<() => Promise<unknown>>(async () => undefined);
+  // Written in: the row goes first at once, ahead of the read-back at the turn's end.
+  const touchConversationRef = useRef<(id: string, preview: string) => void>(() => undefined);
   // Every frame of both streams goes to the voice call first, then to the
   // host: each on its own, so neither throwing keeps the frame from the other.
   const voiceFrameRef = useRef<(frame: Record<string, unknown>, relayed: boolean) => void>(() => undefined);
@@ -353,6 +380,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     onStreamEvent: handleStreamFrame,
     onSessionEnded: sessionEnded,
     onConversationTitle: () => void refreshConversationsRef.current(),
+    onMessageSent: (id, text) => touchConversationRef.current(id, text),
     historySettledFor: eventsReadyId,
     steerAttachments,
     holdSends: holdSendsDuringTurn,
@@ -413,6 +441,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     renameConversation,
     moveConversation,
     clearConversations,
+    touchConversation,
   } = useConversations({
     apiBaseUrl,
     apiEndpoints,
@@ -420,6 +449,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     requestHeaders,
   });
   refreshConversationsRef.current = refreshConversations;
+  touchConversationRef.current = touchConversation;
   // Workspaces group the fullscreen list, when the host names their route.
   const { workspacesEnabled, workspaces, refreshWorkspaces, createWorkspace, renameWorkspace, deleteWorkspace } = useWorkspaces({
     apiBaseUrl,
@@ -729,17 +759,71 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     },
   };
 
+  // What failed in the list - a conversation or workspace action - said
+  // under it (or the header), then gone: it is about the action just tried.
+  // Each saying is its own, so the same failure again shows for its own time.
+  const [listNotice, setListNotice] = useState<{ text: string } | null>(null);
+  const sayListNotice = useCallback((text: string) => setListNotice({ text }), []);
+  useEffect(() => {
+    if (!listNotice) return;
+    const timer = setTimeout(() => setListNotice(null), LIST_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [listNotice]);
+  /** Tell the host of a failed *action* on conversation *id*; true when it told the user itself. */
+  const conversationActionFailed = (action: ChatConversationAction, id: string | null, reason: string): boolean => {
+    const conversation = id ? (conversations.find((c) => c.conversationId === id) ?? null) : null;
+    return askHost(onConversationActionFailed, action, conversation, reason || null) === true;
+  };
+  const sayActionFailed = (action: ChatConversationAction, id: string | null, reason: string, fallback: string) => {
+    if (!conversationActionFailed(action, id, reason)) sayListNotice(reason || fallback);
+  };
+
   const handleClearAll = async () => {
-    if (await clearConversations?.()) handleNewChat();
+    if (!clearConversations) return;
+    const refusal = await clearConversations();
+    if (refusal === null) handleNewChat();
+    else
+      sayActionFailed(
+        'clearAll',
+        null,
+        refusal,
+        clearAllAction === 'archive' ? t('The conversations could not be archived') : t('The conversations could not be deleted'),
+      );
   };
 
   const handleDeleteConversation = async (id: string) => {
-    const deleted = await deleteConversation(id);
+    const refusal = await deleteConversation(id);
+    if (refusal !== null) {
+      sayActionFailed('delete', id, refusal, t('The conversation could not be deleted'));
+      return;
+    }
     // Deleting the active conversation resets to a fresh chat so the next
     // message doesn't target a dead conversation id.
-    if (deleted && id === conversationIdRef.current) {
+    if (id === conversationIdRef.current) {
       handleNewChat();
     }
+  };
+
+  const handleRenameConversation = async (id: string, title: string) => {
+    const refusal = await renameConversation(id, title);
+    if (refusal !== null) sayActionFailed('rename', id, refusal, t('The conversation could not be renamed'));
+  };
+
+  /** File a conversation, once the host agreed. */
+  const handleMoveConversation = async (id: string, workspaceId: string | null): Promise<void> => {
+    const conversation = conversations.find((c) => c.conversationId === id);
+    if (onBeforeMove && conversation) {
+      const workspace = workspaceId ? (workspaces.find((w) => w.id === workspaceId) ?? null) : null;
+      let allowed = false;
+      try {
+        allowed = (await onBeforeMove(conversation, workspace)) === true;
+      } catch (err) {
+        console.error('A chat panel host callback threw', err);
+      }
+      if (!allowed) return;
+    }
+    const refusal = await moveConversation(id, workspaceId);
+    if (refusal !== null) sayActionFailed('move', id, refusal, t('The conversation could not be moved'));
   };
 
   const { sidebarWidth, handleResizeStart, defaultWidth, isResizing } = useSidebarResize({
@@ -1226,11 +1310,29 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // answer is read off its streams. A question addresses the conversation's
   // agent: the one it was transferred to, the restored conversation's, or the
   // one picked.
-  const addressedAgentId =
-    transferredAgent?.id ??
-    (conversationAgentName ? agents.find((a) => a.name === conversationAgentName)?.id : undefined) ??
-    selectedAgent?.id ??
-    null;
+  //
+  // The header's agent (linked, and given to its title and subtitle) is the
+  // one it names: a restored conversation's agent missing from the list is
+  // none there, never the one picked, which the header does not name.
+  const conversationAgent = conversationAgentName ? (agents.find((a) => a.name === conversationAgentName) ?? null) : null;
+  const headerAgent = transferredAgent
+    ? (agents.find((a) => a.id === transferredAgent.id) ?? null)
+    : conversationAgentName
+      ? conversationAgent
+      : selectedAgent;
+  const addressedAgentId = transferredAgent?.id ?? conversationAgent?.id ?? selectedAgent?.id ?? null;
+  const agentLink = useMemo(() => {
+    if (!headerAgent || (!agentHrefProp && !onAgentNameClick)) return undefined;
+    // Followed in place: an http(s) URL, or a path of the page's own origin.
+    // The host's own function: a new one (another locale) gives a new address.
+    const href = inPlaceHref(askHost(agentHrefProp, headerAgent), window.location.href);
+    const onClick = onAgentNameClick ? () => askHost(onAgentNameClick, headerAgent) : undefined;
+    return href || onClick ? { href, onClick } : undefined;
+  }, [headerAgent, agentHrefProp, onAgentNameClick]);
+  const headerContext: ChatHeaderContext = {
+    conversation: (conversationId && conversations.find((c) => c.conversationId === conversationId)) || null,
+    agent: headerAgent,
+  };
   const voice = useVoiceCall({
     send: (text, hooks) =>
       handleSendMessageRef.current({ text, source: 'voice', onSent: hooks.onAccepted, onNotSent: hooks.onNotSent, onSteered: hooks.onSteered }),
@@ -1384,8 +1486,17 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={(id) => void handleDeleteConversation(id)}
         onClearAll={clearConversations ? () => void handleClearAll() : undefined}
+        clearAllAction={clearAllAction}
+        title={typeof headerTitle === 'function' ? askHost(headerTitle, headerContext) : headerTitle}
+        subtitle={typeof headerSubtitle === 'function' ? askHost(headerSubtitle, headerContext) : headerSubtitle}
+        agentLink={agentLink}
         t={t}
       />
+      {listNotice && (!showConversationSidebar || sidebarCollapsed) && (
+        <p role="alert" className="mx-3 mt-2 shrink-0 rounded-md bg-red-500/10 px-2.5 py-1.5 text-[0.7rem] text-red-600 dark:text-red-400">
+          {listNotice.text}
+        </p>
+      )}
       {/* Fullscreen puts the conversation list beside the thread. The header
           stays full width above both: it carries the agent picker, the mode
           switcher and close, which belong to the panel rather than to either
@@ -1400,7 +1511,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
             onSelect={handleSelectConversation}
             onDelete={(id) => void handleDeleteConversation(id)}
-            onRename={(id, title) => void renameConversation(id, title)}
+            onRename={(id, title) => void handleRenameConversation(id, title)}
             onNewChat={handleNewChat}
             workspaces={
               workspacesEnabled
@@ -1419,7 +1530,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
                       }
                       return result;
                     },
-                    onMove: moveConversation,
+                    onMove: handleMoveConversation,
                     onNewChat: (workspaceId) => {
                       handleNewChat(workspaceId);
                       // Still there? Deleted elsewhere, the list drops it and
@@ -1434,6 +1545,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             headerActions={sidebarHeaderActions}
             sections={sidebarSections}
             onClearAll={clearConversations ? () => void handleClearAll() : undefined}
+            clearAllAction={clearAllAction}
+            searchThreshold={sidebarSearchThreshold}
+            channelLabel={channelLabel}
+            notice={listNotice?.text ?? null}
+            onNotice={sayListNotice}
             t={t}
           />
         )}

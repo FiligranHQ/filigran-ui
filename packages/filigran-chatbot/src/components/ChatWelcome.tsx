@@ -64,9 +64,9 @@ export const ChatWelcome = ({
     {agentDescription && <p className="mb-5 max-w-[320px] text-center text-[0.75rem] leading-5 chat-text-secondary-500/40">{agentDescription}</p>}
     {!agentDescription && <span className="mb-5" />}
 
-    {/* A host that passes no suggestions gets no section: the heading on its own
-        used to sit above an empty gap. */}
-    {(suggestionsLoading || promptSuggestions.length > 0) && (
+    {/* No section without suggestions to click: none passed, or nothing can be
+        sent (a read-only panel) - the heading alone sat above an empty gap. */}
+    {onPromptClick && (suggestionsLoading || promptSuggestions.length > 0) && (
       <div className="w-full max-w-[320px]">
         <span className="block text-center mb-2 text-[0.65rem] tracking-[1.5px] uppercase text-[var(--chat-accent)] font-semibold">
           {t('Suggestions')}
@@ -80,7 +80,6 @@ export const ChatWelcome = ({
             ))}
           </div>
         ) : (
-          onPromptClick &&
           promptSuggestions.map((prompt) => (
             <button
               key={prompt}
