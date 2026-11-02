@@ -58,6 +58,11 @@ test('a locale picks its language, whatever its region', () => {
   assert.equal(catalogFor('pt-BR'), undefined);
 });
 
+test('Chinese picks the Simplified catalog only for a Simplified tag', () => {
+  for (const tag of ['zh', 'zh-CN', 'zh_cn', 'zh-SG', 'zh-Hans', 'zh-Hans-CN']) assert.equal(catalogFor(tag), catalogFor('zh-cn'), tag);
+  for (const tag of ['zh-TW', 'zh-HK', 'zh-MO', 'zh-Hant', 'zh-Hant-TW']) assert.equal(catalogFor(tag), undefined, tag);
+});
+
 test("the products' locales pick their catalogs", () => {
   const picked = {
     'de-de': 'de',

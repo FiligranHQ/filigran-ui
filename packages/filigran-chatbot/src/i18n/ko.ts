@@ -1,6 +1,6 @@
 import type { Catalog } from './index';
 
-const ko: Catalog = {
+export const ko: Catalog = {
   '(no output)': '(출력 없음)',
   '1 tool call': '도구 호출 1회',
   '1 transfer': '전환 1회',
@@ -37,6 +37,7 @@ const ko: Catalog = {
   Confirm: '확인',
   'Connecting integrations…': '통합 연결 중…',
   'Connecting the dots': '단서를 연결하는 중',
+  'Consulting an agent…': '에이전트에게 문의 중…',
   'Consulting the sources': '출처를 확인하는 중',
   'Consulting {agent}…': '{agent}에게 문의 중…',
   'Consulting {agent}: {count} questions…': '{agent}에게 문의 중: 질문 {count}개…',
@@ -192,6 +193,7 @@ const ko: Catalog = {
   'System prompt': '시스템 프롬프트',
   'Tap to cancel': '탭하여 취소',
   'Tell us what went wrong (optional)': '무엇이 잘못되었는지 알려 주세요 (선택 사항)',
+  'The agent is answering…': '에이전트 답변 중…',
   'The agent needs your approval to run a tool:': '에이전트가 도구를 실행하려면 승인이 필요합니다:',
   'The agent needs your approval to run these tools:': '에이전트가 다음 도구를 실행하려면 승인이 필요합니다:',
   'The conversation could not be deleted': '대화를 삭제할 수 없습니다',
@@ -218,6 +220,7 @@ const ko: Catalog = {
   'Tool results': '도구 결과',
   'Transfer chain': '전환 체인',
   'Transferred from {agent}': '{agent}에서 전환됨',
+  'Transferring to another agent…': '다른 에이전트로 전환 중…',
   'Transferring to {agent}…': '{agent}(으)로 전환 중…',
   'Turn limit reached.': '턴 한도에 도달했습니다.',
   'Unable to connect. Please check the configuration.': '연결할 수 없습니다. 구성을 확인하세요.',
@@ -248,7 +251,6 @@ const ko: Catalog = {
   default: '기본값',
   'e.g. wrong environment — use staging instead': '예: 잘못된 환경 — 대신 스테이징 환경을 사용하세요',
   'just now': '방금',
-  'the agent': '에이전트',
   'this month': '이번 달',
   'this year': '올해',
   today: '오늘',
@@ -282,5 +284,3 @@ const ko: Catalog = {
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '“예, 항상”을 선택하면 내 기본 설정으로 저장됩니다. 이후 해당 도구는 취소할 때까지 확인 없이 실행되며, 아무도 지켜보지 않는 예약 실행에서도 마찬가지입니다.',
 };
-
-export default ko;

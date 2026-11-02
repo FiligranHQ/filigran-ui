@@ -1,6 +1,6 @@
 import type { Catalog } from './index';
 
-const es: Catalog = {
+export const es: Catalog = {
   '(no output)': '(sin salida)',
   '1 tool call': '1 llamada a una herramienta',
   '1 transfer': '1 transferencia',
@@ -37,8 +37,9 @@ const es: Catalog = {
   Confirm: 'Confirmar',
   'Connecting integrations…': 'Conectando las integraciones…',
   'Connecting the dots': 'Atando cabos',
+  'Consulting an agent…': 'Consultando a un agente…',
   'Consulting the sources': 'Consultando las fuentes',
-  'Consulting {agent}…': '{agent} atiende la consulta…',
+  'Consulting {agent}…': 'Consultando a {agent}…',
   'Consulting {agent}: {count} questions…': 'Consultando a {agent}: {count} preguntas…',
   'Consulting {agent}: {tool} (+{count} more)…': 'Consultando a {agent}: {tool} (+{count} más)…',
   'Consulting {agent}: {tool}…': 'Consultando a {agent}: {tool}…',
@@ -192,6 +193,7 @@ const es: Catalog = {
   'System prompt': 'Prompt del sistema',
   'Tap to cancel': 'Toca para cancelar',
   'Tell us what went wrong (optional)': 'Indíquenos qué ha fallado (opcional)',
+  'The agent is answering…': 'El agente está respondiendo…',
   'The agent needs your approval to run a tool:': 'El agente necesita su aprobación para ejecutar una herramienta:',
   'The agent needs your approval to run these tools:': 'El agente necesita su aprobación para ejecutar estas herramientas:',
   'The conversation could not be deleted': 'No se ha podido eliminar la conversación',
@@ -218,7 +220,8 @@ const es: Catalog = {
   'Tool results': 'Resultados de las herramientas',
   'Transfer chain': 'Cadena de transferencia',
   'Transferred from {agent}': 'Transferido desde {agent}',
-  'Transferring to {agent}…': '{agent} recibe la conversación…',
+  'Transferring to another agent…': 'Transfiriendo a otro agente…',
+  'Transferring to {agent}…': 'Transfiriendo a {agent}…',
   'Turn limit reached.': 'Se ha alcanzado el límite de turnos.',
   'Unable to connect. Please check the configuration.': 'No se puede establecer conexión. Compruebe la configuración.',
   'Unmute microphone': 'Activar el micrófono',
@@ -248,7 +251,6 @@ const es: Catalog = {
   default: 'predeterminado',
   'e.g. wrong environment — use staging instead': 'Por ejemplo, entorno incorrecto: utilice el entorno de pruebas en su lugar',
   'just now': 'hace un momento',
-  'the agent': 'El agente',
   'this month': 'este mes',
   'this year': 'este año',
   today: 'hoy',
@@ -281,5 +283,3 @@ const es: Catalog = {
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '«Sí, siempre» guarda una preferencia para ti. Esa herramienta se ejecutará entonces sin preguntar, incluso en ejecuciones programadas que nadie supervisa, hasta que la revoques.',
 };
-
-export default es;

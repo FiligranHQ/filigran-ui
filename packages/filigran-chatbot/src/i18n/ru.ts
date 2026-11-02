@@ -1,6 +1,6 @@
 import type { Catalog } from './index';
 
-const ru: Catalog = {
+export const ru: Catalog = {
   '(no output)': '(нет вывода)',
   '1 tool call': '1 вызов инструмента',
   '1 transfer': '1 передача',
@@ -37,12 +37,13 @@ const ru: Catalog = {
   Confirm: 'Подтвердить',
   'Connecting integrations…': 'Подключение интеграций…',
   'Connecting the dots': 'Сопоставление фактов',
+  'Consulting an agent…': 'Консультация с агентом…',
   'Consulting the sources': 'Изучение источников',
-  'Consulting {agent}…': '{agent}: консультация…',
-  'Consulting {agent}: {count} questions…': '{agent}: консультация, вопросов — {count}…',
-  'Consulting {agent}: {tool} (+{count} more)…': '{agent}: консультация, {tool} (+{count} ещё)…',
-  'Consulting {agent}: {tool}…': '{agent}: консультация, {tool}…',
-  'Consulting {agent}: writing the answer…': '{agent}: консультация, составление ответа…',
+  'Consulting {agent}…': 'Консультация с агентом {agent}…',
+  'Consulting {agent}: {count} questions…': 'Консультация с агентом {agent}: вопросов — {count}…',
+  'Consulting {agent}: {tool} (+{count} more)…': 'Консультация с агентом {agent}: {tool} (+{count} ещё)…',
+  'Consulting {agent}: {tool}…': 'Консультация с агентом {agent}: {tool}…',
+  'Consulting {agent}: writing the answer…': 'Консультация с агентом {agent}: составление ответа…',
   'Consulting {count} agents…': 'Консультация с агентами ({count})…',
   'Context full — older turns are being dropped': 'Контекст заполнен — старые ходы удаляются',
   'Context nearly full — older turns are being summarized': 'Контекст почти заполнен — старые ходы сводятся в краткое изложение',
@@ -192,6 +193,7 @@ const ru: Catalog = {
   'System prompt': 'Системный промпт',
   'Tap to cancel': 'Коснитесь, чтобы отменить',
   'Tell us what went wrong (optional)': 'Расскажите, что пошло не так (необязательно)',
+  'The agent is answering…': 'Агент отвечает…',
   'The agent needs your approval to run a tool:': 'Агенту нужно ваше одобрение, чтобы запустить инструмент:',
   'The agent needs your approval to run these tools:': 'Агенту нужно ваше одобрение, чтобы запустить эти инструменты:',
   'The conversation could not be deleted': 'Не удалось удалить диалог',
@@ -218,7 +220,8 @@ const ru: Catalog = {
   'Tool results': 'Результаты инструментов',
   'Transfer chain': 'Цепочка передач',
   'Transferred from {agent}': 'Передано от агента {agent}',
-  'Transferring to {agent}…': '{agent} принимает диалог…',
+  'Transferring to another agent…': 'Передача другому агенту…',
+  'Transferring to {agent}…': 'Передача агенту {agent}…',
   'Turn limit reached.': 'Достигнут предел ходов.',
   'Unable to connect. Please check the configuration.': 'Не удалось подключиться. Проверьте конфигурацию.',
   'Unmute microphone': 'Включить микрофон',
@@ -248,7 +251,6 @@ const ru: Catalog = {
   default: 'по умолчанию',
   'e.g. wrong environment — use staging instead': 'например: не та среда — используйте вместо неё тестовую (staging)',
   'just now': 'только что',
-  'the agent': 'Агент',
   'this month': 'в этом месяце',
   'this year': 'в этом году',
   today: 'сегодня',
@@ -281,5 +283,3 @@ const ru: Catalog = {
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '«Да, всегда» сохраняет ваш выбор. После этого инструмент будет запускаться без запроса — в том числе в запланированных запусках, за которыми никто не следит, — пока вы не отзовёте разрешение.',
 };
-
-export default ru;

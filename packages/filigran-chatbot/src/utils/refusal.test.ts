@@ -23,10 +23,18 @@ test("without a detail, a refusal's error is read when a string", () => {
   assert.equal(refusalDetail({ error: 'x'.repeat(501) }), null);
 });
 
+test("an error that is a code or reason phrase is not read: the panel's own message shows", () => {
+  assert.equal(refusalDetail({ error: 'invalid_token' }), null);
+  assert.equal(refusalDetail({ error: 'Unauthorized', status: 401 }), null);
+  assert.equal(refusalDetail({ error: 'Not Found', status: 404, path: '/x' }), null);
+  assert.equal(refusalDetail({ error: 'invalid_token', error_description: 'The access token expired' }), null);
+  assert.equal(refusalDetail({ detail: 'From detail.', error: 'Unauthorized', status: 401 }), 'From detail.');
+});
+
 test('a body that is not JSON has no detail', async () => {
   assert.equal(await readRefusalDetail(new Response('<html>Bad gateway</html>', { status: 502 })), null);
   assert.equal(await readRefusalDetail(new Response(JSON.stringify({ detail: 'Refused.' }), { status: 403 })), 'Refused.');
-  assert.equal(await readRefusalDetail(new Response(JSON.stringify({ error: 'Refused.' }), { status: 403 })), 'Refused.');
+  assert.equal(await readRefusalDetail(new Response(JSON.stringify({ error: 'Access refused.' }), { status: 403 })), 'Access refused.');
 });
 
 test('the headers key changes with the headers, not with their order', () => {

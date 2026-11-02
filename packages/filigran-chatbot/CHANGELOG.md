@@ -16,14 +16,20 @@ This file starts at 3.10.0; earlier releases are on the
   its own: a catalog for each, picked from `locale` by its language whatever
   the region (`de-de`, `it-it`, `ko-kr`, `ru-ru`, `zh-cn`). Those languages
   showed in English unless the host translated every key through `t`.
+  Traditional Chinese tags (`zh-TW`, `zh-HK`, `zh-Hant`) keep falling back.
 
 ### Fixed
 
-- A refusal whose body has no `detail` shows its `error` when that is a string
-  (a proxy answering `{ "error": "..." }`): above the composer, in place of the
+- A refusal whose body has no `detail` shows its `error` when that is a
+  sentence (a proxy answering `{ "error": "..." }`, but not an
+  `invalid_token` or `Unauthorized`): above the composer, in place of the
   answer, on a failed upload's chip, under the conversation list and on a
   conversation that could not be loaded. The panel showed its generic message
   instead.
+- The status line has its own wording when it has no agent's name (`The agent
+  is answering…`, `Consulting an agent…`, `Transferring to another agent…`),
+  where it filled the name with a lowercase `the agent`: `the agent is
+  answering…` started without a capital.
 
 ## 3.19.0 — unreleased
 

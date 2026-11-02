@@ -13,18 +13,31 @@ const usable = (value: unknown): string | null => {
 };
 
 /**
+ * A body's `error` when it is a sentence (a host's proxy answering
+ * `{ "error": "..." }`), not a code or reason phrase: one word
+ * (`invalid_token`, `Unauthorized`), or beside an `error_description` or
+ * `status` (OAuth's and Spring Boot's error bodies).
+ */
+function errorSentence(body: Record<string, unknown>): string | null {
+  if ('error_description' in body || 'status' in body) return null;
+  const text = usable(body.error);
+  return text && /\s/.test(text) ? text : null;
+}
+
+/**
  * The message of a refusal body: its `detail` when a string, or that object's
- * `message` (or `detail`); else its `error` when a string (a host's proxy
- * answering `{ "error": "..." }`); null when there is none worth showing.
+ * `message` (or `detail`); else its `error` when a sentence; null when there
+ * is none worth showing.
  */
 export function refusalDetail(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null;
-  const { detail, error } = body as Record<string, unknown>;
+  const fields = body as Record<string, unknown>;
+  const { detail } = fields;
   if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
     const inner = detail as Record<string, unknown>;
-    return usable(inner.message) ?? usable(inner.detail) ?? usable(error);
+    return usable(inner.message) ?? usable(inner.detail) ?? errorSentence(fields);
   }
-  return usable(detail) ?? usable(error);
+  return usable(detail) ?? errorSentence(fields);
 }
 
 /** The message of a refused response's JSON body, null when it has none (or is not JSON). */

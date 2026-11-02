@@ -201,8 +201,9 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate,
     case 'persisting':
       return { label: t('Saving response…'), StatusIcon: DatabaseIcon, showDots: false };
     case 'mention_answering': {
-      const name = agentStatus.agentName ?? t('the agent');
-      return { label: translate(t, '{agent} is answering…', { agent: name }), StatusIcon: UserPlusIcon, showDots: true };
+      const name = agentStatus.agentName;
+      const label = name ? translate(t, '{agent} is answering…', { agent: name }) : t('The agent is answering…');
+      return { label, StatusIcon: UserPlusIcon, showDots: true };
     }
     case 'steering':
       return { label: t('Incorporating your message…'), StatusIcon: SparklesIcon, showDots: true };
@@ -210,8 +211,9 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate,
       return { label: t('Composing answer…'), StatusIcon: BrainIcon, showDots: true };
     case 'consulting': {
       if (agentStatus.consult) return { label: consultingLabel(agentStatus.consult, t, toolLabels), StatusIcon: UserPlusIcon, showDots: false };
-      const consultName = agentStatus.tools?.[0] ?? t('the agent');
-      return { label: translate(t, 'Consulting {agent}…', { agent: consultName }), StatusIcon: UserPlusIcon, showDots: false };
+      const consultName = agentStatus.tools?.[0];
+      const label = consultName ? translate(t, 'Consulting {agent}…', { agent: consultName }) : t('Consulting an agent…');
+      return { label, StatusIcon: UserPlusIcon, showDots: false };
     }
     case 'delegating': {
       const count = agentStatus.tools?.filter((n) => n === 'spawn_background_task').length ?? 0;
@@ -226,8 +228,9 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate,
       return { label: collectingLabel(fetchCount, t), StatusIcon: SparklesIcon, showDots: false };
     }
     case 'transferring': {
-      const targetName = agentStatus.agentName ?? agentStatus.tools?.[0] ?? t('the agent');
-      return { label: translate(t, 'Transferring to {agent}…', { agent: targetName }), StatusIcon: ExternalLinkIcon, showDots: false };
+      const targetName = agentStatus.agentName ?? agentStatus.tools?.[0];
+      const label = targetName ? translate(t, 'Transferring to {agent}…', { agent: targetName }) : t('Transferring to another agent…');
+      return { label, StatusIcon: ExternalLinkIcon, showDots: false };
     }
     case 'thinking':
     default:

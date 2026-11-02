@@ -1,6 +1,6 @@
 import type { Catalog } from './index';
 
-const de: Catalog = {
+export const de: Catalog = {
   '(no output)': '(keine Ausgabe)',
   '1 tool call': '1 Tool-Aufruf',
   '1 transfer': '1 Übergabe',
@@ -38,6 +38,7 @@ const de: Catalog = {
   Confirm: 'Bestätigen',
   'Connecting integrations…': 'Integrationen werden verbunden…',
   'Connecting the dots': 'Zusammenhänge werden hergestellt',
+  'Consulting an agent…': 'Ein Agent wird konsultiert…',
   'Consulting the sources': 'Quellen werden geprüft',
   'Consulting {agent}…': '{agent} wird konsultiert…',
   'Consulting {agent}: {count} questions…': '{agent} wird konsultiert: {count} Fragen…',
@@ -193,6 +194,7 @@ const de: Catalog = {
   'System prompt': 'System-Prompt',
   'Tap to cancel': 'Zum Abbrechen tippen',
   'Tell us what went wrong (optional)': 'Was ist schiefgelaufen? (optional)',
+  'The agent is answering…': 'Der Agent antwortet…',
   'The agent needs your approval to run a tool:': 'Der Agent benötigt Ihre Freigabe, um ein Tool auszuführen:',
   'The agent needs your approval to run these tools:': 'Der Agent benötigt Ihre Freigabe, um diese Tools auszuführen:',
   'The conversation could not be deleted': 'Die Unterhaltung konnte nicht gelöscht werden',
@@ -220,7 +222,8 @@ const de: Catalog = {
   'Tool results': 'Tool-Ergebnisse',
   'Transfer chain': 'Übergabekette',
   'Transferred from {agent}': 'Übergeben von {agent}',
-  'Transferring to {agent}…': '{agent} übernimmt…',
+  'Transferring to another agent…': 'Übergabe an einen anderen Agenten…',
+  'Transferring to {agent}…': 'Übergabe an {agent}…',
   'Turn limit reached.': 'Rundenlimit erreicht.',
   'Unable to connect. Please check the configuration.': 'Verbindung nicht möglich. Bitte prüfen Sie die Konfiguration.',
   'Unmute microphone': 'Stummschaltung des Mikrofons aufheben',
@@ -250,7 +253,6 @@ const de: Catalog = {
   default: 'Standard',
   'e.g. wrong environment — use staging instead': 'z. B. falsche Umgebung — stattdessen die Staging-Umgebung verwenden',
   'just now': 'gerade eben',
-  'the agent': 'Der Agent',
   'this month': 'diesen Monat',
   'this year': 'dieses Jahr',
   today: 'heute',
@@ -284,5 +286,3 @@ const de: Catalog = {
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '„Ja, immer“ speichert eine Einstellung für Sie. Dieses Tool wird dann ohne Nachfrage ausgeführt — auch bei geplanten Ausführungen, die niemand beobachtet —, bis Sie die Freigabe widerrufen.',
 };
-
-export default de;

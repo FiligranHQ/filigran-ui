@@ -1,6 +1,6 @@
 import type { Catalog } from './index';
 
-const zh: Catalog = {
+export const zh: Catalog = {
   '(no output)': '（无输出）',
   '1 tool call': '1 次工具调用',
   '1 transfer': '1 次转交',
@@ -37,6 +37,7 @@ const zh: Catalog = {
   Confirm: '确认',
   'Connecting integrations…': '正在连接集成…',
   'Connecting the dots': '正在串联线索',
+  'Consulting an agent…': '正在咨询智能体…',
   'Consulting the sources': '正在查阅来源',
   'Consulting {agent}…': '正在咨询 {agent}…',
   'Consulting {agent}: {count} questions…': '正在咨询 {agent}：{count} 个问题…',
@@ -191,6 +192,7 @@ const zh: Catalog = {
   'System prompt': '系统提示词',
   'Tap to cancel': '点按以取消',
   'Tell us what went wrong (optional)': '请告诉我们哪里出了问题（可选）',
+  'The agent is answering…': '智能体正在回答…',
   'The agent needs your approval to run a tool:': '智能体需要您的批准才能运行工具：',
   'The agent needs your approval to run these tools:': '智能体需要您的批准才能运行以下工具：',
   'The conversation could not be deleted': '无法删除该对话',
@@ -216,6 +218,7 @@ const zh: Catalog = {
   'Tool results': '工具结果',
   'Transfer chain': '转交链',
   'Transferred from {agent}': '由 {agent} 转交',
+  'Transferring to another agent…': '正在转交给其他智能体…',
   'Transferring to {agent}…': '正在转交给 {agent}…',
   'Turn limit reached.': '已达轮次上限。',
   'Unable to connect. Please check the configuration.': '无法连接。请检查配置。',
@@ -246,7 +249,6 @@ const zh: Catalog = {
   default: '默认',
   'e.g. wrong environment — use staging instead': '例如：环境不对 — 请改用预发布环境',
   'just now': '刚刚',
-  'the agent': '智能体',
   'this month': '本月',
   'this year': '今年',
   today: '今天',
@@ -278,5 +280,3 @@ const zh: Catalog = {
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '“是，始终允许”会为您保存一项偏好设置。此后，该工具将无需询问即可运行（包括无人值守的计划运行），直到您撤销为止。',
 };
-
-export default zh;

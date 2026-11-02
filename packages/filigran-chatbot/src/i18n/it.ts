@@ -1,6 +1,6 @@
 import type { Catalog } from './index';
 
-const it: Catalog = {
+export const it: Catalog = {
   '(no output)': '(nessun output)',
   '1 tool call': '1 chiamata a strumento',
   '1 transfer': '1 trasferimento',
@@ -37,6 +37,7 @@ const it: Catalog = {
   Confirm: 'Conferma',
   'Connecting integrations…': 'Connessione delle integrazioni…',
   'Connecting the dots': 'Collegamento dei punti',
+  'Consulting an agent…': 'Consulto con un agente…',
   'Consulting the sources': 'Consultazione delle fonti',
   'Consulting {agent}…': 'Consulto con {agent}…',
   'Consulting {agent}: {count} questions…': 'Consulto con {agent}: {count} domande…',
@@ -192,6 +193,7 @@ const it: Catalog = {
   'System prompt': 'Prompt di sistema',
   'Tap to cancel': 'Tocca per annullare',
   'Tell us what went wrong (optional)': 'Spiegaci cosa non ha funzionato (facoltativo)',
+  'The agent is answering…': 'L’agente sta rispondendo…',
   'The agent needs your approval to run a tool:': 'L’agente ha bisogno della tua approvazione per eseguire uno strumento:',
   'The agent needs your approval to run these tools:': 'L’agente ha bisogno della tua approvazione per eseguire questi strumenti:',
   'The conversation could not be deleted': 'Impossibile eliminare la conversazione',
@@ -218,6 +220,7 @@ const it: Catalog = {
   'Tool results': 'Risultati degli strumenti',
   'Transfer chain': 'Catena di trasferimento',
   'Transferred from {agent}': 'Trasferito da {agent}',
+  'Transferring to another agent…': 'Trasferimento verso un altro agente…',
   'Transferring to {agent}…': 'Trasferimento verso {agent}…',
   'Turn limit reached.': 'Limite di turni raggiunto.',
   'Unable to connect. Please check the configuration.': 'Impossibile connettersi. Controlla la configurazione.',
@@ -248,13 +251,12 @@ const it: Catalog = {
   default: 'predefinito',
   'e.g. wrong environment — use staging instead': 'ad es. ambiente errato — usa invece l’ambiente di staging',
   'just now': 'proprio ora',
-  'the agent': 'l’agente',
   'this month': 'questo mese',
   'this year': 'quest’anno',
   today: 'oggi',
   'unknown tool': 'strumento sconosciuto',
   '{agent} has finished': '{agent} ha terminato',
-  '{agent} is answering…': 'Sta rispondendo {agent}…',
+  '{agent} is answering…': '{agent} sta rispondendo…',
   '{agent}: {status}': '{agent}: {status}',
   '{counts} tokens': '{counts} token',
   '{count} iterations': '{count} iterazioni',
@@ -282,5 +284,3 @@ const it: Catalog = {
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '«Sì, sempre» salva una tua preferenza. Quello strumento verrà quindi eseguito senza chiedere, anche nelle esecuzioni pianificate che nessuno sta seguendo, finché non la revochi.',
 };
-
-export default it;
