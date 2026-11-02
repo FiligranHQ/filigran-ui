@@ -555,11 +555,14 @@ async function mountThread(t: { after: (fn: () => Promise<void>) => void }) {
   container.appendChild(host);
   const root = createRoot(host);
   t.after(() => act(async () => root.unmount()));
-  return (conversationId: string, onLoadEarlier: () => Promise<number>) =>
+  return (conversationId: string, onLoadEarlier: () => Promise<number>, earlier: string[] = []) =>
     act(async () => {
       root.render(
         <ChatMessages
-          messages={[{ id: `${conversationId}-m`, role: 'assistant', content: `answer of ${conversationId}`, timestamp: new Date(0) }]}
+          messages={[
+            ...earlier.map((id) => ({ id, role: 'user' as const, content: id, timestamp: new Date(0) })),
+            { id: `${conversationId}-m`, role: 'assistant', content: `answer of ${conversationId}`, timestamp: new Date(0) },
+          ]}
           isLoading={false}
           agentStatus={null}
           agentName="Hunter"
@@ -639,5 +642,37 @@ test("a load still on its way for the conversation left holds back no load in th
   await view.scrollTo(1600);
   await view.scrollTo(100);
   assert.equal(calls, 2, 'c2 loads at once');
+});
+
+test("a load of the conversation left, ending with nothing, keeps the next one's place among its older messages", async (t) => {
+  const view = layOutTranscript(t);
+  clock(t);
+  const show = await mountThread(t);
+  let releaseA!: (count: number) => void;
+  let releaseB!: (count: number) => void;
+  const loadA = () => new Promise<number>((resolve) => (releaseA = resolve));
+  const loadB = () => new Promise<number>((resolve) => (releaseB = resolve));
+  await show('c1', loadA);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  await show('c2', loadB);
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  await act(async () => {
+    releaseA(0);
+    await settle();
+  });
+  view.scrolls.length = 0;
+  // c2's older message lands above it, then its load says so.
+  view.setHeight(2600);
+  await show('c2', loadB, ['c2-older']);
+  await act(async () => {
+    releaseB(1);
+    await settle();
+  });
+  assert.ok(
+    !view.scrolls.some((scroll) => scroll.behavior === 'smooth'),
+    `the reader is not sent to the end: ${JSON.stringify(view.scrolls)}`,
+  );
 });
 

@@ -1076,16 +1076,18 @@ export const ChatMessages = ({
     if (!onLoadEarlier || loadingEarlier) return undefined;
     const loadingFor = conversationId ?? null;
     setLoadingEarlierFor(loadingFor);
-    prependedRef.current = {
+    const prepended = {
       firstId: messages[0]?.id,
       visible: Math.min(messages.length, renderWindow),
       count: 0,
       scrollHeight: el?.scrollHeight ?? 0,
       scrollTop: el?.scrollTop ?? 0,
     };
+    prependedRef.current = prepended;
     try {
       const count = await onLoadEarlier();
-      if (count === 0) prependedRef.current = null;
+      // Only its own record: a load of the next conversation may have set one since.
+      if (count === 0 && prependedRef.current === prepended) prependedRef.current = null;
       // One the reader asked for that brought some lets the scroll load again.
       else autoEarlierRef.current.stopped = false;
       return count;
