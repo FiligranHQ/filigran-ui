@@ -15,10 +15,13 @@ const usable = (value: unknown): string | null => {
 /** An identifier, as a code is written (`invalid_token`, `Unauthorized`); a sentence in any script is not one. */
 const IDENTIFIER = /^[\w.-]+$/;
 
-/** *value* when it is a sentence the backend wrote, not a code. */
+/** Title Case words and nothing else, as an HTTP reason phrase is written (`Not Found`, `Too Many Requests`). */
+const REASON_PHRASE = /^[A-Z][A-Za-z]*(?: [A-Z][A-Za-z]*)*$/;
+
+/** *value* when it is a sentence the backend wrote, not a code or a status's reason phrase. */
 function sentence(value: unknown): string | null {
   const text = usable(value);
-  return text && !IDENTIFIER.test(text) ? text : null;
+  return text && !IDENTIFIER.test(text) && !REASON_PHRASE.test(text) ? text : null;
 }
 
 /**

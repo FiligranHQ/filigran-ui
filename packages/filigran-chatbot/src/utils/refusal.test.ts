@@ -38,6 +38,15 @@ test("an error that is a code is not read: the panel's own message shows", () =>
   assert.equal(refusalDetail({ detail: 'From detail.', error: 'Unauthorized' }), 'From detail.');
 });
 
+test("an error that is a status's reason phrase is not read", () => {
+  assert.equal(refusalDetail({ status: 404, error: 'Not Found' }), null);
+  assert.equal(refusalDetail({ statusCode: 429, error: 'Too Many Requests' }), null);
+  assert.equal(refusalDetail({ error: 'Internal Server Error' }), null);
+  // A sentence in Title Case still has its punctuation or a lowercase word.
+  assert.equal(refusalDetail({ error: 'XTM One is unreachable.' }), 'XTM One is unreachable.');
+  assert.equal(refusalDetail({ error: 'Invalid conversation id' }), 'Invalid conversation id');
+});
+
 test('an error sentence is read in any script, not only one with spaces', () => {
   assert.equal(refusalDetail({ error: '配额已用完。' }), '配额已用完。');
   assert.equal(refusalDetail({ error: 'クォータを超えました。' }), 'クォータを超えました。');

@@ -665,9 +665,10 @@ Where the panel shows why the backend refused a request, it reads the JSON body
 of the non-2xx answer: its `detail` when a string, or the `message` (or
 `detail`) of a `detail` object, as XTM One answers; else its `error` when that
 is a sentence, as the products' proxies answer (`{ "error": "..." }`, beside a
-`status` or not). A code (`invalid_token`, `Unauthorized`), anything else in
-the body (a top-level `message` included), a string over 500 characters or a
-body that is not JSON shows the panel's own, translated message.
+`status` or not). A code (`invalid_token`, `Unauthorized`), a status's reason
+phrase (`Not Found`, `Too Many Requests`), anything else in the body (a
+top-level `message` included), a string over 500 characters or a body that is
+not JSON shows the panel's own, translated message.
 
 ### `POST {apiBaseUrl}/chat/messages`
 
