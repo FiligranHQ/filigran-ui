@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import type { ChatPromptTemplate } from '../types';
+import { isComposing } from '../utils/keyboard';
 import { SparklesIcon } from './icons';
 import { Dropdown } from './Dropdown';
 import { Tooltip } from './Tooltip';
@@ -62,7 +63,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Escape') close();
+                if (e.key === 'Escape' && !isComposing(e)) close();
               }}
               placeholder={t('Search prompts...')}
               aria-label={t('Search prompts...')}

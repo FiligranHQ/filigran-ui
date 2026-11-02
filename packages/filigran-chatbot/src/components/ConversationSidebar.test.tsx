@@ -125,7 +125,8 @@ async function renderWithSections(sections: Sections, props: { conversations?: t
   return { container, draw, search, searchBox, unmount: () => act(() => root.unmount()) };
 }
 
-const sharedSection = (titles: string[], calls: string[] = []) =>
+const sharedSection =
+  (titles: string[], calls: string[] = []) =>
   ({ query }: { query: string }) => {
     calls.push(query);
     const shown = titles.filter((title) => title.toLowerCase().includes(query.toLowerCase()));
@@ -219,4 +220,93 @@ test('a search box that hides takes its query with it', async () => {
   await draw(<section />);
   assert.equal(container.querySelector<HTMLInputElement>('input[aria-label="Search conversations..."]')?.value, '', 'the box comes back empty');
   await unmount();
+});
+
+test('Enter while an input method composes does not commit a rename', async () => {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const renamed: [string, string][] = [];
+  await act(async () => {
+    root.render(
+      <ConversationSidebar
+        conversations={[{ conversationId: 'c1', title: 'Old title' }]}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onRename={(id, title) => renamed.push([id, title])}
+        onNewChat={() => undefined}
+        t={(key) => key}
+      />,
+    );
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Rename conversation"]')!.click();
+    await settle();
+  });
+  const field = () => container.querySelector<HTMLInputElement>('input[aria-label="Conversation title"]');
+  await act(async () => {
+    const input = field()!;
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value')!.set!.call(input, '東京');
+    input.dispatchEvent(new window.Event('input', { bubbles: true }) as unknown as Event);
+    await settle();
+  });
+  const enter = (init: Record<string, unknown>) =>
+    act(async () => {
+      field()!.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...init }) as unknown as Event);
+      await settle();
+    });
+  await enter({ isComposing: true });
+  await enter({ keyCode: 229 });
+  assert.deepEqual(renamed, [], 'the composition is confirmed, not the rename');
+  assert.equal(field()?.value, '東京', 'the field stays open');
+  await enter({ keyCode: 13 });
+  assert.deepEqual(renamed, [['c1', '東京']]);
+  await act(async () => root.unmount());
+  container.remove();
+});
+
+test('Escape while an input method composes does not clear the conversation search', async () => {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const conversations = Array.from({ length: 8 }, (_, i) => ({ conversationId: `c${i}`, title: `Conversation ${i}` }));
+  await act(async () => {
+    root.render(
+      <ConversationSidebar
+        conversations={conversations}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onNewChat={() => undefined}
+        t={(key) => key}
+      />,
+    );
+    await settle();
+  });
+  const search = container.querySelector<HTMLInputElement>('input[aria-label="Search conversations..."]')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(search), 'value')!.set!.call(search, 'とう');
+    search.dispatchEvent(new window.Event('input', { bubbles: true }) as unknown as Event);
+    await settle();
+  });
+  const escape = (init: Record<string, unknown>) =>
+    act(async () => {
+      search.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true, ...init }) as unknown as Event);
+      await settle();
+    });
+  await escape({ isComposing: true });
+  await escape({ keyCode: 229 });
+  assert.equal(search.value, 'とう', 'the composition is cancelled, not the search');
+  await escape({});
+  assert.equal(search.value, '');
+  await act(async () => root.unmount());
+  container.remove();
 });
