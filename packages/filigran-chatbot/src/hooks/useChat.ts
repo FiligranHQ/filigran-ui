@@ -533,6 +533,8 @@ interface UseChatOptions {
   onSessionEnded?: (reason: string | undefined) => void;
   /** A conversation was retitled (`conversation_title`). */
   onConversationTitle?: (conversationId: string | null, title: string) => void;
+  /** The backend took a message in a conversation that exists already, with the text its bubble shows. */
+  onMessageSent?: (conversationId: string, text: string) => void;
   /**
    * The conversation whose history is on screen: its event stream is followed
    * only then, so a relayed turn is appended to that history.
@@ -916,6 +918,7 @@ export function useChat({
   onStreamEvent,
   onSessionEnded,
   onConversationTitle,
+  onMessageSent,
   historySettledFor = null,
   steerAttachments = false,
   holdSends = false,
@@ -1113,6 +1116,8 @@ export function useChat({
   onSessionEndedRef.current = onSessionEnded;
   const onConversationTitleRef = useRef(onConversationTitle);
   onConversationTitleRef.current = onConversationTitle;
+  const onMessageSentRef = useRef(onMessageSent);
+  onMessageSentRef.current = onMessageSent;
   const onBeforeSendRef = useRef(onBeforeSend);
   onBeforeSendRef.current = onBeforeSend;
   const onHeldSendSettledRef = useRef(onHeldSendSettled);
@@ -1643,6 +1648,7 @@ export function useChat({
         const data: unknown = await res.json().catch(() => null);
         const body = data && typeof data === 'object' ? (data as { turn_id?: unknown; answered?: unknown }) : {};
         const turnId = body.turn_id;
+        askHost(onMessageSentRef.current, convId, shown);
         return { result: 'ok', turnId: typeof turnId === 'string' && turnId ? turnId : null, unanswered: body.answered === false };
       }
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
@@ -2524,6 +2530,7 @@ export function useChat({
       }
       accepted = true;
       override?.onSent?.();
+      if (conversationIdRef.current) askHost(onMessageSentRef.current, conversationIdRef.current, shownText);
 
       const parseEvent = getParser(backendType);
       await readSseEvents(
