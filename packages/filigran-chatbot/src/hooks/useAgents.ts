@@ -53,7 +53,17 @@ function parseAgents(data: unknown): XtmAgent[] {
     : Array.isArray((data as Record<string, unknown>)?.agents)
       ? ((data as Record<string, unknown>).agents as unknown[])
       : [];
-  return rawList.filter((raw): raw is XtmAgent => !!raw && typeof raw === 'object' && typeof (raw as XtmAgent).id === 'string');
+  return rawList.filter((raw): raw is XtmAgent => !!raw && typeof raw === 'object' && typeof (raw as XtmAgent).id === 'string').map(withBadges);
+}
+
+/** *agent* with its `badges` kept to non-empty strings, and left off when none is. */
+function withBadges(agent: XtmAgent): XtmAgent {
+  const raw: unknown = (agent as { badges?: unknown }).badges;
+  if (raw === undefined) return agent;
+  const badges = Array.isArray(raw) ? raw.filter((b): b is string => typeof b === 'string' && !!b.trim()).map((b) => b.trim()) : [];
+  const kept: XtmAgent = { ...agent, badges };
+  if (badges.length === 0) delete kept.badges;
+  return kept;
 }
 
 /** The agent named by *key*, matched on id first, then slug. */

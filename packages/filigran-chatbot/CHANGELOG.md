@@ -8,6 +8,58 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.19.0 — unreleased
+
+### Added
+
+- `onBeforeMove(conversation, workspace)` is asked before a drag or a row's
+  Move menu files a conversation into a workspace (`workspace` is `null` when
+  taking it out of one): `false`, or a promise of it, leaves the conversation
+  where it was, e.g. once the user declined to share it with a workspace's
+  members. One that throws or rejects refuses the move.
+- `onConversationActionFailed(action, conversation, error)` is told when
+  deleting, renaming, moving or clearing conversations fails (`'delete'`,
+  `'rename'`, `'move'`, `'clearAll'`), with the backend's `detail` when it
+  gave one; returning `true` keeps the panel's own notice from showing.
+- A row of the conversation list shows the last message
+  (`last_message_preview`) under its title, and a small icon for a
+  conversation started in a messaging channel (`channel`), named `Started in
+  {channel}`: Slack, Teams, WhatsApp, Telegram, Discord and Google Chat out
+  of the box; `channelLabel(channel)` names another, or hides one (`null`).
+  `ChatConversationSummary` gains the optional `lastMessagePreview` and
+  `channel`.
+- `sidebarSearchThreshold` sets how many conversations the list holds before
+  its search box shows (default 7, as before; `0` shows it from the first).
+- `headerTitle` and `headerSubtitle`, a node or a function of what is on
+  screen (`ChatHeaderContext`: the conversation as the list holds it, and the
+  agent), show a title beside the header's agent name and a line under it.
+- `agentHref(agent)` makes the header's agent name a link, followed in place
+  (an http(s) URL or a path of the host's origin), and `onAgentNameClick(agent)`
+  takes a plain click on it; the chevron beside the name opens the agent
+  picker then.
+- `clearAllAction: 'archive'` words Clear all as an archive (`Archive all
+  conversations`).
+- `XtmAgent.badges`: short labels the agents list may send (`badges`, strings
+  only), shown after the agent's name in the agent picker.
+
+### Fixed
+
+- Deleting, renaming or clearing conversations failed silently: the panel now
+  says it under the conversation list, or under the header when the list is
+  not shown, in the backend's words when it gives some. A refused rename
+  still keeps the old title, and now undoes only that row: other changes to
+  the list made meanwhile stay.
+- The conversation list's search matches a conversation's last message and
+  its agent's name too, not its title alone.
+- A message sent in a conversation moves it to the top of its section at
+  once, with the time and its text as the preview; it stayed where it was
+  until the turn ended and the list was read again.
+- A read-only panel showed the welcome screen's "Suggestions" heading over no
+  suggestions, and offered New conversation, which opened a blank read-only
+  chat: the heading is gone, and New conversation (in the header, its history
+  menu, the conversation list and each workspace) is disabled, with the
+  read-only notice (when a string) as its tooltip.
+
 ## 3.18.1 — unreleased
 
 ### Fixed

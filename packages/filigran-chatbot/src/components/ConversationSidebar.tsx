@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import type { ChatConversationSummary, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
-import { timeAgo, translateAround } from '../utils';
+import { timeAgo, translate, translateAround } from '../utils';
+import { channelName, conversationMatches } from '../utils/conversationList';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
@@ -12,6 +13,7 @@ import {
   ChevronRightIcon,
   CloseIcon,
   EditIcon,
+  MessageSquareIcon,
   FolderIcon,
   FolderInputIcon,
   FolderPlusIcon,
@@ -62,6 +64,16 @@ interface ConversationSidebarProps {
   sections?: ReactNode;
   /** Deletes every conversation, after a confirmation; omitted when the host offers no route. */
   onClearAll?: () => void;
+  /** What Clear all does, for its wording. */
+  clearAllAction?: 'delete' | 'archive';
+  /** The search box shows above this many conversations. */
+  searchThreshold?: number;
+  /** The host's names of the channels a conversation was started in (see `channelLabel` on the panel). */
+  channelLabel?: (channel: string) => string | null | undefined;
+  /** Why no conversation can be started (a read-only panel): New conversation is disabled, with this as its tooltip. */
+  newChatDisabledReason?: string;
+  /** What the panel has to say about the list (a failed delete, rename or Clear all). */
+  notice?: string | null;
   t: (key: string) => string;
 }
 
@@ -108,6 +120,11 @@ export const ConversationSidebar = ({
   headerActions,
   sections,
   onClearAll,
+  clearAllAction,
+  searchThreshold = SEARCH_THRESHOLD,
+  channelLabel,
+  newChatDisabledReason,
+  notice,
   t,
 }: ConversationSidebarProps) => {
   const [query, setQuery] = useState('');
@@ -172,7 +189,7 @@ export const ConversationSidebar = ({
   };
 
   const q = query.trim().toLowerCase();
-  const matches = useMemo(() => (q ? (c: ChatConversationSummary) => (c.title || '').toLowerCase().includes(q) : undefined), [q]);
+  const matches = useMemo(() => (q ? (c: ChatConversationSummary) => conversationMatches(c, q) : undefined), [q]);
   const filtered = useMemo(() => (matches ? conversations.filter(matches) : conversations), [conversations, matches]);
   const grouped = useMemo(
     () => (workspaces ? groupConversations(conversations, workspaces.list, { matches }) : null),
@@ -195,12 +212,13 @@ export const ConversationSidebar = ({
             <SidebarIcon size={17} />
           </button>
         </Tooltip>
-        <Tooltip title={t('New conversation')}>
+        <Tooltip title={newChatDisabledReason || t('New conversation')}>
           <button
             type="button"
             onClick={() => onNewChat()}
+            disabled={!!newChatDisabledReason}
             aria-label={t('New conversation')}
-            className="w-8 h-8 flex items-center justify-center rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors disabled:opacity-40 disabled:pointer-events-none"
           >
             <EditIcon size={17} />
           </button>
@@ -225,6 +243,7 @@ export const ConversationSidebar = ({
       fileable={workspaces ? fileable : undefined}
       onMove={move}
       actions={rowActions}
+      channel={channelName(c.channel, channelLabel)}
       t={t}
     />
   );
@@ -232,14 +251,18 @@ export const ConversationSidebar = ({
   return (
     <div className="w-64 shrink-0 flex flex-col border-r chat-border-200/10">
       <div className="flex items-center gap-1 px-3 py-3">
-        <button
-          type="button"
-          onClick={() => onNewChat()}
-          className="flex-1 flex items-center gap-2 rounded-lg border chat-border-200/10 px-3 py-1.5 text-[0.8125rem] chat-text-secondary-700/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
-        >
-          <EditIcon size={15} />
-          {t('New conversation')}
-        </button>
+        {/* A disabled button takes no pointer: its wrapper shows why it is. */}
+        <Tooltip title={newChatDisabledReason ?? ''} className="flex flex-1 min-w-0">
+          <button
+            type="button"
+            onClick={() => onNewChat()}
+            disabled={!!newChatDisabledReason}
+            className="flex-1 flex items-center gap-2 rounded-lg border chat-border-200/10 px-3 py-1.5 text-[0.8125rem] chat-text-secondary-700/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <EditIcon size={15} />
+            {t('New conversation')}
+          </button>
+        </Tooltip>
         {headerActions}
         <Tooltip title={t('Hide conversations')}>
           <button
@@ -254,7 +277,7 @@ export const ConversationSidebar = ({
         </Tooltip>
       </div>
 
-      {conversations.length > SEARCH_THRESHOLD && (
+      {conversations.length > searchThreshold && (
         <div className="px-3 pb-2">
           <div className="relative">
             <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 chat-text-muted-400/40" />
@@ -313,7 +336,7 @@ export const ConversationSidebar = ({
                 toggleable={groupCanToggle(group, activeConversationId, !!q)}
                 pending={!!group.workspace && workspaces.pendingWorkspaceId === group.workspace.id && !activeConversationId}
                 onToggle={() => toggleGroup(group.key)}
-                onNewChat={workspaces.onNewChat}
+                onNewChat={newChatDisabledReason ? undefined : workspaces.onNewChat}
                 onRename={async (id, name) => {
                   const result = await workspaces.onRename(id, name);
                   if (!result.ok) say(result.error, 'The workspace could not be renamed');
@@ -355,13 +378,13 @@ export const ConversationSidebar = ({
         )}
         {sections}
         {onClearAll && conversations.length > 0 && !q && (
-          <ClearAllConversations onClear={onClearAll} className="px-2 pt-3" iconButtonClass={iconButton} t={t} />
+          <ClearAllConversations onClear={onClearAll} action={clearAllAction} className="px-2 pt-3" iconButtonClass={iconButton} t={t} />
         )}
       </div>
 
-      {error && (
+      {(error || notice) && (
         <p role="alert" className="mx-3 mb-3 rounded-md bg-red-500/10 px-2.5 py-1.5 text-[0.7rem] text-red-600 dark:text-red-400">
-          {error}
+          {error || notice}
         </p>
       )}
     </div>
@@ -509,7 +532,8 @@ const WorkspaceGroupSection = ({
   /** A new conversation is about to be created in this workspace. */
   pending: boolean;
   onToggle: () => void;
-  onNewChat: (workspaceId: string) => void;
+  /** Omitted when no conversation can be started. */
+  onNewChat?: (workspaceId: string) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   onDropConversation: (conversationId: string) => void;
@@ -573,16 +597,18 @@ const WorkspaceGroupSection = ({
               </>
             ) : (
               <>
-                <Tooltip title={t('New conversation in this workspace')}>
-                  <button
-                    type="button"
-                    onClick={() => onNewChat(workspace.id)}
-                    aria-label={t('New conversation in this workspace')}
-                    className={iconButton}
-                  >
-                    <EditIcon size={13} />
-                  </button>
-                </Tooltip>
+                {onNewChat && (
+                  <Tooltip title={t('New conversation in this workspace')}>
+                    <button
+                      type="button"
+                      onClick={() => onNewChat(workspace.id)}
+                      aria-label={t('New conversation in this workspace')}
+                      className={iconButton}
+                    >
+                      <EditIcon size={13} />
+                    </button>
+                  </Tooltip>
+                )}
                 <Tooltip title={t('Rename workspace')}>
                   <button type="button" onClick={() => setRenaming(true)} aria-label={t('Rename workspace')} className={iconButton}>
                     <PencilIcon size={13} />
@@ -635,6 +661,7 @@ const ConversationRow = ({
   fileable,
   onMove,
   actions,
+  channel,
   t,
 }: {
   conversation: ChatConversationSummary;
@@ -651,6 +678,8 @@ const ConversationRow = ({
   fileable?: ChatWorkspace[];
   onMove: (conversationId: string, workspaceId: string | null) => void;
   actions?: (conversation: ChatConversationSummary) => ReactNode;
+  /** The channel the conversation was started in, when the row names it. */
+  channel: string | null;
   t: (key: string) => string;
 }) => {
   const [moveOpen, setMoveOpen] = useState(false);
@@ -721,11 +750,23 @@ const ConversationRow = ({
           when the backend does not report it, rather than padded with
           a placeholder.
         */}
-        {(c.agentName || c.updatedAt) && !isEditing && (
-          <span className="block text-[0.65rem] chat-text-muted-400/30 truncate">
-            {c.agentName}
-            {c.agentName && c.updatedAt ? ' · ' : ''}
-            {c.updatedAt ? timeAgo(c.updatedAt, t) : ''}
+        {c.lastMessagePreview && !isEditing && (
+          <span className="block truncate text-[0.7rem] chat-text-secondary-500/50">{c.lastMessagePreview}</span>
+        )}
+        {(c.agentName || c.updatedAt || channel) && !isEditing && (
+          <span className="flex min-w-0 items-center gap-1 text-[0.65rem] chat-text-muted-400/30">
+            {channel && (
+              <Tooltip title={translate(t, 'Started in {channel}', { channel })}>
+                <span role="img" aria-label={translate(t, 'Started in {channel}', { channel })} className="flex shrink-0">
+                  <MessageSquareIcon size={10} />
+                </span>
+              </Tooltip>
+            )}
+            <span className="truncate">
+              {c.agentName}
+              {c.agentName && c.updatedAt ? ' · ' : ''}
+              {c.updatedAt ? timeAgo(c.updatedAt, t) : ''}
+            </span>
           </span>
         )}
       </span>

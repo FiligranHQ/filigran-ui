@@ -6,9 +6,11 @@ import { ANCHOR_GAP, placeTooltip, tooltipMaxWidth, tooltipOpening, type Tooltip
 interface TooltipProps {
   title: string;
   children: React.ReactElement;
+  /** The wrapper's layout, where the control it wraps is laid out by its parent (`flex-1`). */
+  className?: string;
 }
 
-export const Tooltip = ({ title, children }: TooltipProps) => {
+export const Tooltip = ({ title, children, className = 'inline-flex' }: TooltipProps) => {
   const ref = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLSpanElement>(null);
   const [opening, setOpening] = useState<TooltipOpening | null>(null);
@@ -44,7 +46,7 @@ export const Tooltip = ({ title, children }: TooltipProps) => {
   return (
     <span
       ref={ref}
-      className="inline-flex"
+      className={className}
       onMouseEnter={open}
       onMouseLeave={() => setOpening(null)}
       onFocus={handleFocus}
