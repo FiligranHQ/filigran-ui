@@ -32,4 +32,3 @@ test('a page with an opaque origin still follows its paths, and still refuses an
     assert.equal(inPlaceHref('/\\evil.example', page), undefined, page);
   }
 });
-
