@@ -1301,8 +1301,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     (conversationAgentName ? agents.find((a) => a.name === conversationAgentName)?.id : undefined) ??
     selectedAgent?.id ??
     null;
-  // The header's agent, its link, and what its title and subtitle are given.
-  const headerAgent = agents.find((a) => a.id === addressedAgentId) ?? null;
+  // The header's agent, its link, and what its title and subtitle are given:
+  // the agent the header names. A restored conversation's agent missing from
+  // the list is none, never the one picked, which the header does not name.
+  const headerAgentId =
+    transferredAgent?.id ??
+    (conversationAgentName ? (agents.find((a) => a.name === conversationAgentName)?.id ?? null) : (selectedAgent?.id ?? null));
+  const headerAgent = (headerAgentId && agents.find((a) => a.id === headerAgentId)) || null;
   const agentLink = useMemo(() => {
     if (!headerAgent || (!agentHref && !onAgentNameClickProp)) return undefined;
     const raw = askHost(agentHref, headerAgent)?.trim();
@@ -1475,7 +1480,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         newChatDisabledReason={newChatDisabledReason}
         t={t}
       />
-      {listNotice && !showConversationSidebar && (
+      {listNotice && (!showConversationSidebar || sidebarCollapsed) && (
         <p role="alert" className="mx-3 mt-2 shrink-0 rounded-md bg-red-500/10 px-2.5 py-1.5 text-[0.7rem] text-red-600 dark:text-red-400">
           {listNotice}
         </p>

@@ -200,6 +200,58 @@ test('a message sent in an older conversation moves it to the top at once, befor
   });
 });
 
+test('a message steering the running turn moves its conversation up too, with its words', async () => {
+  const stream = sseStream();
+  fakeBackend([
+    agentsRoute,
+    listRoute([
+      { conversation_id: 'c2', title: 'Newer', updated_at: '2026-11-02T09:00:00Z' },
+      { conversation_id: 'c1', title: 'Older', updated_at: '2026-10-01T09:00:00Z' },
+    ]),
+    restoreRoute,
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'steered', turn_id: 't1' }) : undefined),
+  ]);
+  const ref = createRef<ChatPanelHandle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    ref.current!.send('what changed since?');
+    await settle(10);
+  });
+  await act(async () => {
+    stream.send({ type: 'status', status: 'thinking', conversation_id: 'c1' });
+    await settle(10);
+  });
+  await act(async () => {
+    ref.current!.send('and the lateral movement?');
+    await settle(10);
+  });
+  const first = rows()[0];
+  assert.ok(first.textContent?.startsWith('Older'), first.textContent ?? '');
+  assert.ok(first.textContent?.includes('and the lateral movement?'), first.textContent ?? '');
+  await act(async () => {
+    stream.send({ type: 'done', content: 'ok', conversation_id: 'c1' });
+    stream.close();
+    await settle(10);
+  });
+});
+
+test('a failure said while the list is hidden shows under the header', async () => {
+  let fail!: () => void;
+  const deleted = new Promise<Response>((resolve) => {
+    fail = () => resolve(new Response('boom', { status: 500 }));
+  });
+  fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'Keep me' }]), (req) => (req.method === 'DELETE' ? deleted : undefined)]);
+  await render({});
+  await click(button('Delete conversation'));
+  await click(button('Hide conversations'));
+  await act(async () => {
+    fail();
+    await settle(10);
+  });
+  assert.equal(alertText(), 'The conversation could not be deleted');
+});
+
 test('a read-only panel offers no suggestions heading, and no new conversation', async () => {
   fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'One' }])]);
   await render({ readOnly: true, readOnlyNotice: 'Shared with you to read' });
@@ -232,6 +284,26 @@ test('the header shows the title and subtitle the host draws from the conversati
   assert.deepEqual(clicked, ['a1']);
   await click(button('Switch to another agent'));
   assert.ok(document.body.textContent?.includes('Scout'), 'the chevron opens the picker');
+});
+
+test("a restored conversation whose agent is not in the list links no agent, never the one picked", async () => {
+  fakeBackend([
+    agentsRoute,
+    listRoute([{ conversation_id: 'c1', title: 'Old hunt' }]),
+    (req) =>
+      req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', agent_name: 'Retired Bot', messages: [] }) : undefined,
+  ]);
+  const subtitles: (string | null)[] = [];
+  await render({
+    conversationId: 'c1',
+    agentHref: (agent) => `/agents/${agent.id}`,
+    headerSubtitle: ({ agent }) => {
+      subtitles.push(agent?.name ?? null);
+      return null;
+    },
+  });
+  assert.equal(container.querySelector('a[href^="/agents/"]'), null, 'no agent link');
+  assert.equal(subtitles.at(-1), null, 'the subtitle is given no agent');
 });
 
 test('an agent address that is not http(s) or a path links nothing, and no option keeps the header as it was', async () => {

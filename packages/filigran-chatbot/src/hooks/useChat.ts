@@ -1607,6 +1607,7 @@ export function useChat({
         const data: unknown = await res.json().catch(() => null);
         const body = data && typeof data === 'object' ? (data as { turn_id?: unknown; answered?: unknown }) : {};
         const turnId = body.turn_id;
+        askHost(onMessageSentRef.current, convId, shown);
         return { result: 'ok', turnId: typeof turnId === 'string' && turnId ? turnId : null, unanswered: body.answered === false };
       }
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
