@@ -389,6 +389,14 @@ test('the same failure said again stays for its own time', async () => {
   }
 });
 
+test("the agent's link follows a new agentHref from the host, as when its language changes", async () => {
+  fakeBackend([agentsRoute]);
+  await render({ agentHref: (agent) => `/en/agents/${agent.id}` });
+  assert.ok(container.querySelector('a[href="/en/agents/a1"]'));
+  await render({ agentHref: (agent) => `/fr/agents/${agent.id}` });
+  assert.ok(container.querySelector('a[href="/fr/agents/a1"]'), container.querySelector('a')?.getAttribute('href') ?? 'no link');
+});
+
 test('an agent address that is not http(s) or a path links nothing, and no option keeps the header as it was', async () => {
   fakeBackend([agentsRoute]);
   await render({ agentHref: () => 'javascript:alert(1)' });

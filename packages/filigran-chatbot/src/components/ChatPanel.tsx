@@ -214,7 +214,6 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const onTurnRunningChange = useLatestCallback(onTurnRunningChangeProp);
   const onBeforeMove = useLatestCallback(onBeforeMoveProp);
   const onConversationActionFailed = useLatestCallback(onConversationActionFailedProp);
-  const agentHref = useLatestCallback(agentHrefProp);
   const onAgentNameClick = useLatestCallback(onAgentNameClickProp);
   // A click handler, not content: held stable so a host's inline one spares every row.
   const onArtifactOpen = useLatestCallback(onArtifactOpenProp);
@@ -1302,12 +1301,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       : selectedAgent;
   const addressedAgentId = transferredAgent?.id ?? conversationAgent?.id ?? selectedAgent?.id ?? null;
   const agentLink = useMemo(() => {
-    if (!headerAgent || (!agentHref && !onAgentNameClick)) return undefined;
+    if (!headerAgent || (!agentHrefProp && !onAgentNameClick)) return undefined;
     // Followed in place: an http(s) URL, or a path of the page's own origin.
-    const href = inPlaceHref(askHost(agentHref, headerAgent), window.location.origin);
+    // The host's own function: a new one (another locale) gives a new address.
+    const href = inPlaceHref(askHost(agentHrefProp, headerAgent), window.location.href);
     const onClick = onAgentNameClick ? () => askHost(onAgentNameClick, headerAgent) : undefined;
     return href || onClick ? { href, onClick } : undefined;
-  }, [headerAgent, agentHref, onAgentNameClick]);
+  }, [headerAgent, agentHrefProp, onAgentNameClick]);
   const headerContext: ChatHeaderContext = {
     conversation: (conversationId && conversations.find((c) => c.conversationId === conversationId)) || null,
     agent: headerAgent,
