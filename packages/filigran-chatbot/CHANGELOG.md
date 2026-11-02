@@ -8,7 +8,19 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
-## 3.18.0 — unreleased
+## 3.18.1 — unreleased
+
+### Fixed
+
+- A message sent, or a file attached, before the panel's agents have loaded
+  goes to the agent the host asked for (`initialAgent`); it went with no agent
+  before, and the backend answered with the user's default one. The message
+  shows at once and leaves when the agents land, whether from the composer,
+  the handle or a voice call, and Stop lets it go meanwhile. One from the
+  composer or a voice call does not wait for a history still being read back;
+  the handle's `send` still does.
+
+## 3.18.0 — 2026-10-31
 
 ### Added
 
@@ -28,7 +40,7 @@ This file starts at 3.10.0; earlier releases are on the
   consult as `AgentStatusState.consult` (`ConsultStatus`); a host translating
   the panel's keys translates the new ones too.
 
-## 3.17.0 — unreleased
+## 3.17.0 — published within 3.18.0
 
 ### Added
 
@@ -42,16 +54,6 @@ This file starts at 3.10.0; earlier releases are on the
   is read before the conversation is, nor while a turn runs in it; a read-back
   that fails, retried or not, leaves the thread as it is. `selectConversation`
   with the id on screen still does nothing.
-
-### Fixed
-
-- A message sent, or a file attached, before the panel's agents have loaded
-  goes to the agent the host asked for (`initialAgent`); it went with no agent
-  before, and the backend answered with the user's default one. The message
-  shows at once and leaves when the agents land, whether from the composer,
-  the handle or a voice call, and Stop lets it go meanwhile. One from the
-  composer or a voice call does not wait for a history still being read back;
-  the handle's `send` still does.
 
 ## 3.16.1 — 2026-10-29
 
