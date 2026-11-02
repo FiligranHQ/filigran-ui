@@ -672,8 +672,12 @@ export interface ChatPanelProps {
   sidebarHeaderActions?: React.ReactNode;
   /**
    * Sections added under the conversation list (conversations shared with the
-   * user). A function is called with the list's search on each change of it,
-   * so the sections filter on what is typed, as the list does.
+   * user). A function draws them from the list's search, so they filter on
+   * what is typed, as the list does. It is drawn as a component of its own (it
+   * may use hooks) and again only when the search or the function changes:
+   * pass a stable one (`useCallback`). With it, the search box shows whatever
+   * the number of conversations, and a search with no match among the user's
+   * own says so ("None of your conversations matches").
    */
   sidebarSections?: React.ReactNode | ((search: ChatSidebarSearch) => React.ReactNode);
   /** The status line's text for a status, over the built-in one; `undefined` keeps it. */

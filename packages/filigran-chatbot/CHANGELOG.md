@@ -13,10 +13,19 @@ This file starts at 3.10.0; earlier releases are on the
 ### Added
 
 - `sidebarSections` also takes a function of the conversation list's search,
-  `(search: ChatSidebarSearch) => ReactNode`, called again on each change of
-  it with what the search box holds, trimmed (`''` when empty). A host's
-  sections filter on what is typed, as the list does; sections given as an
-  element show as they are.
+  `(search: ChatSidebarSearch) => ReactNode`, given what the search box holds,
+  trimmed (`''` when empty). It is drawn as a component of its own (it may use
+  hooks), again when the search or the function changes, so a host passes a
+  stable one. With it the search box shows whatever the number of
+  conversations, and a search no conversation of the user's own matches says
+  "None of your conversations matches". Sections given as an element show as
+  they are.
+
+### Fixed
+
+- A search box hidden as the list shrinks below its threshold clears its
+  query: the list stayed filtered by a search the user could neither see nor
+  clear.
 
 ## 3.18.1 — unreleased
 

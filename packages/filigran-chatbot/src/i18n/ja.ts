@@ -110,6 +110,7 @@ const ja: Catalog = {
   'New workspace': '新しいワークスペース',
   No: 'いいえ',
   'No agent matches': '該当するエージェントはありません',
+  'None of your conversations matches': '一致するご自身の会話はありません',
   'No conversation matches': '一致する会話はありません',
   'No conversations yet': 'まだ会話はありません',
   'No prompt matches': '一致するプロンプトはありません',

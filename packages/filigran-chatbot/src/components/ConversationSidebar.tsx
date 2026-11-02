@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translateAround } from '../utils';
@@ -67,6 +67,15 @@ interface ConversationSidebarProps {
 
 /** Below this many conversations the list is quicker to scan than to filter. */
 const SEARCH_THRESHOLD = 7;
+
+/**
+ * A host's sections drawn from the search, as a component of their own: their
+ * hooks are theirs, and they are drawn again only when the search or the
+ * function changes, not on each of the list's own updates.
+ */
+const HostSections = memo(function HostSections({ draw, query }: { draw: (search: ChatSidebarSearch) => ReactNode; query: string }) {
+  return <>{draw({ query })}</>;
+});
 /** What a dragged conversation row carries. */
 const DRAG_TYPE = 'application/x-filigran-conversation';
 function readCollapsed(key: string): Set<string> {
@@ -171,7 +180,18 @@ export const ConversationSidebar = ({
     if (refusal !== null) say(refusal, 'The conversation could not be moved');
   };
 
-  const q = query.trim().toLowerCase();
+  // Sections that follow the search make it worth offering whatever the
+  // number of conversations: what the user looks for may be among theirs.
+  const sectionsSearch = typeof sections === 'function';
+  const searchOffered = sectionsSearch || conversations.length > SEARCH_THRESHOLD;
+  // A box that hides takes its query with it: nothing stays filtered out of sight.
+  useEffect(() => {
+    if (!searchOffered) setQuery('');
+  }, [searchOffered]);
+  const search = searchOffered ? query.trim() : '';
+  const q = search.toLowerCase();
+  // With the host's sections searched too, only the user's own conversations are known to match nothing.
+  const noMatch = sectionsSearch ? t('None of your conversations matches') : t('No conversation matches');
   const matches = useMemo(() => (q ? (c: ChatConversationSummary) => (c.title || '').toLowerCase().includes(q) : undefined), [q]);
   const filtered = useMemo(() => (matches ? conversations.filter(matches) : conversations), [conversations, matches]);
   const grouped = useMemo(
@@ -254,7 +274,7 @@ export const ConversationSidebar = ({
         </Tooltip>
       </div>
 
-      {conversations.length > SEARCH_THRESHOLD && (
+      {searchOffered && (
         <div className="px-3 pb-2">
           <div className="relative">
             <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 chat-text-muted-400/40" />
@@ -341,19 +361,19 @@ export const ConversationSidebar = ({
               )}
             </DropZone>
             {q && grouped.groups.length === 0 && grouped.unfiled.length === 0 && (
-              <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{t('No conversation matches')}</p>
+              <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>
             )}
           </>
         ) : (
           <>
             {!loading && conversations.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{t('No conversations yet')}</p>}
             {conversations.length > 0 && filtered.length === 0 && (
-              <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{t('No conversation matches')}</p>
+              <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>
             )}
             {filtered.map(renderRow)}
           </>
         )}
-        {typeof sections === 'function' ? sections({ query: query.trim() }) : sections}
+        {typeof sections === 'function' ? <HostSections draw={sections} query={search} /> : sections}
         {onClearAll && conversations.length > 0 && !q && (
           <ClearAllConversations onClear={onClearAll} className="px-2 pt-3" iconButtonClass={iconButton} t={t} />
         )}
