@@ -211,10 +211,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     ),
   );
   const markerKindList = useShallowStable(useMemo(() => markerKinds(markerRenderers && Object.keys(markerRenderers)), [markerRenderers]));
-  // A function the host writes inline is a new one on every render: kept as one, it does not redraw every message.
-  const toolLabelsByName = useShallowStable(typeof toolLabelsProp === 'function' ? undefined : toolLabelsProp);
-  const toolLabelOf = useLatestCallback(typeof toolLabelsProp === 'function' ? toolLabelsProp : undefined);
-  const toolLabels = toolLabelOf ?? toolLabelsByName;
+  // Read while rendering: a new function redraws the messages, so labels that change (a new language) show at once.
+  const toolLabels = useShallowStable(toolLabelsProp);
   const thinking = useMemo(
     () => ({ statusLabel, waitingMessages, renderWaitingPanel, toolLabels }),
     [statusLabel, waitingMessages, renderWaitingPanel, toolLabels],

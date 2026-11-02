@@ -118,7 +118,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `sidebarRowActions` | `(conversation) => React.ReactNode`       | —            | The host's controls on a row of the conversation list |
 | `sidebarHeaderActions` / `sidebarSections` | `React.ReactNode`  | —            | The host's controls beside New conversation, and sections under the list |
 | `statusLabel`       | `(status: AgentStatusState) => string \| undefined` | — | The status line's text for a status, over the built-in one |
-| `toolLabels`        | `Record<string, string> \| ((toolName: string) => string \| undefined)` | — | Tool names as the status line and the reasoning details show them, by the tool's raw name; a name it does not give keeps the built-in one (`search_iocs` → `Search Iocs`) |
+| `toolLabels`        | `Record<string, string> \| ((toolName: string) => string \| undefined)` | — | Tool names as the status line and the reasoning details show them, by the tool's raw name; a name it does not give keeps the built-in one (`search_iocs` → `Search Iocs`). A new function redraws every message: keep one across renders unless its labels change |
 | `waitingMessages`   | `string[]`                                | built-in     | The waiting panel's rotating messages, already translated |
 | `renderWaitingPanel` | `() => React.ReactNode`                  | —            | Replaces the waiting panel's content (its messages and the invitation to play) |
 | `fontFamily`        | `string`                                  | —            | Font of the panel's text |

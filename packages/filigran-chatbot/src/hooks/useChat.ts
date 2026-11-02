@@ -1896,10 +1896,9 @@ export function useChat({
         // past its consults.
         consultsOpen = parsed.resumed === true || parsed.status === 'tool_start';
       }
+      // A replay keeps the name: its journal may have dropped the mention's
+      // own frame, and replays it otherwise.
       if (parsed.status === 'mention_answering') showMentionAnswering(parsed.agentName, true);
-      // A replay starts over from the turn's first step, which no mentioned
-      // agent's name describes yet; the phase itself goes on.
-      else if (parsed.resumed) setAnsweringAgentName(undefined);
       if (parsed.resumed) {
         // A re-attached turn is replayed from its start: what it had written
         // so far arrives again, whole, its consults included.

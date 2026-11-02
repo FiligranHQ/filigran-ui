@@ -496,13 +496,17 @@ export const ChatThinking = ({
               <StatusIcon size={14} className="text-[var(--chat-accent)] animate-pulse transition-all duration-300" />
             )}
             {answeringAgentName && (
-              <span className="text-xs font-medium text-[var(--chat-accent)]/80 shrink-0">
-                {answeringAgentName}
-                {/* Read as two words, not run into the status. */}
-                <span className="sr-only">: </span>
-              </span>
+              <>
+                {/* Read as the locale's sentence, as the voice call says it, not the two run together. */}
+                <span className="sr-only">{translate(t, '{agent}: {status}', { agent: answeringAgentName, status: label })}</span>
+                <span aria-hidden="true" className="text-xs font-medium text-[var(--chat-accent)]/80 shrink-0">
+                  {answeringAgentName}
+                </span>
+              </>
             )}
-            <span className="text-sm chat-text-secondary-500/50 transition-all duration-300">{label}</span>
+            <span aria-hidden={answeringAgentName ? true : undefined} className="text-sm chat-text-secondary-500/50 transition-all duration-300">
+              {label}
+            </span>
             {waitLeftS !== undefined ? (
               <span className="text-xs chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(Math.ceil(waitLeftS))}</span>
             ) : (

@@ -677,6 +677,8 @@ export interface ChatPanelProps {
   /**
    * Tool names as the status line and the reasoning details show them, over
    * the raw name: by name, or a function of it (`undefined` keeps the raw name).
+   * A new function redraws every message: keep one across renders unless its
+   * labels change.
    */
   toolLabels?: ChatToolLabels;
   /** The rotating messages of the waiting panel, already translated. */

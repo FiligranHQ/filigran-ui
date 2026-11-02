@@ -38,6 +38,15 @@ async function running(props: Partial<Props> = {}) {
 
 const status = (name: string, fields: Record<string, unknown> = {}) => ({ type: 'status', status: name, ...fields });
 
+/** The status line as a screen reader reads it: what is hidden from it left out. */
+function spokenLine(): string {
+  const shown = container.querySelector('.filigran-chat-active-border');
+  if (!shown) return '';
+  const copy = shown.cloneNode(true) as HTMLElement;
+  copy.querySelectorAll('[aria-hidden="true"]').forEach((e) => e.remove());
+  return copy.textContent ?? '';
+}
+
 test('the status line names the setup step, the compaction, the save and the analysis step', async () => {
   const { stream, send } = await running();
   const phases: [string | undefined, string][] = [
@@ -76,7 +85,7 @@ test('a transfer names the agent the conversation goes to', async () => {
 test('each mentioned agent answering is named, and its name stays before the statuses of its run', async () => {
   const { stream, send } = await running();
   const answering = (name: string, position: number) => status('mention_answering', { agent_id: name, agent_name: name, position, total: 2 });
-  const line = () => container.querySelector('.filigran-chat-active-border')?.textContent ?? '';
+  const line = spokenLine;
 
   await send(answering('Analyst', 1));
   assert.equal(line(), 'Analyst is answering…');
@@ -88,10 +97,28 @@ test('each mentioned agent answering is named, and its name stays before the sta
   assert.equal(line(), 'Hunter is answering…');
   await send(status('composing'));
   assert.equal(line(), 'Hunter: Composing answer…');
+  await finish(stream);
+});
 
-  // A replay starts over from the turn's first step, under no agent's name.
-  await send({ type: 'thinking', resumed: true, elapsed_s: 5 });
-  assert.equal(line(), 'Thinking...');
+test("a replay of the turn keeps the answering agent's name, its mention frame replayed or not", async () => {
+  const { stream, send } = await running();
+  await send(
+    status('mention_answering', { agent_id: 'a2', agent_name: 'Analyst', position: 1, total: 1 }),
+    status('tool_start', { tools: ['search_iocs'] }),
+  );
+  // A journal past its bound has dropped the mention's own frame: the replay starts at a later step.
+  await send({ type: 'thinking', resumed: true, elapsed_s: 5 }, status('tool_start', { tools: ['read_report'] }));
+  assert.equal(spokenLine(), 'Analyst: Read Report…');
+  await finish(stream);
+});
+
+test("the answering agent's name and the status are read as the locale's sentence", async () => {
+  const { stream, send } = await running({ locale: 'fr' });
+  await send(
+    status('mention_answering', { agent_id: 'a2', agent_name: 'Analyst', position: 1, total: 1 }),
+    status('tool_start', { tools: ['search_iocs'] }),
+  );
+  assert.equal(spokenLine(), 'Analyst : Search Iocs…');
   await finish(stream);
 });
 
@@ -135,8 +162,7 @@ test('a turn ending in the same tick as the next one starts leaves no mention ph
     events.send({ type: 'thinking', turn_id: 't2' });
     await settle(10);
   });
-  const line = container.querySelector('.filigran-chat-active-border')?.textContent ?? '';
-  assert.equal(line, 'Thinking...', 'the next turn is not under the last agent of the one before');
+  assert.equal(spokenLine(), 'Thinking...', 'the next turn is not under the last agent of the one before');
   await act(async () => {
     void ref.current!.send('also check 2024');
     await settle();
@@ -169,17 +195,44 @@ test("the host's tool names replace the raw ones in the status line", async () =
   await finish(stream);
 });
 
-test("a host's inline tool names function redraws no message", async () => {
+test("a host's tool names written inline as a record redraw no message", async () => {
   fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'assistant', content: 'Found it.' }])]);
   let drawn = 0;
   const renderMessageExtras = () => {
     drawn += 1;
     return null;
   };
-  await render({ conversationId: 'c1', renderMessageExtras, toolLabels: (name) => name });
+  await render({ conversationId: 'c1', renderMessageExtras, toolLabels: { search_iocs: 'Searching indicators' } });
   const before = drawn;
-  await render({ conversationId: 'c1', renderMessageExtras, toolLabels: (name) => name });
+  await render({ conversationId: 'c1', renderMessageExtras, toolLabels: { search_iocs: 'Searching indicators' } });
   assert.equal(drawn, before);
+});
+
+test('new tool names from the host show at once, in the status line and an open reasoning dialog', async () => {
+  const stream = sseStream();
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([{ id: 'm1', role: 'assistant', content: 'Found it.', tool_call_trace: [{ name: 'search_iocs', success: true }] }]),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  const english = (name: string) => (name === 'search_iocs' ? 'Searching indicators' : undefined);
+  const french = (name: string) => (name === 'search_iocs' ? 'Recherche des indicateurs' : undefined);
+  await render({ conversationId: 'c1', toolLabels: english }, ref);
+  await openReasoning();
+  await act(async () => {
+    void ref.current!.send('go');
+    await settle();
+    stream.send(status('tool_start', { tools: ['search_iocs'] }));
+    await settle(10);
+  });
+  assert.ok(text().includes('Searching indicators…'), text());
+
+  await render({ conversationId: 'c1', toolLabels: french }, ref);
+  const dialog = document.querySelector('[role="dialog"]')?.textContent ?? '';
+  assert.ok(dialog.includes('Recherche des indicateurs'), dialog);
+  assert.ok(text().includes('Recherche des indicateurs…'), text());
+  await finish(stream);
 });
 
 test("the host's tool names can come from a function, and a name it does not give stays title-cased", async () => {
