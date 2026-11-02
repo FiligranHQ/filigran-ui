@@ -479,6 +479,30 @@ export interface ChatPanelProps {
   maxFileCount?: number;
   /** Maximum total size in bytes for attached files. Default: 50 * 1024 * 1024 (50 MB). */
   maxTotalSize?: number;
+  /** Maximum size in bytes of one attached file. Default: none (only `maxTotalSize`). */
+  maxFileSize?: number;
+  /**
+   * The file types the composer takes, in the file input's `accept` form
+   * (`'.pdf,image/*'`): the picker offers only these, and a pasted or dropped
+   * file of another type is refused. A file the browser gives no MIME type
+   * (Chrome on Windows for `.md`, `.yaml`) is judged by the type its extension
+   * stands for (`.md`, `.markdown`, `.yaml`, `.yml`, `.csv`, `.tsv`, `.txt`,
+   * `.log`, `.json`), and refused by a MIME token when it stands for none.
+   * Default: any type.
+   */
+  acceptFileTypes?: string;
+  /**
+   * A file the user attached that the composer refused, and why. The composer
+   * names it and says why above the text field, whether or not the host
+   * listens.
+   */
+  onFileRefused?: (file: File, reason: ChatFileRefusal) => void;
+  /**
+   * The composer's placeholder, over "Ask a question...": a text, or one for
+   * the agent selected (`null` until the agents load). Used as given, so the
+   * host translates it.
+   */
+  placeholder?: string | ((agent: XtmAgent | null) => string);
   /** Additional HTTP headers added to chatbot API requests (messages, sessions, agents, uploads). */
   requestHeaders?: Record<string, string>;
   /**
@@ -945,6 +969,8 @@ export interface ChatSendDraft {
   source: 'composer' | 'host' | 'voice';
   /** A turn is running. */
   turnRunning: boolean;
+  /** How many files the message carries (only the composer attaches files); always set by the panel. */
+  fileCount?: number;
   /**
    * A message held while a turn ran, asked about again as it leaves, the turn
    * over (`turnRunning: false`), each send held with it on its own. `false`
@@ -1266,6 +1292,8 @@ export interface ChatFile {
   fileId?: string;
   /** Upload status: 'pending' while uploading, 'done' when uploaded, 'error' on failure. */
   uploadStatus?: 'pending' | 'done' | 'error';
+  /** Why the upload failed, as the backend said (`detail`), when it said. */
+  uploadError?: string;
 }
 
 /** The conversation list's search, as a host's sections read it (`sidebarSections`). */
@@ -1273,6 +1301,13 @@ export interface ChatSidebarSearch {
   /** What the search box holds, trimmed; `''` when it holds nothing. */
   query: string;
 }
+
+/**
+ * Why the composer refused a file (see `onFileRefused`): larger than
+ * `maxFileSize`, past `maxTotalSize` with the files attached, past
+ * `maxFileCount`, or not of `acceptFileTypes`.
+ */
+export type ChatFileRefusal = 'file-size' | 'total-size' | 'file-count' | 'file-type';
 
 /**
  * A past conversation surfaced in the history menu (REST backend only).

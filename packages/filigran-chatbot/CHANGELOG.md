@@ -32,6 +32,22 @@ This file starts at 3.10.0; earlier releases are on the
   only where the button would load them. A load that brings nothing (the
   backend failing) stops them until the conversation is opened again; the
   button still tries again. The button reads `Loading earlier messages…` while they load.
+- `maxFileSize` limits each attached file, next to `maxTotalSize` (none by
+  default). A file refused, whichever limit it went past (`maxFileSize`,
+  `maxTotalSize`, `maxFileCount`), is named above the text field with why; it
+  was dropped without a word. `onFileRefused(file, reason)` tells the host too
+  (`ChatFileRefusal`).
+- `acceptFileTypes` sets the file picker's `accept`, and refuses a pasted or
+  dropped file of another type (`'file-type'`). A file the browser gives no
+  MIME type (Chrome on Windows for `.md`, `.yaml`) is judged by the type its
+  extension stands for, and refused by a MIME token when it stands for none.
+- `placeholder` replaces "Ask a question...": a text, or a function of the
+  agent selected.
+- `onBeforeSend`'s draft says how many files the message carries
+  (`fileCount`).
+- The composer takes the focus after a send from it and after a switch to
+  another conversation or a new one, unless the focus is in a field, a dialog
+  or the host's page; opening the panel takes none.
 - `onBeforeMove(conversation, workspace)` is asked before a drag or a row's
   Move menu files a conversation into a workspace (`workspace` is `null` when
   taking it out of one): `false`, or a promise of it, leaves the conversation
@@ -80,6 +96,14 @@ This file starts at 3.10.0; earlier releases are on the
   opening); only growth inside the thread was followed.
 - Earlier messages already loaded, shown by the button, leave the reader
   where they were in every browser, as older messages fetched do.
+- A failed upload's chip says why: the upload's `detail`
+  (`ChatFile.uploadError`), or "Upload failed". It showed a bare ✕.
+- A message holding a file that failed to upload is not sent until the user
+  removes the file, turn or no turn; with no turn running it went without the
+  file, and nothing said so.
+- Files attached before a host turns `disableFileManagement` on stay shown
+  and removable; they were hidden, yet still sent, or a failed one held every
+  send without a word.
 - Deleting, renaming or clearing conversations failed silently: the panel now
   says it under the conversation list, or under the header when the list is
   not shown, in the backend's words when it gives some. A refused rename

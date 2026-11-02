@@ -92,6 +92,10 @@ import { ChatPanel } from '@filigran/chatbot';
 | `disableFileManagement` | `boolean`                             | `false`      | No attaching or pasting files in the composer                    |
 | `maxFileCount`      | `number`                                  | `10`         | Most files attached to one message                               |
 | `maxTotalSize`      | `number`                                  | 50 MB        | Most bytes the files attached to one message add up to           |
+| `maxFileSize`       | `number`                                  | —            | Most bytes one attached file may hold; none of its own by default, only `maxTotalSize` |
+| `acceptFileTypes`   | `string`                                  | —            | The file types the composer takes, in the file input's `accept` form (`'.pdf,image/*'`): the picker offers only these, and a pasted or dropped file of another type is refused. A file the browser gives no MIME type (Chrome on Windows for `.md`, `.yaml`) is judged by the type its extension stands for (`.md`, `.markdown`, `.yaml`, `.yml`, `.csv`, `.tsv`, `.txt`, `.log`, `.json`), and refused by a MIME token when it stands for none. Any type by default |
+| `onFileRefused`     | `(file: File, reason: ChatFileRefusal) => void` | —      | A file the composer refused: `'file-size'` (over `maxFileSize`), `'total-size'` (past `maxTotalSize`), `'file-count'` (past `maxFileCount`) or `'file-type'` (not of `acceptFileTypes`). The composer names the file and says why above the text field either way |
+| `placeholder`       | `string \| ((agent: XtmAgent \| null) => string)` | `'Ask a question...'` | The composer's placeholder, or one for the agent selected (`null` until the agents load); used as given, so the host translates it |
 | `onMessageFeedback` | `(id, feedback, message) => void`         | —            | Receives each rating of an answer (`null` clears it); `id` is the message's persisted id when the backend reported one (`done.message_id`, a restored entry's `id`), else the panel's own. On its own it enables 👍/👎 and the panel stores nothing; with `apiEndpoints.feedback` set it is called once the backend has stored the rating. With neither, no thumbs. |
 | `locale`            | `string`                                  | browser's    | BCP 47 language tag of the platform's language (e.g. `'fr-FR'`): the language of the panel's catalog for what `t` does not translate, of its message times and of read-aloud. Unset, the browser's — except that a host passing `t` gets no catalog then |
 | `disableImagePreviews` | `boolean`                              | `false`      | Render image attachments as download cards instead of inline previews |
@@ -236,8 +240,9 @@ them stable, and a new one re-renders every message, which is also how to
 refresh what they render.
 
 `onBeforeSend(draft)` sees every non-empty send first, synchronously:
-`draft.text`, `draft.source` (`'composer'`, `'host'` or `'voice'`) and
-`draft.turnRunning` (a turn is running). It returns `false` to take the send
+`draft.text`, `draft.source` (`'composer'`, `'host'` or `'voice'`),
+`draft.turnRunning` (a turn is running) and `draft.fileCount` (the files the
+message carries), e.g. to refuse a send whose files the host cannot use. It returns `false` to take the send
 over (the composer keeps its draft), or an object: `text` rewords what the
 backend receives, `displayText` is what the user's bubble shows, and `extras`
 adds body fields. The panel's own fields cannot be set this way, and a message
@@ -830,9 +835,9 @@ mentions or body fields of its own (`send`'s `extras`, `onBeforeSend`'s
 `extras`) never steers, since a steer reaches the agent as text alone: it waits
 for the turn to end (`holdSendsDuringTurn`), and `onBeforeSend` is asked again,
 with `turnRunning: false`, before it goes out. A file that failed to upload
-neither steers nor waits: while a turn runs, winds down or is let go of with
-the event stream, the composer offers no send and says why, and once no turn
-holds the conversation the message goes without that file. `send` and a voice
+neither steers nor waits, nor goes without that file: its chip says why (the
+upload's `detail`), and the composer offers no send, and says why, until the
+user removes it. `send` and a voice
 call attach no files, so this never holds them. Esc stops generating.
 
 #### Multi-segment responses

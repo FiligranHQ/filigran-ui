@@ -41,6 +41,7 @@ export type {
   ChatSidebarSearch,
   ChatWorkspace,
   ChatFile,
+  ChatFileRefusal,
   ChatPromptTemplate,
   ChatQuotaStatus,
   MessageFeedback,

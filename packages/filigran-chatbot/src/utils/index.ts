@@ -364,6 +364,30 @@ export function findChatbotRoot(el: HTMLElement | null): HTMLElement {
   return document.body;
 }
 
+/** *bytes* as a file chip reads them: `512 B`, `200 KB`, `1.5 MB`; empty for none. */
+export function formatFileSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * *bytes* as a limit reads: floored to one decimal, never rounded up past
+ * what it allows (1536 B is `1.5 KB`, 2 GiB is `2 GB`).
+ */
+export function formatSizeLimit(bytes: number): string {
+  const units: [string, number][] = [
+    ['GB', 1024 ** 3],
+    ['MB', 1024 ** 2],
+    ['KB', 1024],
+  ];
+  for (const [unit, size] of units) {
+    if (bytes >= size) return `${Math.floor((bytes / size) * 10) / 10} ${unit}`;
+  }
+  return `${Math.floor(bytes)} B`;
+}
+
 /**
  * Compact count for the composer's status readouts: 1200 → "1.2k", so neither
  * the quota nor the context gauge can widen the toolbar as the numbers grow.
