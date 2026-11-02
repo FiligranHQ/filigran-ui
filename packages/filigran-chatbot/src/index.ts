@@ -37,6 +37,7 @@ export type {
   ChatConversationSummary,
   ChatWorkspace,
   ChatFile,
+  ChatFileRefusal,
   ChatPromptTemplate,
   ChatQuotaStatus,
   MessageFeedback,

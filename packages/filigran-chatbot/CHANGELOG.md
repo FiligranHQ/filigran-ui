@@ -8,6 +8,33 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.19.0 — unreleased
+
+### Added
+
+- `maxFileSize` limits each attached file, next to `maxTotalSize` (none by
+  default). A file refused, whichever limit it went past (`maxFileSize`,
+  `maxTotalSize`, `maxFileCount`), is named above the text field with why; it
+  was dropped without a word. `onFileRefused(file, reason)` tells the host too
+  (`ChatFileRefusal`).
+- `acceptFileTypes` sets the file picker's `accept`, and refuses a pasted or
+  dropped file of another type (`'file-type'`).
+- `placeholder` replaces "Ask a question...": a text, or a function of the
+  agent selected.
+- `onBeforeSend`'s draft says how many files the message carries
+  (`fileCount`).
+- The composer takes the focus after a send from it and after a switch to
+  another conversation or a new one, unless the focus is in a field, a dialog
+  or the host's page; opening the panel takes none.
+
+### Fixed
+
+- A failed upload's chip says why: the upload's `detail`
+  (`ChatFile.uploadError`), or "Upload failed". It showed a bare ✕.
+- A message holding a file that failed to upload is not sent until the user
+  removes the file, turn or no turn; with no turn running it went without the
+  file, and nothing said so.
+
 ## 3.18.1 — unreleased
 
 ### Fixed

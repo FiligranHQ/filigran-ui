@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
 import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
@@ -29,8 +29,6 @@ interface ChatInputProps {
   onSend: () => void;
   onStop: () => void;
   isLoading: boolean;
-  /** No turn on screen, yet one holds the conversation (winding down, or let go of with the event stream): a send now is held. */
-  sendsHeld?: boolean;
   /**
    * Mid-run steering availability: while the agent is generating, the typed
    * text can be dispatched immediately (Enter / accent Send button) and is
@@ -69,6 +67,30 @@ interface ChatInputProps {
   };
   /** The agents `@` mentions, and the mentions the composer holds; absent while mentions are off. */
   agentMentions?: { agents: XtmAgent[]; mentions: AgentMention[]; onPick: (mention: AgentMention) => void };
+  /** The file picker's `accept`; any type when absent. */
+  accept?: string;
+  /** The text field's placeholder, over "Ask a question...". */
+  placeholder?: string;
+  /** Changes when the field should take the focus (a conversation switched to), unless it is elsewhere. */
+  focusRequest?: number;
+}
+
+/**
+ * Whether the composer may take the focus from where it is: nowhere, or a
+ * control of the panel itself. Never from a field, a dialog, or the host's
+ * page.
+ */
+function focusIsFree(field: HTMLElement): boolean {
+  const active = document.activeElement;
+  if (!active || active === document.body || active === field) return true;
+  const panel = field.closest('.filigran-chatbot');
+  if (!panel?.contains(active) || active.closest('[role="dialog"], [role="alertdialog"], dialog')) return false;
+  const editable =
+    active instanceof HTMLInputElement ||
+    active instanceof HTMLTextAreaElement ||
+    active instanceof HTMLSelectElement ||
+    (active as HTMLElement).isContentEditable;
+  return !editable;
 }
 
 const MAX_TEXTAREA_HEIGHT = 120;
@@ -86,7 +108,6 @@ export const ChatInput = ({
   onSend,
   onStop,
   isLoading,
-  sendsHeld = false,
   canSteer = false,
   attachedFiles = [],
   onFileAdd,
@@ -101,6 +122,9 @@ export const ChatInput = ({
   composerToolbar,
   conversationReferences,
   agentMentions,
+  accept,
+  placeholder,
+  focusRequest,
 }: ChatInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -121,6 +145,18 @@ export const ChatInput = ({
     refs: conversationReferences?.refs ?? NO_REFS,
     onPick: (ref) => conversationReferences?.onPick(ref),
     agentMentions: agentMentionOptions,
+  });
+
+  const focusComposer = () => {
+    const el = textareaRef.current;
+    if (el && focusIsFree(el)) el.focus();
+  };
+  // Not on mount: a panel opening does not take the focus from the page.
+  const focusRequestSeen = useRef(focusRequest);
+  useEffect(() => {
+    if (focusRequest === focusRequestSeen.current) return;
+    focusRequestSeen.current = focusRequest;
+    focusComposer();
   });
 
   // A dictated phrase lands at the end of the draft while the focus is on the
@@ -164,9 +200,8 @@ export const ChatInput = ({
   const hasContent = inputValue.trim() || (isFileManagementEnabled && attachedFiles.length > 0);
   const hasFilesUploading = isFileManagementEnabled && attachedFiles.some((f) => f.uploadStatus === 'pending');
   const hasAttachments = isFileManagementEnabled && attachedFiles.length > 0;
-  // A file that failed to upload keeps the message from going while a turn
-  // holds the conversation: the user removes it, or sends once the turn ends.
-  const failedFileWaits = isFileManagementEnabled && (isLoading || sendsHeld) && hasFailedUpload(attachedFiles);
+  // A file that failed to upload keeps the message from going until the user removes it.
+  const failedFileWaits = isFileManagementEnabled && hasFailedUpload(attachedFiles);
   const canSend = hasContent && !hasFilesUploading && !failedFileWaits;
   // A steer reaches the running loop as text alone, so the agent would never
   // read a conversation it references: such a message waits, like a file.
@@ -190,6 +225,8 @@ export const ChatInput = ({
     if (!(isLoading ? showSteerSend || showHoldSend : canSend)) return;
     dictation.cancel();
     onSend();
+    // The Send button had the focus: the next message is typed at once.
+    focusComposer();
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -208,7 +245,7 @@ export const ChatInput = ({
   const footerText = showHoldSend
     ? t('Enter to send when the answer ends · Esc to stop')
     : failedFileWaits
-      ? t('A file failed to upload: remove it, or send once the answer ends')
+      ? t('A file failed to upload: remove it to send the message')
       : steerable
         ? t('Enter to send now · Esc to stop')
         : isLoading && hasAttachments
@@ -259,7 +296,16 @@ export const ChatInput = ({
                 <FileIcon size={14} />
               )}
               {f.name}
-              {f.uploadStatus === 'error' && <span className="text-red-400 text-[0.6rem]">✕</span>}
+              {f.uploadStatus === 'error' && (
+                <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1 text-red-400">
+                  <span aria-hidden="true" className="text-[0.6rem]">
+                    ✕
+                  </span>
+                  <span className="max-w-[16rem] truncate" title={f.uploadError ?? t('Upload failed')}>
+                    {f.uploadError ?? t('Upload failed')}
+                  </span>
+                </span>
+              )}
               <button type="button" onClick={() => onFileRemove?.(i)} className="ml-0.5 chat-text-muted-400/30 hover:chat-text-secondary-600/60">
                 ×
               </button>
@@ -282,6 +328,7 @@ export const ChatInput = ({
               type="file"
               multiple
               hidden
+              accept={accept || undefined}
               onChange={(e) => {
                 onFileAdd?.(e.target.files);
                 e.target.value = '';
@@ -299,7 +346,7 @@ export const ChatInput = ({
         )}
         <textarea
           ref={textareaRef}
-          placeholder={dictation.listening ? t('Listening...') : t('Ask a question...')}
+          placeholder={dictation.listening ? t('Listening...') : (placeholder ?? t('Ask a question...'))}
           value={inputValue}
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
