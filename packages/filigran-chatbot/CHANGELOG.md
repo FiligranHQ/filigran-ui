@@ -8,7 +8,16 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
-## 3.19.1 — unreleased
+## 3.19.2 — unreleased
+
+### Fixed
+
+- `maxTotalSize: Infinity` lifts the cap on the total size of a message's
+  files, as a host with a per-file limit only passes it (XTM One's web chat and
+  Office add-in). The panel read a value that is not finite as invalid and kept
+  its 50 MB default total.
+
+## 3.19.1 — 2026-11-02
 
 ### Added
 
@@ -34,7 +43,7 @@ This file starts at 3.10.0; earlier releases are on the
   language the panel has no catalog for translates these three keys; it
   translated `the agent` before, and shows them in English until it does.
 
-## 3.19.0 — unreleased
+## 3.19.0 — 2026-11-02
 
 ### Added
 
@@ -190,7 +199,7 @@ This file starts at 3.10.0; earlier releases are on the
   query: the list stayed filtered by a search the user could neither see nor
   clear.
 
-## 3.18.1 — unreleased
+## 3.18.1 — 2026-11-02
 
 ### Fixed
 
