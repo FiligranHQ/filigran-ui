@@ -1,5 +1,5 @@
 import type { ChatFile, ChatFileRefusal, Translate } from '../types';
-import { formatFileSize, translate } from './index';
+import { formatSizeLimit, translate } from './index';
 
 /** The composer's limits on what it attaches to one message. */
 export interface AttachmentLimits {
@@ -12,11 +12,26 @@ export interface AttachmentLimits {
 }
 
 /**
+ * The MIME types of extensions some browsers leave untyped (Chrome on Windows
+ * for `.md`, `.yaml`), so a MIME token can still judge such a file.
+ */
+const UNTYPED_EXTENSION_TYPES: Readonly<Record<string, readonly string[]>> = {
+  md: ['text/markdown'],
+  markdown: ['text/markdown'],
+  yaml: ['application/yaml', 'application/x-yaml', 'text/yaml'],
+  yml: ['application/yaml', 'application/x-yaml', 'text/yaml'],
+  csv: ['text/csv'],
+  tsv: ['text/tab-separated-values'],
+  txt: ['text/plain'],
+  log: ['text/plain'],
+  json: ['application/json'],
+};
+
+/**
  * Whether *file* is of a type *accept* names, read as the file input reads it:
- * `.ext` by the name, `type/*` and `type/subtype` by the MIME type. A file
- * whose type the browser left empty (Chrome on Windows for `.md`, `.yaml`)
- * cannot be judged by a MIME token: it passes where one is named, as the
- * picker offered it, and an extension token still decides it by name.
+ * `.ext` by the name, `type/*` and `type/subtype` by the MIME type. A file the
+ * browser left untyped is judged by the type its extension stands for (see
+ * `UNTYPED_EXTENSION_TYPES`), and refused when it stands for none.
  */
 export function acceptsFile(accept: string | undefined, file: { name: string; type: string }): boolean {
   const tokens = (accept ?? '')
@@ -25,11 +40,12 @@ export function acceptsFile(accept: string | undefined, file: { name: string; ty
     .filter(Boolean);
   if (tokens.length === 0) return true;
   const name = file.name.toLowerCase();
-  const type = file.type.toLowerCase();
-  const mimeTokens = tokens.filter((token) => !token.startsWith('.'));
   if (tokens.some((token) => token.startsWith('.') && name.endsWith(token))) return true;
-  if (!type) return mimeTokens.length > 0;
-  return mimeTokens.some((token) => (token.endsWith('/*') ? type.startsWith(token.slice(0, -1)) : type === token));
+  const dot = name.lastIndexOf('.');
+  const types = file.type ? [file.type.toLowerCase()] : dot >= 0 ? (UNTYPED_EXTENSION_TYPES[name.slice(dot + 1)] ?? []) : [];
+  return tokens.some(
+    (token) => !token.startsWith('.') && types.some((type) => (token.endsWith('/*') ? type.startsWith(token.slice(0, -1)) : type === token)),
+  );
 }
 
 /**
@@ -73,13 +89,13 @@ export function refusalMessage(t: Translate, name: string, reason: ChatFileRefus
     case 'file-type':
       return translate(t, '{name} was not attached: this type of file is not accepted.', { name });
     case 'file-size':
-      return translate(t, '{name} was not attached: a file may be at most {size}.', { name, size: formatFileSize(limits.maxFileSize) });
+      return translate(t, '{name} was not attached: a file may be at most {size}.', { name, size: formatSizeLimit(limits.maxFileSize) });
     case 'file-count':
       return translate(t, '{name} was not attached: a message holds at most {count} files.', { name, count: limits.maxFileCount });
     case 'total-size':
       return translate(t, '{name} was not attached: the files of a message may add up to at most {size}.', {
         name,
-        size: formatFileSize(limits.maxTotalSize),
+        size: formatSizeLimit(limits.maxTotalSize),
       });
   }
 }

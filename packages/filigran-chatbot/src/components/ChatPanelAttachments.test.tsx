@@ -285,6 +285,38 @@ test('a refusal has its own notice: it leaves the unanswered-steer one alone, an
   }
 });
 
+test("the handle's send leaves the refusal shown; a send from the composer clears it", async () => {
+  const streams = [sseStream(), sseStream()];
+  let next = 0;
+  fakeBackend([agentsRoute, restoreRoute(), uploadRoute, (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', maxFileSize: 100 }, ref);
+  try {
+    await attach(sized('huge.iso', 200));
+    const refusal = 'huge.iso was not attached: a file may be at most 100 B.';
+    assert.equal(notice(), refusal);
+    await act(async () => {
+      void ref.current!.send('from the host');
+      await settle();
+      streams[0].send({ type: 'done', content: 'Done', conversation_id: 'c1' });
+      streams[0].close();
+      await settle(10);
+    });
+    assert.equal(notice(), refusal);
+    await act(async () => {
+      ref.current!.setDraft('from the composer');
+      await settle();
+    });
+    await act(async () => {
+      sendButton().click();
+      await settle(10);
+    });
+    assert.equal(notice(), null);
+  } finally {
+    await finish(...streams);
+  }
+});
+
 test('focus in a field, a dialog or an editable element of the panel stays through a conversation switch', async () => {
   fakeBackend([agentsRoute, restoreRoute()]);
   const ref = createRef<Handle>();

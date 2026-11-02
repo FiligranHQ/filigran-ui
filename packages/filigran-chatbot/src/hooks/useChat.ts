@@ -2223,7 +2223,8 @@ export function useChat({
     if (!decided) return 'dropped';
     noticeUntilSendRef.current = false;
     setNotice(null);
-    setFileNotice(null);
+    // The handle's and a voice call's sends leave the composer's files, and what was said of them, alone.
+    if (fromComposer) setFileNotice(null);
     const hookExtras = decided.extras;
     // The fields this message adds to the body: the handle's, then the hook's.
     const sendExtras = override?.extras || hookExtras ? { ...override?.extras, ...hookExtras } : undefined;

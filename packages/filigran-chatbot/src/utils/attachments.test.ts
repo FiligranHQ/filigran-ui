@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { acceptsFile, admitFiles, refusalMessage, type AttachmentLimits } from './attachments.ts';
-import { formatFileSize } from './index.ts';
+import { formatFileSize, formatSizeLimit } from './index.ts';
 import type { ChatFile } from '../types.ts';
 
 const file = (name: string, size: number, type = '') => ({ name, size, type });
@@ -22,10 +22,15 @@ test('accept reads extensions by the name, wildcards and types by the MIME type,
   assert.ok(acceptsFile(undefined, file('run.exe', 1)));
 });
 
-test('a file the browser gave no type passes a MIME token, and an extension token still decides it by name', () => {
+test('a file the browser gave no type is judged by the type its extension stands for, and refused when it stands for none', () => {
   // Chrome on Windows leaves `.md` and `.yaml` untyped, though the picker offered them.
   assert.ok(acceptsFile('text/markdown', file('notes.md', 1)));
   assert.ok(acceptsFile('.pdf,text/*', file('config.yaml', 1)));
+  assert.ok(acceptsFile('application/yaml', file('config.yml', 1)));
+  assert.ok(!acceptsFile('image/*', file('config.yaml', 1)));
+  assert.ok(!acceptsFile('image/*', file('server.log', 1)));
+  assert.ok(!acceptsFile('text/*', file('README', 1)));
+  assert.ok(!acceptsFile('text/*', file('blob.xyz', 1)));
   assert.ok(!acceptsFile('.pdf', file('notes.md', 1)));
   assert.ok(acceptsFile('.md', file('notes.md', 1)));
   assert.ok(!acceptsFile('text/markdown', file('notes.md', 1, 'application/octet-stream')));
@@ -69,8 +74,7 @@ test('the per-file limit and the type come before the count and the total', () =
   );
 });
 
-test('a size reads as the transcript shows a file: bytes, whole KB, MB to one decimal', () => {
-  assert.equal(formatFileSize(50 * 1024 * 1024), '50.0 MB');
+test('a file reads as the transcript shows it: bytes, whole KB, MB to one decimal', () => {
   assert.equal(formatFileSize(1.5 * 1024 * 1024), '1.5 MB');
   assert.equal(formatFileSize(200 * 1024), '200 KB');
   assert.equal(formatFileSize(512), '512 B');
@@ -78,11 +82,21 @@ test('a size reads as the transcript shows a file: bytes, whole KB, MB to one de
   assert.equal(formatFileSize(undefined), '');
 });
 
+test('a limit reads floored to one decimal, never past what it allows, in GB from 1 GiB', () => {
+  assert.equal(formatSizeLimit(50 * 1024 * 1024), '50 MB');
+  assert.equal(formatSizeLimit(1.5 * 1024 ** 3), '1.5 GB');
+  assert.equal(formatSizeLimit(2 * 1024 ** 3), '2 GB');
+  assert.equal(formatSizeLimit(1536), '1.5 KB');
+  assert.equal(formatSizeLimit(1600), '1.5 KB');
+  assert.equal(formatSizeLimit(2047), '1.9 KB');
+  assert.equal(formatSizeLimit(1000), '1000 B');
+});
+
 test('the refusal names the file and the limit it went past', () => {
   const t = (key: string) => key;
   const limits = { ...LIMITS, maxFileSize: 10 * 1024 * 1024, maxTotalSize: 50 * 1024 * 1024 };
-  assert.equal(refusalMessage(t, 'scan.iso', 'file-size', limits), 'scan.iso was not attached: a file may be at most 10.0 MB.');
-  assert.equal(refusalMessage(t, 'b.pdf', 'total-size', limits), 'b.pdf was not attached: the files of a message may add up to at most 50.0 MB.');
+  assert.equal(refusalMessage(t, 'scan.iso', 'file-size', limits), 'scan.iso was not attached: a file may be at most 10 MB.');
+  assert.equal(refusalMessage(t, 'b.pdf', 'total-size', limits), 'b.pdf was not attached: the files of a message may add up to at most 50 MB.');
   assert.equal(refusalMessage(t, 'c.pdf', 'file-count', limits), 'c.pdf was not attached: a message holds at most 3 files.');
   assert.equal(refusalMessage(t, 'run.exe', 'file-type', limits), 'run.exe was not attached: this type of file is not accepted.');
 });

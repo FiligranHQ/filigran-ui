@@ -19,8 +19,8 @@ This file starts at 3.10.0; earlier releases are on the
   (`ChatFileRefusal`).
 - `acceptFileTypes` sets the file picker's `accept`, and refuses a pasted or
   dropped file of another type (`'file-type'`). A file the browser gives no
-  MIME type passes where a MIME token is named; an extension token still
-  decides it by name.
+  MIME type (Chrome on Windows for `.md`, `.yaml`) is judged by the type its
+  extension stands for, and refused by a MIME token when it stands for none.
 - `placeholder` replaces "Ask a question...": a text, or a function of the
   agent selected.
 - `onBeforeSend`'s draft says how many files the message carries
