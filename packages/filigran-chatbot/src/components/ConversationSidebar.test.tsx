@@ -153,13 +153,14 @@ test("a host's sections given as an element show as they are, whatever is typed"
   await unmount();
 });
 
-test("a host's sections may use hooks: collapsing the list does not break it", async () => {
+test("a hook in the host's function itself survives a collapse, as long as it draws one branch", async () => {
   function Shared({ query }: { query: string }) {
     const shown = useMemo(() => ['Acme intrusion'].filter((t) => t.toLowerCase().includes(query.toLowerCase())), [query]);
     return <section aria-label="Shared with me">{shown.join(', ')}</section>;
   }
   const sections = ({ query }: { query: string }) => {
-    // A hook in the host's function itself: it must belong to its own component.
+    // The supported place for hooks is `Shared`, a component the function
+    // returns; one in the function itself holds while it draws one branch.
     const label = useMemo(() => `Shared (${query || 'all'})`, [query]);
     return (
       <div aria-label={label}>

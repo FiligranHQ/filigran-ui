@@ -677,9 +677,9 @@ export interface ChatPanelProps {
    * the function changes: pass a stable one (`useCallback`). Hooks go in a
    * component it returns (`({ query }) => <Shared query={query} />`): hook
    * calls in the function itself break once it draws another branch. With it,
-   * the search box shows whatever
-   * the number of conversations, and a search with no match among the user's
-   * own says so ("None of your conversations matches").
+   * the search box shows whatever the number of conversations, and a search
+   * with no match among the user's own says so ("None of your conversations
+   * matches").
    */
   sidebarSections?: React.ReactNode | ((search: ChatSidebarSearch) => React.ReactNode);
   /** The status line's text for a status, over the built-in one; `undefined` keeps it. */
