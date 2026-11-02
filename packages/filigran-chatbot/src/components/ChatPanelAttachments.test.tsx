@@ -113,6 +113,38 @@ test("a failed upload's chip says why, and the message is not sent until the fil
   await finish(stream);
 });
 
+test('a file attached before the host turns attaching off stays shown and removable', async () => {
+  const stream = sseStream();
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url === '/api/chat/upload' ? json({ detail: 'The file is over the 5 MB limit.' }, 413) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await attach(sized('report.pdf', 10));
+  await render({ conversationId: 'c1', disableFileManagement: true }, ref);
+  assert.equal(container.querySelector('input[type="file"]'), null, 'nothing more can be attached');
+  const failed = container.querySelector('[data-testid="filigran-chat-upload-error"]');
+  assert.ok(failed, 'the failed file is still shown, with why');
+  await act(async () => {
+    ref.current!.setDraft('read this');
+    await settle();
+  });
+  assert.equal(sendButton().disabled, true, 'the failed file still holds the message, visibly');
+  await act(async () => {
+    failed.parentElement!.querySelector('button')!.click();
+    await settle();
+  });
+  await act(async () => {
+    sendButton().click();
+    await settle(10);
+  });
+  assert.equal(messages(requests).length, 1, 'sent once the file is removed');
+  await finish(stream);
+});
+
 test('a failed upload whose backend gave no reason says it failed', async () => {
   fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/upload' ? new Response('Bad gateway', { status: 502 }) : undefined)]);
   await render({ conversationId: 'c1' });

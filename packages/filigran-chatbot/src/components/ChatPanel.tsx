@@ -1535,9 +1535,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               onStop={handleStopGenerating}
               isLoading={isLoading}
               canSteer={canSteer}
-              attachedFiles={disableFileManagement ? [] : attachedFiles}
+              // Files attached before the host turned attaching off stay shown
+              // and removable: they still go with the message, or keep it.
+              attachedFiles={attachedFiles}
               onFileAdd={disableFileManagement ? undefined : handleFileAdd}
-              onFileRemove={disableFileManagement ? undefined : (i) => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
+              onFileRemove={(i) => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
               onPaste={disableFileManagement ? undefined : handlePaste}
               accept={acceptFileTypes}
               placeholder={composerPlaceholder}

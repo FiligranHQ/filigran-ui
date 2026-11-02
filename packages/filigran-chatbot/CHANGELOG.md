@@ -34,6 +34,9 @@ This file starts at 3.10.0; earlier releases are on the
 - A message holding a file that failed to upload is not sent until the user
   removes the file, turn or no turn; with no turn running it went without the
   file, and nothing said so.
+- Files attached before a host turns `disableFileManagement` on stay shown
+  and removable; they were hidden, yet still sent, or a failed one held every
+  send without a word.
 
 ## 3.18.1 — unreleased
 

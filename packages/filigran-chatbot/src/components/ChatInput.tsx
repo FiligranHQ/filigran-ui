@@ -196,12 +196,13 @@ export const ChatInput = ({
   // field, so it lives inside it, next to Send.
   const hasToolbar = Boolean((prompts && prompts.length > 0) || quota || contextUsage || composerToolbar);
 
+  // Attaching may be off while files attached before stay, shown and removable.
   const isFileManagementEnabled = Boolean(onFileAdd && onFileRemove && onPaste);
-  const hasContent = inputValue.trim() || (isFileManagementEnabled && attachedFiles.length > 0);
-  const hasFilesUploading = isFileManagementEnabled && attachedFiles.some((f) => f.uploadStatus === 'pending');
-  const hasAttachments = isFileManagementEnabled && attachedFiles.length > 0;
+  const hasAttachments = attachedFiles.length > 0;
+  const hasContent = inputValue.trim() || hasAttachments;
+  const hasFilesUploading = attachedFiles.some((f) => f.uploadStatus === 'pending');
   // A file that failed to upload keeps the message from going until the user removes it.
-  const failedFileWaits = isFileManagementEnabled && hasFailedUpload(attachedFiles);
+  const failedFileWaits = hasFailedUpload(attachedFiles);
   const canSend = hasContent && !hasFilesUploading && !failedFileWaits;
   // A steer reaches the running loop as text alone, so the agent would never
   // read a conversation it references: such a message waits, like a file.
@@ -277,7 +278,7 @@ export const ChatInput = ({
           )}
         </div>
       )}
-      {isFileManagementEnabled && attachedFiles.length > 0 && (
+      {hasAttachments && (
         <div className="flex gap-1.5 flex-wrap mb-2">
           {attachedFiles.map((f, i) => (
             <span
