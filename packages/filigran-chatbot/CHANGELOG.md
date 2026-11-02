@@ -18,7 +18,9 @@ This file starts at 3.10.0; earlier releases are on the
   was dropped without a word. `onFileRefused(file, reason)` tells the host too
   (`ChatFileRefusal`).
 - `acceptFileTypes` sets the file picker's `accept`, and refuses a pasted or
-  dropped file of another type (`'file-type'`).
+  dropped file of another type (`'file-type'`). A file the browser gives no
+  MIME type passes where a MIME token is named; an extension token still
+  decides it by name.
 - `placeholder` replaces "Ask a question...": a text, or a function of the
   agent selected.
 - `onBeforeSend`'s draft says how many files the message carries

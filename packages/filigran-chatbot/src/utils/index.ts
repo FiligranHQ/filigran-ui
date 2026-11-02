@@ -364,6 +364,14 @@ export function findChatbotRoot(el: HTMLElement | null): HTMLElement {
   return document.body;
 }
 
+/** *bytes* as a file chip and a size limit read them: `512 B`, `200 KB`, `1.5 MB`; empty for none. */
+export function formatFileSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 /**
  * Compact count for the composer's status readouts: 1200 → "1.2k", so neither
  * the quota nor the context gauge can widen the toolbar as the numbers grow.

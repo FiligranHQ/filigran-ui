@@ -26,7 +26,8 @@ const attach = (...files: File[]) =>
     await settle(10);
   });
 const sized = (name: string, size: number, type = 'application/pdf') => new File([new Uint8Array(size)], name, { type });
-const notice = () => container.querySelector('[data-testid="filigran-chat-composer-notice"]')?.textContent ?? null;
+const notice = () => container.querySelector('[data-testid="filigran-chat-file-notice"]')?.textContent ?? null;
+const steerNotice = () => container.querySelector('[data-testid="filigran-chat-composer-notice"]')?.textContent ?? null;
 const chips = () => [...container.querySelectorAll('[data-testid="filigran-chat-composer"] .rounded-full')].map((e) => e.textContent ?? '');
 const textarea = () => container.querySelector<HTMLTextAreaElement>('textarea')!;
 const sendButton = () => container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!;
@@ -203,7 +204,7 @@ test('a send from the composer, and a conversation switched to, focus the field;
   const ref = createRef<Handle>();
   await render({}, ref);
   try {
-    assert.notEqual(document.activeElement, textarea(), 'opening the panel takes no focus');
+    assert.ok(document.activeElement !== textarea(), 'opening the panel takes no focus');
     await act(async () => {
       ref.current!.setDraft('hello');
       await settle();
@@ -212,7 +213,7 @@ test('a send from the composer, and a conversation switched to, focus the field;
       sendButton().click();
       await settle(10);
     });
-    assert.equal(document.activeElement, textarea(), 'after a send');
+    assert.ok(document.activeElement === textarea(), 'after a send');
   } finally {
     await finish(...streams);
   }
@@ -221,7 +222,7 @@ test('a send from the composer, and a conversation switched to, focus the field;
     ref.current!.selectConversation('c1');
     await settle(10);
   });
-  assert.equal(document.activeElement, textarea(), 'after a switch');
+  assert.ok(document.activeElement === textarea(), 'after a switch');
   // The host's own field keeps the focus through a switch.
   const hostField = document.createElement('input');
   document.body.appendChild(hostField);
@@ -231,8 +232,116 @@ test('a send from the composer, and a conversation switched to, focus the field;
       ref.current!.newConversation();
       await settle(10);
     });
-    assert.equal(document.activeElement, hostField);
+    assert.ok(document.activeElement === hostField);
   } finally {
     hostField.remove();
+  }
+});
+
+test('a refusal has its own notice: it leaves the unanswered-steer one alone, and outlives the turn it was shown in', async () => {
+  const streams = [sseStream(), sseStream()];
+  let next = 0;
+  fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    uploadRoute,
+    (req) => (req.url === '/api/chat/messages' ? streams[next++].response() : undefined),
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'stored', turn_id: null, answered: false }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', maxFileSize: 100 }, ref);
+  try {
+    await act(async () => {
+      void ref.current!.send('first');
+      await settle();
+      streams[0].send({ type: 'stream', content: 'Working' });
+      await settle(10);
+    });
+    await act(async () => {
+      void ref.current!.send('one more thing');
+      await settle(10);
+    });
+    const unanswered = 'This message will be read with your next one.';
+    assert.equal(steerNotice(), unanswered);
+    await attach(sized('huge.iso', 200));
+    assert.equal(notice(), 'huge.iso was not attached: a file may be at most 100 B.');
+    assert.equal(steerNotice(), unanswered, 'the refusal does not overwrite it');
+    await act(async () => {
+      streams[0].send({ type: 'done', content: 'Working, done' });
+      streams[0].close();
+      await settle(10);
+    });
+    assert.equal(notice(), 'huge.iso was not attached: a file may be at most 100 B.', 'past the turn’s end');
+    await attach(sized('ok.pdf', 10));
+    assert.equal(notice(), null, 'the next attach that refuses nothing clears it');
+    assert.equal(steerNotice(), unanswered, 'and leaves the steer notice');
+    await act(async () => {
+      void ref.current!.send('next');
+      await settle(10);
+    });
+    assert.equal(steerNotice(), null, 'until the next send');
+  } finally {
+    await finish(...streams);
+  }
+});
+
+test('focus in a field, a dialog or an editable element of the panel stays through a conversation switch', async () => {
+  fakeBackend([agentsRoute, restoreRoute()]);
+  const ref = createRef<Handle>();
+  await render({}, ref);
+  const panel = container.querySelector<HTMLElement>('.filigran-chatbot')!;
+  const field = document.createElement('input');
+  const dialog = document.createElement('div');
+  dialog.setAttribute('role', 'dialog');
+  const dialogButton = document.createElement('button');
+  dialog.appendChild(dialogButton);
+  const editable = document.createElement('div');
+  editable.contentEditable = 'true';
+  editable.tabIndex = 0;
+  for (const [held, label] of [
+    [field, 'a field'],
+    [dialogButton, 'a dialog'],
+    [editable, 'an editable element'],
+  ] as const) {
+    const host = held === dialogButton ? dialog : held;
+    panel.appendChild(host);
+    try {
+      held.focus();
+      assert.ok(document.activeElement === held, label);
+      await act(async () => {
+        ref.current!.newConversation();
+        await settle(10);
+      });
+      assert.ok(document.activeElement === held, `${label} keeps the focus`);
+    } finally {
+      host.remove();
+    }
+  }
+});
+
+test('a placeholder function runs once per agent, not on each streamed delta', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  let calls = 0;
+  const placeholder = (agent: { name: string } | null) => {
+    calls += 1;
+    return `Ask ${agent?.name ?? 'the assistant'}`;
+  };
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', placeholder }, ref);
+  try {
+    const before = calls;
+    await act(async () => {
+      void ref.current!.send('hello');
+      await settle();
+      for (let i = 0; i < 5; i += 1) {
+        stream.send({ type: 'stream', content: `part ${i} ` });
+        await settle(2);
+      }
+    });
+    assert.equal(textarea().placeholder, 'Ask Hunter');
+    assert.equal(calls, before);
+  } finally {
+    await finish(stream);
   }
 });

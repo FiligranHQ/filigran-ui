@@ -23,6 +23,8 @@ interface ChatInputProps {
   heldMessage?: { text: string; displayText?: string } | null;
   /** What the backend said when it refused a steer or a Stop. */
   notice?: string | null;
+  /** Which files the last attach refused, and why. */
+  fileNotice?: string | null;
   onCancelHeld?: () => void;
   inputValue: string;
   onInputChange: (value: string) => void;
@@ -102,6 +104,7 @@ export const ChatInput = ({
   canHold = false,
   heldMessage,
   notice,
+  fileNotice,
   onCancelHeld,
   inputValue,
   onInputChange,
@@ -265,6 +268,11 @@ export const ChatInput = ({
       {notice && (
         <div role="alert" data-testid="filigran-chat-composer-notice" className="mb-2 text-[0.75rem] text-red-500 dark:text-red-400">
           {notice}
+        </div>
+      )}
+      {fileNotice && (
+        <div role="alert" data-testid="filigran-chat-file-notice" className="mb-2 text-[0.75rem] text-red-500 dark:text-red-400">
+          {fileNotice}
         </div>
       )}
       {heldMessage && (

@@ -1,5 +1,5 @@
 import type { ChatFile, ChatFileRefusal, Translate } from '../types';
-import { translate } from './index';
+import { formatFileSize, translate } from './index';
 
 /** The composer's limits on what it attaches to one message. */
 export interface AttachmentLimits {
@@ -13,7 +13,10 @@ export interface AttachmentLimits {
 
 /**
  * Whether *file* is of a type *accept* names, read as the file input reads it:
- * `.ext` by the name, `type/*` and `type/subtype` by the MIME type.
+ * `.ext` by the name, `type/*` and `type/subtype` by the MIME type. A file
+ * whose type the browser left empty (Chrome on Windows for `.md`, `.yaml`)
+ * cannot be judged by a MIME token: it passes where one is named, as the
+ * picker offered it, and an extension token still decides it by name.
  */
 export function acceptsFile(accept: string | undefined, file: { name: string; type: string }): boolean {
   const tokens = (accept ?? '')
@@ -23,11 +26,10 @@ export function acceptsFile(accept: string | undefined, file: { name: string; ty
   if (tokens.length === 0) return true;
   const name = file.name.toLowerCase();
   const type = file.type.toLowerCase();
-  return tokens.some((token) => {
-    if (token.startsWith('.')) return name.endsWith(token);
-    if (token.endsWith('/*')) return type.startsWith(token.slice(0, -1));
-    return type === token;
-  });
+  const mimeTokens = tokens.filter((token) => !token.startsWith('.'));
+  if (tokens.some((token) => token.startsWith('.') && name.endsWith(token))) return true;
+  if (!type) return mimeTokens.length > 0;
+  return mimeTokens.some((token) => (token.endsWith('/*') ? type.startsWith(token.slice(0, -1)) : type === token));
 }
 
 /**
@@ -65,32 +67,19 @@ export function admitFiles<F extends { name: string; type: string; size: number 
   return { accepted, refused };
 }
 
-/** *bytes* as a limit reads: `50 MB`, `1.5 GB`, `200 KB`. */
-export function formatByteLimit(bytes: number): string {
-  const units: [string, number][] = [
-    ['GB', 1024 ** 3],
-    ['MB', 1024 ** 2],
-    ['KB', 1024],
-  ];
-  for (const [unit, size] of units) {
-    if (bytes >= size) return `${Number((bytes / size).toFixed(1))} ${unit}`;
-  }
-  return `${bytes} B`;
-}
-
 /** What the composer tells the user of a file it refused, naming it. */
 export function refusalMessage(t: Translate, name: string, reason: ChatFileRefusal, limits: AttachmentLimits): string {
   switch (reason) {
     case 'file-type':
       return translate(t, '{name} was not attached: this type of file is not accepted.', { name });
     case 'file-size':
-      return translate(t, '{name} was not attached: a file may be at most {size}.', { name, size: formatByteLimit(limits.maxFileSize) });
+      return translate(t, '{name} was not attached: a file may be at most {size}.', { name, size: formatFileSize(limits.maxFileSize) });
     case 'file-count':
       return translate(t, '{name} was not attached: a message holds at most {count} files.', { name, count: limits.maxFileCount });
     case 'total-size':
       return translate(t, '{name} was not attached: the files of a message may add up to at most {size}.', {
         name,
-        size: formatByteLimit(limits.maxTotalSize),
+        size: formatFileSize(limits.maxTotalSize),
       });
   }
 }

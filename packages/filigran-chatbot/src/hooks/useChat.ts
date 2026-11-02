@@ -732,8 +732,10 @@ interface UseChatReturn {
   handleSendMessage: (override?: SendOverride) => Promise<ChatSendOutcome>;
   /** A message held until the running turn ends (`holdSends`), if any. */
   heldMessage: HeldMessage | null;
-  /** What the backend said when it refused a steer or a Stop, or which files were not attached and why, shown by the composer; `null` when nothing. */
+  /** What the backend said when it refused a steer or a Stop, shown by the composer; `null` when nothing. */
   notice: string | null;
+  /** Which files the last attach refused, and why, shown by the composer; `null` when none. */
+  fileNotice: string | null;
   /** Bumped on each switch to another conversation or a new one: the composer takes the focus, unless it is elsewhere. */
   composerFocusRequest: number;
   cancelHeldMessage: () => void;
@@ -988,6 +990,9 @@ export function useChat({
   heldMessageRef.current = heldMessage;
   // A refused steer's or Stop's reason, until the next send or the turn's end.
   const [notice, setNotice] = useState<string | null>(null);
+  // The files the last attach refused, and why: until the next attach, a send
+  // or another conversation, whatever the turn does.
+  const [fileNotice, setFileNotice] = useState<string | null>(null);
   // The notice says what becomes of the next send: it outlives the turn's end.
   const noticeUntilSendRef = useRef(false);
   // Relayed turns ended by a provisional end, by turn id, with the answer each
@@ -1160,10 +1165,6 @@ export function useChat({
     maxFileSize: maxFileSize !== undefined && Number.isFinite(maxFileSize) && maxFileSize > 0 ? maxFileSize : Infinity,
     accept: acceptFileTypes,
   };
-  const onFileRefusedRef = useRef(onFileRefused);
-  onFileRefusedRef.current = onFileRefused;
-  // The notice naming the files last refused: the next attach replaces it.
-  const refusalNoticeRef = useRef<string | null>(null);
   const [composerFocusRequest, setComposerFocusRequest] = useState(0);
 
   // Determine message endpoint URL
@@ -1503,27 +1504,28 @@ export function useChat({
   /**
    * Handle file selection: validate limits, add files to state immediately,
    * then upload them in the background. Each file chip shows its upload status;
-   * a file refused is named, with why, in the composer's notice.
+   * a file refused is named, with why, above the text field (`fileNotice`).
    */
   const handleFileAdd = (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0 || !getUploadUrl()) return;
 
-    // Pre-generate stable IDs so side effects use the same IDs as the state.
-    const candidates = Array.from(fileList, (file) => ({ file, tempId: randomId(), name: file.name, type: file.type, size: file.size }));
+    const incoming = Array.from(fileList);
+    // Drawn before the updater, which may run twice, so the state and the uploads share them.
+    const tempIds = new Map(incoming.map((file) => [file, randomId()]));
 
-    // The updater stays pure (it may run twice): it only records what it decided.
-    let accepted: typeof candidates = [];
-    let refused: { file: (typeof candidates)[number]; reason: ChatFileRefusal }[] = [];
+    // The updater stays pure: it only records what it decided.
+    let accepted: File[] = [];
+    let refused: { file: File; reason: ChatFileRefusal }[] = [];
     setAttachedFiles((prev) => {
-      ({ accepted, refused } = admitFiles(prev, candidates, attachmentLimits));
+      ({ accepted, refused } = admitFiles(prev, incoming, attachmentLimits));
       if (accepted.length === 0) return prev;
-      const newEntries: ChatFile[] = accepted.map(({ file, tempId }) => ({
+      const newEntries: ChatFile[] = accepted.map((file) => ({
         name: file.name,
         type: file.type,
         size: file.size,
         rawFile: file,
         uploadStatus: 'pending' as const,
-        fileId: tempId,
+        fileId: tempIds.get(file),
       }));
       return [...prev, ...newEntries];
     });
@@ -1531,12 +1533,8 @@ export function useChat({
     // Launch uploads OUTSIDE the state updater (side effects)
     // Use setTimeout(0) to ensure state has settled after the updater
     setTimeout(() => {
-      const refusal = refused.map(({ file, reason }) => refusalMessage(t, file.name, reason, attachmentLimits)).join(' ') || null;
-      const shownBefore = refusalNoticeRef.current;
-      refusalNoticeRef.current = refusal;
-      if (refusal) setNotice(refusal);
-      else if (shownBefore) setNotice((prev) => (prev === shownBefore ? null : prev));
-      for (const { file, reason } of refused) askHost(onFileRefusedRef.current, file.file, reason);
+      setFileNotice(refused.map(({ file, reason }) => refusalMessage(t, file.name, reason, attachmentLimits)).join(' ') || null);
+      for (const { file, reason } of refused) askHost(onFileRefused, file, reason);
       const failed = (tempId: string, err?: unknown) =>
         setAttachedFiles((p) =>
           p.map((f) =>
@@ -1546,7 +1544,8 @@ export function useChat({
           ),
         );
       const signal = uploadAbortRef.current.signal;
-      for (const { file, tempId } of accepted) {
+      for (const file of accepted) {
+        const tempId = tempIds.get(file)!;
         (async () => {
           try {
             const convId = await ensureConversation();
@@ -2199,6 +2198,10 @@ export function useChat({
     const draft = fromComposer ? inputValue : (override?.draft ?? '');
     const files = fromComposer ? attachedFiles : (override?.files ?? []);
     if (!typed.trim() && files.length === 0) return 'dropped';
+    // A file that failed to upload keeps the message from going at all: sent
+    // without it, the agent would answer as if it had read it. Dropped before
+    // the host is asked or a notice is cleared, as nothing leaves.
+    if (hasFailedUpload(files)) return 'dropped';
     const source = fromComposer ? 'composer' : (override?.source ?? 'host');
     // A turn ended provisionally and still holds the conversation (see
     // `WIND_DOWN_MS`), or one let go of with the event stream may run on (see
@@ -2220,6 +2223,7 @@ export function useChat({
     if (!decided) return 'dropped';
     noticeUntilSendRef.current = false;
     setNotice(null);
+    setFileNotice(null);
     const hookExtras = decided.extras;
     // The fields this message adds to the body: the handle's, then the hook's.
     const sendExtras = override?.extras || hookExtras ? { ...override?.extras, ...hookExtras } : undefined;
@@ -2238,9 +2242,6 @@ export function useChat({
     const sentMentions = !fromComposer ? (override?.mentions ?? []) : agentMentionsEnabled ? agentMentions : [];
     const mentionedIds = mentionedAgentIds(sentMentions, text);
     if (!text && files.length === 0) return 'dropped';
-    // A file that failed to upload keeps the message from going at all: sent
-    // without it, the agent would answer as if it had read it.
-    if (hasFailedUpload(files)) return 'dropped';
     const clearComposer = () => {
       if (!fromComposer) return;
       setInputValue('');
@@ -2905,6 +2906,7 @@ export function useChat({
     clearHandover();
     noticeUntilSendRef.current = false;
     stopRunning('stopped');
+    setFileNotice(null);
     setMessages([]);
     if (!keepComposer) {
       setInputValue('');
@@ -3620,6 +3622,7 @@ export function useChat({
     readPendingApprovals: pendingApprovalsBase ? readPendingApprovals : null,
     heldMessage,
     notice,
+    fileNotice,
     composerFocusRequest,
     cancelHeldMessage: cancelHeld,
     reloadHistory,

@@ -317,6 +317,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     readPendingApprovals,
     heldMessage,
     notice,
+    fileNotice,
     composerFocusRequest,
     cancelHeldMessage,
     agentMentions,
@@ -346,7 +347,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     maxTotalSize,
     maxFileSize,
     acceptFileTypes,
-    onFileRefused: onFileRefusedProp ? onFileRefused : undefined,
+    onFileRefused,
     storageKeyPrefix,
     controlledConversationId,
     onConversationIdChange: onConversationChangeProp ? onConversationChange : undefined,
@@ -783,7 +784,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
    * whichever agent is selected, so that is the agent its label names.
    */
   const [conversationAgentName, setConversationAgentName] = useState<string | null>(null);
-  const composerPlaceholder = typeof placeholder === 'function' ? askHost(placeholder, selectedAgent ?? null) : placeholder;
+  // Not on every render: a host's function runs once per agent, not per streamed delta.
+  const composerPlaceholder = useMemo(
+    () => (typeof placeholder === 'function' ? askHost(placeholder, selectedAgent ?? null) : placeholder),
+    [placeholder, selectedAgent],
+  );
   const agentName = transferredAgent?.name || conversationAgentName || selectedAgent?.name || t('Assistant');
 
   // "Viewing the chat" must mean the panel is on screen in the active tab —
@@ -1527,6 +1532,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               canHold={holdSendsDuringTurn}
               heldMessage={heldMessage}
               notice={notice}
+              fileNotice={fileNotice}
               onCancelHeld={cancelHeldMessage}
               agentMentions={agentMentionsEnabled && agents.length > 0 ? { agents, mentions: agentMentions, onPick: addAgentMention } : undefined}
               inputValue={inputValue}

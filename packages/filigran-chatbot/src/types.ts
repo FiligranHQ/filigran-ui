@@ -484,7 +484,10 @@ export interface ChatPanelProps {
   /**
    * The file types the composer takes, in the file input's `accept` form
    * (`'.pdf,image/*'`): the picker offers only these, and a pasted or dropped
-   * file of another type is refused. Default: any type.
+   * file of another type is refused. A file the browser gives no MIME type
+   * (Chrome on Windows for `.md`, `.yaml`) passes where a MIME token is named,
+   * as the picker offered it; an extension token still decides it by name.
+   * Default: any type.
    */
   acceptFileTypes?: string;
   /**
