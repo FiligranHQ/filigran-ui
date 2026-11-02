@@ -18,7 +18,7 @@ import type {
 import { feedbackKeyOf, useMessageFeedback, type FeedbackEntry } from '../hooks/useMessageFeedback';
 import { useSpeechReader } from '../hooks/useSpeechReader';
 import type { TtsRoute } from '../utils/speech';
-import { answerMarkdownSources, artifactKey, formatFileSize, splitAnswerMarkers, stripAnswerMarkers } from '../utils';
+import { answerMarkdownSources, artifactKey, formatFileSize, splitAnswerMarkers, standaloneMarker, stripAnswerMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
 import { isComposing } from '../utils/keyboard';
 import { formatMessageTime } from '../utils/messageTime';
@@ -789,6 +789,19 @@ const MessageRow = memo(
     );
     const shown = shownFeedback(feedback, msg.feedback);
     const speechKey = feedbackKeyOf(msg);
+
+    // A finished answer that is a standalone marker alone, with nothing attached: the card is the whole row.
+    const standalone =
+      isAssistant && !isStreaming && !msg.attachments?.length && !msg.artifacts?.length
+        ? standaloneMarker(content, markerRenderers, markerKindList)
+        : null;
+    if (standalone) {
+      return (
+        <div data-message-id={msg.serverId ?? msg.id} data-testid="filigran-chat-standalone-marker" className="flex w-full">
+          {renderHostMarker(standalone.kind, standalone.args, 'standalone')}
+        </div>
+      );
+    }
 
     return (
       <div data-message-id={msg.serverId ?? msg.id} className={`group/msg flex flex-col ${isAssistant ? 'items-start' : 'items-end'}`}>

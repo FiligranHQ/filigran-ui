@@ -47,6 +47,30 @@ test("a host's marker renders its card in place, and one that throws takes only 
   assert.ok(!text().includes('[[WORK_ITEM'));
 });
 
+test('an answer that is a standalone marker alone is its card alone, with nothing around it', async () => {
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'assistant', content: 'First answer.' },
+      { id: 'm2', role: 'assistant', content: '[[NOTE:n1]]' },
+      { id: 'm3', role: 'assistant', content: 'Before [[NOTE:n2]] after' },
+    ]),
+  ]);
+  await render({ conversationId: 'c1', markerRenderers: { NOTE: { render: (args) => <hr data-note={args} />, standalone: true } } });
+  const rows = [...container.querySelectorAll('[data-message-id]')];
+  const alone = container.querySelector('[data-message-id="m2"]')!;
+  assert.equal(alone.getAttribute('data-testid'), 'filigran-chat-standalone-marker');
+  assert.ok(alone.querySelector('hr[data-note="n1"]'), 'the card');
+  assert.equal(alone.textContent, '', 'no agent name, no time');
+  assert.equal(alone.querySelectorAll('button').length, 0, 'no actions');
+  // In a sentence, the same marker keeps its answer's frame.
+  const inProse = container.querySelector('[data-message-id="m3"]')!;
+  assert.ok(inProse.querySelector('hr[data-note="n2"]'));
+  assert.ok(inProse.querySelector('[data-testid="filigran-chat-assistant-message"]'));
+  assert.ok(inProse.querySelector('button[aria-label="Copy response"]'));
+  assert.equal(rows.length, 3);
+});
+
 test("a host's code block renderer stands in for its language's fenced blocks, and one that throws takes only itself down", async () => {
   const fence = (language: string, code: string) => '```' + language + '\n' + code + '\n```';
   fakeBackend([
