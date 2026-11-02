@@ -12,18 +12,32 @@ const usable = (value: unknown): string | null => {
   return text && text.length <= MAX_DETAIL_LENGTH ? text : null;
 };
 
+/** An identifier, as a code is written (`invalid_token`, `Unauthorized`); a sentence in any script is not one. */
+const IDENTIFIER = /^[\w.-]+$/;
+
+/** Title Case words and nothing else, as an HTTP reason phrase is written (`Not Found`, `Too Many Requests`). */
+const REASON_PHRASE = /^[A-Z][A-Za-z]*(?: [A-Z][A-Za-z]*)*$/;
+
+/** *value* when it is a sentence the backend wrote, not a code or a status's reason phrase. */
+function sentence(value: unknown): string | null {
+  const text = usable(value);
+  return text && !IDENTIFIER.test(text) && !REASON_PHRASE.test(text) ? text : null;
+}
+
 /**
  * The message of a refusal body: its `detail` when a string, or that object's
- * `message` (or `detail`); null when there is none worth showing.
+ * `message` (or `detail`), as XTM One answers; else its `error` when a
+ * sentence, as the products' proxies answer (`{ "error": "..." }`, beside a
+ * `status` or not); null when there is none worth showing.
  */
 export function refusalDetail(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null;
-  const detail = (body as Record<string, unknown>).detail;
+  const { detail, error } = body as Record<string, unknown>;
   if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
     const inner = detail as Record<string, unknown>;
-    return usable(inner.message) ?? usable(inner.detail);
+    return usable(inner.message) ?? usable(inner.detail) ?? sentence(error);
   }
-  return usable(detail);
+  return usable(detail) ?? sentence(error);
 }
 
 /** The message of a refused response's JSON body, null when it has none (or is not JSON). */

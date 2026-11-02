@@ -1,6 +1,6 @@
 import type { Catalog } from './index';
 
-const ja: Catalog = {
+export const ja: Catalog = {
   '(no output)': '（出力なし）',
   '1 tool call': 'ツール呼び出し 1 件',
   '1 transfer': '転送 1 件',
@@ -37,6 +37,7 @@ const ja: Catalog = {
   Confirm: '確認する',
   'Connecting integrations…': '連携を接続中…',
   'Connecting the dots': '情報を関連付けています',
+  'Consulting an agent…': 'エージェントに問い合わせ中…',
   'Consulting the sources': '情報源を確認しています',
   'Consulting {agent}…': '{agent} に問い合わせ中…',
   'Consulting {agent}: {count} questions…': '{agent} に問い合わせ中: {count} 件の質問…',
@@ -192,6 +193,7 @@ const ja: Catalog = {
   'System prompt': 'システムプロンプト',
   'Tap to cancel': 'タップしてキャンセル',
   'Tell us what went wrong (optional)': '問題があった点をお聞かせください（任意）',
+  'The agent is answering…': 'エージェントが回答中…',
   'The agent needs your approval to run a tool:': 'エージェントがツールを実行するには、あなたの承認が必要です：',
   'The agent needs your approval to run these tools:': 'エージェントがこれらのツールを実行するには、あなたの承認が必要です：',
   'The conversation could not be deleted': '会話を削除できませんでした',
@@ -219,6 +221,7 @@ const ja: Catalog = {
   'Tool results': 'ツールの結果',
   'Transfer chain': '転送チェーン',
   'Transferred from {agent}': '{agent} から転送されました',
+  'Transferring to another agent…': '別のエージェントに転送中…',
   'Transferring to {agent}…': '{agent} に転送中…',
   'Turn limit reached.': 'ターン制限に達しました。',
   'Unable to connect. Please check the configuration.': '接続できません。設定を確認してください。',
@@ -249,7 +252,6 @@ const ja: Catalog = {
   default: 'デフォルト',
   'e.g. wrong environment — use staging instead': '例：環境が間違っている — 代わりにステージング環境を使用してください',
   'just now': 'たった今',
-  'the agent': 'エージェント',
   'this month': '今月',
   'this year': '今年',
   today: '今日',
@@ -283,5 +285,3 @@ const ja: Catalog = {
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '「はい、常に」を選ぶと、あなたの設定として保存されます。以後、そのツールは確認なしで実行されます（誰も見ていない定期実行を含む）。取り消すまでこの設定は有効です。',
 };
-
-export default ja;

@@ -1,6 +1,6 @@
 import type { Catalog } from './index';
 
-const fr: Catalog = {
+export const fr: Catalog = {
   '(no output)': '(pas de sortie)',
   '1 tool call': '1 appel d’outil',
   '1 transfer': '1 transfert',
@@ -37,6 +37,7 @@ const fr: Catalog = {
   Confirm: 'Confirmer',
   'Connecting integrations…': 'Connexion des intégrations…',
   'Connecting the dots': 'Relier les points',
+  'Consulting an agent…': 'Consultation d’un agent…',
   'Consulting the sources': 'Consulter les sources',
   'Consulting {agent}…': 'Consultation de {agent}…',
   'Consulting {agent}: {count} questions…': 'Consultation de {agent} : {count} questions…',
@@ -192,6 +193,7 @@ const fr: Catalog = {
   'System prompt': 'Prompt système',
   'Tap to cancel': 'Touchez pour annuler',
   'Tell us what went wrong (optional)': 'Dites-nous ce qui n’a pas fonctionné (facultatif)',
+  'The agent is answering…': 'L’agent répond…',
   'The agent needs your approval to run a tool:': 'L’agent a besoin de votre accord pour exécuter un outil :',
   'The agent needs your approval to run these tools:': 'L’agent a besoin de votre accord pour exécuter ces outils :',
   'The conversation could not be deleted': 'Impossible de supprimer la conversation',
@@ -218,6 +220,7 @@ const fr: Catalog = {
   'Tool results': 'Résultats des outils',
   'Transfer chain': 'Chaîne de transfert',
   'Transferred from {agent}': 'Transféré depuis {agent}',
+  'Transferring to another agent…': 'Transfert vers un autre agent…',
   'Transferring to {agent}…': 'Transfert vers {agent}…',
   'Turn limit reached.': 'Limite de tours atteinte.',
   'Unable to connect. Please check the configuration.': 'Impossible de se connecter. Veuillez vérifier la configuration.',
@@ -248,7 +251,6 @@ const fr: Catalog = {
   default: 'par défaut',
   'e.g. wrong environment — use staging instead': 'Par exemple : environnement incorrect — utilisez plutôt l’environnement de préproduction',
   'just now': 'à l’instant',
-  'the agent': 'l’agent',
   'this month': 'ce mois-ci',
   'this year': 'cette année',
   today: 'aujourd’hui',
@@ -281,5 +283,3 @@ const fr: Catalog = {
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '« Oui, toujours » enregistre une préférence pour vous. Cet outil s’exécutera alors sans demander, y compris lors des exécutions planifiées que personne ne surveille, jusqu’à ce que vous la révoquiez.',
 };
-
-export default fr;

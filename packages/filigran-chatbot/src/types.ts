@@ -576,7 +576,7 @@ export interface ChatPanelProps {
   onMessageFeedback?: (messageId: string, feedback: MessageFeedback | null, message: ChatMessage) => void;
   /**
    * The user's language as a BCP 47 tag (`'fr'`, `'en-US'`): the language the
-   * panel speaks (its own catalog: en, es, fr, ja) where `t` does not
+   * panel speaks (its own catalog: en, de, es, fr, it, ja, ko, ru, zh-Hans) where `t` does not
    * translate a key, formats the time under each message and is the language
    * answers are read aloud in. Default: the browser's own, except that a host
    * passing `t` and no `locale` gets no catalog.
@@ -1292,7 +1292,7 @@ export interface ChatFile {
   fileId?: string;
   /** Upload status: 'pending' while uploading, 'done' when uploaded, 'error' on failure. */
   uploadStatus?: 'pending' | 'done' | 'error';
-  /** Why the upload failed, as the backend said (`detail`), when it said. */
+  /** Why the upload failed, as the backend said, when it said: its reason (README, "A refusal's reason"). */
   uploadError?: string;
 }
 

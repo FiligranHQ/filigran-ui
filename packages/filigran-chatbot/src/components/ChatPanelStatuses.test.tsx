@@ -82,6 +82,15 @@ test('a transfer names the agent the conversation goes to', async () => {
   await finish(stream);
 });
 
+test('an agent the status does not name has its own wording, not a name filled in', async () => {
+  const { stream, send } = await running();
+  await send(status('transfer_start', { agent_id: 'a2' }));
+  assert.ok(text().includes('Transferring to another agent…'), text());
+  await send(status('mention_answering', { agent_id: 'a3', position: 1, total: 2 }));
+  assert.equal(spokenLine(), 'The agent is answering…');
+  await finish(stream);
+});
+
 test('each mentioned agent answering is named, and its name stays before the statuses of its run', async () => {
   const { stream, send } = await running();
   const answering = (name: string, position: number) => status('mention_answering', { agent_id: name, agent_name: name, position, total: 2 });
