@@ -8,6 +8,25 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.19.0 — unreleased
+
+### Added
+
+- `sidebarSections` also takes a function of the conversation list's search,
+  `(search: ChatSidebarSearch) => ReactNode`, given what the search box holds,
+  trimmed (`''` when empty). It is drawn again when the search or the function
+  changes, so a host passes a stable one, and puts hooks in a component the
+  function returns. With it the search box shows whatever the number of
+  conversations, and a search no conversation of the user's own matches says
+  "None of your conversations matches". Sections given as an element show as
+  they are.
+
+### Fixed
+
+- A search box hidden as the list shrinks below its threshold clears its
+  query: the list stayed filtered by a search the user could neither see nor
+  clear.
+
 ## 3.18.1 — unreleased
 
 ### Fixed
