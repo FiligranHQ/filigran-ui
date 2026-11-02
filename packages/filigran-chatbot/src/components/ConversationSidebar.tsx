@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } 
 import type { ChatConversationSummary, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translateAround } from '../utils';
+import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
@@ -472,6 +473,7 @@ const NameField = ({
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
         e.stopPropagation();
+        if (isComposing(e)) return;
         if (e.key === 'Enter') commit();
         if (e.key === 'Escape') {
           settled.current = true;
@@ -702,6 +704,7 @@ const ConversationRow = ({
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               e.stopPropagation();
+              if (isComposing(e)) return;
               if (e.key === 'Enter') onCommitRename();
               if (e.key === 'Escape') onCancelRename();
             }}

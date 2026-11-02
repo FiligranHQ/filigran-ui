@@ -706,19 +706,19 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           handleFileAdd(e.dataTransfer.files);
         },
       }
-    : readOnly
-      ? {
-          // A file dropped where nothing takes it would open in the tab, leaving the chat.
-          onDragOver: (e: React.DragEvent) => {
-            if (!carriesFiles(e)) return;
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'none';
-          },
-          onDrop: (e: React.DragEvent) => {
-            if (carriesFiles(e)) e.preventDefault();
-          },
-        }
-      : {};
+    : {};
+  // A file dropped anywhere else on the panel would open in the tab, leaving
+  // the chat. The thread's drop zone, when there is one, has taken it already.
+  const noDropHandlers = {
+    onDragOver: (e: React.DragEvent) => {
+      if (!carriesFiles(e) || e.isDefaultPrevented()) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'none';
+    },
+    onDrop: (e: React.DragEvent) => {
+      if (carriesFiles(e)) e.preventDefault();
+    },
+  };
 
   const handleClearAll = async () => {
     if (await clearConversations?.()) handleNewChat();
@@ -1338,7 +1338,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   };
 
   return (
-    <div ref={rootRef} className={containerClasses} style={containerStyle} data-testid="filigran-chat-panel">
+    <div ref={rootRef} className={containerClasses} style={containerStyle} data-testid="filigran-chat-panel" {...noDropHandlers}>
       {mode === 'sidebar' && resizable && (
         <div onMouseDown={handleResizeStart} className="absolute top-0 -left-1 bottom-0 w-2 cursor-col-resize z-10 group">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 bottom-0 w-0.5 rounded-sm bg-[var(--chat-accent)] opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100" />

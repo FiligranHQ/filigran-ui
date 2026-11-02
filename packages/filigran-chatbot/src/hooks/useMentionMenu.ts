@@ -150,7 +150,7 @@ export function useMentionMenu({
 
   /** The menu's keys; true when the key was the menu's to handle. */
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): boolean => {
-    if ((view.kind === 'closed' && items.length === 0) || !trigger || e.nativeEvent.isComposing) return false;
+    if ((view.kind === 'closed' && items.length === 0) || !trigger) return false;
     if (e.key === 'Escape') {
       e.preventDefault();
       setDismissedAnchor(trigger.anchor);

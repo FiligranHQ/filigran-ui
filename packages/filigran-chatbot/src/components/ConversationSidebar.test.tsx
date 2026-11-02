@@ -1,14 +1,16 @@
 /**
- * Rendering tests of the conversation list's workspaces - `yarn test`.
+ * Rendering tests of the conversation list - `yarn test`: its workspaces, and
+ * renaming a conversation.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act } from 'react';
-import { createRoot } from 'react-dom/client';
 
 import { installDom, settle } from '../../test/dom.ts';
 
 installDom();
+// Loaded after the page: react-dom decides at load which events it listens to.
+const { createRoot } = await import('react-dom/client');
 const { ConversationSidebar } = await import('./ConversationSidebar.tsx');
 
 const WORKSPACE = { id: 'w1', name: 'Hunts', isOwn: true, isDefault: false, canManage: true };
@@ -67,4 +69,52 @@ test("a host's translation keeps the glyph where it puts {icon}", async () => {
   assert.equal(hint.textContent, 'Déposez une conversation ici ou démarrez-en une avec .');
   assert.equal(hint.querySelectorAll('svg').length, 1);
   await unmount();
+});
+
+test('Enter while an input method composes does not commit a rename', async () => {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const renamed: [string, string][] = [];
+  await act(async () => {
+    root.render(
+      <ConversationSidebar
+        conversations={[{ conversationId: 'c1', title: 'Old title' }]}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onRename={(id, title) => renamed.push([id, title])}
+        onNewChat={() => undefined}
+        t={(key) => key}
+      />,
+    );
+    await settle();
+  });
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Rename conversation"]')!.click();
+    await settle();
+  });
+  const field = () => container.querySelector<HTMLInputElement>('input[aria-label="Conversation title"]');
+  await act(async () => {
+    const input = field()!;
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value')!.set!.call(input, '東京');
+    input.dispatchEvent(new window.Event('input', { bubbles: true }) as unknown as Event);
+    await settle();
+  });
+  const enter = (init: Record<string, unknown>) =>
+    act(async () => {
+      field()!.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...init }) as unknown as Event);
+      await settle();
+    });
+  await enter({ isComposing: true });
+  await enter({ keyCode: 229 });
+  assert.deepEqual(renamed, [], 'the composition is confirmed, not the rename');
+  assert.equal(field()?.value, '東京', 'the field stays open');
+  await enter({ keyCode: 13 });
+  assert.deepEqual(renamed, [['c1', '東京']]);
+  await act(async () => root.unmount());
+  container.remove();
 });

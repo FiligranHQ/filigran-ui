@@ -1,13 +1,6 @@
-/** One clipboard entry, as a `DataTransferItem` exposes it. */
-export interface ClipboardEntry {
-  kind: string;
-  type: string;
-  getAsFile(): File | null;
-}
-
 /** What a paste hands over, as the `DataTransfer` of a `paste` event exposes it. */
 export interface ClipboardPayload {
-  items: ArrayLike<ClipboardEntry>;
+  files: ArrayLike<File>;
   getData(format: string): string;
 }
 
@@ -19,41 +12,85 @@ function readClipboardText(data: ClipboardPayload, format: string): string {
   }
 }
 
-/** Whether an HTML fragment shows any text: not only markup, styles, comments or an `<img>`. */
-function htmlCarriesText(html: string): boolean {
-  const text = html
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<(head|style|script|title|template|xml)\b[\s\S]*?<\/\1\s*>/gi, ' ')
-    // A quoted attribute may hold a `>` (`alt="Revenue > costs"`).
-    .replace(/<(?:"[^"]*"|'[^']*'|[^'">])*>/g, ' ')
-    .replace(/&(nbsp|#160|#xa0);/gi, ' ');
-  return /\S/.test(text);
+/** Elements whose content shows no text. */
+const HIDDEN_BLOCK = /<(head|style|script|title|template|xml)\b/iy;
+const SPACE_ENTITY = /&(?:nbsp|#160|#xa0);/iy;
+const SPACE = /\s/;
+
+/**
+ * Where the tag opening at *start* ends, past its `>`; -1 when it never closes.
+ * A quoted attribute may hold a `>` (`alt="Revenue > costs"`).
+ */
+function tagEnd(html: string, start: number): number {
+  for (let i = start + 1; i < html.length; i += 1) {
+    const c = html[i];
+    if (c === '>') return i + 1;
+    if (c === '"' || c === "'") {
+      const close = html.indexOf(c, i + 1);
+      if (close < 0) return -1;
+      i = close;
+    }
+  }
+  return -1;
 }
 
 /**
- * The files a paste attaches: any file, as drag and drop and the attach button
- * take any file, except the picture an app adds as a rendering of the text it
- * copied.
- *
- * Office suites and spreadsheets copy a selection as its text, its HTML and an
- * image of it, which the browser hands over as a file. That paste is the text:
- * attaching the image would put a picture of the selection in the message and,
- * as attaching cancels the paste, drop the text. So images that come with plain
- * text and an HTML fragment showing text are not attached. A browser's "Copy
- * image" (its HTML is the `<img>` alone, maybe with the image address as text)
- * and a file manager's copy (the file, with its name or path as text, no HTML)
- * still attach.
- *
- * Empty when the paste attaches nothing: it then reaches the text box untouched.
+ * Whether an HTML fragment shows any text: not only markup, styles, comments
+ * or an `<img>`. One pass that stops at the first character shown, as a paste
+ * can carry megabytes of HTML.
+ */
+function htmlCarriesText(html: string): boolean {
+  const unclosed = new Set<string>();
+  let i = 0;
+  while (i < html.length) {
+    const c = html[i];
+    if (c === '<') {
+      if (html.startsWith('<!--', i)) {
+        const close = html.indexOf('-->', i + 4);
+        if (close >= 0) {
+          i = close + 3;
+          continue;
+        }
+      }
+      HIDDEN_BLOCK.lastIndex = i;
+      const name = HIDDEN_BLOCK.exec(html)?.[1].toLowerCase();
+      if (name && !unclosed.has(name)) {
+        const close = new RegExp(`</${name}\\s*>`, 'gi');
+        close.lastIndex = i;
+        if (close.exec(html)) {
+          i = close.lastIndex;
+          continue;
+        }
+        // Not searched again: the fragment holds no closing tag after this one.
+        unclosed.add(name);
+      }
+      const end = tagEnd(html, i);
+      // A `<` that opens no tag is text.
+      if (end < 0) return true;
+      i = end;
+      continue;
+    }
+    if (c === '&') {
+      SPACE_ENTITY.lastIndex = i;
+      if (SPACE_ENTITY.test(html)) {
+        i = SPACE_ENTITY.lastIndex;
+        continue;
+      }
+    }
+    if (!SPACE.test(c)) return true;
+    i += 1;
+  }
+  return false;
+}
+
+/**
+ * The files a paste attaches. Office suites copy a selection as its text, its
+ * HTML and a picture of it: images that come with plain text and HTML showing
+ * text are that picture, not attached, so the text is pasted instead.
  */
 export function clipboardFiles(data: ClipboardPayload | null | undefined): File[] {
   if (!data) return [];
-  const files: File[] = [];
-  for (const item of Array.from(data.items ?? [])) {
-    if (item.kind !== 'file') continue;
-    const file = item.getAsFile();
-    if (file) files.push(file);
-  }
+  const files = Array.from(data.files ?? []);
   if (files.length === 0) return files;
   const renderingOfText =
     files.every((file) => file.type.startsWith('image/')) &&

@@ -18,6 +18,7 @@ import { useSpeechReader } from '../hooks/useSpeechReader';
 import type { TtsRoute } from '../utils/speech';
 import { answerMarkdownSources, artifactKey, splitAnswerMarkers, stripAnswerMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
+import { isComposing } from '../utils/keyboard';
 import { formatMessageTime } from '../utils/messageTime';
 import { userMessageText } from '../utils/userMessage';
 import {
@@ -349,6 +350,7 @@ const FeedbackComment = ({
         readOnly={pending}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
+          if (isComposing(e)) return;
           if (e.key === 'Escape') {
             e.preventDefault();
             e.stopPropagation();

@@ -108,18 +108,46 @@ test('Enter while an input method composes leaves the mention menu alone', async
   assert.equal(textarea().value, '@', 'no agent is inserted into the unfinished word');
 });
 
+/** Drag *types* over *target* (`dragover`, then `drop`): whether each was cancelled, and the drop effect asked for. */
+async function dragOnto(target: Element, types: string[]) {
+  const dataTransfer = { types, files: [] as File[], dropEffect: 'move' };
+  const over = await fire(target, new window.Event('dragover', { bubbles: true, cancelable: true }) as unknown as Event, { dataTransfer });
+  const dropEffect = dataTransfer.dropEffect;
+  const drop = await fire(target, new window.Event('drop', { bubbles: true, cancelable: true }) as unknown as Event, { dataTransfer });
+  return { over, drop, dropEffect };
+}
+
+const header = () => container.querySelector('[data-testid="filigran-chat-panel"]')!.firstElementChild!;
+
 test('a file dropped on a read-only panel leaves the page where it is', async () => {
   fakeBackend([agentsRoute]);
   await render({ readOnly: true, readOnlyNotice: <span data-testid="notice">Read only</span> });
-  const target = container.querySelector('[data-testid="notice"]')!;
-  const drag = (type: string, types: string[]) => {
-    const event = new window.Event(type, { bubbles: true, cancelable: true }) as unknown as Event;
-    return fire(target, event, { dataTransfer: { types, files: [], dropEffect: 'none' } });
-  };
-  assert.equal(await drag('dragover', ['Files']), true, 'the browser does not offer to open it');
-  assert.equal(await drag('drop', ['Files']), true, 'nor opens it');
-  assert.equal(await drag('dragover', ['text/plain']), false, 'a dragged selection is left to the page');
-  assert.equal(await drag('drop', ['text/plain']), false);
+  const notice = container.querySelector('[data-testid="notice"]')!;
+  assert.deepEqual(
+    await dragOnto(notice, ['Files']),
+    { over: true, drop: true, dropEffect: 'none' },
+    'the browser neither offers to open it nor opens it',
+  );
+  assert.deepEqual(
+    await dragOnto(notice, ['text/plain']),
+    { over: false, drop: false, dropEffect: 'move' },
+    'a dragged selection is left to the page',
+  );
+});
+
+test('a file dropped on a panel that takes no files leaves the page where it is', async () => {
+  fakeBackend([agentsRoute]);
+  await render({ disableFileManagement: true });
+  assert.deepEqual(await dragOnto(textarea(), ['Files']), { over: true, drop: true, dropEffect: 'none' });
+});
+
+test('a file dropped outside the thread leaves the page where it is; the thread still takes it', async () => {
+  const requests = fakeBackend([agentsRoute]);
+  await render({});
+  assert.deepEqual(await dragOnto(header(), ['Files']), { over: true, drop: true, dropEffect: 'none' }, 'the header');
+  assert.equal(requests.filter((r) => r.method === 'POST').length, 0, 'nothing is attached from the header');
+  const { over, dropEffect } = await dragOnto(textarea(), ['Files']);
+  assert.deepEqual({ over, dropEffect }, { over: true, dropEffect: 'copy' }, 'the thread offers to attach it');
 });
 
 const DRAFT_KEY = 'filigranChatDraft:new';
@@ -151,4 +179,36 @@ test('the draft is written when the page is hidden, and not when it shows again'
   } finally {
     delete (document as unknown as Record<string, unknown>).visibilityState;
   }
+});
+
+test('two panels on one conversation keep the draft typed in either: the other does not write over it', async () => {
+  fakeBackend([agentsRoute]);
+  const ref = createRef<Handle>();
+  await render({}, ref);
+  const otherContainer = document.createElement('div');
+  document.body.appendChild(otherContainer);
+  const other = createRoot(otherContainer);
+  await act(async () => {
+    other.render(<ChatPanel mode="inline" apiBaseUrl="/api" user={{ firstName: 'Ada' }} />);
+    await settle();
+  });
+  try {
+    await act(async () => ref.current!.setDraft('typed in the first'));
+    await fire(window as unknown as EventTarget, new window.Event('pagehide') as unknown as Event);
+    assert.equal(sessionStorage.getItem(DRAFT_KEY), 'typed in the first');
+  } finally {
+    await act(async () => other.unmount());
+    otherContainer.remove();
+  }
+});
+
+test('the draft is written under the storage prefix the panel has when the page goes away', async () => {
+  fakeBackend([agentsRoute]);
+  const ref = createRef<Handle>();
+  await render({ storageKeyPrefix: 'before' }, ref);
+  await render({ storageKeyPrefix: 'after' }, ref);
+  await act(async () => ref.current!.setDraft('a draft'));
+  await fire(window as unknown as EventTarget, new window.Event('pagehide') as unknown as Event);
+  assert.equal(sessionStorage.getItem(`after:${DRAFT_KEY}`), 'a draft');
+  assert.equal(sessionStorage.getItem(`before:${DRAFT_KEY}`), null);
 });
