@@ -1292,7 +1292,7 @@ export interface ChatFile {
   fileId?: string;
   /** Upload status: 'pending' while uploading, 'done' when uploaded, 'error' on failure. */
   uploadStatus?: 'pending' | 'done' | 'error';
-  /** Why the upload failed, as the backend said (`detail`), when it said. */
+  /** Why the upload failed, as the backend said (`detail`, else `error`), when it said. */
   uploadError?: string;
 }
 

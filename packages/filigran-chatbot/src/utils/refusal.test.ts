@@ -9,13 +9,24 @@ test("a refusal's detail is read as a string, or from an object's message or det
   assert.equal(refusalDetail({ detail: '  ' }), null);
   assert.equal(refusalDetail({ detail: [{ loc: ['body'], msg: 'field required' }] }), null);
   assert.equal(refusalDetail({ detail: 'x'.repeat(501) }), null);
-  assert.equal(refusalDetail({ error: 'no detail' }), null);
   assert.equal(refusalDetail(null), null);
+});
+
+test("without a detail, a refusal's error is read when a string", () => {
+  assert.equal(refusalDetail({ error: 'Quota exceeded.' }), 'Quota exceeded.');
+  assert.equal(refusalDetail({ detail: 'From detail.', error: 'From error.' }), 'From detail.');
+  assert.equal(refusalDetail({ detail: { code: 'x' }, error: 'From error.' }), 'From error.');
+  assert.equal(refusalDetail({ detail: [{ msg: 'field required' }], error: 'From error.' }), 'From error.');
+  assert.equal(refusalDetail({ error: { message: 'An object.' } }), null);
+  assert.equal(refusalDetail({ error: ['A list.'] }), null);
+  assert.equal(refusalDetail({ error: '  ' }), null);
+  assert.equal(refusalDetail({ error: 'x'.repeat(501) }), null);
 });
 
 test('a body that is not JSON has no detail', async () => {
   assert.equal(await readRefusalDetail(new Response('<html>Bad gateway</html>', { status: 502 })), null);
   assert.equal(await readRefusalDetail(new Response(JSON.stringify({ detail: 'Refused.' }), { status: 403 })), 'Refused.');
+  assert.equal(await readRefusalDetail(new Response(JSON.stringify({ error: 'Refused.' }), { status: 403 })), 'Refused.');
 });
 
 test('the headers key changes with the headers, not with their order', () => {
