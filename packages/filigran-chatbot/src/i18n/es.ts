@@ -242,6 +242,7 @@ const es: Catalog = {
   'unknown tool': 'herramienta desconocida',
   '{agent} has finished': '{agent} ha finalizado',
   '{agent} is answering…': '{agent} está respondiendo…',
+  '{agent}: {status}': '{agent}: {status}',
   '{counts} tokens': '{counts} tokens',
   '{count} iterations': '{count} iteraciones',
   '{count} scenes': '{count} escenas',

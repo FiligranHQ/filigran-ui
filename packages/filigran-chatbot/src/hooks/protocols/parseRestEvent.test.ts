@@ -239,10 +239,11 @@ test('a transfer, a mentioned agent answering, a setup step and the agent step a
     action: 'status',
     status: 'transferring',
     agentName: 'Analyst',
+    contextUsage: undefined,
   });
   assert.deepEqual(
     parseRestEvent({ type: 'status', status: 'mention_answering', agent_id: 'a2', agent_name: 'Analyst', position: 1, total: 2 }, ctx()),
-    { action: 'status', status: 'mention_answering', agentName: 'Analyst' },
+    { action: 'status', status: 'mention_answering', agentName: 'Analyst', contextUsage: undefined },
   );
   const preparing = parseRestEvent({ type: 'status', status: 'preparing', phase: 'memory' }, ctx());
   assert.equal(preparing.action === 'status' && preparing.phase, 'memory');
@@ -264,4 +265,12 @@ test('a restored answer cut by a server restart says so', () => {
   assert.equal(cut.interrupted, true);
   assert.equal(whole.interrupted, undefined);
   assert.equal(user.interrupted, undefined);
+});
+
+test('a transfer and a mentioned agent answering keep the context usage they carry', () => {
+  const usage = { context_tokens: 1200, context_window: 8000 };
+  for (const status of ['transfer_start', 'mention_answering']) {
+    const parsed = parseRestEvent({ type: 'status', status, agent_name: 'Analyst', ...usage }, { hasUsedTools: false, activeNodeId: '' });
+    assert.deepEqual(parsed.action === 'status' && parsed.contextUsage, { used: 1200, limit: 8000 }, status);
+  }
 });

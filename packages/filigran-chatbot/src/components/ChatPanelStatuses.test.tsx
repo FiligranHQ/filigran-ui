@@ -81,13 +81,17 @@ test('each mentioned agent answering is named, and its name stays before the sta
   await send(answering('Analyst', 1));
   assert.equal(line(), 'Analyst is answering…');
   await send(status('tool_start', { tools: ['search_iocs'] }));
-  assert.equal(line(), 'AnalystSearch Iocs…');
+  assert.equal(line(), 'Analyst: Search Iocs…', 'read as two words');
 
   // Its answer closes; the next mentioned agent answers in a bubble of its own.
   await send({ type: 'done', content: 'APT28.', intermediate: true, answered_by: { agent_name: 'Analyst' } }, answering('Hunter', 2));
   assert.equal(line(), 'Hunter is answering…');
   await send(status('composing'));
-  assert.equal(line(), 'HunterComposing answer…');
+  assert.equal(line(), 'Hunter: Composing answer…');
+
+  // A replay starts over from the turn's first step, under no agent's name.
+  await send({ type: 'thinking', resumed: true, elapsed_s: 5 });
+  assert.equal(line(), 'Thinking...');
   await finish(stream);
 });
 
@@ -109,6 +113,36 @@ test('while mentioned agents answer, a send is held for the next turn, not steer
   assert.equal(steers().length, 1, 'not steered');
   assert.ok(text().includes('Sends when the answer ends:'), text());
   await finish(stream);
+});
+
+test('a turn ending in the same tick as the next one starts leaves no mention phase to the next', async () => {
+  const events = sseStream();
+  const requests = fakeBackend([
+    agentsRoute,
+    restoreRoute(),
+    (req) => (req.url.startsWith('/api/chat/conversations/c1/events') ? events.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'steered' }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', apiEndpoints: { events: '/chat/conversations' } }, ref);
+  await act(async () => {
+    events.send({ type: 'thinking', turn_id: 't1' });
+    events.send(status('mention_answering', { agent_id: 'a2', agent_name: 'Analyst', position: 1, total: 1, turn_id: 't1' }));
+    await settle(10);
+  });
+  await act(async () => {
+    events.send({ type: 'done', turn_id: 't1', content: 'APT28.', message_id: 'm1' });
+    events.send({ type: 'thinking', turn_id: 't2' });
+    await settle(10);
+  });
+  const line = container.querySelector('.filigran-chat-active-border')?.textContent ?? '';
+  assert.equal(line, 'Thinking...', 'the next turn is not under the last agent of the one before');
+  await act(async () => {
+    void ref.current!.send('also check 2024');
+    await settle();
+  });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/messages/steer').length, 1, 'the next turn steers');
+  await finish(events);
 });
 
 test('a replay of the turn keeps its mention phase: a send meanwhile is still held', async () => {
@@ -133,6 +167,19 @@ test("the host's tool names replace the raw ones in the status line", async () =
   await send(status('consult_progress', { agent_id: 'a2', agent_name: 'Analyst', inner: status('tool_start', { tools: ['search_iocs'] }) }));
   assert.ok(text().includes('Consulting Analyst: Searching indicators…'), text());
   await finish(stream);
+});
+
+test("a host's inline tool names function redraws no message", async () => {
+  fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'assistant', content: 'Found it.' }])]);
+  let drawn = 0;
+  const renderMessageExtras = () => {
+    drawn += 1;
+    return null;
+  };
+  await render({ conversationId: 'c1', renderMessageExtras, toolLabels: (name) => name });
+  const before = drawn;
+  await render({ conversationId: 'c1', renderMessageExtras, toolLabels: (name) => name });
+  assert.equal(drawn, before);
 });
 
 test("the host's tool names can come from a function, and a name it does not give stays title-cased", async () => {

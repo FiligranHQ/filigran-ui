@@ -20,7 +20,8 @@ This file starts at 3.10.0; earlier releases are on the
 
 - The status line says what the turn does where it said `Thinking...`:
   `{agent} is answering…` for each mentioned agent of a turn, with that
-  agent's name before the statuses of its run (`AgentStatusState.answeringAgentName`);
+  agent's name before the statuses of its run, in the voice call too
+  (`AgentStatusState.answeringAgentName`);
   `Transferring to {agent}…` on `transfer_start`; the setup step of
   `preparing` by its `phase` (`Loading conversation history…`, `Summarizing
   earlier conversation…`, `Recalling memory…`, `Connecting integrations…`,

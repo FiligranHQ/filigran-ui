@@ -198,7 +198,7 @@ function resolveStatusVisual(agentStatus: AgentStatusState | null, t: Translate,
     case 'persisting':
       return { label: t('Saving response…'), StatusIcon: DatabaseIcon, showDots: false };
     case 'mention_answering': {
-      const name = agentStatus.agentName ?? agentStatus.answeringAgentName ?? t('the agent');
+      const name = agentStatus.agentName ?? t('the agent');
       return { label: translate(t, '{agent} is answering…', { agent: name }), StatusIcon: UserPlusIcon, showDots: true };
     }
     case 'steering':
@@ -240,6 +240,23 @@ export function statusLineText(
   toolLabels?: ChatToolLabels,
 ): string {
   return (agentStatus && statusLabel?.(agentStatus)) || resolveStatusVisual(agentStatus, t, toolLabels).label;
+}
+
+/** The mentioned agent whose run *agentStatus* describes, when its own text does not name it. */
+function answeringAgentOf(agentStatus: AgentStatusState | null): string | undefined {
+  return agentStatus?.status === 'mention_answering' ? undefined : agentStatus?.answeringAgentName;
+}
+
+/** The status line as one text, the answering agent's name first: where the line cannot set the name apart. */
+export function statusSentence(
+  agentStatus: AgentStatusState | null,
+  t: Translate,
+  statusLabel?: ThinkingOverrides['statusLabel'],
+  toolLabels?: ChatToolLabels,
+): string {
+  const status = statusLineText(agentStatus, t, statusLabel, toolLabels);
+  const agent = answeringAgentOf(agentStatus);
+  return agent ? translate(t, '{agent}: {status}', { agent, status }) : status;
 }
 
 /**
@@ -417,8 +434,7 @@ export const ChatThinking = ({
   const visual = resolveStatusVisual(agentStatus, t, toolLabels);
   const { StatusIcon, showDots } = visual;
   const label = statusLineText(agentStatus, t, statusLabel, toolLabels);
-  // The mentioned agent whose run the status describes; its own line names it already.
-  const answeringAgentName = agentStatus?.status === 'mention_answering' ? undefined : agentStatus?.answeringAgentName;
+  const answeringAgentName = answeringAgentOf(agentStatus);
   const thinkingContent = agentStatus?.thinkingContent;
 
   // Tick the elapsed counter every second. The backend only reports a fresh
@@ -479,7 +495,13 @@ export const ChatThinking = ({
             ) : (
               <StatusIcon size={14} className="text-[var(--chat-accent)] animate-pulse transition-all duration-300" />
             )}
-            {answeringAgentName && <span className="text-xs font-medium text-[var(--chat-accent)]/80 shrink-0">{answeringAgentName}</span>}
+            {answeringAgentName && (
+              <span className="text-xs font-medium text-[var(--chat-accent)]/80 shrink-0">
+                {answeringAgentName}
+                {/* Read as two words, not run into the status. */}
+                <span className="sr-only">: </span>
+              </span>
+            )}
             <span className="text-sm chat-text-secondary-500/50 transition-all duration-300">{label}</span>
             {waitLeftS !== undefined ? (
               <span className="text-xs chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(Math.ceil(waitLeftS))}</span>

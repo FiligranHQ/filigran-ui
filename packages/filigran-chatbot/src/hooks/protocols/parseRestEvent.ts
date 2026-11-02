@@ -367,11 +367,13 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
         conversationId: typeof evt.conversation_id === 'string' ? evt.conversation_id : undefined,
       };
     }
-    if (st === 'transfer_start') {
-      return { action: 'status', status: 'transferring', agentName: optionalString(evt.agent_name) };
-    }
-    if (st === 'mention_answering') {
-      return { action: 'status', status: st, agentName: optionalString(evt.agent_name) };
+    if (st === 'transfer_start' || st === 'mention_answering') {
+      return {
+        action: 'status',
+        status: st === 'transfer_start' ? 'transferring' : st,
+        agentName: optionalString(evt.agent_name),
+        contextUsage: parseContextUsage(evt),
+      };
     }
     if (st === 'consult_progress') {
       // Not the consulted agent's context: the gauge stays the conversation's.

@@ -244,6 +244,7 @@ const ja: Catalog = {
   'unknown tool': '不明なツール',
   '{agent} has finished': '{agent} が完了しました',
   '{agent} is answering…': '{agent} が回答中…',
+  '{agent}: {status}': '{agent}：{status}',
   '{counts} tokens': '{counts} トークン',
   '{count} iterations': '{count} 回の反復',
   '{count} scenes': '{count} シーン',

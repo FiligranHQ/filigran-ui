@@ -27,7 +27,7 @@ import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
-import { statusLineText } from './ChatThinking';
+import { statusSentence } from './ChatThinking';
 import { ChatVoiceCall } from './ChatVoiceCall';
 import { waitingGameUrl } from './ChatWaitingPanel';
 import { ChatWelcome } from './ChatWelcome';
@@ -211,7 +211,10 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     ),
   );
   const markerKindList = useShallowStable(useMemo(() => markerKinds(markerRenderers && Object.keys(markerRenderers)), [markerRenderers]));
-  const toolLabels = useShallowStable(toolLabelsProp);
+  // A function the host writes inline is a new one on every render: kept as one, it does not redraw every message.
+  const toolLabelsByName = useShallowStable(typeof toolLabelsProp === 'function' ? undefined : toolLabelsProp);
+  const toolLabelOf = useLatestCallback(typeof toolLabelsProp === 'function' ? toolLabelsProp : undefined);
+  const toolLabels = toolLabelOf ?? toolLabelsByName;
   const thinking = useMemo(
     () => ({ statusLabel, waitingMessages, renderWaitingPanel, toolLabels }),
     [statusLabel, waitingMessages, renderWaitingPanel, toolLabels],
@@ -1557,7 +1560,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           call={voice.snapshot}
           agentName={agentName}
           logoIcon={resolvedLogo}
-          processingLabel={statusLineText(agentStatus, t, statusLabel, toolLabels)}
+          processingLabel={statusSentence(agentStatus, t, statusLabel, toolLabels)}
           onInterrupt={voice.interrupt}
           onToggleMute={voice.toggleMute}
           onEnd={voice.end}

@@ -922,14 +922,6 @@ export function useChat({
     mentionsAnsweringRef.current = answering;
     setMentionsAnswering(answering);
   };
-  // The mention phase lasts until the turn ends: a replay of the turn, or its
-  // next stream after a handover, is the same turn and still answered by them.
-  useEffect(() => {
-    if (isLoading) return;
-    setAnsweringAgentName(undefined);
-    mentionsAnsweringRef.current = false;
-    setMentionsAnswering(false);
-  }, [isLoading]);
   const shownAgentStatus = useMemo(
     () => (agentStatus && answeringAgentName ? { ...agentStatus, answeringAgentName } : agentStatus),
     [agentStatus, answeringAgentName],
@@ -1120,6 +1112,9 @@ export function useChat({
     if (isLoadingRef.current) setTurnEnd(ended);
     isLoadingRef.current = false;
     setIsLoading(false);
+    // The mention phase lasts until the turn ends: a replay of the turn, or its
+    // next stream after a handover, is the same turn and still answered by them.
+    showMentionAnswering(undefined, false);
     if (!noticeUntilSendRef.current) setNotice(null);
   };
   // Ref mirror of pageContext so the value sent reflects the page the user is
@@ -1902,6 +1897,9 @@ export function useChat({
         consultsOpen = parsed.resumed === true || parsed.status === 'tool_start';
       }
       if (parsed.status === 'mention_answering') showMentionAnswering(parsed.agentName, true);
+      // A replay starts over from the turn's first step, which no mentioned
+      // agent's name describes yet; the phase itself goes on.
+      else if (parsed.resumed) setAnsweringAgentName(undefined);
       if (parsed.resumed) {
         // A re-attached turn is replayed from its start: what it had written
         // so far arrives again, whole, its consults included.

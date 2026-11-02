@@ -243,6 +243,7 @@ const fr: Catalog = {
   'unknown tool': 'outil inconnu',
   '{agent} has finished': '{agent} a terminé',
   '{agent} is answering…': '{agent} répond…',
+  '{agent}: {status}': '{agent} : {status}',
   '{counts} tokens': '{counts} tokens',
   '{count} iterations': '{count} itérations',
   '{count} scenes': '{count} scènes',

@@ -789,10 +789,10 @@ export interface ChatCodeBlockContext {
   streaming: boolean;
 }
 
-/** Renders one fenced code block of a language (see `ChatPanelProps.codeBlockRenderers`); *code* is the block's text. `null` keeps the block as code. */
 /** Tool names as a person reads them, by the tool's raw name (see `ChatPanelProps.toolLabels`). */
 export type ChatToolLabels = Readonly<Record<string, string>> | ((toolName: string) => string | undefined);
 
+/** Renders one fenced code block of a language (see `ChatPanelProps.codeBlockRenderers`); *code* is the block's text. `null` keeps the block as code. */
 export type ChatCodeBlockRenderer = (code: string, context: ChatCodeBlockContext) => React.ReactNode;
 
 /** What a message slot (`renderMessageExtras`, `messageFooterActions`) is drawn with. */
