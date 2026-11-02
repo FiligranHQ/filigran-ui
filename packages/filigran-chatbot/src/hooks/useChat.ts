@@ -30,6 +30,7 @@ import { readSseEvents } from '../utils/sse';
 import { randomId } from '../utils/randomId';
 import { askHost } from '../utils/askHost';
 import { hasFailedUpload } from '../utils/failedUpload';
+import { clipboardFiles } from '../utils/clipboard';
 import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
 import { mentionedAgentIds, pruneAgentMentions, withAgentMention, type AgentMention } from '../utils/agentMentions';
 import { usePanelFetch } from './usePanelRequests';
@@ -714,7 +715,7 @@ interface UseChatReturn {
    * torn down by a benign host re-render or a StrictMode double-invoke.
    */
   conversationIdRef: React.MutableRefObject<string | null>;
-  handleFileAdd: (fileList: FileList | null) => void;
+  handleFileAdd: (fileList: ArrayLike<File> | null) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
   /** Send the composer's content, or *override*'s without touching the composer. */
   handleSendMessage: (override?: SendOverride) => Promise<ChatSendOutcome>;
@@ -1476,7 +1477,7 @@ export function useChat({
    * Handle file selection: validate limits, add files to state immediately,
    * then upload them in the background. Each file chip shows its upload status.
    */
-  const handleFileAdd = (fileList: FileList | null) => {
+  const handleFileAdd = (fileList: ArrayLike<File> | null) => {
     if (!fileList || fileList.length === 0 || !getUploadUrl()) return;
 
     // Build the list of accepted files outside the state updater (pure logic)
@@ -1550,7 +1551,7 @@ export function useChat({
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    const { files } = e.clipboardData;
+    const files = clipboardFiles(e.clipboardData);
     if (files.length > 0) {
       e.preventDefault();
       handleFileAdd(files);
@@ -3420,18 +3421,29 @@ export function useChat({
     [],
   );
 
-  // Flush the pending draft on unmount. Hosts unmount the panel the instant it
-  // is closed, which would otherwise drop anything typed inside the debounce
-  // window — exactly the keystrokes the draft exists to protect.
+  // Flush the pending draft on unmount, and when the page goes away or is
+  // hidden. Hosts unmount the panel the instant it is closed, and a reload or a
+  // closed tab runs no unmount at all: either would otherwise drop anything
+  // typed inside the debounce window — exactly the keystrokes the draft exists
+  // to protect.
   const draftFlushRef = useRef({ conversationId, inputValue, conversationRefs });
   draftFlushRef.current = { conversationId, inputValue, conversationRefs };
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    const flush = () => {
       const { conversationId: id, inputValue: value, conversationRefs: refs } = draftFlushRef.current;
       persistDraft(storageKeyPrefix, id, value, refs);
-    },
-    [],
-  );
+    };
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onHidden);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onHidden);
+      flush();
+    };
+  }, []);
 
   /**
    * Recover a prompt the page never saw, or lost to a reload.

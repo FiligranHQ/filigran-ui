@@ -706,7 +706,19 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           handleFileAdd(e.dataTransfer.files);
         },
       }
-    : {};
+    : readOnly
+      ? {
+          // A file dropped where nothing takes it would open in the tab, leaving the chat.
+          onDragOver: (e: React.DragEvent) => {
+            if (!carriesFiles(e)) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'none';
+          },
+          onDrop: (e: React.DragEvent) => {
+            if (carriesFiles(e)) e.preventDefault();
+          },
+        }
+      : {};
 
   const handleClearAll = async () => {
     if (await clearConversations?.()) handleNewChat();

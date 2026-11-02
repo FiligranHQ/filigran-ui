@@ -8,6 +8,26 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.19.0 — unreleased
+
+### Fixed
+
+- A paste from an office suite or a spreadsheet (Excel, Word, PowerPoint,
+  OneNote, LibreOffice, Numbers) puts the copied text in the composer. These
+  apps copy a selection as its text, its HTML and a picture of it, and the
+  panel attached the picture and dropped the text. A paste whose files are all
+  images, with plain text and an HTML fragment that shows text, attaches
+  nothing and reaches the text box; a screenshot, a browser's "Copy image" and
+  a file copied in a file manager still attach.
+- Enter while an input method composes a word (Chinese, Japanese, Korean)
+  confirms the word instead of sending the half-typed message, and Escape
+  then cancels the composition without stopping the turn.
+- A file dropped on a read-only panel (`readOnly`) leaves the page where it
+  is; the browser opened it in the tab, away from the chat.
+- The composer's draft is written when the page goes away (`pagehide`) or is
+  hidden, so a reload right after typing keeps it; a keystroke within the
+  300 ms the draft waits before being written was lost.
+
 ## 3.18.1 — unreleased
 
 ### Fixed
