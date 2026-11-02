@@ -901,7 +901,7 @@ test('a file that failed to upload offers neither a steer nor a hold while the t
   assert.equal(container.querySelector('button[aria-label="Send now"]'), null);
   assert.equal(container.querySelector('button[aria-label="Send when the answer ends"]'), null);
   assert.ok(!text().includes('Enter to send now'), 'nor says Enter sends it');
-  assert.ok(text().includes('A file failed to upload: remove it, or send once the answer ends'), 'it says what to do');
+  assert.ok(text().includes('A file failed to upload: remove it to send the message'), 'it says what to do');
   assert.ok(!text().includes('Attachments wait for the current response'));
   await finish(stream);
 });

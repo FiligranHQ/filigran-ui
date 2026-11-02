@@ -17,7 +17,7 @@ import type {
 import { feedbackKeyOf, useMessageFeedback, type FeedbackEntry } from '../hooks/useMessageFeedback';
 import { useSpeechReader } from '../hooks/useSpeechReader';
 import type { TtsRoute } from '../utils/speech';
-import { answerMarkdownSources, artifactKey, splitAnswerMarkers, stripAnswerMarkers } from '../utils';
+import { answerMarkdownSources, artifactKey, formatFileSize, splitAnswerMarkers, stripAnswerMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
 import { isComposing } from '../utils/keyboard';
 import { formatMessageTime } from '../utils/messageTime';
@@ -165,13 +165,6 @@ interface ChatMessagesProps {
   /** The host's overrides of the status line and the waiting panel. */
   thinking?: ThinkingOverrides;
   t: (key: string) => string;
-}
-
-function formatFileSize(bytes?: number): string {
-  if (!bytes || bytes <= 0) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /** Short uppercase extension label for a file chip (e.g. `report.pdf` → `PDF`). */

@@ -129,6 +129,10 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     onDownloadError: onDownloadErrorProp,
     maxFileCount,
     maxTotalSize,
+    maxFileSize,
+    acceptFileTypes,
+    onFileRefused: onFileRefusedProp,
+    placeholder,
     requestHeaders: requestHeadersProp,
     pageContext: pageContextProp,
     pushContentSelector,
@@ -204,6 +208,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const promptSuggestions = useShallowStable(promptSuggestionsProp);
   const onRelativeLinkClick = useLatestCallback(onRelativeLinkClickProp);
   const onDownloadError = useLatestCallback(onDownloadErrorProp);
+  const onFileRefused = useLatestCallback(onFileRefusedProp);
   const onPlayWaitingGame = useLatestCallback(onPlayWaitingGameProp);
   const onTaskComplete = useLatestCallback(onTaskCompleteProp);
   const onMessageFeedback = useLatestCallback(onMessageFeedbackProp);
@@ -319,7 +324,6 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     setInputValue,
     isLoading,
     turnRunning,
-    sendsHeld,
     turnEnd,
     agentStatus,
     attachedFiles,
@@ -347,6 +351,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     readPendingApprovals,
     heldMessage,
     notice,
+    fileNotice,
+    composerFocusRequest,
     cancelHeldMessage,
     agentMentions,
     addAgentMention,
@@ -373,6 +379,9 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     t,
     maxFileCount,
     maxTotalSize,
+    maxFileSize,
+    acceptFileTypes,
+    onFileRefused,
     storageKeyPrefix,
     controlledConversationId,
     onConversationIdChange: onConversationChangeProp ? onConversationChange : undefined,
@@ -880,6 +889,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
    * whichever agent is selected, so that is the agent its label names.
    */
   const [conversationAgentName, setConversationAgentName] = useState<string | null>(null);
+  // Not on every render: a host's function runs once per agent, not per streamed delta.
+  const composerPlaceholder = useMemo(
+    () => (typeof placeholder === 'function' ? askHost(placeholder, selectedAgent ?? null) : placeholder),
+    [placeholder, selectedAgent],
+  );
   const agentName = transferredAgent?.name || conversationAgentName || selectedAgent?.name || t('Assistant');
 
   // "Viewing the chat" must mean the panel is on screen in the active tab —
@@ -1651,11 +1665,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           ) : (
             <ChatInput
               header={composerHeader}
-              sendsHeld={sendsHeld}
               steerAttachments={steerAttachments}
               canHold={holdSendsDuringTurn}
               heldMessage={heldMessage}
               notice={notice}
+              fileNotice={fileNotice}
               onCancelHeld={cancelHeldMessage}
               agentMentions={agentMentionsEnabled && agents.length > 0 ? { agents, mentions: agentMentions, onPick: addAgentMention } : undefined}
               inputValue={inputValue}
@@ -1664,10 +1678,15 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               onStop={handleStopGenerating}
               isLoading={isLoading}
               canSteer={canSteer}
-              attachedFiles={disableFileManagement ? [] : attachedFiles}
+              // Files attached before the host turned attaching off stay shown
+              // and removable: they still go with the message, or keep it.
+              attachedFiles={attachedFiles}
               onFileAdd={disableFileManagement ? undefined : handleFileAdd}
-              onFileRemove={disableFileManagement ? undefined : (i) => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
+              onFileRemove={(i) => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
               onPaste={disableFileManagement ? undefined : handlePaste}
+              accept={acceptFileTypes}
+              placeholder={composerPlaceholder}
+              focusRequest={composerFocusRequest}
               t={t}
               mode={mode}
               separatorColor={draftBorderColor}
