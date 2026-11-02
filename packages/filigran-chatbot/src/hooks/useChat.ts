@@ -30,6 +30,7 @@ import { readSseEvents } from '../utils/sse';
 import { randomId } from '../utils/randomId';
 import { askHost } from '../utils/askHost';
 import { hasFailedUpload } from '../utils/failedUpload';
+import { clipboardFiles } from '../utils/clipboard';
 import { readRefusalDetail, requestHeadersKey } from '../utils/refusal';
 import { mentionedAgentIds, pruneAgentMentions, withAgentMention, type AgentMention } from '../utils/agentMentions';
 import { usePanelFetch } from './usePanelRequests';
@@ -67,7 +68,24 @@ function loadDraftRefs(prefix: string | undefined, conversationId: string | null
   }
 }
 
-function persistDraft(prefix: string | undefined, conversationId: string | null, value: string, refs: ChatConversationRef[]): void {
+const draftSignature = (prefix: string | undefined, conversationId: string | null, value: string, refs: ChatConversationRef[]): string =>
+  JSON.stringify([draftKey(prefix, conversationId), value, refs]);
+
+/**
+ * Write a draft unless it is the one *written* holds, what this panel last
+ * wrote or read for it: two panels on one conversation share its draft, and
+ * the one left untouched must not write over what the other typed.
+ */
+function persistDraft(
+  written: { current: string | null },
+  prefix: string | undefined,
+  conversationId: string | null,
+  value: string,
+  refs: ChatConversationRef[],
+): void {
+  const signature = draftSignature(prefix, conversationId, value, refs);
+  if (signature === written.current) return;
+  written.current = signature;
   writeStorage('session', draftKey(prefix, conversationId), value);
   writeStorage('session', draftRefsKey(prefix, conversationId), refs.length > 0 ? JSON.stringify(refs) : null);
 }
@@ -716,7 +734,7 @@ interface UseChatReturn {
    * torn down by a benign host re-render or a StrictMode double-invoke.
    */
   conversationIdRef: React.MutableRefObject<string | null>;
-  handleFileAdd: (fileList: FileList | null) => void;
+  handleFileAdd: (fileList: ArrayLike<File> | null) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
   /** Send the composer's content, or *override*'s without touching the composer. */
   handleSendMessage: (override?: SendOverride) => Promise<ChatSendOutcome>;
@@ -923,6 +941,8 @@ export function useChat({
   const [initialDraft] = useState(() => loadDraftState(storageKeyPrefix, conversationId));
   const [inputValue, setInputValue] = useState(initialDraft.text);
   const [conversationRefs, setConversationRefs] = useState<ChatConversationRef[]>(initialDraft.refs);
+  const writtenDraftRef = useRef<string | null>(null);
+  writtenDraftRef.current ??= draftSignature(storageKeyPrefix, conversationId, initialDraft.text, initialDraft.refs);
   const [agentMentions, setAgentMentions] = useState<AgentMention[]>([]);
   const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
   const [transferredAgent, setTransferredAgent] = useState<TransferredAgent | null>(null);
@@ -1481,7 +1501,7 @@ export function useChat({
    * Handle file selection: validate limits, add files to state immediately,
    * then upload them in the background. Each file chip shows its upload status.
    */
-  const handleFileAdd = (fileList: FileList | null) => {
+  const handleFileAdd = (fileList: ArrayLike<File> | null) => {
     if (!fileList || fileList.length === 0 || !getUploadUrl()) return;
 
     // Build the list of accepted files outside the state updater (pure logic)
@@ -1555,7 +1575,7 @@ export function useChat({
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    const { files } = e.clipboardData;
+    const files = clipboardFiles(e.clipboardData);
     if (files.length > 0) {
       e.preventDefault();
       handleFileAdd(files);
@@ -2946,6 +2966,7 @@ export function useChat({
       // `resetChat` blanked the composer; bring back this conversation's
       // own unsent draft, if any, with its references.
       const draft = loadDraftState(storageKeyPrefix, id);
+      writtenDraftRef.current = draftSignature(storageKeyPrefix, id, draft.text, draft.refs);
       setInputValue(draft.text);
       setConversationRefs(draft.refs);
     }
@@ -3401,7 +3422,7 @@ export function useChat({
   // also clears the draft — no explicit cleanup needed at the send sites.
   useEffect(() => {
     const id = window.setTimeout(() => {
-      persistDraft(storageKeyPrefix, conversationId, inputValue, conversationRefs);
+      persistDraft(writtenDraftRef, storageKeyPrefix, conversationId, inputValue, conversationRefs);
     }, DRAFT_PERSIST_DELAY_MS);
     return () => window.clearTimeout(id);
   }, [inputValue, conversationId, conversationRefs, storageKeyPrefix]);
@@ -3427,18 +3448,29 @@ export function useChat({
     [],
   );
 
-  // Flush the pending draft on unmount. Hosts unmount the panel the instant it
-  // is closed, which would otherwise drop anything typed inside the debounce
-  // window — exactly the keystrokes the draft exists to protect.
-  const draftFlushRef = useRef({ conversationId, inputValue, conversationRefs });
-  draftFlushRef.current = { conversationId, inputValue, conversationRefs };
-  useEffect(
-    () => () => {
-      const { conversationId: id, inputValue: value, conversationRefs: refs } = draftFlushRef.current;
-      persistDraft(storageKeyPrefix, id, value, refs);
-    },
-    [],
-  );
+  // Flush the pending draft on unmount, and when the page goes away or is
+  // hidden. Hosts unmount the panel the instant it is closed, and a reload or a
+  // closed tab runs no unmount at all: either would otherwise drop anything
+  // typed inside the debounce window — exactly the keystrokes the draft exists
+  // to protect.
+  const draftFlushRef = useRef({ storageKeyPrefix, conversationId, inputValue, conversationRefs });
+  draftFlushRef.current = { storageKeyPrefix, conversationId, inputValue, conversationRefs };
+  useEffect(() => {
+    const flush = () => {
+      const { storageKeyPrefix: prefix, conversationId: id, inputValue: value, conversationRefs: refs } = draftFlushRef.current;
+      persistDraft(writtenDraftRef, prefix, id, value, refs);
+    };
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onHidden);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onHidden);
+      flush();
+    };
+  }, []);
 
   /**
    * Recover a prompt the page never saw, or lost to a reload.

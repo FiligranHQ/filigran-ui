@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
 import { speakableText } from '../utils/speech';
+import { dropsAsText } from '../utils/drop';
 import { optInRoute } from '../utils/routes';
 import { themeVariables } from '../utils/theme';
 import { createTranslate } from '../i18n';
@@ -737,6 +738,20 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         },
       }
     : {};
+  // A file dropped anywhere else on the panel would open in the tab, leaving
+  // the chat. The thread's drop zone, when there is one, has taken it already.
+  // The drop effect is left alone, so a host's drop zone around the panel
+  // still gets the drop; a link or picture dragged with its address goes into
+  // a text field as text.
+  const leavesFileDrop = (e: React.DragEvent) => !carriesFiles(e) || e.isDefaultPrevented() || dropsAsText(e.dataTransfer.types, e.target);
+  const noDropHandlers = {
+    onDragOver: (e: React.DragEvent) => {
+      if (!leavesFileDrop(e)) e.preventDefault();
+    },
+    onDrop: (e: React.DragEvent) => {
+      if (!leavesFileDrop(e)) e.preventDefault();
+    },
+  };
 
   // What failed in the list - a conversation or workspace action - said
   // under it (or the header), then gone: it is about the action just tried.
@@ -1428,7 +1443,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   };
 
   return (
-    <div ref={rootRef} className={containerClasses} style={containerStyle} data-testid="filigran-chat-panel">
+    <div ref={rootRef} className={containerClasses} style={containerStyle} data-testid="filigran-chat-panel" {...noDropHandlers}>
       {mode === 'sidebar' && resizable && (
         <div onMouseDown={handleResizeStart} className="absolute top-0 -left-1 bottom-0 w-2 cursor-col-resize z-10 group">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 bottom-0 w-0.5 rounded-sm bg-[var(--chat-accent)] opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100" />

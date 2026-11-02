@@ -3,6 +3,7 @@ import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
 import { channelName, conversationMatches } from '../utils/conversationList';
+import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
@@ -292,7 +293,7 @@ export const ConversationSidebar = ({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Escape') setQuery('');
+                if (e.key === 'Escape' && !isComposing(e)) setQuery('');
               }}
               placeholder={t('Search conversations...')}
               aria-label={t('Search conversations...')}
@@ -499,6 +500,7 @@ const NameField = ({
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
         e.stopPropagation();
+        if (isComposing(e)) return;
         if (e.key === 'Enter') commit();
         if (e.key === 'Escape') {
           settled.current = true;
@@ -732,6 +734,7 @@ const ConversationRow = ({
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               e.stopPropagation();
+              if (isComposing(e)) return;
               if (e.key === 'Enter') onCommitRename();
               if (e.key === 'Escape') onCancelRename();
             }}

@@ -64,6 +64,31 @@ This file starts at 3.10.0; earlier releases are on the
   until the turn ended and the list was read again.
 - A read-only panel showed the welcome screen's "Suggestions" heading over no
   suggestions: nothing can be sent there, so the section is left out.
+- A paste from an office suite or a spreadsheet (Excel, Word, PowerPoint,
+  OneNote, LibreOffice, Numbers) puts the copied text in the composer. These
+  apps copy a selection as its text, its HTML and a picture of it, and the
+  panel attached the picture and dropped the text. A paste whose files are all
+  images, with plain text and an HTML fragment that shows text, attaches
+  nothing and reaches the text box; a screenshot, a browser's "Copy image" and
+  a file copied in a file manager still attach. A picture copied together with
+  text around it (an image and its caption in Word or Outlook) is read the same
+  way: the text is pasted, the picture is not attached; copy the picture alone
+  to attach it.
+- Enter while an input method composes a word (Chinese, Japanese, Korean)
+  confirms the word instead of sending the half-typed message, renaming a
+  conversation or naming a workspace, and Escape then cancels the composition
+  without stopping the turn, closing the field or clearing a search.
+- A file dropped on the panel where it attaches none (a `readOnly` panel, one
+  with `disableFileManagement` or no upload route, or the header and the
+  conversation list of any panel) leaves the page where it is; the browser
+  opened it in the tab, away from the chat. A host's own drop zone around the
+  panel still receives the drop, and a picture or link dragged from a page
+  still goes into a text field as its address.
+- The composer's draft is written when the page goes away (`pagehide`) or is
+  hidden, so a reload right after typing keeps it; a keystroke within the
+  300 ms the draft waits before being written was lost. Two panels on one
+  conversation write only the draft typed in them, so neither erases the
+  other's.
 - A search box hidden as the list shrinks below its threshold clears its
   query: the list stayed filtered by a search the user could neither see nor
   clear.
