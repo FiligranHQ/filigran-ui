@@ -807,7 +807,8 @@ const MessageRow = memo(
           </div>
         )}
 
-        {showActions && (
+        {/* A reply cut short keeps its warning even with no text to act on. */}
+        {(showActions || (isAssistant && !isStreaming && cutShort)) && (
           <div className="mt-0.5 flex flex-wrap items-center gap-0.5 chat-text-muted-400/40">
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
             {hasReasoningDetails && (
@@ -826,21 +827,25 @@ const MessageRow = memo(
                 </button>
               </Tooltip>
             )}
-            <MessageCopyButton text={plainText} label={t('Copy response')} t={t} />
-            {feedbackMode && (
-              <MessageFeedbackButtons
-                value={shown.value}
-                locked={shown.locked}
-                pending={!!feedback?.pending}
-                onChange={(next) => onRate(msg, next, feedback)}
-                downRef={downRef}
-                t={t}
-              />
+            {showActions && (
+              <>
+                <MessageCopyButton text={plainText} label={t('Copy response')} t={t} />
+                {feedbackMode && (
+                  <MessageFeedbackButtons
+                    value={shown.value}
+                    locked={shown.locked}
+                    pending={!!feedback?.pending}
+                    onChange={(next) => onRate(msg, next, feedback)}
+                    downRef={downRef}
+                    t={t}
+                  />
+                )}
+                {speechDocuments && hasSpeakableWords(speechDocuments) && (
+                  <ReadAloudButton speaking={isSpeaking} onToggle={() => onToggleSpeech(speechKey, speechDocuments)} t={t} />
+                )}
+                {messageFooterActions?.(msg, { streaming: isStreaming })}
+              </>
             )}
-            {speechDocuments && hasSpeakableWords(speechDocuments) && (
-              <ReadAloudButton speaking={isSpeaking} onToggle={() => onToggleSpeech(speechKey, speechDocuments)} t={t} />
-            )}
-            {messageFooterActions?.(msg, { streaming: isStreaming })}
           </div>
         )}
         {showActions && feedback?.commentOpen && (

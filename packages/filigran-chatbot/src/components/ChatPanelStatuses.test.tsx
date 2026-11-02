@@ -111,6 +111,20 @@ test('while mentioned agents answer, a send is held for the next turn, not steer
   await finish(stream);
 });
 
+test('a replay of the turn keeps its mention phase: a send meanwhile is still held', async () => {
+  const { stream, send, ref, requests } = await running({ holdSendsDuringTurn: true });
+  const steers = () => requests.filter((r) => r.url === '/api/chat/messages/steer');
+  await send(status('mention_answering', { agent_id: 'a2', agent_name: 'Analyst', position: 1, total: 2 }));
+  // Re-attached, the turn is replayed from its start, its mention frame still to come.
+  await send({ type: 'thinking', resumed: true, elapsed_s: 5 });
+  await act(async () => {
+    void ref.current!.send('and the infrastructure');
+    await settle();
+  });
+  assert.equal(steers().length, 0, 'not steered');
+  await finish(stream);
+});
+
 test("the host's tool names replace the raw ones in the status line", async () => {
   const { stream, send } = await running({ toolLabels: { search_iocs: 'Searching indicators' } });
   await send(status('tool_start', { tools: ['search_iocs', 'read_report'] }));
@@ -159,6 +173,13 @@ test('the reasoning details name the tools as the host does', async () => {
   await openReasoning();
   const dialog = document.querySelector('[role="dialog"]')?.textContent ?? '';
   assert.ok(dialog.includes('Searching indicators') && dialog.includes('read report'), dialog);
+});
+
+test('an interrupted reply cut before any text keeps its warning', async () => {
+  fakeBackend([agentsRoute, restoreRoute([{ id: 'm1', role: 'assistant', content: '', interrupted: true }])]);
+  await render({ conversationId: 'c1' });
+  assert.equal(await openReasoning(), 'Reasoning details — interrupted by a server restart');
+  assert.equal(document.querySelector('button[aria-label="Copy response"]'), null, 'nothing to copy');
 });
 
 test('a stored reply interrupted by a server restart is marked, and its details say why', async () => {

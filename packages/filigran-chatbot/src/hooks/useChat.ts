@@ -922,6 +922,14 @@ export function useChat({
     mentionsAnsweringRef.current = answering;
     setMentionsAnswering(answering);
   };
+  // The mention phase lasts until the turn ends: a replay of the turn, or its
+  // next stream after a handover, is the same turn and still answered by them.
+  useEffect(() => {
+    if (isLoading) return;
+    setAnsweringAgentName(undefined);
+    mentionsAnsweringRef.current = false;
+    setMentionsAnswering(false);
+  }, [isLoading]);
   const shownAgentStatus = useMemo(
     () => (agentStatus && answeringAgentName ? { ...agentStatus, answeringAgentName } : agentStatus),
     [agentStatus, answeringAgentName],
@@ -1834,7 +1842,6 @@ export function useChat({
     // Whether the agent's tool calls run, where its consults do: once it has
     // moved on, a consult frame still arriving is past and is not shown.
     let consultsOpen = true;
-    showMentionAnswering(undefined, false);
 
     const deltas = createStreamDeltas((textChanged, thinking) => {
       if (textChanged) {
@@ -1894,9 +1901,7 @@ export function useChat({
         // past its consults.
         consultsOpen = parsed.resumed === true || parsed.status === 'tool_start';
       }
-      // A replay sends its mentions' frames again.
-      if (parsed.resumed) showMentionAnswering(undefined, false);
-      else if (parsed.status === 'mention_answering') showMentionAnswering(parsed.agentName, true);
+      if (parsed.status === 'mention_answering') showMentionAnswering(parsed.agentName, true);
       if (parsed.resumed) {
         // A re-attached turn is replayed from its start: what it had written
         // so far arrives again, whole, its consults included.
