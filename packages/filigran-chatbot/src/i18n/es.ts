@@ -79,6 +79,7 @@ export const es: Catalog = {
   'Drop a conversation here, or start one with {icon}.': 'Suelte aquí una conversación o inicie una con {icon}.',
   'Drop files to attach them': 'Suelte los archivos para adjuntarlos',
   'End voice call': 'Finalizar la llamada de voz',
+  'Enter to send · Shift+Enter for new line': 'Pulse Intro para enviar · Mayús+Intro para una nueva línea',
   'Enter to send now · Esc to stop': 'Pulse Intro para enviar ahora · Esc para detener',
   'Enter to send when the answer ends · Esc to stop': 'Pulse Intro para enviar cuando termine la respuesta · Esc para detener',
   'Every conversation is in a workspace.': 'Todas las conversaciones están en un espacio de trabajo.',

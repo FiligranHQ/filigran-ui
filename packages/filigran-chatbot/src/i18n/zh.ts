@@ -78,6 +78,7 @@ export const zh: Catalog = {
   'Drop a conversation here, or start one with {icon}.': '将对话拖放到此处，或使用 {icon} 开始新对话。',
   'Drop files to attach them': '拖放文件以附加',
   'End voice call': '结束语音通话',
+  'Enter to send · Shift+Enter for new line': '按 Enter 发送 · 按 Shift+Enter 换行',
   'Enter to send now · Esc to stop': '按 Enter 立即发送 · 按 Esc 停止',
   'Enter to send when the answer ends · Esc to stop': '按 Enter 在回答结束后发送 · 按 Esc 停止',
   'Every conversation is in a workspace.': '所有对话都已在工作区中。',

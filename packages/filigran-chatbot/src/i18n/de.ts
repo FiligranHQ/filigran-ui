@@ -80,6 +80,7 @@ export const de: Catalog = {
   'Drop a conversation here, or start one with {icon}.': 'Legen Sie hier eine Unterhaltung ab oder beginnen Sie eine mit {icon}.',
   'Drop files to attach them': 'Dateien zum Anhängen hier ablegen',
   'End voice call': 'Sprachanruf beenden',
+  'Enter to send · Shift+Enter for new line': 'Eingabetaste zum Senden · Umschalt+Eingabetaste für eine neue Zeile',
   'Enter to send now · Esc to stop': 'Eingabetaste zum sofortigen Senden · Esc zum Anhalten',
   'Enter to send when the answer ends · Esc to stop': 'Eingabetaste zum Senden nach der Antwort · Esc zum Anhalten',
   'Every conversation is in a workspace.': 'Jede Unterhaltung ist in einem Arbeitsbereich.',

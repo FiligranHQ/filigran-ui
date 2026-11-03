@@ -455,6 +455,42 @@ test('older messages load as the reader nears the top, never while the view foll
   assert.ok(text().includes('the first question'));
 });
 
+test('older messages loaded on scroll land above the reader, who stays on what they were reading', async (t) => {
+  const view = layOutTranscript(t);
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  fakeBackend([
+    agentsRoute,
+    restoreRoute(
+      [
+        { id: 'm2', role: 'user', content: 'the question' },
+        { id: 'm3', role: 'assistant', content: 'newest answer' },
+      ],
+      { has_more: true },
+    ),
+    async (req) => {
+      if (!req.url.startsWith('/api/chat/sessions/c1/messages?')) return undefined;
+      await held;
+      return json({ messages: [{ id: 'm1', role: 'user', content: 'the first question' }], has_more: false });
+    },
+  ]);
+  await render({ conversationId: 'c1', apiEndpoints: { messagesPage: '/chat/sessions' } });
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  view.scrolls.length = 0;
+  // The 600 px the older message adds above the thread.
+  view.setHeight(2600);
+  await act(async () => {
+    release();
+    await settle();
+  });
+  assert.ok(text().includes('the first question'));
+  const transcript = container.querySelector('[data-testid="filigran-chat-transcript"]') as HTMLElement;
+  assert.equal(transcript.scrollTop, 700, 'as far below the new top as the reader was below the old one');
+  assert.deepEqual(view.scrolls, [], 'nor sent to the end');
+  assert.ok(button('Scroll to bottom'), 'still not following');
+});
+
 test('older messages are asked for at most once a cooldown', async (t) => {
   const view = layOutTranscript(t);
   const requests = fakeBackend([

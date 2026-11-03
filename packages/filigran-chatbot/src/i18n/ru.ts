@@ -79,6 +79,7 @@ export const ru: Catalog = {
   'Drop a conversation here, or start one with {icon}.': 'Перетащите сюда диалог или начните новый с помощью {icon}.',
   'Drop files to attach them': 'Перетащите файлы, чтобы прикрепить их',
   'End voice call': 'Завершить голосовой вызов',
+  'Enter to send · Shift+Enter for new line': 'Enter — отправить · Shift+Enter — новая строка',
   'Enter to send now · Esc to stop': 'Enter — отправить сейчас · Esc — остановить',
   'Enter to send when the answer ends · Esc to stop': 'Enter — отправить после ответа · Esc — остановить',
   'Every conversation is in a workspace.': 'Все диалоги находятся в рабочих пространствах.',
