@@ -170,9 +170,9 @@ test("a picture's lightbox is named after the picture, keeps Tab on its own cont
       { id: 'm1', role: 'user', content: 'look', attachments: [{ file_id: 'up1', filename: 'shot.png', content_type: 'image/png' }] },
       { id: 'm2', role: 'assistant', content: 'Seen.' },
     ]),
-    (req) => (req.url === '/api/chat/files/up1/download' ? new Response('png', { status: 200 }) : undefined),
+    (req) => (req.url === '/api/chat/files/up1/download' ? new Response(new Blob(['png'], { type: 'image/png' })) : undefined),
   ]);
-  await render({ conversationId: 'c1' });
+  await render({ conversationId: 'c1', requestHeaders: { Authorization: 'Bearer a' } });
   const picture = container.querySelector('img[alt="shot.png"]');
   assert.ok(picture, `the uploaded picture is shown: ${text()}`);
   const expand = picture.parentElement?.querySelector('button');
