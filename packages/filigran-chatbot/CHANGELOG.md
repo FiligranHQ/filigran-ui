@@ -19,10 +19,14 @@ This file starts at 3.10.0; earlier releases are on the
   Traditional Chinese tags (`zh-TW`, `zh-HK`, `zh-Hant`) keep falling back.
 - An agent the backend marks `disable_chat: true` (`XtmAgent.disableChat`) is
   said `Not recommended for chat` in the agent picker, and the composer warns
-  while it is the agent written to. It stays selectable.
+  while it is the conversation's agent as the header names it. It stays
+  selectable.
 - The header names the channel a conversation was started in under the
   agent's name (`Agent · {channel}`), as its row does, when the host draws no
-  `headerSubtitle`; `channelLabel` names it there too.
+  `headerSubtitle`; `channelLabel` names it there too. The restore's
+  `channel` names it before the list is read.
+- The composer's warning also covers an agent the draft `@`-mentions that is
+  not meant for chat, until the mention is removed.
 - With workspaces, the list's `Not in a workspace` group has a `New
   conversation outside a workspace` button, beside each workspace's own.
 

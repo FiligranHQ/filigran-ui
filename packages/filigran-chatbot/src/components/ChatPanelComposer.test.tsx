@@ -108,6 +108,38 @@ test('Enter while an input method composes leaves the mention menu alone', async
   assert.equal(textarea().value, '@', 'no agent is inserted into the unfinished word');
 });
 
+test('a draft mentioning an agent not meant for chat warns of it until the mention is removed', async () => {
+  fakeBackend([
+    (req) =>
+      req.url === '/api/chat/agents'
+        ? json([
+            { id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null },
+            { id: 'a2', name: 'Reporter', slug: 'reporter', icon: null, description: null, disable_chat: true },
+          ])
+        : undefined,
+  ]);
+  await render({ agentMentions: true });
+  // A boolean: a failed assertion on a DOM node takes minutes to print.
+  const warning = () => !!container.querySelector('[data-testid="filigran-chat-agent-not-for-chat"]');
+  const type = async (value: string) =>
+    act(async () => {
+      textarea().focus();
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(textarea()), 'value')?.set?.call(textarea(), value);
+      textarea().setSelectionRange(value.length, value.length);
+      textarea().dispatchEvent(new window.Event('input', { bubbles: true }));
+      textarea().dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      await settle();
+    });
+  await type('@Rep');
+  const option = [...container.querySelectorAll('[role="listbox"] [role="option"]')].find((o) => o.textContent?.includes('Reporter'));
+  assert.ok(option, 'the mention menu offers Reporter');
+  await fire(option, new window.MouseEvent('mousedown', { bubbles: true, cancelable: true }) as unknown as Event);
+  assert.ok(textarea().value.startsWith('@'), textarea().value);
+  assert.ok(warning(), 'the mentioned agent is warned of, the conversation being with Hunter');
+  await type('no mention left');
+  assert.equal(warning(), false, 'the mention removed, the warning goes');
+});
+
 /** Drag *types* over *target* (`dragover`, then `drop`): whether each was cancelled, and the drop effect asked for. */
 async function dragOnto(target: Element, types: string[]) {
   const dataTransfer = { types, files: [] as File[], dropEffect: 'move' };

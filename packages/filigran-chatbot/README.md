@@ -513,6 +513,11 @@ without one shows no time. `feedback` is the caller's own rating of an
 assistant answer: the thumbs are then locked on it ("Feedback already
 submitted").
 
+The response may also carry the conversation's `channel` (`slack`, `teams`,
+…), as the list does: the header names it (`Agent · {channel}`) without
+reading the list, which floating and sidebar modes read only once the history
+menu opens.
+
 The response **should echo a `conversation_id`**. When the stored
 `conversation_id` no longer exists (e.g. the platform was reset but the
 browser kept an old id in `localStorage`), the backend is expected to

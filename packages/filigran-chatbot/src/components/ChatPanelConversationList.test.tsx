@@ -493,8 +493,9 @@ test('an agent not meant for chat is said so in the picker and warned of in the 
         : undefined,
   ]);
   await render({});
-  const warning = () => container.querySelector('[data-testid="filigran-chat-agent-not-for-chat"]');
-  assert.equal(warning(), null, 'the agent picked first is meant for chat');
+  // A boolean: a failed assertion on a DOM node takes minutes to print.
+  const warning = () => !!container.querySelector('[data-testid="filigran-chat-agent-not-for-chat"]');
+  assert.equal(warning(), false, 'the agent picked first is meant for chat');
   await click(buttons().find((b) => b.textContent?.includes('Hunter')));
   const pickerRow = (name: string) =>
     buttons()
@@ -508,10 +509,42 @@ test('an agent not meant for chat is said so in the picker and warned of in the 
     'selected',
   );
   assert.equal(
-    warning()?.textContent,
+    container.querySelector('[data-testid="filigran-chat-agent-not-for-chat"]')?.textContent,
     'This agent is designed for assignments, not direct chat. It may not respond well to conversational interactions.',
   );
   await click(buttons().find((b) => b.textContent === 'Reporter'));
   await click(pickerRow('Scout'));
-  assert.equal(warning(), null);
+  assert.equal(warning(), false);
+});
+
+test('the header names the channel a restore reports, before the list is read', async () => {
+  const requests = fakeBackend([
+    agentsRoute,
+    listRoute([]),
+    (req) =>
+      req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', channel: 'teams', messages: [] }) : undefined,
+  ]);
+  await render({ mode: 'floating', conversationId: 'c1' });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'GET').length, 0, 'the list is not read');
+  assert.equal(container.querySelector('[data-testid="filigran-chat-header-subtitle"]')?.textContent, 'Agent · Teams');
+});
+
+test('a restored conversation whose agent is not in the list warns of no agent, never of the one picked', async () => {
+  fakeBackend([
+    (req) =>
+      req.url === '/api/chat/agents'
+        ? json([{ id: 'a2', name: 'Reporter', slug: 'reporter', icon: null, description: null, disable_chat: true }])
+        : undefined,
+    listRoute([{ conversation_id: 'c1', title: 'Old hunt' }]),
+    (req) =>
+      req.url === '/api/chat/sessions' && req.method === 'POST'
+        ? json({ conversation_id: 'c1', agent_name: 'Retired Bot', messages: [] })
+        : undefined,
+  ]);
+  // A boolean: a failed assertion on a DOM node takes minutes to print.
+  const warning = () => !!container.querySelector('[data-testid="filigran-chat-agent-not-for-chat"]');
+  await render({});
+  assert.ok(warning(), 'the picked agent is not meant for chat');
+  await render({ conversationId: 'c1' });
+  assert.equal(warning(), false, "the conversation's own agent is unknown");
 });
