@@ -571,7 +571,8 @@ Selecting a conversation restores it through the existing
 `POST /chat/sessions` contract above. The endpoint is fetched lazily when the
 history menu opens; a backend that doesn't implement it yet (404/405) simply
 yields an empty list, so the menu shows its empty state instead of breaking
-the chat. Set `apiEndpoints.history` to `null` to hide the history menu
+the chat. Any other failed read shows "Could not load your conversations."
+with a Retry, and keeps the conversations a previous read gave. Set `apiEndpoints.history` to `null` to hide the history menu
 entirely, or point it at a dedicated path if your proxy can't route `GET` on
 the sessions path.
 
