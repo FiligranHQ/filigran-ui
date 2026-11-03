@@ -8,6 +8,18 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.19.2 — unreleased
+
+### Fixed
+
+- An image's lightbox is named after the image (its alt text, or the file's
+  name for an uploaded picture) and keeps `Image preview` for one with none; it
+  read `Image preview` for every picture.
+- Tab and Shift+Tab stay on the lightbox's own controls (Download when offered,
+  Close) while it is open; they reached the page under it.
+- An image's Expand button is visible while it has keyboard focus, so the focus
+  given back after the lightbox closes can be seen. It showed on hover only.
+
 ## 3.19.1 — unreleased
 
 ### Added

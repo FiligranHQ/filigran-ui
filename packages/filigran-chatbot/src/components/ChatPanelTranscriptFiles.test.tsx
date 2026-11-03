@@ -163,6 +163,36 @@ test("a user's uploaded picture is downloaded from its lightbox", async () => {
   assert.equal(requests.filter((r) => r.url === '/api/chat/files/up1/download').length, 1);
 });
 
+test("a picture's lightbox is named after the picture, keeps Tab on its own controls, and its Expand button shows on focus", async () => {
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'look', attachments: [{ file_id: 'up1', filename: 'shot.png', content_type: 'image/png' }] },
+      { id: 'm2', role: 'assistant', content: 'Seen.' },
+    ]),
+    (req) => (req.url === '/api/chat/files/up1/download' ? new Response('png', { status: 200 }) : undefined),
+  ]);
+  await render({ conversationId: 'c1' });
+  assert.ok(button('Expand image')!.classList.contains('focus-visible:opacity-100'), 'visible once focused');
+  await click(container.querySelector('img[alt="shot.png"]')!);
+  const dialog = container.querySelector('[role="dialog"]')!;
+  assert.equal(dialog.getAttribute('aria-label'), 'shot.png', 'named after the picture');
+  const tab = (shiftKey: boolean) =>
+    act(async () => {
+      const event = new window.KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+      document.dispatchEvent(event);
+      await settle();
+      assert.ok(event.defaultPrevented, 'the page under the scrim is not reached');
+    });
+  const download = dialog.querySelector('button[aria-label="Download"]');
+  const close = dialog.querySelector('button[aria-label="Close"]');
+  assert.equal(document.activeElement, close, 'focus starts on Close');
+  await tab(false);
+  assert.equal(document.activeElement, download, 'Tab from the last control goes to the first');
+  await tab(true);
+  assert.equal(document.activeElement, close, 'Shift+Tab from the first goes to the last');
+});
+
 test('new request headers fetch a picture again with the picture still shown', async () => {
   let release!: () => void;
   const held = new Promise<void>((resolve) => (release = resolve));
