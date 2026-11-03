@@ -448,6 +448,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     historyEnabled,
     conversations,
     conversationsLoading,
+    conversationsFailed,
     refreshConversations,
     deleteConversation,
     renameConversation,
@@ -1518,6 +1519,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         onHistoryMenuClose={() => setHistoryMenuOpen(false)}
         conversations={conversations}
         conversationsLoading={conversationsLoading}
+        conversationsFailed={conversationsFailed}
+        onRetryConversations={() => void refreshConversations()}
         activeConversationId={conversationId}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={(id) => void handleDeleteConversation(id)}
@@ -1542,6 +1545,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           <ConversationSidebar
             conversations={conversations}
             loading={conversationsLoading}
+            failed={conversationsFailed}
+            onRetry={() => void refreshConversations()}
             activeConversationId={conversationId}
             collapsed={sidebarCollapsed}
             onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}

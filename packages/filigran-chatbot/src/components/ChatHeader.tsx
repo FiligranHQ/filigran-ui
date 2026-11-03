@@ -17,6 +17,7 @@ import {
   UserPlusIcon,
 } from './icons';
 import { ClearAllConversations } from './ClearAllConversations';
+import { ConversationListFailed } from './ConversationListFailed';
 import { Dropdown } from './Dropdown';
 import { Spinner } from './Spinner';
 import { Tooltip } from './Tooltip';
@@ -49,6 +50,10 @@ interface ChatHeaderProps {
   onHistoryMenuClose?: () => void;
   conversations?: ChatConversationSummary[];
   conversationsLoading?: boolean;
+  /** The last read of the list failed: with no conversations, the menu says so instead of being empty. */
+  conversationsFailed?: boolean;
+  /** Reads the list again, offered when it could not be read. */
+  onRetryConversations?: () => void;
   activeConversationId?: string | null;
   onSelectConversation?: (id: string) => void;
   onDeleteConversation?: (id: string) => void;
@@ -161,6 +166,8 @@ export const ChatHeader = ({
   onHistoryMenuClose,
   conversations = [],
   conversationsLoading = false,
+  conversationsFailed = false,
+  onRetryConversations,
   activeConversationId = null,
   onSelectConversation,
   onDeleteConversation,
@@ -399,9 +406,13 @@ export const ChatHeader = ({
                   <Spinner size={16} />
                 </div>
               )}
-              {!conversationsLoading && conversations.length === 0 && (
-                <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('No conversations yet')}</div>
-              )}
+              {!conversationsLoading &&
+                conversations.length === 0 &&
+                (conversationsFailed ? (
+                  <ConversationListFailed onRetry={() => onRetryConversations?.()} className="px-4 py-3" t={t} />
+                ) : (
+                  <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('No conversations yet')}</div>
+                ))}
               {conversations.map((conv) => {
                 const isActive = conv.conversationId === activeConversationId;
                 const when = timeAgo(conv.updatedAt, t);
