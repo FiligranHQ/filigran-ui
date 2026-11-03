@@ -10,7 +10,8 @@ import type {
   ChatSendOutcome,
   Translate,
 } from '../types';
-import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
+import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds, translate } from '../utils';
+import { channelName } from '../utils/conversationList';
 import { speakableText } from '../utils/speech';
 import { dropsAsText } from '../utils/drop';
 import { optInRoute } from '../utils/routes';
@@ -1349,6 +1350,10 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     conversation: (conversationId && conversations.find((c) => c.conversationId === conversationId)) || null,
     agent: headerAgent,
   };
+  // The channel the conversation on screen was started in, as its row names it.
+  const headerChannel = channelName(headerContext.conversation?.channel, channelLabel);
+  // The agent the composer writes to, when the host marks it not meant for chat.
+  const addressesChatlessAgent = !!addressedAgentId && !!agents.find((a) => a.id === addressedAgentId)?.disableChat;
   const voice = useVoiceCall({
     send: (text, hooks) =>
       handleSendMessageRef.current({ text, source: 'voice', onSent: hooks.onAccepted, onNotSent: hooks.onNotSent, onSteered: hooks.onSteered }),
@@ -1504,7 +1509,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         onClearAll={clearConversations ? () => void handleClearAll() : undefined}
         clearAllAction={clearAllAction}
         title={typeof headerTitle === 'function' ? askHost(headerTitle, headerContext) : headerTitle}
-        subtitle={typeof headerSubtitle === 'function' ? askHost(headerSubtitle, headerContext) : headerSubtitle}
+        subtitle={
+          typeof headerSubtitle === 'function'
+            ? askHost(headerSubtitle, headerContext)
+            : headerSubtitle === undefined
+              ? headerChannel && translate(t, 'Agent · {channel}', { channel: headerChannel })
+              : headerSubtitle
+        }
         agentLink={agentLink}
         t={t}
       />
@@ -1673,6 +1684,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               heldMessage={heldMessage}
               notice={notice}
               fileNotice={fileNotice}
+              agentNotForChat={addressesChatlessAgent}
               onCancelHeld={cancelHeldMessage}
               agentMentions={agentMentionsEnabled && agents.length > 0 ? { agents, mentions: agentMentions, onPick: addAgentMention } : undefined}
               inputValue={inputValue}

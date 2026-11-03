@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
-import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
+import { AlertTriangleIcon, AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
 import { useMentionMenu } from '../hooks/useMentionMenu';
 import { useDictation } from '../hooks/useDictation';
 import { referencedConversations } from '../utils/conversationRefs';
@@ -26,6 +26,8 @@ interface ChatInputProps {
   notice?: string | null;
   /** Which files the last attach refused, and why. */
   fileNotice?: string | null;
+  /** The agent written to is meant for assignments rather than chat (`XtmAgent.disableChat`). */
+  agentNotForChat?: boolean;
   onCancelHeld?: () => void;
   inputValue: string;
   onInputChange: (value: string) => void;
@@ -106,6 +108,7 @@ export const ChatInput = ({
   heldMessage,
   notice,
   fileNotice,
+  agentNotForChat = false,
   onCancelHeld,
   inputValue,
   onInputChange,
@@ -276,6 +279,15 @@ export const ChatInput = ({
       {fileNotice && (
         <div role="alert" data-testid="filigran-chat-file-notice" className="mb-2 text-[0.75rem] text-red-500 dark:text-red-400">
           {fileNotice}
+        </div>
+      )}
+      {agentNotForChat && (
+        <div
+          data-testid="filigran-chat-agent-not-for-chat"
+          className="mb-2 flex items-start gap-1.5 text-[0.7rem] text-amber-600 dark:text-amber-400"
+        >
+          <AlertTriangleIcon size={12} className="mt-0.5 shrink-0" />
+          <span>{t('This agent is designed for assignments, not direct chat. It may not respond well to conversational interactions.')}</span>
         </div>
       )}
       {heldMessage && (

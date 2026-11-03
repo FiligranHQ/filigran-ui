@@ -361,7 +361,14 @@ export const ConversationSidebar = ({
             <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
               <div className="flex items-center justify-between px-2 pb-1 pt-3">
                 <span className={sectionLabel}>{t('Not in a workspace')}</span>
-                <span className="text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.unfiled.length}</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.unfiled.length}</span>
+                  <Tooltip title={t('New conversation outside a workspace')}>
+                    <button type="button" onClick={() => onNewChat()} aria-label={t('New conversation outside a workspace')} className={iconButton}>
+                      <EditIcon size={13} />
+                    </button>
+                  </Tooltip>
+                </span>
               </div>
               {grouped.unfiled.map(renderRow)}
               {unfiledNote && (

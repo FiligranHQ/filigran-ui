@@ -17,6 +17,14 @@ This file starts at 3.10.0; earlier releases are on the
   the region (`de-de`, `it-it`, `ko-kr`, `ru-ru`, `zh-cn`). Those languages
   showed in English unless the host translated every key through `t`.
   Traditional Chinese tags (`zh-TW`, `zh-HK`, `zh-Hant`) keep falling back.
+- An agent the backend marks `disable_chat: true` (`XtmAgent.disableChat`) is
+  said `Not recommended for chat` in the agent picker, and the composer warns
+  while it is the agent written to. It stays selectable.
+- The header names the channel a conversation was started in under the
+  agent's name (`Agent · {channel}`), as its row does, when the host draws no
+  `headerSubtitle`; `channelLabel` names it there too.
+- With workspaces, the list's `Not in a workspace` group has a `New
+  conversation outside a workspace` button, beside each workspace's own.
 
 ### Fixed
 
