@@ -173,10 +173,12 @@ test("a picture's lightbox is named after the picture, keeps Tab on its own cont
     (req) => (req.url === '/api/chat/files/up1/download' ? new Response('png', { status: 200 }) : undefined),
   ]);
   await render({ conversationId: 'c1' });
-  const expand = container.querySelector('img[alt="shot.png"]')?.parentElement?.querySelector('button');
+  const picture = container.querySelector('img[alt="shot.png"]');
+  assert.ok(picture, `the uploaded picture is shown: ${text()}`);
+  const expand = picture.parentElement?.querySelector('button');
   assert.ok(expand, 'the picture has its Expand button beside it');
-  assert.ok(expand.classList.contains('focus-visible:opacity-100'), 'visible once focused');
-  await click(container.querySelector('img[alt="shot.png"]')!);
+  assert.ok(expand.className.includes('focus-visible:opacity-100'), 'visible once focused');
+  await click(picture);
   const dialog = container.querySelector('[role="dialog"]')!;
   assert.equal(dialog.getAttribute('aria-label'), 'shot.png', 'named after the picture');
   const tab = (shiftKey: boolean) =>
