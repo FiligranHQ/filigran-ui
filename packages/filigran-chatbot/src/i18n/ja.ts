@@ -80,6 +80,7 @@ export const ja: Catalog = {
   'Drop a conversation here, or start one with {icon}.': 'ここに会話をドロップするか、{icon} で新しく開始してください。',
   'Drop files to attach them': 'ファイルをドロップして添付',
   'End voice call': '音声通話を終了',
+  'Enter to send · Shift+Enter for new line': 'Enterキーで送信 · Shift+Enterキーで改行',
   'Enter to send now · Esc to stop': 'Enterキーで今すぐ送信 · Escキーで停止',
   'Enter to send when the answer ends · Esc to stop': 'Enterキーで回答の終了後に送信 · Escキーで停止',
   'Every conversation is in a workspace.': 'すべての会話がワークスペースに含まれています。',
