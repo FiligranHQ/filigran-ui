@@ -58,7 +58,7 @@ import { MarkdownMessage } from './MarkdownMessage';
 import { ReasoningDetailsDialog } from './ReasoningDetailsDialog';
 import { Tooltip } from './Tooltip';
 import { askHost } from '../utils/askHost';
-import { KeepViewContext, WorkingFiles, type WorkingFile } from './WorkingFiles';
+import { KeepViewContext, supersededInReply, WorkingFiles, type WorkingFile } from './WorkingFiles';
 
 /**
  * Windowed thread rendering: only the most recent slice of the thread is
@@ -602,7 +602,13 @@ const MessageRow = memo(
     // stripped) renders.
     const workingFile = (att: ChatAttachment, key: string, card: React.ReactNode): WorkingFile => {
       const isImage = isImageAttachment(att);
-      return { key, card, isImage, imageUrl: isImage ? resolveAttachmentUrl?.(att) : undefined };
+      return {
+        key,
+        card,
+        isImage,
+        imageUrl: isImage ? resolveAttachmentUrl?.(att) : undefined,
+        superseded: supersededInReply(att, msg.attachments ?? []),
+      };
     };
 
     const buildAssistantBlocks = (): React.ReactNode[] => {

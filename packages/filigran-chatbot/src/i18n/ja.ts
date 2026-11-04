@@ -192,6 +192,7 @@ export const ja: Catalog = {
   'Summarize my recent findings': '私の最近の発見を要約してください',
   'Summarized conversation': '会話の要約',
   'Summarizing earlier conversation…': '以前の会話を要約中…',
+  'Superseded': '置き換え済み',
   'Switch to': '切り替え先',
   'Switch to another agent': '別のエージェントに切り替える',
   'Switch view': 'ビューを切り替える',
