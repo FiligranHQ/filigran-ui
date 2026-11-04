@@ -187,6 +187,7 @@ export const it: Catalog = {
   'Summarize my recent findings': 'Riassumi le mie scoperte più recenti',
   'Summarized conversation': 'Conversazione riassunta',
   'Summarizing earlier conversation…': 'Riepilogo della parte precedente della conversazione…',
+  'Superseded': 'Sostituito',
   'Switch to': 'Passa a',
   'Switch to another agent': 'Passa a un altro agente',
   'Switch view': 'Cambia vista',

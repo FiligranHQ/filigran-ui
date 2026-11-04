@@ -186,6 +186,7 @@ export const zh: Catalog = {
   'Summarize my recent findings': '总结我最近的发现',
   'Summarized conversation': '已总结的对话',
   'Summarizing earlier conversation…': '正在总结较早的对话…',
+  'Superseded': '已被替换',
   'Switch to': '切换到',
   'Switch to another agent': '切换到其他智能体',
   'Switch view': '切换视图',

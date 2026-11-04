@@ -187,6 +187,7 @@ export const ru: Catalog = {
   'Summarize my recent findings': 'Подведи итоги моих последних находок',
   'Summarized conversation': 'Краткое изложение диалога',
   'Summarizing earlier conversation…': 'Краткое изложение начала диалога…',
+  'Superseded': 'Заменён',
   'Switch to': 'Переключиться на',
   'Switch to another agent': 'Переключиться на другого агента',
   'Switch view': 'Сменить вид',

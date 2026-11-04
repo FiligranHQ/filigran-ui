@@ -188,6 +188,7 @@ export const de: Catalog = {
   'Summarize my recent findings': 'Fasse meine jüngsten Erkenntnisse zusammen',
   'Summarized conversation': 'Zusammengefasste Unterhaltung',
   'Summarizing earlier conversation…': 'Früherer Teil der Unterhaltung wird zusammengefasst…',
+  'Superseded': 'Ersetzt',
   'Switch to': 'Wechseln zu',
   'Switch to another agent': 'Zu einem anderen Agenten wechseln',
   'Switch view': 'Ansicht wechseln',
