@@ -4,7 +4,7 @@
  * steer held until the turn ends, reading aloud in the backend's voice,
  * jumping to a message, the skeleton of a conversation being read back, and
  * the conversation created before the first message of a turn that outlives
- * its stream.
+ * its stream or can be steered.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -215,6 +215,32 @@ test('a backend whose turns outlive their stream gets the conversation created b
   // Nothing of the turn came yet: the Stop says it awaits the send.
   assert.deepEqual(requests.find((r) => r.url === '/api/chat/messages/cancel')?.body, { conversation_id: 'c-new', awaiting_send: true });
   stream.send({ type: 'cancelled' });
+  await finish(stream);
+});
+
+test('a backend that can be steered gets the conversation created before the first message, so its first turn can be steered', async () => {
+  const stream = sseStream();
+  const requests = fakeBackend([
+    agentsRoute,
+    (req) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c-new', messages: [] }) : undefined),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => (req.url === '/api/chat/messages/steer' ? json({ status: 'queued' }) : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  // The default steer route, and none of a turn that outlives its stream.
+  await render({}, ref);
+  await act(async () => {
+    ref.current!.send('first message');
+    await settle();
+  });
+  const order = requests.filter((r) => r.method === 'POST').map((r) => r.url);
+  assert.deepEqual(order.slice(0, 2), ['/api/chat/sessions', '/api/chat/messages']);
+  await act(async () => {
+    ref.current!.send('and also this');
+    await settle();
+  });
+  assert.equal((requests.find((r) => r.url === '/api/chat/messages/steer')!.body as { conversation_id: string }).conversation_id, 'c-new');
+  stream.send({ type: 'done', content: 'answered', conversation_id: 'c-new', message_id: 'm1' });
   await finish(stream);
 });
 

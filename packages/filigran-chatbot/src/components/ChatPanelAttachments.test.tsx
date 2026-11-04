@@ -202,7 +202,8 @@ test('a send from the composer, and a conversation switched to, focus the field;
   const streams = [sseStream()];
   fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? streams[0].response() : undefined)]);
   const ref = createRef<Handle>();
-  await render({}, ref);
+  // No steering: the send would have `c1` created first, and the switch to it be none.
+  await render({ apiEndpoints: { steer: null } }, ref);
   try {
     assert.ok(document.activeElement !== textarea(), 'opening the panel takes no focus');
     await act(async () => {

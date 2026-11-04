@@ -2496,10 +2496,11 @@ export function useChat({
       // there: the message endpoint would create it in no workspace. Should
       // that fail (the workspace was archived or is no longer shared), the
       // message still goes, in a conversation of no workspace, rather than
-      // being lost. So is one whose turns outlive their stream: Stop,
-      // "Continue now" and steering name the conversation from the first turn.
+      // being lost. So is one whose turns outlive their stream, or that can be
+      // steered: Stop, "Continue now" and a steer name the conversation, and
+      // from the first turn on.
       const turnsOutliveStream = !!(getCancelUrl() || getSkipWaitUrl() || hasEvents);
-      if (!conversationIdRef.current && (pendingWorkspaceRef.current || turnsOutliveStream)) {
+      if (!conversationIdRef.current && (pendingWorkspaceRef.current || turnsOutliveStream || getSteerUrl() !== null)) {
         const generation = sessionGate.generation;
         const created = await ensureConversation();
         // A new chat replaced this one meanwhile: the send went with it, and
