@@ -17,6 +17,14 @@ This file starts at 3.10.0; earlier releases are on the
   actions, as a note between messages (a change of agent, for instance). Each
   answer showed its marker's card inside the answer's frame.
 
+### Changed
+
+- The agent picker follows the conversation on screen: opening a conversation
+  of another agent, or reading back one the host continued with another agent,
+  picks that agent, so a new chat starts with it, and `onAgentChange` is called.
+  An agent picked in the menu meanwhile stays picked. The picker kept the agent
+  last picked in the menu, while the header named the conversation's.
+
 ### Fixed
 
 - `maxTotalSize: Infinity` lifts the cap on the total size of a message's
