@@ -48,6 +48,11 @@ This file starts at 3.10.0; earlier releases are on the
   else is drawn in its place without the message's frame. For messages a host
   folds into one of its own, such as the replies of a turn cut and resumed
   shown as one card.
+- `expandedWorkspaceGroups` and `onExpandedWorkspaceGroupsChange` let a host
+  keep, per user, which workspace groups of the conversation list are open.
+  Given, every other group starts collapsed until the user opens it, and a
+  workspace the user creates from the list opens. Unset, groups start open
+  and the ones the user collapses are remembered per browser, as before.
 
 ### Changed
 

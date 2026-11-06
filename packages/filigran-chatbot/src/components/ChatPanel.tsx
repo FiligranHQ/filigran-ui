@@ -188,6 +188,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     agentMentions: agentMentionsEnabled = false,
     hideConversationList = false,
     initialConversationListCollapsed = false,
+    expandedWorkspaceGroups,
+    onExpandedWorkspaceGroupsChange,
     onBeforeMove: onBeforeMoveProp,
     onConversationActionFailed: onConversationActionFailedProp,
     sidebarSearchThreshold,
@@ -1611,6 +1613,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
                 : undefined
             }
             storageKeyPrefix={storageKeyPrefix}
+            expandedGroups={expandedWorkspaceGroups}
+            onExpandedGroupsChange={onExpandedWorkspaceGroupsChange}
             rowActions={sidebarRowActions}
             headerActions={sidebarHeaderActions}
             sections={sidebarSections}
