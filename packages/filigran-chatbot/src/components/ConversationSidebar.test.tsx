@@ -381,3 +381,48 @@ test('given the groups a user opened, the others start collapsed, a toggle says 
   await act(async () => root.unmount());
   container.remove();
 });
+
+test('the groups a user opened, given once the list has mounted, apply then', async () => {
+  const workspace = (id: string, name: string) => ({ id, name, isOwn: true, isDefault: false, canManage: true });
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const draw = (expandedGroups: string[] | undefined) =>
+    root.render(
+      <ConversationSidebar
+        conversations={[]}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onNewChat={() => undefined}
+        expandedGroups={expandedGroups}
+        workspaces={{
+          list: [workspace('w1', 'Hunts'), workspace('w2', 'Reports')],
+          pendingWorkspaceId: null,
+          onCreate: async () => ({ ok: true }),
+          onRename: async () => ({ ok: true }),
+          onDelete: async () => ({ ok: true }),
+          onMove: async () => undefined,
+          onNewChat: () => undefined,
+        }}
+        t={(key) => key}
+      />,
+    );
+  const header = (name: string) =>
+    [...container.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')].find((b) => b.textContent?.includes(name));
+  await act(async () => {
+    draw(undefined);
+    await settle();
+  });
+  await act(async () => {
+    draw(['w2']);
+    await settle();
+  });
+  assert.equal(header('Hunts')?.getAttribute('aria-expanded'), 'false');
+  assert.equal(header('Reports')?.getAttribute('aria-expanded'), 'true');
+  await act(async () => root.unmount());
+  container.remove();
+});

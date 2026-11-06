@@ -160,6 +160,8 @@ export const ConversationSidebar = ({
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => readCollapsed(collapsedKey));
   // Or, where the host keeps them per user, the groups the user has opened.
   const [openedGroups, setOpenedGroups] = useState<Set<string> | null>(() => (expandedGroups ? new Set(expandedGroups) : null));
+  // A host still reading them when the list mounts gives them once it has them.
+  if (expandedGroups && !openedGroups) setOpenedGroups(new Set(expandedGroups));
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
 
   const startRename = (id: string, current: string) => {

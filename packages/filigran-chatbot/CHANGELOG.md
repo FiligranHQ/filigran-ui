@@ -51,8 +51,9 @@ This file starts at 3.10.0; earlier releases are on the
 - `expandedWorkspaceGroups` and `onExpandedWorkspaceGroupsChange` let a host
   keep, per user, which workspace groups of the conversation list are open.
   Given, every other group starts collapsed until the user opens it, and a
-  workspace the user creates from the list opens. Unset, groups start open
-  and the ones the user collapses are remembered per browser, as before.
+  workspace the user creates from the list opens. A host still reading them
+  passes `undefined` until it has them. Unset, groups start open and the ones
+  the user collapses are remembered per browser, as before.
 
 ### Changed
 
