@@ -162,6 +162,7 @@ interface ChatMessagesProps {
   transformMessageText?: (text: string, message: ChatMessage) => string;
   onArtifactOpen?: (artifact: ChatArtifact) => void;
   renderMessageExtras?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
+  replaceMessage?: ChatPanelProps['replaceMessage'];
   messageFooterActions?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   /** Shown after the last message. */
   transcriptFooter?: React.ReactNode;
@@ -956,6 +957,7 @@ export const ChatMessages = ({
   transformMessageText,
   onArtifactOpen,
   renderMessageExtras,
+  replaceMessage,
   messageFooterActions,
   transcriptFooter,
   onLoadEarlier,
@@ -1273,6 +1275,16 @@ export const ChatMessages = ({
                   onSkipWait={onSkipWait}
                   {...thinking}
                 />
+              </div>
+            );
+          }
+
+          const replaced = replaceMessage?.(msg, { streaming: isStreamingMessage });
+          if (replaced === null) return null;
+          if (replaced !== undefined) {
+            return (
+              <div key={msg.id} data-message-id={msg.serverId ?? msg.id} data-testid="filigran-chat-replaced-message" className="flex w-full">
+                {replaced}
               </div>
             );
           }

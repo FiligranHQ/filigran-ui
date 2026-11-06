@@ -695,6 +695,15 @@ export interface ChatPanelProps {
   welcome?: React.ReactNode;
   /** Rendered under a message's content, before its footer; `context.streaming` while the answer is still coming. */
   renderMessageExtras?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
+  /**
+   * Draws a message in its own way: `undefined` leaves it to the panel, `null`
+   * leaves it out, and anything else is drawn in its place, without the
+   * message's frame (its name, time and actions). For a host that folds several
+   * messages into one of its own (a turn cut and resumed, drawn as one card on
+   * the first of them, the others left out). Asked of every message, streaming
+   * ones included: return `undefined` fast for the others.
+   */
+  replaceMessage?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   /** Controls added to a finished message's footer. */
   messageFooterActions?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   /** Controls added to a conversation's row in the conversation list. */
