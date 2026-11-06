@@ -53,7 +53,18 @@ function parseAgents(data: unknown): XtmAgent[] {
     : Array.isArray((data as Record<string, unknown>)?.agents)
       ? ((data as Record<string, unknown>).agents as unknown[])
       : [];
-  return rawList.filter((raw): raw is XtmAgent => !!raw && typeof raw === 'object' && typeof (raw as XtmAgent).id === 'string').map(withBadges);
+  return rawList
+    .filter((raw): raw is XtmAgent => !!raw && typeof raw === 'object' && typeof (raw as XtmAgent).id === 'string')
+    .map((agent) => withChatFlag(withBadges(agent)));
+}
+
+/** *agent* with `disableChat` set when the backend marks it not meant for chat (`disable_chat: true`), and left off otherwise. */
+function withChatFlag(agent: XtmAgent): XtmAgent {
+  const raw = agent as { disable_chat?: unknown; disableChat?: unknown };
+  const kept: XtmAgent = { ...agent };
+  delete kept.disableChat;
+  if (raw.disable_chat === true || raw.disableChat === true) kept.disableChat = true;
+  return kept;
 }
 
 /** *agent* with its `badges` kept to distinct non-empty strings, and left off when none is. */

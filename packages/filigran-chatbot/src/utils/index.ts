@@ -1,4 +1,4 @@
-import type { ChatArtifact, ChatArtifactKind, Translate } from '../types';
+import type { ChatArtifact, ChatArtifactKind, ChatMarkerRenderer, Translate } from '../types';
 
 export function hexAlpha(hex: string, alpha: number): string {
   const a = Math.round(alpha * 255)
@@ -573,6 +573,18 @@ export function splitAnswerMarkers(content: string, streaming = false, hostKinds
   const tail = streaming ? withoutMarkerHead(rest, grammar) : rest;
   if (tail) parts.push({ type: 'text', value: tail });
   return parts;
+}
+
+/** The host marker *content* is, and nothing else, when its renderer is `standalone`; null otherwise. */
+export function standaloneMarker(
+  content: string,
+  renderers: Readonly<Record<string, ChatMarkerRenderer>> | undefined,
+  hostKinds: readonly string[] = [],
+): { kind: string; args: string } | null {
+  if (!renderers) return null;
+  const parts = splitAnswerMarkers(content, false, hostKinds).filter((part) => part.type !== 'text' || part.value.trim());
+  const [part] = parts;
+  return parts.length === 1 && part.type === 'marker' && renderers[part.kind]?.standalone ? { kind: part.kind, args: part.args } : null;
 }
 
 /**

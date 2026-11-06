@@ -1,9 +1,10 @@
 /**
  * Rendering tests of the conversation list's actions and the header a host
- * shapes - `yarn test`: a move the host confirms, failed actions said, the
- * backend's previews and channels, a conversation written in going first,
- * Clear all's wording, the read-only panel, the header's title, subtitle and
- * agent link, and the agent picker's badges.
+ * shapes - `yarn test`: a move the host confirms, failed actions said, a list
+ * that could not be read, the backend's previews and channels, a conversation
+ * written in going first, Clear all's wording, the read-only panel, the
+ * header's title, subtitle and agent link, a new conversation outside the
+ * workspaces, and the agent picker's badges and agents not meant for chat.
  */
 import { afterEach, beforeEach, mock, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -416,4 +417,211 @@ test("the agent picker shows an agent's badges, each once and strings only, and 
       .pop();
   assert.equal(pickerRow('Hunter')?.textContent, 'HunterCompany');
   assert.equal(pickerRow('Scout')?.textContent, 'Scout');
+});
+
+test("without a subtitle of the host's, the header names the channel a conversation was started in, and nothing for one it does not name", async () => {
+  fakeBackend([
+    agentsRoute,
+    listRoute([
+      { conversation_id: 'c1', title: 'From Slack', channel: 'slack' },
+      { conversation_id: 'c2', title: 'From the web', channel: 'web' },
+      { conversation_id: 'c3', title: 'Bare' },
+    ]),
+    restoreRoute,
+  ]);
+  const subtitle = () => container.querySelector('[data-testid="filigran-chat-header-subtitle"]')?.textContent ?? null;
+  await render({ conversationId: 'c1' });
+  assert.equal(subtitle(), 'Agent · Slack');
+  await render({ conversationId: 'c2' });
+  assert.equal(subtitle(), null, "the panel's own channel");
+  await render({ conversationId: 'c3' });
+  assert.equal(subtitle(), null, 'a backend that sends no channel');
+  await render({ conversationId: 'c1', channelLabel: () => 'Slack DM' });
+  assert.equal(subtitle(), 'Agent · Slack DM', "the host's name for it");
+  await render({ conversationId: 'c1', channelLabel: () => null });
+  assert.equal(subtitle(), null, 'a channel the host hides');
+  await render({ conversationId: 'c1', channelLabel: undefined, headerSubtitle: null });
+  assert.equal(subtitle(), null, "the host's own subtitle, none, wins");
+});
+
+test('the list starts a conversation outside the workspaces, after one was about to start in a workspace', async () => {
+  const stream = sseStream();
+  const requests = fakeBackend([
+    agentsRoute,
+    listRoute([{ conversation_id: 'c1', title: 'Hunt', workspace_id: 'w1' }]),
+    (req) => (req.url === '/api/chat/workspaces' && req.method === 'GET' ? json([{ id: 'w1', name: 'Shared hunts', can_manage: true }]) : undefined),
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+  ]);
+  const ref = createRef<ChatPanelHandle>();
+  await render({ apiEndpoints: { workspaces: '/chat/workspaces' } }, ref);
+  await click(button('New conversation in this workspace'));
+  assert.ok(text().includes('New conversation — send a message to start it'), 'about to start in the workspace');
+  await click(button('New conversation outside a workspace'));
+  assert.ok(!text().includes('New conversation — send a message to start it'), 'no longer');
+  await act(async () => {
+    ref.current!.send('hello');
+    await settle(10);
+  });
+  // A conversation of a workspace is created first; one of none comes with its first message.
+  assert.equal(requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'POST').length, 0, 'none created in the workspace');
+  const sent = requests.find((r) => r.url === '/api/chat/messages');
+  assert.ok(sent, 'the message goes');
+  assert.ok(!(sent.body as { conversation_id?: string }).conversation_id, JSON.stringify(sent.body));
+  await act(async () => {
+    stream.send({ type: 'done', content: 'ok', conversation_id: 'c2' });
+    stream.close();
+    await settle(10);
+  });
+});
+
+test('a list without workspaces offers no New conversation outside a workspace', async () => {
+  fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'Hunt' }])]);
+  await render({});
+  assert.equal(button('New conversation outside a workspace'), undefined);
+  assert.ok(button('New conversation'));
+});
+
+test('an agent not meant for chat is said so in the picker and warned of in the composer, and stays selectable', async () => {
+  fakeBackend([
+    (req) =>
+      req.url === '/api/chat/agents'
+        ? json([
+            { id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description: null },
+            { id: 'a2', name: 'Reporter', slug: 'reporter', icon: null, description: null, disable_chat: true },
+            { id: 'a3', name: 'Scout', slug: 'scout', icon: null, description: null, disable_chat: false },
+          ])
+        : undefined,
+  ]);
+  await render({});
+  // A boolean: a failed assertion on a DOM node takes minutes to print.
+  const warning = () => !!container.querySelector('[data-testid="filigran-chat-agent-not-for-chat"]');
+  assert.equal(warning(), false, 'the agent picked first is meant for chat');
+  await click(buttons().find((b) => b.textContent?.includes('Hunter')));
+  const pickerRow = (name: string) =>
+    buttons()
+      .filter((b) => b.textContent?.startsWith(name))
+      .pop();
+  assert.equal(pickerRow('Reporter')?.textContent, 'ReporterNot recommended for chat');
+  assert.equal(pickerRow('Scout')?.textContent, 'Scout');
+  await click(pickerRow('Reporter'));
+  assert.ok(
+    buttons().some((b) => b.textContent === 'Reporter'),
+    'selected',
+  );
+  assert.equal(
+    container.querySelector('[data-testid="filigran-chat-agent-not-for-chat"]')?.textContent,
+    'This agent is designed for assignments, not direct chat. It may not respond well to conversational interactions.',
+  );
+  await click(buttons().find((b) => b.textContent === 'Reporter'));
+  await click(pickerRow('Scout'));
+  assert.equal(warning(), false);
+});
+
+test('the header names the channel a restore reports, before the list is read', async () => {
+  const requests = fakeBackend([
+    agentsRoute,
+    listRoute([]),
+    (req) =>
+      req.url === '/api/chat/sessions' && req.method === 'POST' ? json({ conversation_id: 'c1', channel: 'teams', messages: [] }) : undefined,
+  ]);
+  await render({ mode: 'floating', conversationId: 'c1' });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'GET').length, 0, 'the list is not read');
+  assert.equal(container.querySelector('[data-testid="filigran-chat-header-subtitle"]')?.textContent, 'Agent · Teams');
+});
+
+test('a restored conversation whose agent is not in the list warns of no agent, never of the one picked', async () => {
+  fakeBackend([
+    (req) =>
+      req.url === '/api/chat/agents'
+        ? json([{ id: 'a2', name: 'Reporter', slug: 'reporter', icon: null, description: null, disable_chat: true }])
+        : undefined,
+    listRoute([{ conversation_id: 'c1', title: 'Old hunt' }]),
+    (req) =>
+      req.url === '/api/chat/sessions' && req.method === 'POST'
+        ? json({ conversation_id: 'c1', agent_name: 'Retired Bot', messages: [] })
+        : undefined,
+  ]);
+  // A boolean: a failed assertion on a DOM node takes minutes to print.
+  const warning = () => !!container.querySelector('[data-testid="filigran-chat-agent-not-for-chat"]');
+  await render({});
+  assert.ok(warning(), 'the picked agent is not meant for chat');
+  await render({ conversationId: 'c1' });
+  assert.equal(warning(), false, "the conversation's own agent is unknown");
+});
+
+/** The list route answering what *answer* gives for each read. */
+const listReads = (answer: () => Response | Promise<Response>) => (req: RecordedRequest) =>
+  req.url === '/api/chat/sessions' && req.method === 'GET' ? answer() : undefined;
+const listError = () => container.querySelector('[data-testid="filigran-chat-conversation-list-error"]');
+
+test('a list that could not be read says so, never that there is none, and Retry reads it again', async () => {
+  let answer: () => Response = () => new Response('boom', { status: 500 });
+  fakeBackend([agentsRoute, listReads(() => answer())]);
+  await render({});
+  assert.equal(listError()?.textContent, 'Could not load your conversations.Retry');
+  assert.ok(!text().includes('No conversations yet'), text());
+
+  answer = () => json([{ conversation_id: 'c1', title: 'Back again' }]);
+  await click(button('Retry'));
+  assert.equal(listError(), null);
+  assert.ok(rows()[0].textContent?.includes('Back again'));
+});
+
+test('a list read that cannot reach the backend, or is refused, says so too', async () => {
+  for (const answer of [() => Promise.reject(new TypeError('Failed to fetch')), () => json({ detail: 'Not allowed' }, 403)]) {
+    fakeBackend([agentsRoute, listReads(answer)]);
+    await render({});
+    assert.ok(listError(), text());
+    await act(async () => root.unmount());
+    root = createRoot(container);
+  }
+});
+
+test('a backend without the list route still shows an empty list', async () => {
+  for (const status of [404, 405]) {
+    fakeBackend([agentsRoute, listReads(() => new Response(null, { status }))]);
+    await render({});
+    assert.equal(listError(), null, String(status));
+    assert.ok(text().includes('No conversations yet'), text());
+    await act(async () => root.unmount());
+    root = createRoot(container);
+  }
+});
+
+test('a read that fails once the list was read keeps its conversations', async () => {
+  let answer: () => Response = () => json([{ conversation_id: 'c1', title: 'Still here' }]);
+  const requests = fakeBackend([agentsRoute, restoreRoute, listReads(() => answer())]);
+  const reads = () => requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'GET').length;
+  await render({});
+  const before = reads();
+  answer = () => new Response('boom', { status: 503 });
+  await render({ conversationId: 'c1' });
+  assert.ok(reads() > before, 'read again');
+  assert.equal(listError(), null);
+  assert.ok(rows()[0].textContent?.includes('Still here'));
+});
+
+test('the workspaces of a list that could not be read give way to the failure', async () => {
+  fakeBackend([
+    agentsRoute,
+    listReads(() => new Response('boom', { status: 500 })),
+    (req) => (req.url === '/api/chat/workspaces' && req.method === 'GET' ? json([{ id: 'w1', name: 'Shared hunts', can_manage: true }]) : undefined),
+  ]);
+  await render({ apiEndpoints: { workspaces: '/chat/workspaces' } });
+  assert.ok(listError());
+  assert.ok(!text().includes('No conversations yet') && !text().includes('Shared hunts'), text());
+});
+
+test("the header's history menu says the list could not be read, and retries it", async () => {
+  let answer: () => Response = () => new Response('boom', { status: 500 });
+  fakeBackend([agentsRoute, listReads(() => answer())]);
+  await render({ hideConversationList: true });
+  await click(button('Conversation history'));
+  const menuError = () => document.body.querySelector('[data-testid="filigran-chat-conversation-list-error"]');
+  assert.ok(menuError());
+  assert.ok(!document.body.textContent?.includes('No conversations yet'));
+  answer = () => json([{ conversation_id: 'c1', title: 'Found it' }]);
+  await click(button('Retry'));
+  assert.equal(menuError(), null);
+  assert.ok(document.body.textContent?.includes('Found it'));
 });

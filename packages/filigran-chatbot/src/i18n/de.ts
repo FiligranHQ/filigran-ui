@@ -8,6 +8,7 @@ export const de: Catalog = {
     'Eine Datei konnte nicht hochgeladen werden: Entfernen Sie sie, um die Nachricht zu senden',
   'A message references at most {count} conversations': 'Eine Nachricht verweist auf höchstens {count} Unterhaltungen',
   'Acting on the page…': 'Aktion auf der Seite…',
+  'Agent · {channel}': 'Agent · {channel}',
   'Agent switching is not available here': 'Der Agentenwechsel ist hier nicht verfügbar',
   'Almost there': 'Gleich geschafft',
   'Also applies to your scheduled runs, until you revoke it': 'Gilt auch für Ihre geplanten Ausführungen, bis Sie die Freigabe widerrufen',
@@ -59,6 +60,7 @@ export const de: Catalog = {
   'Copy code': 'Code kopieren',
   'Copy message': 'Nachricht kopieren',
   'Copy response': 'Antwort kopieren',
+  'Could not load your conversations.': 'Ihre Unterhaltungen konnten nicht geladen werden.',
   'Could not reach the assistant service. Check the connection and try again.':
     'Der Assistenzdienst ist nicht erreichbar. Prüfen Sie die Verbindung und versuchen Sie es erneut.',
   'Could not send your decision. Please try again.': 'Ihre Entscheidung konnte nicht gesendet werden. Bitte versuchen Sie es erneut.',
@@ -80,6 +82,7 @@ export const de: Catalog = {
   'Drop a conversation here, or start one with {icon}.': 'Legen Sie hier eine Unterhaltung ab oder beginnen Sie eine mit {icon}.',
   'Drop files to attach them': 'Dateien zum Anhängen hier ablegen',
   'End voice call': 'Sprachanruf beenden',
+  'Enter to send · Shift+Enter for new line': 'Eingabetaste zum Senden · Umschalt+Eingabetaste für eine neue Zeile',
   'Enter to send now · Esc to stop': 'Eingabetaste zum sofortigen Senden · Esc zum Anhalten',
   'Enter to send when the answer ends · Esc to stop': 'Eingabetaste zum Senden nach der Antwort · Esc zum Anhalten',
   'Every conversation is in a workspace.': 'Jede Unterhaltung ist in einem Arbeitsbereich.',
@@ -115,6 +118,7 @@ export const de: Catalog = {
   'New chat': 'Neuer Chat',
   'New conversation': 'Neue Unterhaltung',
   'New conversation in this workspace': 'Neue Unterhaltung in diesem Arbeitsbereich',
+  'New conversation outside a workspace': 'Neue Unterhaltung außerhalb eines Arbeitsbereichs',
   'New conversation — send a message to start it': 'Neue Unterhaltung — senden Sie eine Nachricht, um sie zu beginnen',
   'New workspace': 'Neuer Arbeitsbereich',
   No: 'Nein',
@@ -126,6 +130,7 @@ export const de: Catalog = {
   'No response was generated. Please try again.': 'Es wurde keine Antwort erzeugt. Bitte versuchen Sie es erneut.',
   'No response.': 'Keine Antwort.',
   'Not in a workspace': 'In keinem Arbeitsbereich',
+  'Not recommended for chat': 'Nicht für den Chat empfohlen',
   'Not rendered yet': 'Noch nicht gerendert',
   Open: 'Öffnen',
   'Open conversation': 'Unterhaltung öffnen',
@@ -210,6 +215,8 @@ export const de: Catalog = {
   'The workspace could not be renamed': 'Der Arbeitsbereich konnte nicht umbenannt werden',
   'Thinking it through': 'Wird durchdacht',
   'Thinking...': 'Denkt nach...',
+  'This agent is designed for assignments, not direct chat. It may not respond well to conversational interactions.':
+    'Dieser Agent ist für Aufträge gedacht, nicht für den direkten Chat. Auf Unterhaltungen antwortet er womöglich schlecht.',
   'This conversation could not be loaded.': 'Diese Unterhaltung konnte nicht geladen werden.',
   'This decision could not be sent. Reload the chat and try again.':
     'Diese Entscheidung konnte nicht gesendet werden. Laden Sie den Chat neu und versuchen Sie es erneut.',

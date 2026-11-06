@@ -75,6 +75,17 @@ test('the status line names the setup step, the compaction, the save and the ana
   await finish(stream);
 });
 
+test("a host's status label sees the setup step and names it, the panel's names the ones it leaves", async () => {
+  const { stream, send } = await running({
+    statusLabel: (s) => (s.status === 'preparing' && s.phase === 'memory' ? 'Reading your notes…' : undefined),
+  });
+  await send(status('preparing', { phase: 'memory' }));
+  assert.ok(text().includes('Reading your notes…') && !text().includes('Recalling memory…'), text());
+  await send(status('preparing', { phase: 'tools' }));
+  assert.ok(text().includes('Preparing tools…'), text());
+  await finish(stream);
+});
+
 test('a transfer names the agent the conversation goes to', async () => {
   const { stream, send } = await running();
   await send(status('transfer_start', { agent_id: 'a2', agent_name: 'Analyst' }));
