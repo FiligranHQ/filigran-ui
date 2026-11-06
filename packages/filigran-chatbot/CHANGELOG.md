@@ -52,9 +52,18 @@ This file starts at 3.10.0; earlier releases are on the
   the region (`de-de`, `it-it`, `ko-kr`, `ru-ru`, `zh-cn`). Those languages
   showed in English unless the host translated every key through `t`.
   Traditional Chinese tags (`zh-TW`, `zh-HK`, `zh-Hant`) keep falling back.
+- Inline, as a sidebar and fullscreen, the composer's footer has a line of
+  its own for what the keys do (`filigran-chat-composer-hint`), above the
+  disclaimer: an idle composer reads
+  `Enter to send · Shift+Enter for new line`, a busy one the status it read
+  before, and the line keeps its height when empty. The floating window keeps
+  one line, where a status takes the disclaimer's place.
 
 ### Fixed
 
+- `filigran-chat-disclaimer` holds the disclaimer alone. It held the
+  composer's status in its place while a turn ran or a file failed to
+  upload; the status is now `filigran-chat-composer-hint`.
 - A refusal whose body has no `detail` shows its `error` when that is a
   sentence, as the products' proxies answer (`{ "error": "..." }`, beside a
   `status` or not), never a code (`invalid_token`, `Unauthorized`) nor a
