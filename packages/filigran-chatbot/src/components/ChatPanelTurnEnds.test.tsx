@@ -740,12 +740,18 @@ test('a relayed turn’s stored end gives its answer everything a live done woul
   }
 });
 
-test('a steer refused because the turn just ended goes back to the composer, saying nothing, without held sends', async () => {
-  const stream = sseStream();
-  fakeBackend([
+test('a steer refused because the turn just ended is sent as the next turn, without held sends too', async () => {
+  const first = sseStream();
+  const second = sseStream();
+  let turns = 0;
+  const requests = fakeBackend([
     agentsRoute,
     restoreRoute(),
-    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+    (req) => {
+      if (req.url !== '/api/chat/messages') return undefined;
+      turns += 1;
+      return turns === 1 ? first.response() : second.response();
+    },
     (req) => (req.url === '/api/chat/messages/steer' ? json({ detail: 'No response is currently being generated' }, 409) : undefined),
   ]);
   const ref = createRef<Handle>();
@@ -753,7 +759,7 @@ test('a steer refused because the turn just ended goes back to the composer, say
   await act(async () => {
     void ref.current!.send('first');
     await settle();
-    stream.send({ type: 'stream', content: 'Working' });
+    first.send({ type: 'stream', content: 'Working' });
     await settle(10);
   });
   await act(async () => {
@@ -764,9 +770,16 @@ test('a steer refused because the turn just ended goes back to the composer, say
     container.querySelector<HTMLButtonElement>('button[aria-label="Send now"]')!.click();
     await settle(10);
   });
-  assert.equal(notice(), null);
-  assert.equal(container.querySelector('textarea')!.value, 'steer me');
-  await finish(stream);
+  assert.equal(notice(), null, 'an ordinary race says nothing');
+  assert.equal(container.querySelector('textarea')!.value, '', 'the message is not handed back');
+  await act(async () => {
+    first.send({ type: 'done', content: 'Working', conversation_id: 'c1' });
+    first.close();
+    await settle(10);
+  });
+  const sends = requests.filter((r) => r.url === '/api/chat/messages').map((r) => (r.body as { content: string }).content);
+  assert.deepEqual(sends, ['first', 'steer me']);
+  await finish(second);
 });
 
 test('a refused Stop keeps what the turn reported since the click', async () => {
