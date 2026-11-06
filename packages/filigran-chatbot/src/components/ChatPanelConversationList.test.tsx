@@ -453,7 +453,8 @@ test('the list starts a conversation outside the workspaces, after one was about
     (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
   ]);
   const ref = createRef<ChatPanelHandle>();
-  await render({ apiEndpoints: { workspaces: '/chat/workspaces' } }, ref);
+  // No steering: a host that steers has the conversation created before the send, outside a workspace too.
+  await render({ apiEndpoints: { workspaces: '/chat/workspaces', steer: null } }, ref);
   await click(button('New conversation in this workspace'));
   assert.ok(text().includes('New conversation — send a message to start it'), 'about to start in the workspace');
   await click(button('New conversation outside a workspace'));
