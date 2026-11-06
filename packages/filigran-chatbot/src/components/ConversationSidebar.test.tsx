@@ -310,3 +310,119 @@ test('Escape while an input method composes does not clear the conversation sear
   await act(async () => root.unmount());
   container.remove();
 });
+
+test('given the groups a user opened, the others start collapsed, a toggle says which are open, and a workspace created here opens', async () => {
+  const workspace = (id: string, name: string) => ({ id, name, isOwn: true, isDefault: false, canManage: true });
+  const conversation = (id: string, workspaceId: string) => ({ conversationId: id, title: `Chat ${id}`, updatedAt: '2026-11-01T00:00:00Z', workspaceId });
+  const list = [workspace('w1', 'Hunts'), workspace('w2', 'Reports')];
+  const reported: string[][] = [];
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const draw = () =>
+    root.render(
+      <ConversationSidebar
+        conversations={[conversation('c1', 'w1'), conversation('c2', 'w2')]}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onNewChat={() => undefined}
+        expandedGroups={['w2']}
+        onExpandedGroupsChange={(keys) => reported.push(keys)}
+        workspaces={{
+          list,
+          pendingWorkspaceId: null,
+          onCreate: async (name) => {
+            const created = workspace('w3', name);
+            list.push(created);
+            return { ok: true, workspace: created };
+          },
+          onRename: async () => ({ ok: true }),
+          onDelete: async () => ({ ok: true }),
+          onMove: async () => undefined,
+          onNewChat: () => undefined,
+        }}
+        t={(key) => key}
+      />,
+    );
+  await act(async () => {
+    draw();
+    await settle();
+  });
+  const header = (name: string) =>
+    [...container.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')].find((b) => b.textContent?.includes(name));
+  assert.equal(header('Hunts')?.getAttribute('aria-expanded'), 'false', 'a group never opened starts collapsed');
+  assert.equal(header('Reports')?.getAttribute('aria-expanded'), 'true', 'a group the user opened starts open');
+
+  await act(async () => header('Hunts')!.click());
+  assert.equal(header('Hunts')?.getAttribute('aria-expanded'), 'true');
+  assert.deepEqual(reported.at(-1)?.sort(), ['w1', 'w2'], 'the host is told which groups are open');
+  await act(async () => header('Reports')!.click());
+  assert.deepEqual(reported.at(-1), ['w1']);
+
+  await act(async () => container.querySelector<HTMLButtonElement>('button[aria-label="New workspace"]')!.click());
+  const name = container.querySelector<HTMLInputElement>('input[placeholder="Workspace name"]');
+  assert.ok(name, 'the name field');
+  await act(async () => {
+    setValue(name, 'Triage');
+    name.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await settle();
+  });
+  await act(async () => {
+    draw();
+    await settle();
+  });
+  assert.equal(header('Triage')?.getAttribute('aria-expanded'), 'true', 'a workspace the user creates opens');
+  assert.deepEqual(reported.at(-1)?.sort(), ['w1', 'w3']);
+
+  await act(async () => root.unmount());
+  container.remove();
+});
+
+test('the groups a user opened, given once the list has mounted, apply then', async () => {
+  const workspace = (id: string, name: string) => ({ id, name, isOwn: true, isDefault: false, canManage: true });
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const draw = (expandedGroups: string[] | undefined) =>
+    root.render(
+      <ConversationSidebar
+        conversations={[]}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onNewChat={() => undefined}
+        expandedGroups={expandedGroups}
+        workspaces={{
+          list: [workspace('w1', 'Hunts'), workspace('w2', 'Reports')],
+          pendingWorkspaceId: null,
+          onCreate: async () => ({ ok: true }),
+          onRename: async () => ({ ok: true }),
+          onDelete: async () => ({ ok: true }),
+          onMove: async () => undefined,
+          onNewChat: () => undefined,
+        }}
+        t={(key) => key}
+      />,
+    );
+  const header = (name: string) =>
+    [...container.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')].find((b) => b.textContent?.includes(name));
+  await act(async () => {
+    draw(undefined);
+    await settle();
+  });
+  await act(async () => {
+    draw(['w2']);
+    await settle();
+  });
+  assert.equal(header('Hunts')?.getAttribute('aria-expanded'), 'false');
+  assert.equal(header('Reports')?.getAttribute('aria-expanded'), 'true');
+  await act(async () => root.unmount());
+  container.remove();
+});

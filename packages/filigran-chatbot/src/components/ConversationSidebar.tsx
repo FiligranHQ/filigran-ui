@@ -62,6 +62,9 @@ interface ConversationSidebarProps {
   workspaces?: SidebarWorkspaces;
   /** Namespace of the browser-storage keys (see `storageKeyPrefix` on the panel). */
   storageKeyPrefix?: string;
+  /** The groups the user has opened, every other one collapsed (see `expandedWorkspaceGroups` on the panel). */
+  expandedGroups?: string[];
+  onExpandedGroupsChange?: (keys: string[]) => void;
   /** The host's controls on a row, before rename and delete. */
   rowActions?: (conversation: ChatConversationSummary) => ReactNode;
   /** The host's controls beside New conversation. */
@@ -133,6 +136,8 @@ export const ConversationSidebar = ({
   onNewChat,
   workspaces,
   storageKeyPrefix,
+  expandedGroups,
+  onExpandedGroupsChange,
   rowActions,
   headerActions,
   sections,
@@ -153,6 +158,10 @@ export const ConversationSidebar = ({
   // Where the collapsed workspace groups are remembered, per browser.
   const collapsedKey = storageKey(storageKeyPrefix, STORAGE_KEYS.collapsedWorkspaces);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => readCollapsed(collapsedKey));
+  // Or, where the host keeps them per user, the groups the user has opened.
+  const [openedGroups, setOpenedGroups] = useState<Set<string> | null>(() => (expandedGroups ? new Set(expandedGroups) : null));
+  // A host still reading them when the list mounts gives them once it has them.
+  if (expandedGroups && !openedGroups) setOpenedGroups(new Set(expandedGroups));
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
 
   const startRename = (id: string, current: string) => {
@@ -177,7 +186,20 @@ export const ConversationSidebar = ({
     setEditingId(null);
   };
 
+  const setGroupOpened = (key: string, open: boolean) => {
+    if (!openedGroups || openedGroups.has(key) === open) return;
+    const next = new Set(openedGroups);
+    if (open) next.add(key);
+    else next.delete(key);
+    setOpenedGroups(next);
+    onExpandedGroupsChange?.([...next]);
+  };
+
   const toggleGroup = (key: string) => {
+    if (openedGroups) {
+      setGroupOpened(key, !openedGroups.has(key));
+      return;
+    }
     setCollapsedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -214,6 +236,10 @@ export const ConversationSidebar = ({
     () => (workspaces ? groupConversations(conversations, workspaces.list, { matches }) : null),
     [conversations, workspaces, matches],
   );
+  // Collapsed: the groups the user has not opened, where the host keeps those; else the ones they collapsed.
+  const collapsedGroupKeys = openedGroups
+    ? new Set((grouped?.groups ?? []).map((group) => group.key).filter((key) => !openedGroups.has(key)))
+    : collapsedGroups;
   const fileable = workspaces ? fileableWorkspaces(workspaces.list) : [];
   const unfiledNote = grouped ? unfiledEmptyNote({ total: conversations.length, unfiled: grouped.unfiled.length, loading, searching: !!q }) : null;
 
@@ -339,6 +365,8 @@ export const ConversationSidebar = ({
                   if (!name) return;
                   const result = await workspaces.onCreate(name);
                   if (!result.ok) say(result.error, 'The workspace could not be created');
+                  // It opens: it is where the user is about to drop things.
+                  else if (result.workspace) setGroupOpened(result.workspace.id, true);
                 }}
                 onCancel={() => setCreatingWorkspace(false)}
               />
@@ -348,7 +376,7 @@ export const ConversationSidebar = ({
                 key={group.key}
                 workspace={group.workspace}
                 count={group.conversations.length}
-                open={groupIsOpen(group.key, collapsedGroups, group, activeConversationId, !!q)}
+                open={groupIsOpen(group.key, collapsedGroupKeys, group, activeConversationId, !!q)}
                 toggleable={groupCanToggle(group, activeConversationId, !!q)}
                 pending={!!group.workspace && workspaces.pendingWorkspaceId === group.workspace.id && !activeConversationId}
                 onToggle={() => toggleGroup(group.key)}
