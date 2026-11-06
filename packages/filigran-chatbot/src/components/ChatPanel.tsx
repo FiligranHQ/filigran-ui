@@ -10,7 +10,8 @@ import type {
   ChatSendOutcome,
   Translate,
 } from '../types';
-import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
+import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds, translate } from '../utils';
+import { channelName } from '../utils/conversationList';
 import { speakableText } from '../utils/speech';
 import { dropsAsText } from '../utils/drop';
 import { optInRoute } from '../utils/routes';
@@ -893,6 +894,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
    * whichever agent is selected, so that is the agent its label names.
    */
   const [conversationAgentName, setConversationAgentName] = useState<string | null>(null);
+  /** The channel a restored conversation was started in, when its restore reports it (`channel`). */
+  const [restoredChannel, setRestoredChannel] = useState<{ conversationId: string; channel: string } | null>(null);
   // Not on every render: a host's function runs once per agent, not per streamed delta.
   const composerPlaceholder = useMemo(
     () => (typeof placeholder === 'function' ? askHost(placeholder, selectedAgent ?? null) : placeholder),
@@ -1190,6 +1193,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         // tell us. Both land on the selected-agent fallback, but only the
         // first is a deliberate answer.
         setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
+        setRestoredChannel(
+          typeof data.conversation_id === 'string' && typeof data.channel === 'string' && data.channel
+            ? { conversationId: data.conversation_id, channel: data.channel }
+            : null,
+        );
         const restored = parseRestoredMessages(data.messages);
         settleUnseenEndRef.current(readFor, restored);
         if (recreated) {
@@ -1370,6 +1378,12 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     conversation: (conversationId && conversations.find((c) => c.conversationId === conversationId)) || null,
     agent: headerAgent,
   };
+  // The channel the conversation on screen was started in, as its row names it:
+  // the list's, else its restore's, so a panel that has not read the list names it too.
+  const headerChannel = channelName(
+    headerContext.conversation?.channel ?? (restoredChannel?.conversationId === conversationId ? restoredChannel.channel : undefined),
+    channelLabel,
+  );
   const voice = useVoiceCall({
     send: (text, hooks) =>
       handleSendMessageRef.current({ text, source: 'voice', onSent: hooks.onAccepted, onNotSent: hooks.onNotSent, onSteered: hooks.onSteered }),
@@ -1527,7 +1541,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         onClearAll={clearConversations ? () => void handleClearAll() : undefined}
         clearAllAction={clearAllAction}
         title={typeof headerTitle === 'function' ? askHost(headerTitle, headerContext) : headerTitle}
-        subtitle={typeof headerSubtitle === 'function' ? askHost(headerSubtitle, headerContext) : headerSubtitle}
+        subtitle={
+          typeof headerSubtitle === 'function'
+            ? askHost(headerSubtitle, headerContext)
+            : headerSubtitle === undefined
+              ? headerChannel && translate(t, 'Agent · {channel}', { channel: headerChannel })
+              : headerSubtitle
+        }
         agentLink={agentLink}
         t={t}
       />
@@ -1698,6 +1718,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               heldMessage={heldMessage}
               notice={notice}
               fileNotice={fileNotice}
+              agentNotForChat={!!headerAgent?.disableChat}
               onCancelHeld={cancelHeldMessage}
               agentMentions={agentMentionsEnabled && agents.length > 0 ? { agents, mentions: agentMentions, onPick: addAgentMention } : undefined}
               inputValue={inputValue}

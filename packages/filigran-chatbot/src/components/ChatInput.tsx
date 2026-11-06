@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
-import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
+import { AlertTriangleIcon, AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
 import { useMentionMenu } from '../hooks/useMentionMenu';
 import { useDictation } from '../hooks/useDictation';
 import { referencedConversations } from '../utils/conversationRefs';
@@ -26,6 +26,8 @@ interface ChatInputProps {
   notice?: string | null;
   /** Which files the last attach refused, and why. */
   fileNotice?: string | null;
+  /** The conversation's agent is meant for assignments rather than chat (`XtmAgent.disableChat`); an agent the draft mentions is warned of too. */
+  agentNotForChat?: boolean;
   onCancelHeld?: () => void;
   inputValue: string;
   onInputChange: (value: string) => void;
@@ -106,6 +108,7 @@ export const ChatInput = ({
   heldMessage,
   notice,
   fileNotice,
+  agentNotForChat = false,
   onCancelHeld,
   inputValue,
   onInputChange,
@@ -211,9 +214,12 @@ export const ChatInput = ({
   // A steer reaches the running loop as text alone, so the agent would never
   // read a conversation it references: such a message waits, like a file.
   // A mention routes the message to another agent: it waits for the turn too.
+  const mentionedIds = agentMentions ? mentionedAgentIds(agentMentions.mentions, inputValue) : [];
   const waitsForTurn =
     (Boolean(conversationReferences) && referencedConversations(conversationReferences?.refs ?? NO_REFS, inputValue).length > 0) ||
-    (Boolean(agentMentions) && mentionedAgentIds(agentMentions?.mentions ?? [], inputValue).length > 0);
+    mentionedIds.length > 0;
+  // The message goes to an agent not meant for chat: the conversation's, or one it mentions.
+  const warnsNotForChat = agentNotForChat || mentionedIds.some((id) => agentMentions?.agents.find((a) => a.id === id)?.disableChat);
   // What the composer holds can steer the running agent: text, and
   // attachments only with steerAttachments. The accent Send button shows NEXT
   // to Stop while there is something to send, its files uploaded.
@@ -287,6 +293,15 @@ export const ChatInput = ({
       {fileNotice && (
         <div role="alert" data-testid="filigran-chat-file-notice" className="mb-2 text-[0.75rem] text-red-500 dark:text-red-400">
           {fileNotice}
+        </div>
+      )}
+      {warnsNotForChat && (
+        <div
+          data-testid="filigran-chat-agent-not-for-chat"
+          className="mb-2 flex items-start gap-1.5 text-[0.7rem] text-amber-600 dark:text-amber-400"
+        >
+          <AlertTriangleIcon size={12} className="mt-0.5 shrink-0" />
+          <span>{t('This agent is designed for assignments, not direct chat. It may not respond well to conversational interactions.')}</span>
         </div>
       )}
       {heldMessage && (

@@ -141,8 +141,8 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onBeforeMove`      | `(conversation, workspace \| null) => boolean \| Promise<boolean>` | — | Asked before a drag or a row's Move menu files a conversation into a workspace (`null`: out of one); `false` leaves it where it was |
 | `onConversationActionFailed` | `(action, conversation \| null, error \| null) => boolean \| void` | — | A failed `'delete'`, `'rename'`, `'move'` or `'clearAll'`, with the backend's reason; return `true` when the host told the user itself, and the panel says nothing |
 | `sidebarSearchThreshold` | `number`                             | `7`          | The conversation list's search box shows above this many conversations; `0` shows it from the first |
-| `channelLabel`      | `(channel: string) => string \| null \| undefined` | — | Names the channel a row's conversation was started in (`Started in {channel}`); `null` shows nothing, `undefined` keeps the panel's names (Slack, Teams, WhatsApp, Telegram, Discord, Google Chat) |
-| `headerTitle` / `headerSubtitle` | `React.ReactNode \| ((context: ChatHeaderContext) => React.ReactNode)` | — | A title beside the header's agent name and a line under it, or functions of the conversation on screen (as the list holds it) and the agent |
+| `channelLabel`      | `(channel: string) => string \| null \| undefined` | — | Names the channel a conversation was started in, on its row (`Started in {channel}`) and in the header (`Agent · {channel}`); `null` shows nothing, `undefined` keeps the panel's names (Slack, Teams, WhatsApp, Telegram, Discord, Google Chat) |
+| `headerTitle` / `headerSubtitle` | `React.ReactNode \| ((context: ChatHeaderContext) => React.ReactNode)` | — | A title beside the header's agent name and a line under it, or functions of the conversation on screen (as the list holds it) and the agent. Without `headerSubtitle`, the line reads `Agent · {channel}` for a conversation started in a channel its row names |
 | `agentHref`         | `(agent: XtmAgent) => string \| undefined` | —          | Links the header's agent name to this address (http(s) or a path of the host's origin), in place; the chevron beside it opens the picker |
 | `onAgentNameClick`  | `(agent: XtmAgent) => void`               | —            | Takes a plain click on the header's agent name (over `agentHref`); the chevron beside it opens the picker |
 | `clearAllAction`    | `'delete' \| 'archive'`                   | `'delete'`   | What Clear all does, for its wording (`Archive all conversations`) |
@@ -468,6 +468,11 @@ Returns available AI agents.
 `badges` is optional: short labels, already translated, shown after the
 agent's name in the agent picker. Anything but strings is ignored.
 
+`disable_chat` is optional: `true` marks an agent meant for assignments rather
+than chat. The picker says `Not recommended for chat` after its name, and the
+composer warns while it is the agent written to; it stays selectable. The
+panel reads it as `XtmAgent.disableChat`.
+
 ### `POST {apiBaseUrl}/chat/sessions`
 
 Restores conversation history (and, implicitly, resolves the session).
@@ -510,6 +515,11 @@ persisted id, what its rating is stored against (see
 without one shows no time. `feedback` is the caller's own rating of an
 assistant answer: the thumbs are then locked on it ("Feedback already
 submitted").
+
+The response may also carry the conversation's `channel` (`slack`, `teams`,
+…), as the list does: the header names it (`Agent · {channel}`) without
+reading the list, which floating and sidebar modes read only once the history
+menu opens.
 
 The response **should echo a `conversation_id`**. When the stored
 `conversation_id` no longer exists (e.g. the platform was reset but the
@@ -567,8 +577,8 @@ Lists the user's past conversations for the history menu in the chat header.
 ```
 
 `last_message_preview` and `channel` are optional: a row shows the preview
-under its title, and names a messaging channel the conversation was started
-in (see `channelLabel`).
+under its title, and the search matches it; the row and the header name a
+messaging channel the conversation was started in (see `channelLabel`).
 
 Selecting a conversation restores it through the existing
 `POST /chat/sessions` contract above. The endpoint is fetched lazily when the

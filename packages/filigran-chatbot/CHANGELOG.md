@@ -16,6 +16,23 @@ This file starts at 3.10.0; earlier releases are on the
   nothing else shows the card alone, without the agent's name, the time or the
   actions, as a note between messages (a change of agent, for instance). Each
   answer showed its marker's card inside the answer's frame.
+- The panel speaks German, Italian, Korean, Russian and Simplified Chinese on
+  its own: a catalog for each, picked from `locale` by its language whatever
+  the region (`de-de`, `it-it`, `ko-kr`, `ru-ru`, `zh-cn`). Those languages
+  showed in English unless the host translated every key through `t`.
+  Traditional Chinese tags (`zh-TW`, `zh-HK`, `zh-Hant`) keep falling back.
+- An agent the backend marks `disable_chat: true` (`XtmAgent.disableChat`) is
+  said `Not recommended for chat` in the agent picker, and the composer warns
+  while it is the conversation's agent as the header names it. It stays
+  selectable.
+- The header names the channel a conversation was started in under the
+  agent's name (`Agent · {channel}`), as its row does, when the host draws no
+  `headerSubtitle`; `channelLabel` names it there too. The restore's
+  `channel` names it before the list is read.
+- The composer's warning also covers an agent the draft `@`-mentions that is
+  not meant for chat, until the mention is removed.
+- With workspaces, the list's `Not in a workspace` group has a `New
+  conversation outside a workspace` button, beside each workspace's own.
 
 ### Changed
 
@@ -42,6 +59,19 @@ This file starts at 3.10.0; earlier releases are on the
   Close) while it is open; they reached the page under it.
 - An image's Expand button is visible while it has keyboard focus, so the focus
   given back after the lightbox closes can be seen. It showed on hover only.
+- A refusal whose body has no `detail` shows its `error` when that is a
+  sentence, as the products' proxies answer (`{ "error": "..." }`, beside a
+  `status` or not), never a code (`invalid_token`, `Unauthorized`) nor a
+  status's reason phrase (`Not Found`, `Too Many Requests`). It shows above
+  the composer, in place of the answer, on a failed upload's chip, under the
+  conversation list and on a conversation that could not be loaded. The panel
+  showed its generic message instead.
+- The status line has its own wording when it has no agent's name (`The agent
+  is answering…`, `Consulting an agent…`, `Transferring to another agent…`),
+  where it filled the name with a lowercase `the agent`: `the agent is
+  answering…` started without a capital. A host translating through `t` in a
+  language the panel has no catalog for translates these three keys; it
+  translated `the agent` before, and shows them in English until it does.
 
 ## 3.19.1 — 2026-11-02
 
