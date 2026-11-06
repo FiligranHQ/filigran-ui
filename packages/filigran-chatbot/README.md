@@ -107,7 +107,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `conversationId`    | `string \| null`                          | —            | The conversation on screen when the host owns it (a `?c=` URL); `null` is a new chat. Left `undefined`, the panel remembers its own, and a host-owned one is never written to storage |
 | `onConversationChange` | `(id: string \| null) => void`         | —            | Called whenever the conversation on screen changes, whoever changed it (a first answer, New chat, the history) |
 | `initialAgent`      | `string`                                  | —            | Agent selected once the list loads, by id or slug, over the remembered one |
-| `onAgentChange`     | `(agent: XtmAgent) => void`               | —            | Called when another agent is picked |
+| `onAgentChange`     | `(agent: XtmAgent) => void`               | —            | Called when another agent is picked, in the menu or by opening a conversation of another agent: the picker follows the conversation on screen |
 | `readOnly`          | `boolean`                                 | `false`      | Hides the composer: a conversation the user may read but not write to |
 | `readOnlyNotice`    | `React.ReactNode`                         | —            | Shown in place of the composer while `readOnly` |
 | `getRequestExtras`  | `() => Record<string, unknown>`           | —            | Fields merged into every message body, read at send time (the host's own per-message options). They never override the panel's fields |
@@ -571,7 +571,8 @@ Selecting a conversation restores it through the existing
 `POST /chat/sessions` contract above. The endpoint is fetched lazily when the
 history menu opens; a backend that doesn't implement it yet (404/405) simply
 yields an empty list, so the menu shows its empty state instead of breaking
-the chat. Set `apiEndpoints.history` to `null` to hide the history menu
+the chat. Any other failed read shows "Could not load your conversations."
+with a Retry, and keeps the conversations a previous read gave. Set `apiEndpoints.history` to `null` to hide the history menu
 entirely, or point it at a dedicated path if your proxy can't route `GET` on
 the sessions path.
 

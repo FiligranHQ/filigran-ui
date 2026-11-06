@@ -58,6 +58,7 @@ export const ru: Catalog = {
   'Copy code': 'Копировать код',
   'Copy message': 'Копировать сообщение',
   'Copy response': 'Копировать ответ',
+  'Could not load your conversations.': 'Не удалось загрузить ваши диалоги.',
   'Could not reach the assistant service. Check the connection and try again.':
     'Не удалось связаться со службой ассистента. Проверьте подключение и повторите попытку.',
   'Could not send your decision. Please try again.': 'Не удалось отправить ваше решение. Повторите попытку.',

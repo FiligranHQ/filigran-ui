@@ -58,6 +58,7 @@ export const ko: Catalog = {
   'Copy code': '코드 복사',
   'Copy message': '메시지 복사',
   'Copy response': '응답 복사',
+  'Could not load your conversations.': '대화를 불러올 수 없습니다.',
   'Could not reach the assistant service. Check the connection and try again.':
     '어시스턴트 서비스에 연결할 수 없습니다. 연결을 확인하고 다시 시도하세요.',
   'Could not send your decision. Please try again.': '결정을 보내지 못했습니다. 다시 시도하세요.',

@@ -8,6 +8,26 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.20.0 — unreleased
+
+### Changed
+
+- The agent picker follows the conversation on screen: opening a conversation
+  of another agent, or reading back one the host continued with another agent,
+  picks that agent, so a new chat starts with it, and `onAgentChange` is called.
+  An agent picked in the menu meanwhile stays picked. The picker kept the agent
+  last picked in the menu, while the header named the conversation's.
+
+### Fixed
+
+- An image's lightbox is named after the image (its alt text, or the file's
+  name for an uploaded picture) and keeps `Image preview` for one with none; it
+  read `Image preview` for every picture.
+- Tab and Shift+Tab stay on the lightbox's own controls (Download when offered,
+  Close) while it is open; they reached the page under it.
+- An image's Expand button is visible while it has keyboard focus, so the focus
+  given back after the lightbox closes can be seen. It showed on hover only.
+
 ## 3.19.1 — unreleased
 
 ### Added
@@ -42,6 +62,12 @@ This file starts at 3.10.0; earlier releases are on the
   answering…` started without a capital. A host translating through `t` in a
   language the panel has no catalog for translates these three keys; it
   translated `the agent` before, and shows them in English until it does.
+- A conversation list that could not be read (a refusal, a server or network
+  error) says "Could not load your conversations." with a Retry, in the
+  fullscreen list and the header's history menu, where it said "No
+  conversations yet". A read that fails once the list was read keeps the
+  conversations it showed; a backend without the route (404/405) still shows
+  an empty list.
 
 ## 3.19.0 — unreleased
 

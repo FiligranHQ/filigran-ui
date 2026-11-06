@@ -59,6 +59,7 @@ export const de: Catalog = {
   'Copy code': 'Code kopieren',
   'Copy message': 'Nachricht kopieren',
   'Copy response': 'Antwort kopieren',
+  'Could not load your conversations.': 'Ihre Unterhaltungen konnten nicht geladen werden.',
   'Could not reach the assistant service. Check the connection and try again.':
     'Der Assistenzdienst ist nicht erreichbar. Prüfen Sie die Verbindung und versuchen Sie es erneut.',
   'Could not send your decision. Please try again.': 'Ihre Entscheidung konnte nicht gesendet werden. Bitte versuchen Sie es erneut.',

@@ -58,6 +58,7 @@ export const it: Catalog = {
   'Copy code': 'Copia il codice',
   'Copy message': 'Copia il messaggio',
   'Copy response': 'Copia la risposta',
+  'Could not load your conversations.': 'Impossibile caricare le tue conversazioni.',
   'Could not reach the assistant service. Check the connection and try again.':
     'Impossibile raggiungere il servizio dell’assistente. Controlla la connessione e riprova.',
   'Could not send your decision. Please try again.': 'Impossibile inviare la tua decisione. Riprova.',

@@ -21,6 +21,7 @@ interface ImageLightboxProps {
 const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps) => {
   const hostRef = useRef<HTMLSpanElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [root, setRoot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -29,7 +30,22 @@ const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps)
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      // The overlay is modal: Tab and Shift+Tab cycle its own controls, never the page under the scrim.
+      const controls = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button') ?? [])];
+      if (controls.length === 0) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      const active = document.activeElement;
+      const inside = !!active && controls.includes(active as HTMLElement);
+      if (!inside || (e.shiftKey && active === first) || (!e.shiftKey && active === last)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus({ preventScroll: true });
+      }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -49,11 +65,12 @@ const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps)
       {root &&
         createPortal(
           <div
+            ref={dialogRef}
             className="absolute inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4"
             onClick={onClose}
             role="dialog"
             aria-modal="true"
-            aria-label={t('Image preview')}
+            aria-label={alt.trim() || t('Image preview')}
           >
             <div className="absolute top-4 right-4 flex gap-2">
               {onDownload && (
@@ -203,7 +220,7 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
           type="button"
           onClick={() => setExpanded(true)}
           aria-label={t('Expand image')}
-          className="absolute top-2 right-2 rounded-md bg-black/50 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover/img:opacity-100"
+          className="absolute top-2 right-2 rounded-md bg-black/50 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover/img:opacity-100 focus-visible:opacity-100"
         >
           <MaximizeIcon size={14} />
         </button>

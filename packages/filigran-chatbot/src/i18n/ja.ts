@@ -58,6 +58,7 @@ export const ja: Catalog = {
   'Copy code': 'コードをコピー',
   'Copy message': 'メッセージをコピー',
   'Copy response': '応答をコピー',
+  'Could not load your conversations.': '会話を読み込めませんでした。',
   'Could not reach the assistant service. Check the connection and try again.':
     'アシスタントサービスに接続できませんでした。接続状態を確認して、もう一度お試しください。',
   'Could not send your decision. Please try again.': '決定内容を送信できませんでした。もう一度お試しください。',

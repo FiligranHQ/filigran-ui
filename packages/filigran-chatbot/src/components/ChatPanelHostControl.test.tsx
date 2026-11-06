@@ -676,6 +676,64 @@ test('a reload asked during a turn reads nothing until the turn ends, then keeps
   assert.ok(text().includes('Continued by Deck Bot on 2026-10-30.'));
 });
 
+const TWO_AGENTS = [...AGENTS, { id: 'a2', name: 'Analyst', slug: 'analyst', icon: null, description: null }];
+const twoAgentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(TWO_AGENTS) : undefined);
+
+test('the picker follows the conversation opened to its agent, and a new chat starts with it', async () => {
+  const turn = sseStream();
+  const requests = fakeBackend([
+    twoAgentsRoute,
+    restoreRoute([{ id: 'm1', role: 'assistant', content: 'Earlier answer' }], { agent_name: 'Analyst' }),
+    (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined),
+  ]);
+  const ref = createRef<Handle>();
+  const picked: string[] = [];
+  await render({ conversationId: 'c1', initialAgent: 'hunter', onAgentChange: (agent) => picked.push(agent.slug ?? agent.id) }, ref);
+  assert.deepEqual(picked, ['analyst'], 'the host hears of the agent the picker followed');
+  await act(async () => {
+    ref.current!.newConversation();
+    await settle();
+  });
+  await act(async () => {
+    void ref.current!.send('a new question');
+    await settle();
+  });
+  assert.equal(slugOf(requests.filter((r) => r.url === '/api/chat/messages').at(-1)), 'analyst');
+  await finish(turn);
+});
+
+test('the picker follows a conversation continued with another agent once it is read back', async () => {
+  const session: Record<string, unknown> = { conversation_id: 'c1', messages: [], agent_name: 'Hunter' };
+  fakeBackend([twoAgentsRoute, (req) => (req.url === '/api/chat/sessions' ? json(session) : undefined)]);
+  const ref = createRef<Handle>();
+  const picked: string[] = [];
+  await render({ conversationId: 'c1', initialAgent: 'hunter', onAgentChange: (agent) => picked.push(agent.slug ?? agent.id) }, ref);
+  assert.deepEqual(picked, [], 'already the agent picked');
+  // The host continued the conversation with another agent.
+  session.agent_name = 'Analyst';
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle(10);
+  });
+  assert.deepEqual(picked, ['analyst']);
+});
+
+test('an agent picked in the menu while a conversation is open stays picked', async () => {
+  fakeBackend([twoAgentsRoute, restoreRoute([], { agent_name: 'Analyst' })]);
+  const ref = createRef<Handle>();
+  const picked: string[] = [];
+  await render({ conversationId: 'c1', initialAgent: 'hunter', onAgentChange: (agent) => picked.push(agent.slug ?? agent.id) }, ref);
+  const picker = [...container.querySelectorAll('button')].find((b) => b.textContent?.includes('Analyst'))!;
+  await act(async () => picker.click());
+  const hunter = [...document.querySelectorAll('button')].find((b) => b.textContent?.trim().startsWith('Hunter'))!;
+  await act(async () => {
+    hunter.click();
+    await settle(10);
+  });
+  assert.deepEqual(picked, ['analyst', 'hunter']);
+  assert.ok(text().includes('Hunter'), 'the new chat is with the agent picked, not the conversation left');
+});
+
 test("the conversation's agent read back replaces the one a turn transferred it to", async () => {
   const session: Record<string, unknown> = { conversation_id: 'c1', messages: [], agent_name: 'Hunter' };
   const turn = sseStream();

@@ -625,7 +625,11 @@ export interface ChatPanelProps {
   onConversationChange?: (conversationId: string | null) => void;
   /** Agent selected once the list loads, by id or slug, over the remembered one. */
   initialAgent?: string;
-  /** Called when another agent is picked. */
+  /**
+   * Called when another agent is picked, in the menu or by opening a
+   * conversation of another agent (the picker follows the conversation on
+   * screen, so a new chat starts with its agent).
+   */
   onAgentChange?: (agent: XtmAgent) => void;
   /** Hides the composer: a conversation the user may read but not write to. */
   readOnly?: boolean;
