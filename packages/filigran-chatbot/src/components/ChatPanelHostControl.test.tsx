@@ -702,6 +702,51 @@ test('the picker follows the conversation opened to its agent, and a new chat st
   await finish(turn);
 });
 
+/** A read-back of `c1` by Analyst that answers only when *release* is called. */
+function heldRestore() {
+  let release!: () => void;
+  const held = new Promise<Response>((resolve) => {
+    release = () => resolve(json({ conversation_id: 'c1', messages: [], agent_name: 'Analyst' }));
+  });
+  const route = (req: RecordedRequest) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? held : undefined);
+  return { route, release };
+}
+
+test('an agent a host names while the conversation is read back stays picked once its agent is followed', async () => {
+  const turn = sseStream();
+  const restore = heldRestore();
+  const requests = fakeBackend([twoAgentsRoute, restore.route, (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', initialAgent: 'hunter' }, ref);
+  act(() => {
+    ref.current!.newConversation({ agent: 'hunter' });
+    void ref.current!.send('for the hunter');
+  });
+  await act(async () => {
+    restore.release();
+    await settle(10);
+  });
+  assert.equal(slugOf(requests.filter((r) => r.url === '/api/chat/messages').at(-1)), 'hunter');
+  await finish(turn);
+});
+
+test("a send a host makes while the conversation is read back goes to the conversation's agent", async () => {
+  const turn = sseStream();
+  const restore = heldRestore();
+  const requests = fakeBackend([twoAgentsRoute, restore.route, (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', initialAgent: 'hunter' }, ref);
+  act(() => {
+    void ref.current!.send('a follow-up');
+  });
+  await act(async () => {
+    restore.release();
+    await settle(10);
+  });
+  assert.equal(slugOf(requests.filter((r) => r.url === '/api/chat/messages').at(-1)), 'analyst');
+  await finish(turn);
+});
+
 test('the picker follows a conversation continued with another agent once it is read back', async () => {
   const session: Record<string, unknown> = { conversation_id: 'c1', messages: [], agent_name: 'Hunter' };
   fakeBackend([twoAgentsRoute, (req) => (req.url === '/api/chat/sessions' ? json(session) : undefined)]);
