@@ -10,6 +10,13 @@ This file starts at 3.10.0; earlier releases are on the
 
 ## 3.20.0 — unreleased
 
+### Added
+
+- `ChatMarkerRenderer.standalone`: an answer that is the renderer's marker and
+  nothing else shows the card alone, without the agent's name, the time or the
+  actions, as a note between messages (a change of agent, for instance). Each
+  answer showed its marker's card inside the answer's frame.
+
 ### Changed
 
 - The agent picker follows the conversation on screen: opening a conversation
@@ -18,7 +25,18 @@ This file starts at 3.10.0; earlier releases are on the
   An agent picked in the menu meanwhile stays picked. The picker kept the agent
   last picked in the menu, while the header named the conversation's.
 
-## 3.19.1 — unreleased
+### Fixed
+
+- `maxTotalSize: Infinity` lifts the cap on the total size of a message's
+  files, as a host with a per-file limit only passes it (XTM One's web chat and
+  Office add-in). The panel read a value that is not finite as invalid and kept
+  its 50 MB default total.
+- A message sent from a new chat no longer comes back as the next new chat's
+  draft: the draft leaves the conversation it was typed in as it is sent. The
+  write of the emptied composer could land on the conversation the send
+  created, leaving the sent text under the new chat's draft.
+
+## 3.19.1 — 2026-11-02
 
 ### Added
 
@@ -44,7 +62,7 @@ This file starts at 3.10.0; earlier releases are on the
   language the panel has no catalog for translates these three keys; it
   translated `the agent` before, and shows them in English until it does.
 
-## 3.19.0 — unreleased
+## 3.19.0 — 2026-11-02
 
 ### Added
 
@@ -200,7 +218,7 @@ This file starts at 3.10.0; earlier releases are on the
   query: the list stayed filtered by a search the user could neither see nor
   clear.
 
-## 3.18.1 — unreleased
+## 3.18.1 — 2026-11-02
 
 ### Fixed
 
