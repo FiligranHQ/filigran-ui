@@ -35,6 +35,13 @@ This file starts at 3.10.0; earlier releases are on the
   draft: the draft leaves the conversation it was typed in as it is sent. The
   write of the emptied composer could land on the conversation the send
   created, leaving the sent text under the new chat's draft.
+- An image's lightbox is named after the image (its alt text, or the file's
+  name for an uploaded picture) and keeps `Image preview` for one with none; it
+  read `Image preview` for every picture.
+- Tab and Shift+Tab stay on the lightbox's own controls (Download when offered,
+  Close) while it is open; they reached the page under it.
+- An image's Expand button is visible while it has keyboard focus, so the focus
+  given back after the lightbox closes can be seen. It showed on hover only.
 
 ## 3.19.1 — 2026-11-02
 
