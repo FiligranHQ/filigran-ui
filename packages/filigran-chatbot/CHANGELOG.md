@@ -87,6 +87,10 @@ This file starts at 3.10.0; earlier releases are on the
   turns end with their stream (no `cancel`, `skipWait` or `events` route) the
   panel learned the conversation's id only at the turn's end, and a message
   typed while that first turn ran could not be sent.
+- A steer the backend refuses because the turn just ended (409) goes out as
+  the next message, as a send during a turn winding down does, whatever
+  `holdSendsDuringTurn` says. Without it, the text went back to the composer
+  and the user had to send it again.
 - Files added from outside the panel's own events (a host's call) upload too:
   the upload launched on a timer that assumed the tray had been updated
   already, which only a pick guaranteed.
