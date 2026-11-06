@@ -166,6 +166,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     transcriptFooter,
     welcome,
     renderMessageExtras,
+    replaceMessage,
     messageFooterActions,
     sidebarRowActions,
     sidebarHeaderActions,
@@ -1707,6 +1708,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               transformMessageText={transformMessageText}
               onArtifactOpen={onArtifactOpen}
               renderMessageExtras={renderMessageExtras}
+              replaceMessage={replaceMessage}
               messageFooterActions={messageFooterActions}
               transcriptFooter={transcriptFooter}
               onLoadEarlier={serverHasEarlier ? loadEarlier : undefined}
