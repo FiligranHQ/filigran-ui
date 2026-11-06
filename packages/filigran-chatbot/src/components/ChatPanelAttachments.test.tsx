@@ -97,6 +97,50 @@ test('a file past maxFileCount or maxTotalSize is refused with why, never droppe
   assert.equal(chips().length, 2);
 });
 
+test('maxTotalSize: Infinity puts no cap on the total, only maxFileSize on each file', async () => {
+  fakeBackend([agentsRoute, restoreRoute(), uploadRoute]);
+  const refused: [string, ChatFileRefusal][] = [];
+  const mb = 1024 * 1024;
+  await render({
+    conversationId: 'c1',
+    maxFileSize: 40 * mb,
+    maxTotalSize: Number.POSITIVE_INFINITY,
+    onFileRefused: (file, reason) => refused.push([file.name, reason]),
+  });
+  // Sizes stated, not allocated: 90 MB together, past the 50 MB default total.
+  const claimed = (name: string, size: number) => Object.defineProperty(sized(name, 1), 'size', { value: size });
+  await attach(claimed('a.pdf', 30 * mb), claimed('b.pdf', 30 * mb), claimed('c.pdf', 30 * mb), claimed('d.pdf', 41 * mb));
+  assert.deepEqual(refused, [['d.pdf', 'file-size']]);
+  assert.equal(chips().length, 3);
+});
+
+test('a maxTotalSize that is not a positive number keeps the 50 MB default', async () => {
+  fakeBackend([agentsRoute, restoreRoute(), uploadRoute]);
+  const refused: [string, ChatFileRefusal][] = [];
+  await render({ conversationId: 'c1', maxTotalSize: Number.NaN, onFileRefused: (file, reason) => refused.push([file.name, reason]) });
+  const claimed = (name: string, size: number) => Object.defineProperty(sized(name, 1), 'size', { value: size });
+  await attach(claimed('a.pdf', 30 * 1024 * 1024), claimed('b.pdf', 30 * 1024 * 1024));
+  assert.deepEqual(refused, [['b.pdf', 'total-size']]);
+});
+
+test("a new chat's draft is gone once it is sent, not left as the next new chat's", async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({}, ref);
+  await act(async () => ref.current!.setDraft('the question'));
+  await act(async () => {
+    window.dispatchEvent(new window.Event('pagehide'));
+  });
+  assert.equal(sessionStorage.getItem('filigranChatDraft:new'), 'the question', 'the draft as the page left it');
+  await act(async () => {
+    sendButton().click();
+    await settle();
+  });
+  assert.equal(sessionStorage.getItem('filigranChatDraft:new'), null);
+  await finish(stream);
+});
+
 test('acceptFileTypes filters the picker and refuses a file of another type', async () => {
   const requests = fakeBackend([agentsRoute, restoreRoute(), uploadRoute]);
   const refused: [string, ChatFileRefusal][] = [];
@@ -240,7 +284,8 @@ test('a send from the composer, and a conversation switched to, focus the field;
   const streams = [sseStream()];
   fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? streams[0].response() : undefined)]);
   const ref = createRef<Handle>();
-  await render({}, ref);
+  // No steering: the send would have `c1` created first, and the switch to it be none.
+  await render({ apiEndpoints: { steer: null } }, ref);
   try {
     assert.ok(document.activeElement !== textarea(), 'opening the panel takes no focus');
     await act(async () => {

@@ -10,7 +10,8 @@ import type {
   ChatSendOutcome,
   Translate,
 } from '../types';
-import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds } from '../utils';
+import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds, translate } from '../utils';
+import { channelName } from '../utils/conversationList';
 import { speakableText } from '../utils/speech';
 import { dropsAsText } from '../utils/drop';
 import { optInRoute } from '../utils/routes';
@@ -263,6 +264,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     agentsSettled,
     agentsDisabled,
     selectedAgent,
+    setSelectedAgent,
     agentMenuOpen,
     setAgentMenuOpen,
     handleSwitchAgent,
@@ -448,6 +450,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     historyEnabled,
     conversations,
     conversationsLoading,
+    conversationsFailed,
     refreshConversations,
     deleteConversation,
     renameConversation,
@@ -892,6 +895,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
    * whichever agent is selected, so that is the agent its label names.
    */
   const [conversationAgentName, setConversationAgentName] = useState<string | null>(null);
+  /** The channel a restored conversation was started in, when its restore reports it (`channel`). */
+  const [restoredChannel, setRestoredChannel] = useState<{ conversationId: string; channel: string } | null>(null);
   // Not on every render: a host's function runs once per agent, not per streamed delta.
   const composerPlaceholder = useMemo(
     () => (typeof placeholder === 'function' ? askHost(placeholder, selectedAgent ?? null) : placeholder),
@@ -1189,6 +1194,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         // tell us. Both land on the selected-agent fallback, but only the
         // first is a deliberate answer.
         setConversationAgentName(typeof data.agent_name === 'string' ? data.agent_name : null);
+        setRestoredChannel(
+          typeof data.conversation_id === 'string' && typeof data.channel === 'string' && data.channel
+            ? { conversationId: data.conversation_id, channel: data.channel }
+            : null,
+        );
         const restored = parseRestoredMessages(data.messages);
         settleUnseenEndRef.current(readFor, restored);
         if (recreated) {
@@ -1343,6 +1353,20 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       ? conversationAgent
       : selectedAgent;
   const addressedAgentId = transferredAgent?.id ?? conversationAgent?.id ?? selectedAgent?.id ?? null;
+
+  // The picker follows the conversation on screen as its agent changes (one
+  // opened, read back, or continued with another agent): a new chat then
+  // starts with that agent, and the host hears of it. Only on that change: an
+  // agent picked in the menu meanwhile stays picked.
+  const followedAgentIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const id = conversationAgent?.id ?? null;
+    if (id === followedAgentIdRef.current) return;
+    followedAgentIdRef.current = id;
+    if (!conversationAgent || conversationAgent.id === selectedAgent?.id) return;
+    setSelectedAgent(conversationAgent);
+    onAgentChange?.(conversationAgent);
+  }, [conversationAgent, selectedAgent, setSelectedAgent, onAgentChange]);
   const agentLink = useMemo(() => {
     if (!headerAgent || (!agentHrefProp && !onAgentNameClick)) return undefined;
     // Followed in place: an http(s) URL, or a path of the page's own origin.
@@ -1355,6 +1379,12 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     conversation: (conversationId && conversations.find((c) => c.conversationId === conversationId)) || null,
     agent: headerAgent,
   };
+  // The channel the conversation on screen was started in, as its row names it:
+  // the list's, else its restore's, so a panel that has not read the list names it too.
+  const headerChannel = channelName(
+    headerContext.conversation?.channel ?? (restoredChannel?.conversationId === conversationId ? restoredChannel.channel : undefined),
+    channelLabel,
+  );
   const voice = useVoiceCall({
     send: (text, hooks) =>
       handleSendMessageRef.current({ text, source: 'voice', onSent: hooks.onAccepted, onNotSent: hooks.onNotSent, onSteered: hooks.onSteered }),
@@ -1505,13 +1535,21 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         onHistoryMenuClose={() => setHistoryMenuOpen(false)}
         conversations={conversations}
         conversationsLoading={conversationsLoading}
+        conversationsFailed={conversationsFailed}
+        onRetryConversations={() => void refreshConversations()}
         activeConversationId={conversationId}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={(id) => void handleDeleteConversation(id)}
         onClearAll={clearConversations ? () => void handleClearAll() : undefined}
         clearAllAction={clearAllAction}
         title={typeof headerTitle === 'function' ? askHost(headerTitle, headerContext) : headerTitle}
-        subtitle={typeof headerSubtitle === 'function' ? askHost(headerSubtitle, headerContext) : headerSubtitle}
+        subtitle={
+          typeof headerSubtitle === 'function'
+            ? askHost(headerSubtitle, headerContext)
+            : headerSubtitle === undefined
+              ? headerChannel && translate(t, 'Agent · {channel}', { channel: headerChannel })
+              : headerSubtitle
+        }
         agentLink={agentLink}
         t={t}
       />
@@ -1529,6 +1567,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           <ConversationSidebar
             conversations={conversations}
             loading={conversationsLoading}
+            failed={conversationsFailed}
+            onRetry={() => void refreshConversations()}
             activeConversationId={conversationId}
             collapsed={sidebarCollapsed}
             onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
@@ -1680,6 +1720,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               heldMessage={heldMessage}
               notice={notice}
               fileNotice={fileNotice}
+              agentNotForChat={!!headerAgent?.disableChat}
               onCancelHeld={cancelHeldMessage}
               agentMentions={agentMentionsEnabled && agents.length > 0 ? { agents, mentions: agentMentions, onPick: addAgentMention } : undefined}
               inputValue={inputValue}

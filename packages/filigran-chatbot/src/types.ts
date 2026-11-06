@@ -477,7 +477,7 @@ export interface ChatPanelProps {
   onDownloadError?: (error: unknown, attachment: ChatAttachment) => void;
   /** Maximum number of files attachable in one chat context. Default: 10. */
   maxFileCount?: number;
-  /** Maximum total size in bytes for attached files. Default: 50 * 1024 * 1024 (50 MB). */
+  /** Maximum total size in bytes for attached files; `Infinity` for none. Default: 50 * 1024 * 1024 (50 MB). */
   maxTotalSize?: number;
   /** Maximum size in bytes of one attached file. Default: none (only `maxTotalSize`). */
   maxFileSize?: number;
@@ -625,7 +625,11 @@ export interface ChatPanelProps {
   onConversationChange?: (conversationId: string | null) => void;
   /** Agent selected once the list loads, by id or slug, over the remembered one. */
   initialAgent?: string;
-  /** Called when another agent is picked. */
+  /**
+   * Called when another agent is picked, in the menu or by opening a
+   * conversation of another agent (the picker follows the conversation on
+   * screen, so a new chat starts with its agent).
+   */
   onAgentChange?: (agent: XtmAgent) => void;
   /** Hides the composer: a conversation the user may read but not write to. */
   readOnly?: boolean;
@@ -838,14 +842,18 @@ export interface ChatPanelProps {
   sidebarSearchThreshold?: number;
   /**
    * Names the channel a conversation was started in, on its row (`Started in
-   * {channel}`): a string names it, `null` shows nothing, `undefined` keeps
+   * {channel}`) and in the header (`Agent · {channel}`): a string names it, `null` shows nothing, `undefined` keeps
    * the panel's own name (Slack, Teams, WhatsApp, Telegram, Discord, Google
    * Chat; no other channel is shown).
    */
   channelLabel?: (channel: string) => string | null | undefined;
   /** A title beside the agent's name in the header (the conversation's, say), or a function of what is on screen. */
   headerTitle?: React.ReactNode | ((context: ChatHeaderContext) => React.ReactNode);
-  /** A line under the agent's name in the header (`Agent · Slack`, say), or a function of what is on screen. */
+  /**
+   * A line under the agent's name in the header, or a function of what is on
+   * screen. Undefined: `Agent · {channel}` for a conversation started in a
+   * channel its row names (see `channelLabel`), nothing otherwise.
+   */
   headerSubtitle?: React.ReactNode | ((context: ChatHeaderContext) => React.ReactNode);
   /**
    * Links the header's agent name to this address (an http(s) URL or a path
@@ -893,6 +901,11 @@ export interface ChatMarkerRenderer {
   renderWhileStreaming?: boolean;
   /** Give it the thread's full width rather than the prose's. */
   fullWidth?: boolean;
+  /**
+   * An answer that is this marker and nothing else shows the card alone, as a
+   * note between messages: no agent name, time or actions around it.
+   */
+  standalone?: boolean;
 }
 
 /** What a code block renderer is drawn from. */
@@ -1396,6 +1409,12 @@ export interface XtmAgent {
   group?: string;
   /** Short labels shown after its name in the agent picker (`Company`), already translated. */
   badges?: string[];
+  /**
+   * The agent is meant for assignments rather than chat (`disable_chat`): the
+   * picker says "Not recommended for chat" and the composer warns while it is
+   * the one written to. It stays selectable.
+   */
+  disableChat?: boolean;
 }
 
 export interface IconProps {

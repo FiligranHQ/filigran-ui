@@ -81,6 +81,32 @@ test('collapsed, unnamed files are one closed line; opened, each has its card, a
   assert.equal(toggle.getAttribute('aria-expanded'), 'false');
 });
 
+test('a file the reply wrote again under the same name and kind is marked superseded in the list, its last version not', async () => {
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'write the brief' },
+      {
+        id: 'm2',
+        role: 'assistant',
+        content: 'The brief is ready.',
+        attachments: [
+          { file_id: 'draft', filename: 'brief.md', content_type: 'text/markdown' },
+          { file_id: 'plain', filename: 'brief.md', content_type: 'text/plain' },
+          { file_id: 'final', filename: 'brief.md', content_type: 'text/markdown; charset=utf-8' },
+        ],
+      },
+    ]),
+  ]);
+  await render({ conversationId: 'c1', collapseUnnamedFiles: true });
+  await click(button('Working files (3)'));
+  const rows = [...container.querySelectorAll('li')].map((row) => row.textContent ?? '');
+  assert.deepEqual(
+    rows.map((row) => row.includes('Superseded')),
+    [true, false, false],
+  );
+});
+
 test("a host's predicate picks the unnamed files to collapse", async () => {
   restoreFiles();
   await render({ conversationId: 'c1', collapseUnnamedFiles: (att) => att.fileTag === 'working_file' });
@@ -161,6 +187,40 @@ test("a user's uploaded picture is downloaded from its lightbox", async () => {
   assert.ok(container.querySelector('[role="dialog"]'), 'the lightbox is open');
   await click(button('Download'));
   assert.equal(requests.filter((r) => r.url === '/api/chat/files/up1/download').length, 1);
+});
+
+test("a picture's lightbox is named after the picture, keeps Tab on its own controls, and its Expand button shows on focus", async () => {
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'look', attachments: [{ file_id: 'up1', filename: 'shot.png', content_type: 'image/png' }] },
+      { id: 'm2', role: 'assistant', content: 'Seen.' },
+    ]),
+    (req) => (req.url === '/api/chat/files/up1/download' ? new Response(new Blob(['png'], { type: 'image/png' })) : undefined),
+  ]);
+  await render({ conversationId: 'c1', requestHeaders: { Authorization: 'Bearer a' } });
+  const picture = container.querySelector('img[alt="shot.png"]');
+  assert.ok(picture, `the uploaded picture is shown: ${text()}`);
+  const expand = picture.parentElement?.querySelector('button');
+  assert.ok(expand, 'the picture has its Expand button beside it');
+  assert.ok(expand.className.includes('focus-visible:opacity-100'), 'visible once focused');
+  await click(picture);
+  const dialog = container.querySelector('[role="dialog"]')!;
+  assert.equal(dialog.getAttribute('aria-label'), 'shot.png', 'named after the picture');
+  const tab = (shiftKey: boolean) =>
+    act(async () => {
+      const event = new window.KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+      document.dispatchEvent(event);
+      await settle();
+      assert.ok(event.defaultPrevented, 'the page under the scrim is not reached');
+    });
+  const download = dialog.querySelector('button[aria-label="Download"]');
+  const close = dialog.querySelector('button[aria-label="Close"]');
+  assert.equal(document.activeElement, close, 'focus starts on Close');
+  await tab(false);
+  assert.equal(document.activeElement, download, 'Tab from the last control goes to the first');
+  await tab(true);
+  assert.equal(document.activeElement, close, 'Shift+Tab from the first goes to the last');
 });
 
 test('new request headers fetch a picture again with the picture still shown', async () => {
@@ -453,6 +513,42 @@ test('older messages load as the reader nears the top, never while the view foll
     await settle();
   });
   assert.ok(text().includes('the first question'));
+});
+
+test('older messages loaded on scroll land above the reader, who stays on what they were reading', async (t) => {
+  const view = layOutTranscript(t);
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  fakeBackend([
+    agentsRoute,
+    restoreRoute(
+      [
+        { id: 'm2', role: 'user', content: 'the question' },
+        { id: 'm3', role: 'assistant', content: 'newest answer' },
+      ],
+      { has_more: true },
+    ),
+    async (req) => {
+      if (!req.url.startsWith('/api/chat/sessions/c1/messages?')) return undefined;
+      await held;
+      return json({ messages: [{ id: 'm1', role: 'user', content: 'the first question' }], has_more: false });
+    },
+  ]);
+  await render({ conversationId: 'c1', apiEndpoints: { messagesPage: '/chat/sessions' } });
+  await view.scrollTo(1600);
+  await view.scrollTo(100);
+  view.scrolls.length = 0;
+  // The 600 px the older message adds above the thread.
+  view.setHeight(2600);
+  await act(async () => {
+    release();
+    await settle();
+  });
+  assert.ok(text().includes('the first question'));
+  const transcript = container.querySelector('[data-testid="filigran-chat-transcript"]') as HTMLElement;
+  assert.equal(transcript.scrollTop, 700, 'as far below the new top as the reader was below the old one');
+  assert.deepEqual(view.scrolls, [], 'nor sent to the end');
+  assert.ok(button('Scroll to bottom'), 'still not following');
 });
 
 test('older messages are asked for at most once a cooldown', async (t) => {
