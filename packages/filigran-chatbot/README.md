@@ -194,13 +194,16 @@ A host adds what is its own without the package learning about it. An answer
 marker `[[KIND:args]]` renders the host's card where it stands, once the answer
 is done (`renderWhileStreaming` to show it earlier); a renderer named `FILE`,
 `PRESENTATION`, `REPORT` or `VIDEO` replaces the built-in card, and a marker no
-renderer names stays text:
+renderer names stays text. A `standalone` renderer draws an answer that is its
+marker and nothing else as the card alone, without the agent's name, the time
+or the actions: a note between messages, such as a change of agent:
 
 ```tsx
 const markers = useMemo(
   () => ({
     WORK_ITEM: { render: (id) => <WorkItemCard id={id} /> },
     INVESTIGATION: { render: (id) => <InvestigationBlock id={id} />, fullWidth: true },
+    AGENT_SWITCH: { render: (id) => <AgentSwitchDivider id={id} />, fullWidth: true, standalone: true },
   }),
   [],
 );
