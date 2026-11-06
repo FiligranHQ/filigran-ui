@@ -1201,6 +1201,14 @@ export function useChat({
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<string | null>(null);
   // Abort controller for in-flight file uploads (cancelled on new chat)
   const uploadAbortRef = useRef<AbortController>(new AbortController());
+  // Uploads, and the launches still waiting for their tray, end with the panel.
+  useEffect(
+    () => () => {
+      uploadAbortRef.current.abort();
+      uploadAbortRef.current = new AbortController();
+    },
+    [],
+  );
 
   // Guard invalid consumer values and keep deterministic limits.
   const effectiveMaxFileCount = Number.isFinite(maxFileCount) && maxFileCount > 0 ? Math.floor(maxFileCount) : DEFAULT_MAX_FILE_COUNT;
@@ -1557,14 +1565,18 @@ export function useChat({
     if (!fileList || fileList.length === 0 || !getUploadUrl()) return;
 
     const incoming = Array.from(fileList);
+    // Aborted by a reset of the chat and by the panel's unmount: these files go with it.
+    const signal = uploadAbortRef.current.signal;
     // Drawn before the updater, which may run twice, so the state and the uploads share them.
     const tempIds = new Map(incoming.map((file) => [file, randomId()]));
 
     // The updater stays pure: it only records what it decided.
     let accepted: File[] = [];
     let refused: { file: File; reason: ChatFileRefusal }[] = [];
+    let decided = false;
     setAttachedFiles((prev) => {
       ({ accepted, refused } = admitFiles(prev, incoming, attachmentLimits));
+      decided = true;
       if (accepted.length === 0) return prev;
       const newEntries: ChatFile[] = accepted.map((file) => ({
         name: file.name,
@@ -1577,9 +1589,14 @@ export function useChat({
       return [...prev, ...newEntries];
     });
 
-    // Launch uploads OUTSIDE the state updater (side effects)
-    // Use setTimeout(0) to ensure state has settled after the updater
-    setTimeout(() => {
+    // Launch uploads OUTSIDE the state updater (side effects), once it ran:
+    // a pick's runs at once, a host's (`attachFiles`) with the next render.
+    const launch = () => {
+      if (signal.aborted) return;
+      if (!decided) {
+        setTimeout(launch, 0);
+        return;
+      }
       setFileNotice(refused.map(({ file, reason }) => refusalMessage(t, file.name, reason, attachmentLimits)).join(' ') || null);
       for (const { file, reason } of refused) askHost(onFileRefused, file, reason);
       const failed = (tempId: string, err?: unknown) =>
@@ -1590,7 +1607,6 @@ export function useChat({
               : f,
           ),
         );
-      const signal = uploadAbortRef.current.signal;
       for (const file of accepted) {
         const tempId = tempIds.get(file)!;
         (async () => {
@@ -1608,7 +1624,8 @@ export function useChat({
           }
         })();
       }
-    }, 0);
+    };
+    setTimeout(launch, 0);
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
