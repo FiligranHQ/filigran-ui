@@ -7,6 +7,7 @@ import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
+import { ConversationListFailed } from './ConversationListFailed';
 import { Dropdown } from './Dropdown';
 import {
   BotIcon,
@@ -46,6 +47,10 @@ export interface SidebarWorkspaces {
 interface ConversationSidebarProps {
   conversations: ChatConversationSummary[];
   loading: boolean;
+  /** The last read of the list failed: with no conversations, the list says so instead of being empty. */
+  failed?: boolean;
+  /** Reads the list again, offered when it could not be read. */
+  onRetry?: () => void;
   activeConversationId: string | null;
   collapsed: boolean;
   onToggleCollapsed: () => void;
@@ -117,6 +122,8 @@ const sectionLabel = 'text-[0.625rem] font-medium uppercase tracking-wide chat-t
 export const ConversationSidebar = ({
   conversations,
   loading,
+  failed = false,
+  onRetry,
   activeConversationId,
   collapsed,
   onToggleCollapsed,
@@ -310,7 +317,9 @@ export const ConversationSidebar = ({
           </div>
         )}
 
-        {grouped && workspaces ? (
+        {failed && !loading && conversations.length === 0 ? (
+          <ConversationListFailed onRetry={() => onRetry?.()} className="px-3 py-2" t={t} />
+        ) : grouped && workspaces ? (
           <>
             {!q && (
               <div className="flex items-center justify-between px-2 pb-1 pt-1">
@@ -361,7 +370,14 @@ export const ConversationSidebar = ({
             <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
               <div className="flex items-center justify-between px-2 pb-1 pt-3">
                 <span className={sectionLabel}>{t('Not in a workspace')}</span>
-                <span className="text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.unfiled.length}</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.unfiled.length}</span>
+                  <Tooltip title={t('New conversation outside a workspace')}>
+                    <button type="button" onClick={() => onNewChat()} aria-label={t('New conversation outside a workspace')} className={iconButton}>
+                      <EditIcon size={13} />
+                    </button>
+                  </Tooltip>
+                </span>
               </div>
               {grouped.unfiled.map(renderRow)}
               {unfiledNote && (

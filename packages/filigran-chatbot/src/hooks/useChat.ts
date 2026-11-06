@@ -1204,7 +1204,8 @@ export function useChat({
 
   // Guard invalid consumer values and keep deterministic limits.
   const effectiveMaxFileCount = Number.isFinite(maxFileCount) && maxFileCount > 0 ? Math.floor(maxFileCount) : DEFAULT_MAX_FILE_COUNT;
-  const effectiveMaxTotalSize = Number.isFinite(maxTotalSize) && maxTotalSize > 0 ? maxTotalSize : DEFAULT_MAX_TOTAL_SIZE;
+  // `Infinity` puts no cap on the total; anything else not above 0 keeps the default.
+  const effectiveMaxTotalSize = maxTotalSize > 0 ? maxTotalSize : DEFAULT_MAX_TOTAL_SIZE;
   const attachmentLimits: AttachmentLimits = {
     maxFileCount: effectiveMaxFileCount,
     maxTotalSize: effectiveMaxTotalSize,
@@ -2306,6 +2307,10 @@ export function useChat({
       setConversationRefs([]);
       setAgentMentions([]);
       setAttachedFiles([]);
+      // The draft sent leaves the conversation it was typed in at once: the
+      // debounced write would land on the conversation a new chat's send
+      // creates, and leave the text as the next new chat's draft.
+      persistDraft(writtenDraftRef, storageKeyPrefix, conversationIdRef.current, '', []);
     };
     if (isLoadingRef.current || windingDownNow) {
       // Mid-run steering. References, mentions and the host's own fields never
@@ -2496,10 +2501,11 @@ export function useChat({
       // there: the message endpoint would create it in no workspace. Should
       // that fail (the workspace was archived or is no longer shared), the
       // message still goes, in a conversation of no workspace, rather than
-      // being lost. So is one whose turns outlive their stream: Stop,
-      // "Continue now" and steering name the conversation from the first turn.
+      // being lost. So is one whose turns outlive their stream, or that can be
+      // steered: Stop, "Continue now" and a steer name the conversation, and
+      // from the first turn on.
       const turnsOutliveStream = !!(getCancelUrl() || getSkipWaitUrl() || hasEvents);
-      if (!conversationIdRef.current && (pendingWorkspaceRef.current || turnsOutliveStream)) {
+      if (!conversationIdRef.current && (pendingWorkspaceRef.current || turnsOutliveStream || getSteerUrl() !== null)) {
         const generation = sessionGate.generation;
         const created = await ensureConversation();
         // A new chat replaced this one meanwhile: the send went with it, and
