@@ -36,6 +36,13 @@ This file starts at 3.10.0; earlier releases are on the
 - In a reply's "Working files" list, a file the same reply wrote again later,
   with the same name and kind of file (MIME type without its parameters, else
   the type label), carries a "Superseded" tag; its last version carries none.
+- `ChatPanelHandle.attachFiles(files)` puts files in the composer's tray as if
+  the user picked them, uploaded and held to the same limits, for the next
+  message: files another app shared to the host. Nothing happens where the
+  panel takes no files.
+- `initialConversationListCollapsed` starts the conversation list collapsed to
+  its strip, from which the user opens it: for a phone or a narrow window.
+  Read once, when the panel mounts.
 
 ### Changed
 
@@ -80,6 +87,9 @@ This file starts at 3.10.0; earlier releases are on the
   turns end with their stream (no `cancel`, `skipWait` or `events` route) the
   panel learned the conversation's id only at the turn's end, and a message
   typed while that first turn ran could not be sent.
+- Files added from outside the panel's own events (a host's call) upload too:
+  the upload launched on a timer that assumed the tray had been updated
+  already, which only a pick guaranteed.
 
 ## 3.19.1 — 2026-11-02
 
