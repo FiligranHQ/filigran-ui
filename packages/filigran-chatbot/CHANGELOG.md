@@ -72,6 +72,15 @@ This file starts at 3.10.0; earlier releases are on the
   answering…` started without a capital. A host translating through `t` in a
   language the panel has no catalog for translates these three keys; it
   translated `the agent` before, and shows them in English until it does.
+- A host that can steer (a `steer` route, on by default) gets its conversation
+  created before the first message, so the first turn can be steered. Where
+  turns end with their stream (no `cancel`, `skipWait` or `events` route) the
+  panel learned the conversation's id only at the turn's end, and a message
+  typed while that first turn ran could not be sent.
+- A steer the backend refuses because the turn just ended (409) goes out as
+  the next message, as a send during a turn winding down does, whatever
+  `holdSendsDuringTurn` says. Without it, the text went back to the composer
+  and the user had to send it again.
 
 ## 3.19.1 — 2026-11-02
 
