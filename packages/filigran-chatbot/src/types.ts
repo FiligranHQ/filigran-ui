@@ -887,6 +887,11 @@ export interface ChatMarkerRenderer {
   renderWhileStreaming?: boolean;
   /** Give it the thread's full width rather than the prose's. */
   fullWidth?: boolean;
+  /**
+   * An answer that is this marker and nothing else shows the card alone, as a
+   * note between messages: no agent name, time or actions around it.
+   */
+  standalone?: boolean;
 }
 
 /** What a code block renderer is drawn from. */
