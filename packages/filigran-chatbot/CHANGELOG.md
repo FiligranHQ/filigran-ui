@@ -68,6 +68,12 @@ This file starts at 3.10.0; earlier releases are on the
   answering…` started without a capital. A host translating through `t` in a
   language the panel has no catalog for translates these three keys; it
   translated `the agent` before, and shows them in English until it does.
+- A conversation list that could not be read (a refusal, a server or network
+  error) says "Could not load your conversations." with a Retry, in the
+  fullscreen list and the header's history menu, where it said "No
+  conversations yet". A read that fails once the list was read keeps the
+  conversations it showed; a backend without the route (404/405) still shows
+  an empty list.
 
 ## 3.19.0 — 2026-11-02
 

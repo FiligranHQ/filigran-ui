@@ -58,6 +58,7 @@ export const zh: Catalog = {
   'Copy code': '复制代码',
   'Copy message': '复制消息',
   'Copy response': '复制回复',
+  'Could not load your conversations.': '无法加载您的对话。',
   'Could not reach the assistant service. Check the connection and try again.': '无法连接到助手服务。请检查连接后重试。',
   'Could not send your decision. Please try again.': '无法发送您的决定。请重试。',
   'Create agent': '创建智能体',
