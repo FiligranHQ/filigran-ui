@@ -1447,7 +1447,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       },
       getDraft: () => draftRef.current,
       focusComposer: () => rootRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus(),
-      attachFiles: (files) => attachFilesRef.current(files),
+      // Queued like a switch: files attached after one go to the conversation switched to.
+      attachFiles: (files) => enqueue(() => attachFilesRef.current(files)),
       stop: () => {
         // A question a voice call awaits goes with its turn.
         voice.cancel();

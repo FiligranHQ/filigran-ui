@@ -1201,6 +1201,14 @@ export function useChat({
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<string | null>(null);
   // Abort controller for in-flight file uploads (cancelled on new chat)
   const uploadAbortRef = useRef<AbortController>(new AbortController());
+  // Uploads, and the launches still waiting for their tray, end with the panel.
+  useEffect(
+    () => () => {
+      uploadAbortRef.current.abort();
+      uploadAbortRef.current = new AbortController();
+    },
+    [],
+  );
 
   // Guard invalid consumer values and keep deterministic limits.
   const effectiveMaxFileCount = Number.isFinite(maxFileCount) && maxFileCount > 0 ? Math.floor(maxFileCount) : DEFAULT_MAX_FILE_COUNT;
@@ -1557,6 +1565,8 @@ export function useChat({
     if (!fileList || fileList.length === 0 || !getUploadUrl()) return;
 
     const incoming = Array.from(fileList);
+    // Aborted by a reset of the chat and by the panel's unmount: these files go with it.
+    const signal = uploadAbortRef.current.signal;
     // Drawn before the updater, which may run twice, so the state and the uploads share them.
     const tempIds = new Map(incoming.map((file) => [file, randomId()]));
 
@@ -1582,6 +1592,7 @@ export function useChat({
     // Launch uploads OUTSIDE the state updater (side effects), once it ran:
     // a pick's runs at once, a host's (`attachFiles`) with the next render.
     const launch = () => {
+      if (signal.aborted) return;
       if (!decided) {
         setTimeout(launch, 0);
         return;
@@ -1596,7 +1607,6 @@ export function useChat({
               : f,
           ),
         );
-      const signal = uploadAbortRef.current.signal;
       for (const file of accepted) {
         const tempId = tempIds.get(file)!;
         (async () => {

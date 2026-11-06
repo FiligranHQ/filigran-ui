@@ -12,7 +12,7 @@ import { fakeBackend, json, settle, sseStream, type RecordedRequest } from '../.
 import { agentsRoute, container, finish, mountPanels, restoreRoute, text, type Handle } from '../../test/panel.tsx';
 import type { ChatFileRefusal, ChatSendDraft } from '../types.ts';
 
-const { render } = mountPanels();
+const { render, unmount } = mountPanels();
 
 let uploads = 0;
 const uploadRoute = (req: RecordedRequest) => (req.url === '/api/chat/upload' ? json({ file_ids: [`f${++uploads}`] }) : undefined);
@@ -44,6 +44,33 @@ test('files a host hands the panel go in the tray as picked ones do: uploaded, a
   assert.ok(text().includes('shared.pdf'), 'the shared file is in the tray');
   assert.equal(requests.filter((r) => r.url === '/api/chat/upload').length, 1, 'only the file under the limit is uploaded');
   assert.ok(notice()?.includes('too-big.pdf'), 'the file over the limit is refused, by name');
+});
+
+test('files a host hands the panel right after starting a conversation go to that conversation', async () => {
+  fakeBackend([agentsRoute, restoreRoute(), uploadRoute]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  act(() => {
+    ref.current!.newConversation();
+    ref.current!.attachFiles([sized('shared.pdf', 100)]);
+  });
+  await act(async () => {
+    await settle(10);
+  });
+  assert.ok(text().includes('shared.pdf'), 'the switch did not clear them');
+});
+
+test('files a host hands a panel that then goes away are never uploaded', async () => {
+  const requests = fakeBackend([agentsRoute, restoreRoute(), uploadRoute]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  const handle = ref.current!;
+  act(() => handle.attachFiles([sized('shared.pdf', 100)]));
+  await unmount();
+  await act(async () => {
+    await settle(10);
+  });
+  assert.equal(requests.filter((r) => r.url === '/api/chat/upload').length, 0);
 });
 
 test('a panel that takes no files leaves what a host hands it', async () => {
