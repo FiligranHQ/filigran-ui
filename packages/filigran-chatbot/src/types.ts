@@ -812,6 +812,12 @@ export interface ChatPanelProps {
    */
   hideConversationList?: boolean;
   /**
+   * The conversation list starts collapsed to its strip, from which the user
+   * opens it: where it would squeeze the thread, a phone or a narrow window.
+   * Read once, when the panel mounts. Default: false.
+   */
+  initialConversationListCollapsed?: boolean;
+  /**
    * Asked before a conversation is filed into a workspace (`null`: taken out
    * of its workspace), by a drag or the row's Move menu: `false` (or a promise
    * of it) leaves it where it is, e.g. once the user declined to share it with
@@ -938,6 +944,12 @@ export interface ChatPanelHandle {
    */
   getDraft: () => string;
   focusComposer: () => void;
+  /**
+   * Put *files* in the composer's tray as if the user picked them (uploaded and
+   * checked the same way), to go with the next message: files another app
+   * shared to the host. Nothing where the panel takes no files.
+   */
+  attachFiles: (files: readonly File[]) => void;
   /** Same as the Stop button; also cancels the question a voice call awaits, and stops it speaking. */
   stop: () => void;
   /**

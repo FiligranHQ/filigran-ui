@@ -185,6 +185,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     holdSendsDuringTurn = false,
     agentMentions: agentMentionsEnabled = false,
     hideConversationList = false,
+    initialConversationListCollapsed = false,
     onBeforeMove: onBeforeMoveProp,
     onConversationActionFailed: onConversationActionFailedProp,
     sidebarSearchThreshold,
@@ -480,7 +481,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // Fullscreen shows the conversation list permanently, so it has to be
   // fetched on entry rather than lazily when a menu opens. Kept collapsible:
   // fullscreen is also the mode people use to read a long answer.
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(initialConversationListCollapsed);
   // A host may give the thread the whole width (a rail, a task pane): the
   // header's history menu then stands in for the list.
   const showConversationSidebar = isWide && historyEnabled && !hideConversationList;
@@ -1251,6 +1252,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   handleNewChatRef.current = handleNewChat;
   const handleSwitchConversationRef = useRef(handleSwitchConversation);
   handleSwitchConversationRef.current = handleSwitchConversation;
+  // A host's files attach as a drop would, and only where one would.
+  const attachFilesRef = useRef<(files: readonly File[]) => void>(() => undefined);
+  attachFilesRef.current = (files) => {
+    if (canDropFiles && files.length > 0) handleFileAdd(files);
+  };
   const agentsRef = useRef(agents);
   agentsRef.current = agents;
   const selectedAgentRef = useRef(selectedAgent);
@@ -1411,6 +1417,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       },
       getDraft: () => draftRef.current,
       focusComposer: () => rootRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus(),
+      attachFiles: (files) => attachFilesRef.current(files),
       stop: () => {
         // A question a voice call awaits goes with its turn.
         voice.cancel();

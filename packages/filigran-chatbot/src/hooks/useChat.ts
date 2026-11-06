@@ -1562,8 +1562,10 @@ export function useChat({
     // The updater stays pure: it only records what it decided.
     let accepted: File[] = [];
     let refused: { file: File; reason: ChatFileRefusal }[] = [];
+    let decided = false;
     setAttachedFiles((prev) => {
       ({ accepted, refused } = admitFiles(prev, incoming, attachmentLimits));
+      decided = true;
       if (accepted.length === 0) return prev;
       const newEntries: ChatFile[] = accepted.map((file) => ({
         name: file.name,
@@ -1576,9 +1578,13 @@ export function useChat({
       return [...prev, ...newEntries];
     });
 
-    // Launch uploads OUTSIDE the state updater (side effects)
-    // Use setTimeout(0) to ensure state has settled after the updater
-    setTimeout(() => {
+    // Launch uploads OUTSIDE the state updater (side effects), once it ran:
+    // a pick's runs at once, a host's (`attachFiles`) with the next render.
+    const launch = () => {
+      if (!decided) {
+        setTimeout(launch, 0);
+        return;
+      }
       setFileNotice(refused.map(({ file, reason }) => refusalMessage(t, file.name, reason, attachmentLimits)).join(' ') || null);
       for (const { file, reason } of refused) askHost(onFileRefused, file, reason);
       const failed = (tempId: string, err?: unknown) =>
@@ -1607,7 +1613,8 @@ export function useChat({
           }
         })();
       }
-    }, 0);
+    };
+    setTimeout(launch, 0);
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
