@@ -59,6 +59,7 @@ export const ja: Catalog = {
   'Copy code': 'コードをコピー',
   'Copy message': 'メッセージをコピー',
   'Copy response': '応答をコピー',
+  'Could not load your conversations.': '会話を読み込めませんでした。',
   'Could not reach the assistant service. Check the connection and try again.':
     'アシスタントサービスに接続できませんでした。接続状態を確認して、もう一度お試しください。',
   'Could not send your decision. Please try again.': '決定内容を送信できませんでした。もう一度お試しください。',
@@ -80,6 +81,7 @@ export const ja: Catalog = {
   'Drop a conversation here, or start one with {icon}.': 'ここに会話をドロップするか、{icon} で新しく開始してください。',
   'Drop files to attach them': 'ファイルをドロップして添付',
   'End voice call': '音声通話を終了',
+  'Enter to send · Shift+Enter for new line': 'Enterキーで送信 · Shift+Enterキーで改行',
   'Enter to send now · Esc to stop': 'Enterキーで今すぐ送信 · Escキーで停止',
   'Enter to send when the answer ends · Esc to stop': 'Enterキーで回答の終了後に送信 · Escキーで停止',
   'Every conversation is in a workspace.': 'すべての会話がワークスペースに含まれています。',

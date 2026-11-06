@@ -1,10 +1,10 @@
 /**
  * Rendering tests of the conversation list's actions and the header a host
- * shapes - `yarn test`: a move the host confirms, failed actions said, the
- * backend's previews and channels, a conversation written in going first,
- * Clear all's wording, the read-only panel, the header's title, subtitle and
- * agent link, a new conversation outside the workspaces, and the agent
- * picker's badges and agents not meant for chat.
+ * shapes - `yarn test`: a move the host confirms, failed actions said, a list
+ * that could not be read, the backend's previews and channels, a conversation
+ * written in going first, Clear all's wording, the read-only panel, the
+ * header's title, subtitle and agent link, a new conversation outside the
+ * workspaces, and the agent picker's badges and agents not meant for chat.
  */
 import { afterEach, beforeEach, mock, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -547,4 +547,81 @@ test('a restored conversation whose agent is not in the list warns of no agent, 
   assert.ok(warning(), 'the picked agent is not meant for chat');
   await render({ conversationId: 'c1' });
   assert.equal(warning(), false, "the conversation's own agent is unknown");
+});
+
+/** The list route answering what *answer* gives for each read. */
+const listReads = (answer: () => Response | Promise<Response>) => (req: RecordedRequest) =>
+  req.url === '/api/chat/sessions' && req.method === 'GET' ? answer() : undefined;
+const listError = () => container.querySelector('[data-testid="filigran-chat-conversation-list-error"]');
+
+test('a list that could not be read says so, never that there is none, and Retry reads it again', async () => {
+  let answer: () => Response = () => new Response('boom', { status: 500 });
+  fakeBackend([agentsRoute, listReads(() => answer())]);
+  await render({});
+  assert.equal(listError()?.textContent, 'Could not load your conversations.Retry');
+  assert.ok(!text().includes('No conversations yet'), text());
+
+  answer = () => json([{ conversation_id: 'c1', title: 'Back again' }]);
+  await click(button('Retry'));
+  assert.equal(listError(), null);
+  assert.ok(rows()[0].textContent?.includes('Back again'));
+});
+
+test('a list read that cannot reach the backend, or is refused, says so too', async () => {
+  for (const answer of [() => Promise.reject(new TypeError('Failed to fetch')), () => json({ detail: 'Not allowed' }, 403)]) {
+    fakeBackend([agentsRoute, listReads(answer)]);
+    await render({});
+    assert.ok(listError(), text());
+    await act(async () => root.unmount());
+    root = createRoot(container);
+  }
+});
+
+test('a backend without the list route still shows an empty list', async () => {
+  for (const status of [404, 405]) {
+    fakeBackend([agentsRoute, listReads(() => new Response(null, { status }))]);
+    await render({});
+    assert.equal(listError(), null, String(status));
+    assert.ok(text().includes('No conversations yet'), text());
+    await act(async () => root.unmount());
+    root = createRoot(container);
+  }
+});
+
+test('a read that fails once the list was read keeps its conversations', async () => {
+  let answer: () => Response = () => json([{ conversation_id: 'c1', title: 'Still here' }]);
+  const requests = fakeBackend([agentsRoute, restoreRoute, listReads(() => answer())]);
+  const reads = () => requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'GET').length;
+  await render({});
+  const before = reads();
+  answer = () => new Response('boom', { status: 503 });
+  await render({ conversationId: 'c1' });
+  assert.ok(reads() > before, 'read again');
+  assert.equal(listError(), null);
+  assert.ok(rows()[0].textContent?.includes('Still here'));
+});
+
+test('the workspaces of a list that could not be read give way to the failure', async () => {
+  fakeBackend([
+    agentsRoute,
+    listReads(() => new Response('boom', { status: 500 })),
+    (req) => (req.url === '/api/chat/workspaces' && req.method === 'GET' ? json([{ id: 'w1', name: 'Shared hunts', can_manage: true }]) : undefined),
+  ]);
+  await render({ apiEndpoints: { workspaces: '/chat/workspaces' } });
+  assert.ok(listError());
+  assert.ok(!text().includes('No conversations yet') && !text().includes('Shared hunts'), text());
+});
+
+test("the header's history menu says the list could not be read, and retries it", async () => {
+  let answer: () => Response = () => new Response('boom', { status: 500 });
+  fakeBackend([agentsRoute, listReads(() => answer())]);
+  await render({ hideConversationList: true });
+  await click(button('Conversation history'));
+  const menuError = () => document.body.querySelector('[data-testid="filigran-chat-conversation-list-error"]');
+  assert.ok(menuError());
+  assert.ok(!document.body.textContent?.includes('No conversations yet'));
+  answer = () => json([{ conversation_id: 'c1', title: 'Found it' }]);
+  await click(button('Retry'));
+  assert.equal(menuError(), null);
+  assert.ok(document.body.textContent?.includes('Found it'));
 });

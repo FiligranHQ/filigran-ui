@@ -477,7 +477,7 @@ export interface ChatPanelProps {
   onDownloadError?: (error: unknown, attachment: ChatAttachment) => void;
   /** Maximum number of files attachable in one chat context. Default: 10. */
   maxFileCount?: number;
-  /** Maximum total size in bytes for attached files. Default: 50 * 1024 * 1024 (50 MB). */
+  /** Maximum total size in bytes for attached files; `Infinity` for none. Default: 50 * 1024 * 1024 (50 MB). */
   maxTotalSize?: number;
   /** Maximum size in bytes of one attached file. Default: none (only `maxTotalSize`). */
   maxFileSize?: number;
@@ -625,7 +625,11 @@ export interface ChatPanelProps {
   onConversationChange?: (conversationId: string | null) => void;
   /** Agent selected once the list loads, by id or slug, over the remembered one. */
   initialAgent?: string;
-  /** Called when another agent is picked. */
+  /**
+   * Called when another agent is picked, in the menu or by opening a
+   * conversation of another agent (the picker follows the conversation on
+   * screen, so a new chat starts with its agent).
+   */
   onAgentChange?: (agent: XtmAgent) => void;
   /** Hides the composer: a conversation the user may read but not write to. */
   readOnly?: boolean;
@@ -891,6 +895,11 @@ export interface ChatMarkerRenderer {
   renderWhileStreaming?: boolean;
   /** Give it the thread's full width rather than the prose's. */
   fullWidth?: boolean;
+  /**
+   * An answer that is this marker and nothing else shows the card alone, as a
+   * note between messages: no agent name, time or actions around it.
+   */
+  standalone?: boolean;
 }
 
 /** What a code block renderer is drawn from. */

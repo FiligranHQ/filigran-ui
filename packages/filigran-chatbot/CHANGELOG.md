@@ -8,10 +8,14 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
-## 3.19.1 — unreleased
+## 3.20.0 — unreleased
 
 ### Added
 
+- `ChatMarkerRenderer.standalone`: an answer that is the renderer's marker and
+  nothing else shows the card alone, without the agent's name, the time or the
+  actions, as a note between messages (a change of agent, for instance). Each
+  answer showed its marker's card inside the answer's frame.
 - The panel speaks German, Italian, Korean, Russian and Simplified Chinese on
   its own: a catalog for each, picked from `locale` by its language whatever
   the region (`de-de`, `it-it`, `ko-kr`, `ru-ru`, `zh-cn`). Those languages
@@ -30,8 +34,31 @@ This file starts at 3.10.0; earlier releases are on the
 - With workspaces, the list's `Not in a workspace` group has a `New
   conversation outside a workspace` button, beside each workspace's own.
 
+### Changed
+
+- The agent picker follows the conversation on screen: opening a conversation
+  of another agent, or reading back one the host continued with another agent,
+  picks that agent, so a new chat starts with it, and `onAgentChange` is called.
+  An agent picked in the menu meanwhile stays picked. The picker kept the agent
+  last picked in the menu, while the header named the conversation's.
+
 ### Fixed
 
+- `maxTotalSize: Infinity` lifts the cap on the total size of a message's
+  files, as a host with a per-file limit only passes it (XTM One's web chat and
+  Office add-in). The panel read a value that is not finite as invalid and kept
+  its 50 MB default total.
+- A message sent from a new chat no longer comes back as the next new chat's
+  draft: the draft leaves the conversation it was typed in as it is sent. The
+  write of the emptied composer could land on the conversation the send
+  created, leaving the sent text under the new chat's draft.
+- An image's lightbox is named after the image (its alt text, or the file's
+  name for an uploaded picture) and keeps `Image preview` for one with none; it
+  read `Image preview` for every picture.
+- Tab and Shift+Tab stay on the lightbox's own controls (Download when offered,
+  Close) while it is open; they reached the page under it.
+- An image's Expand button is visible while it has keyboard focus, so the focus
+  given back after the lightbox closes can be seen. It showed on hover only.
 - A refusal whose body has no `detail` shows its `error` when that is a
   sentence, as the products' proxies answer (`{ "error": "..." }`, beside a
   `status` or not), never a code (`invalid_token`, `Unauthorized`) nor a
@@ -46,7 +73,48 @@ This file starts at 3.10.0; earlier releases are on the
   language the panel has no catalog for translates these three keys; it
   translated `the agent` before, and shows them in English until it does.
 
-## 3.19.0 — unreleased
+## 3.19.1 — 2026-11-02
+
+### Added
+
+- The panel speaks German, Italian, Korean, Russian and Simplified Chinese on
+  its own: a catalog for each, picked from `locale` by its language whatever
+  the region (`de-de`, `it-it`, `ko-kr`, `ru-ru`, `zh-cn`). Those languages
+  showed in English unless the host translated every key through `t`.
+  Traditional Chinese tags (`zh-TW`, `zh-HK`, `zh-Hant`) keep falling back.
+- Inline, as a sidebar and fullscreen, the composer's footer has a line of
+  its own for what the keys do (`filigran-chat-composer-hint`), above the
+  disclaimer: an idle composer reads
+  `Enter to send · Shift+Enter for new line`, a busy one the status it read
+  before, and the line keeps its height when empty. The floating window keeps
+  one line, where a status takes the disclaimer's place.
+
+### Fixed
+
+- `filigran-chat-disclaimer` holds the disclaimer alone. It held the
+  composer's status in its place while a turn ran or a file failed to
+  upload; the status is now `filigran-chat-composer-hint`.
+- A refusal whose body has no `detail` shows its `error` when that is a
+  sentence, as the products' proxies answer (`{ "error": "..." }`, beside a
+  `status` or not), never a code (`invalid_token`, `Unauthorized`) nor a
+  status's reason phrase (`Not Found`, `Too Many Requests`). It shows above
+  the composer, in place of the answer, on a failed upload's chip, under the
+  conversation list and on a conversation that could not be loaded. The panel
+  showed its generic message instead.
+- The status line has its own wording when it has no agent's name (`The agent
+  is answering…`, `Consulting an agent…`, `Transferring to another agent…`),
+  where it filled the name with a lowercase `the agent`: `the agent is
+  answering…` started without a capital. A host translating through `t` in a
+  language the panel has no catalog for translates these three keys; it
+  translated `the agent` before, and shows them in English until it does.
+- A conversation list that could not be read (a refusal, a server or network
+  error) says "Could not load your conversations." with a Retry, in the
+  fullscreen list and the header's history menu, where it said "No
+  conversations yet". A read that fails once the list was read keeps the
+  conversations it showed; a backend without the route (404/405) still shows
+  an empty list.
+
+## 3.19.0 — 2026-11-02
 
 ### Added
 
@@ -202,7 +270,7 @@ This file starts at 3.10.0; earlier releases are on the
   query: the list stayed filtered by a search the user could neither see nor
   clear.
 
-## 3.18.1 — unreleased
+## 3.18.1 — 2026-11-02
 
 ### Fixed
 

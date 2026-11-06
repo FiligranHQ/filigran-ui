@@ -263,6 +263,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     agentsSettled,
     agentsDisabled,
     selectedAgent,
+    setSelectedAgent,
     agentMenuOpen,
     setAgentMenuOpen,
     handleSwitchAgent,
@@ -448,6 +449,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     historyEnabled,
     conversations,
     conversationsLoading,
+    conversationsFailed,
     refreshConversations,
     deleteConversation,
     renameConversation,
@@ -1345,6 +1347,20 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       ? conversationAgent
       : selectedAgent;
   const addressedAgentId = transferredAgent?.id ?? conversationAgent?.id ?? selectedAgent?.id ?? null;
+
+  // The picker follows the conversation on screen as its agent changes (one
+  // opened, read back, or continued with another agent): a new chat then
+  // starts with that agent, and the host hears of it. Only on that change: an
+  // agent picked in the menu meanwhile stays picked.
+  const followedAgentIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const id = conversationAgent?.id ?? null;
+    if (id === followedAgentIdRef.current) return;
+    followedAgentIdRef.current = id;
+    if (!conversationAgent || conversationAgent.id === selectedAgent?.id) return;
+    setSelectedAgent(conversationAgent);
+    onAgentChange?.(conversationAgent);
+  }, [conversationAgent, selectedAgent, setSelectedAgent, onAgentChange]);
   const agentLink = useMemo(() => {
     if (!headerAgent || (!agentHrefProp && !onAgentNameClick)) return undefined;
     // Followed in place: an http(s) URL, or a path of the page's own origin.
@@ -1512,6 +1528,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         onHistoryMenuClose={() => setHistoryMenuOpen(false)}
         conversations={conversations}
         conversationsLoading={conversationsLoading}
+        conversationsFailed={conversationsFailed}
+        onRetryConversations={() => void refreshConversations()}
         activeConversationId={conversationId}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={(id) => void handleDeleteConversation(id)}
@@ -1542,6 +1560,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           <ConversationSidebar
             conversations={conversations}
             loading={conversationsLoading}
+            failed={conversationsFailed}
+            onRetry={() => void refreshConversations()}
             activeConversationId={conversationId}
             collapsed={sidebarCollapsed}
             onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}

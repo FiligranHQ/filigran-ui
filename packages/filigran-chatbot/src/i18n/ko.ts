@@ -59,6 +59,7 @@ export const ko: Catalog = {
   'Copy code': '코드 복사',
   'Copy message': '메시지 복사',
   'Copy response': '응답 복사',
+  'Could not load your conversations.': '대화를 불러올 수 없습니다.',
   'Could not reach the assistant service. Check the connection and try again.':
     '어시스턴트 서비스에 연결할 수 없습니다. 연결을 확인하고 다시 시도하세요.',
   'Could not send your decision. Please try again.': '결정을 보내지 못했습니다. 다시 시도하세요.',
@@ -80,6 +81,7 @@ export const ko: Catalog = {
   'Drop a conversation here, or start one with {icon}.': '여기에 대화를 끌어다 놓거나 {icon}(으)로 새 대화를 시작하세요.',
   'Drop files to attach them': '파일을 끌어다 놓아 첨부하세요',
   'End voice call': '음성 통화 종료',
+  'Enter to send · Shift+Enter for new line': 'Enter 키로 보내기 · Shift+Enter 키로 줄 바꿈',
   'Enter to send now · Esc to stop': 'Enter 키로 지금 보내기 · Esc 키로 중지',
   'Enter to send when the answer ends · Esc to stop': 'Enter 키로 답변이 끝나면 보내기 · Esc 키로 중지',
   'Every conversation is in a workspace.': '모든 대화가 작업 공간에 있습니다.',

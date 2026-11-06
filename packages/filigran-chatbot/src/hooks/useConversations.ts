@@ -17,6 +17,8 @@ interface UseConversationsReturn {
   historyEnabled: boolean;
   conversations: ChatConversationSummary[];
   conversationsLoading: boolean;
+  /** Whether the last read of the list failed: the list then holds what the read before it gave, if any. */
+  conversationsFailed: boolean;
   /** Fetch (or re-fetch) the conversation list. No-ops when history is disabled. */
   refreshConversations: () => Promise<void>;
   /**
@@ -70,9 +72,10 @@ function parseConversation(raw: unknown): ChatConversationSummary | null {
  * menu opens — via `GET {apiBaseUrl}{sessions}`, and conversations are
  * deleted via `DELETE {apiBaseUrl}{sessions}/{conversation_id}`.
  *
- * Degrades gracefully: a backend that doesn't implement the list endpoint
- * yet (404/405/network error) simply yields an empty list, so the menu shows
- * its empty state instead of breaking the chat.
+ * A backend that doesn't implement the list endpoint (404/405) yields an
+ * empty list, so the menu shows its empty state; any other failed read
+ * (refusal, server error, network error, unreadable body) is a failure the
+ * list says, and keeps the conversations it held.
  */
 export function useConversations({
   apiBaseUrl,
@@ -83,6 +86,7 @@ export function useConversations({
   const panelFetch = usePanelFetch();
   const [conversations, setConversations] = useState<ChatConversationSummary[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [conversationsFailed, setConversationsFailed] = useState(false);
 
   const historyEnabled = backendType === 'rest' && !apiEndpoints?.singleEndpoint && apiEndpoints?.sessions !== null && apiEndpoints?.history !== null;
 
@@ -96,8 +100,13 @@ export function useConversations({
         method: 'GET',
         headers: { ...(requestHeaders ?? {}) },
       });
-      if (!res.ok) {
+      if (res.status === 404 || res.status === 405) {
         setConversations([]);
+        setConversationsFailed(false);
+        return;
+      }
+      if (!res.ok) {
+        setConversationsFailed(true);
         return;
       }
       const data: unknown = await res.json();
@@ -107,8 +116,9 @@ export function useConversations({
           ? ((data as Record<string, unknown>).conversations as unknown[])
           : [];
       setConversations(rawList.map(parseConversation).filter((c): c is ChatConversationSummary => c !== null));
+      setConversationsFailed(false);
     } catch {
-      setConversations([]);
+      setConversationsFailed(true);
     } finally {
       setConversationsLoading(false);
     }
@@ -214,6 +224,7 @@ export function useConversations({
     historyEnabled,
     conversations,
     conversationsLoading,
+    conversationsFailed,
     refreshConversations,
     deleteConversation,
     renameConversation,

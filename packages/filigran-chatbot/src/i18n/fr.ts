@@ -59,6 +59,7 @@ export const fr: Catalog = {
   'Copy code': 'Copier le code',
   'Copy message': 'Copier le message',
   'Copy response': 'Copier la réponse',
+  'Could not load your conversations.': 'Impossible de charger vos conversations.',
   'Could not reach the assistant service. Check the connection and try again.':
     'Impossible d’accéder au service d’assistant. Vérifiez la connexion et réessayez.',
   'Could not send your decision. Please try again.': 'Impossible d’envoyer votre décision. Veuillez réessayer.',
@@ -80,6 +81,7 @@ export const fr: Catalog = {
   'Drop a conversation here, or start one with {icon}.': 'Déposez une conversation ici ou démarrez-en une avec {icon}.',
   'Drop files to attach them': 'Déposez des fichiers pour les joindre',
   'End voice call': 'Terminer l’appel vocal',
+  'Enter to send · Shift+Enter for new line': 'Appuyez sur Entrée pour envoyer · Maj+Entrée pour une nouvelle ligne',
   'Enter to send now · Esc to stop': 'Appuyez sur Entrée pour envoyer maintenant · Appuyez sur Échap pour arrêter',
   'Enter to send when the answer ends · Esc to stop': 'Appuyez sur Entrée pour envoyer à la fin de la réponse · Appuyez sur Échap pour arrêter',
   'Every conversation is in a workspace.': 'Toutes les conversations sont dans un espace de travail.',
