@@ -162,6 +162,10 @@ export const ConversationSidebar = ({
   const [openedGroups, setOpenedGroups] = useState<Set<string> | null>(() => (expandedGroups ? new Set(expandedGroups) : null));
   // A host still reading them when the list mounts gives them once it has them.
   if (expandedGroups && !openedGroups) setOpenedGroups(new Set(expandedGroups));
+  // The groups open now, for a change made after an await (a workspace
+  // created): the set its render saw may have changed meanwhile.
+  const openedGroupsRef = useRef(openedGroups);
+  openedGroupsRef.current = openedGroups;
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
 
   const startRename = (id: string, current: string) => {
@@ -187,10 +191,12 @@ export const ConversationSidebar = ({
   };
 
   const setGroupOpened = (key: string, open: boolean) => {
-    if (!openedGroups || openedGroups.has(key) === open) return;
-    const next = new Set(openedGroups);
+    const current = openedGroupsRef.current;
+    if (!current || current.has(key) === open) return;
+    const next = new Set(current);
     if (open) next.add(key);
     else next.delete(key);
+    openedGroupsRef.current = next;
     setOpenedGroups(next);
     onExpandedGroupsChange?.([...next]);
   };

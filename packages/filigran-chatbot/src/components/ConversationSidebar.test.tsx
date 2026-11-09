@@ -382,6 +382,79 @@ test('given the groups a user opened, the others start collapsed, a toggle says 
   container.remove();
 });
 
+test('a group opened while a workspace is being created stays open once it is', async () => {
+  const workspace = (id: string, name: string) => ({ id, name, isOwn: true, isDefault: false, canManage: true });
+  const conversation = (id: string, workspaceId: string) => ({ conversationId: id, title: `Chat ${id}`, updatedAt: '2026-11-01T00:00:00Z', workspaceId });
+  const list = [workspace('w1', 'Hunts'), workspace('w2', 'Reports')];
+  const reported: string[][] = [];
+  let finishCreate!: () => void;
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const draw = () =>
+    root.render(
+      <ConversationSidebar
+        conversations={[conversation('c1', 'w1'), conversation('c2', 'w2')]}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onNewChat={() => undefined}
+        expandedGroups={['w2']}
+        onExpandedGroupsChange={(keys) => reported.push(keys)}
+        workspaces={{
+          list,
+          pendingWorkspaceId: null,
+          // The create answers only once the user has opened Hunts meanwhile.
+          onCreate: (name) =>
+            new Promise((resolve) => {
+              finishCreate = () => {
+                const created = workspace('w3', name);
+                list.push(created);
+                resolve({ ok: true, workspace: created });
+              };
+            }),
+          onRename: async () => ({ ok: true }),
+          onDelete: async () => ({ ok: true }),
+          onMove: async () => undefined,
+          onNewChat: () => undefined,
+        }}
+        t={(key) => key}
+      />,
+    );
+  await act(async () => {
+    draw();
+    await settle();
+  });
+  const header = (name: string) =>
+    [...container.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')].find((b) => b.textContent?.includes(name));
+
+  await act(async () => container.querySelector<HTMLButtonElement>('button[aria-label="New workspace"]')!.click());
+  const name = container.querySelector<HTMLInputElement>('input[placeholder="Workspace name"]')!;
+  await act(async () => {
+    setValue(name, 'Triage');
+    name.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await settle();
+  });
+  await act(async () => header('Hunts')!.click());
+  await act(async () => {
+    finishCreate();
+    await settle();
+  });
+  await act(async () => {
+    draw();
+    await settle();
+  });
+  assert.equal(header('Hunts')?.getAttribute('aria-expanded'), 'true', 'the group opened meanwhile collapsed again');
+  assert.equal(header('Triage')?.getAttribute('aria-expanded'), 'true');
+  assert.deepEqual(reported.at(-1)?.sort(), ['w1', 'w2', 'w3'], 'the host is told the groups open now');
+
+  await act(async () => root.unmount());
+  container.remove();
+});
+
 test('the groups a user opened, given once the list has mounted, apply then', async () => {
   const workspace = (id: string, name: string) => ({ id, name, isOwn: true, isDefault: false, canManage: true });
   const container = document.createElement('div');
