@@ -600,6 +600,8 @@ const MessageRow = memo(
     // prose are appended as a fallback; a marker with no descriptor renders
     // nothing. During streaming neither is hydrated yet, so only prose (markers
     // stripped) renders.
+    // Read once per reply: which of its files it wrote again afterwards.
+    const supersededIds = supersededInReply(msg.attachments ?? []);
     const workingFile = (att: ChatAttachment, key: string, card: React.ReactNode): WorkingFile => {
       const isImage = isImageAttachment(att);
       return {
@@ -607,7 +609,7 @@ const MessageRow = memo(
         card,
         isImage,
         imageUrl: isImage ? resolveAttachmentUrl?.(att) : undefined,
-        superseded: supersededInReply(att, msg.attachments ?? []),
+        superseded: supersededIds.has(att.fileId),
       };
     };
 

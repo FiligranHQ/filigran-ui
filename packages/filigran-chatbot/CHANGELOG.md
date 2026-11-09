@@ -35,7 +35,8 @@ This file starts at 3.10.0; earlier releases are on the
   conversation outside a workspace` button, beside each workspace's own.
 - In a reply's "Working files" list, a file the same reply wrote again later,
   with the same name and kind of file (MIME type without its parameters, else
-  the type label), carries a "Superseded" tag; its last version carries none.
+  the type label), carries a "Superseded" tag; its last version carries none,
+  nor does a file listed twice.
 
 ### Changed
 
