@@ -35,8 +35,11 @@ export interface ApiEndpoints {
    * message was persisted and will be injected into the running agentic loop
    * at the next iteration boundary. On a non-2xx response the optimistic
    * bubble is rolled back and the text is restored into the composer, so a
-   * backend without steering support degrades gracefully. Set to null to
-   * disable mid-run steering entirely.
+   * backend without steering support degrades gracefully. A new chat is
+   * created (`POST {sessions}`) before its first message, so a steer can name
+   * the first turn's conversation: the stream names it only when the turn
+   * ends. Set to null to disable mid-run steering entirely, and that create
+   * with it.
    */
   steer?: string | null;
   /**
