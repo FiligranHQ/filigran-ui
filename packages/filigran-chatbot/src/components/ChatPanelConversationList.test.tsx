@@ -470,6 +470,21 @@ test('a read that fails once the list was read keeps its conversations', async (
   assert.ok(rows()[0].textContent?.includes('Still here'));
 });
 
+test("a read refused once the list was read drops its conversations: they may be another account's", async () => {
+  for (const status of [401, 403]) {
+    let answer: () => Response = () => json([{ conversation_id: 'c1', title: 'Earlier account' }]);
+    fakeBackend([agentsRoute, restoreRoute, listReads(() => answer())]);
+    await render({});
+    assert.ok(rows()[0].textContent?.includes('Earlier account'), String(status));
+    answer = () => json({ detail: 'Not signed in' }, status);
+    await render({ conversationId: 'c1' });
+    assert.ok(!text().includes('Earlier account'), `${status}: the refused read left the previous list`);
+    assert.ok(listError(), `${status}: the refusal is not said`);
+    await act(async () => root.unmount());
+    root = createRoot(container);
+  }
+});
+
 test('the workspaces of a list that could not be read give way to the failure', async () => {
   fakeBackend([
     agentsRoute,
