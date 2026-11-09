@@ -267,10 +267,10 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     agentsSettled,
     agentsDisabled,
     selectedAgent,
-    setSelectedAgent,
     agentMenuOpen,
     setAgentMenuOpen,
     handleSwitchAgent,
+    followAgent,
     reloadAgents,
   } = useAgents({
     apiBaseUrl,
@@ -1365,16 +1365,16 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
 
   // The picker follows the conversation on screen as its agent changes (one
   // opened, read back, or continued with another agent): a new chat then
-  // starts with that agent, and the host hears of it. Only on that change: an
-  // agent picked in the menu meanwhile stays picked.
+  // starts with that agent, a reload included, and the host hears of it. Only
+  // on that change: an agent picked in the menu meanwhile stays picked.
   useEffect(() => {
     const id = conversationAgent?.id ?? null;
     if (id === followedAgentId) return;
     setFollowedAgentId(id);
     if (!conversationAgent || conversationAgent.id === selectedAgent?.id) return;
-    setSelectedAgent(conversationAgent);
+    followAgent(conversationAgent);
     onAgentChange?.(conversationAgent);
-  }, [conversationAgent, followedAgentId, selectedAgent, setSelectedAgent, onAgentChange]);
+  }, [conversationAgent, followedAgentId, selectedAgent, followAgent, onAgentChange]);
   const agentLink = useMemo(() => {
     if (!headerAgent || (!agentHrefProp && !onAgentNameClick)) return undefined;
     // Followed in place: an http(s) URL, or a path of the page's own origin.
