@@ -108,6 +108,9 @@ This file starts at 3.10.0; earlier releases are on the
 - Files added from outside the panel's own events (a host's call) upload too:
   the upload launched on a timer that assumed the tray had been updated
   already, which only a pick guaranteed.
+- A wait a resumed turn continued (`wait_start`) ends on `wait_continued`
+  with `Analyzing results…`, as the turn moves on to read what it waited for.
+  The status line read `Thinking...` until the next status.
 
 ## 3.19.1 — 2026-11-02
 
