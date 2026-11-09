@@ -848,13 +848,15 @@ if the user already typed something new), the send resolves `'failed'` and the
 refusal's [reason](#a-refusals-reason), when there is one, shows above the composer — so a backend
 without steering support degrades gracefully and the message is never silently
 lost. A `409` means no turn is running any more, an ordinary race: no notice
-shows, and with `holdSendsDuringTurn` the message is held and sent as the next
-turn instead of going back to the composer. Set `apiEndpoints.steer` to `null`
-to disable the steering affordances entirely.
+shows, and the message is held and sent as the next turn, with or without
+`holdSendsDuringTurn`. Set `apiEndpoints.steer` to `null` to disable the
+steering affordances entirely.
 
 Steering only applies to sends on the `rest` backend with a known
-`conversation_id` (the first turn of a fresh conversation only receives its id
-on `done`). A message with attachments steers only with `steerAttachments`
+`conversation_id`. The stream names a fresh conversation only on `done`, so
+while steering is on a new chat is created (`POST {sessions}`) before its first
+message, and that first turn can be steered too; with `steer: null` it is not.
+A message with attachments steers only with `steerAttachments`
 (once every file is uploaded); one carrying conversation references, agent
 mentions or body fields of its own (`send`'s `extras`, `onBeforeSend`'s
 `extras`) never steers, since a steer reaches the agent as text alone: it waits
