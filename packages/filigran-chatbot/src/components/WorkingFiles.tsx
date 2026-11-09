@@ -19,10 +19,15 @@ export interface WorkingFile {
 const versionKey = (file: ChatAttachment) =>
   `${file.filename.trim()}\n${(file.contentType || file.type || '').split(';')[0].trim().toLowerCase()}`;
 
-/** Whether *file* is followed, among its reply's *files*, by another version of it: a draft written again. */
-export function supersededInReply(file: ChatAttachment, files: readonly ChatAttachment[]): boolean {
-  const key = versionKey(file);
-  return files.slice(files.indexOf(file) + 1).some((later) => versionKey(later) === key);
+/**
+ * The files of a reply that it wrote again afterwards, by id: drafts. A file
+ * is superseded when the last file of its name and kind is another file; the
+ * same file listed twice (re-sent on a resume, say) is never its own draft.
+ */
+export function supersededInReply(files: readonly ChatAttachment[]): Set<string> {
+  const last = new Map<string, string>();
+  for (const file of files) last.set(versionKey(file), file.fileId);
+  return new Set(files.filter((file) => last.get(versionKey(file)) !== file.fileId).map((file) => file.fileId));
 }
 
 /** Called once the list has opened: the thread keeps the view where it is if the list pushed its end out of view. */
