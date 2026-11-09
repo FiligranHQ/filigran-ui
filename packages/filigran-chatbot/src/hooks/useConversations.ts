@@ -17,7 +17,7 @@ interface UseConversationsReturn {
   historyEnabled: boolean;
   conversations: ChatConversationSummary[];
   conversationsLoading: boolean;
-  /** Whether the last read of the list failed: the list then holds what the read before it gave, if any. */
+  /** Whether the last read of the list failed: the list then holds what the read before it gave, if any, unless it was refused (401/403). */
   conversationsFailed: boolean;
   /** Fetch (or re-fetch) the conversation list. No-ops when history is disabled. */
   refreshConversations: () => Promise<void>;
@@ -75,7 +75,9 @@ function parseConversation(raw: unknown): ChatConversationSummary | null {
  * A backend that doesn't implement the list endpoint (404/405) yields an
  * empty list, so the menu shows its empty state; any other failed read
  * (refusal, server error, network error, unreadable body) is a failure the
- * list says, and keeps the conversations it held.
+ * list says. A server or network failure keeps the conversations it held; a
+ * refusal (401/403) drops them, since the session they were read with may be
+ * over or another account's.
  */
 export function useConversations({
   apiBaseUrl,
@@ -106,6 +108,7 @@ export function useConversations({
         return;
       }
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) setConversations([]);
         setConversationsFailed(true);
         return;
       }
