@@ -705,6 +705,65 @@ test("a host draws a message its own way, leaves one out, and keeps the others t
   assert.ok(['m1', 'm2', 'm3', 'm4'].every((id) => seen.includes(id)), 'asked of every message');
 });
 
+const SWEEP = restoreRoute([
+  { id: 'm1', role: 'user', content: 'run the sweep' },
+  { id: 'm2', role: 'assistant', content: 'Sweep done.' },
+]);
+
+test("a host's `false` keeps the panel's row, as `undefined` does", async () => {
+  fakeBackend([agentsRoute, SWEEP]);
+  // `isCut(m) && <CutCard />`: false for every message that is not one.
+  await render({ conversationId: 'c1', replaceMessage: (message) => message.serverId === 'none' && <span>never</span> });
+  assert.equal(container.querySelector('[data-testid="filigran-chat-replaced-message"]'), null);
+  assert.ok(text().includes('run the sweep') && text().includes('Sweep done.'));
+});
+
+test("a host that throws on one message costs that message its replacement, never the panel", async () => {
+  const original = console.error;
+  console.error = () => undefined;
+  try {
+    fakeBackend([agentsRoute, SWEEP]);
+    function Broken(): never {
+      throw new Error('no raw content');
+    }
+    await render({
+      conversationId: 'c1',
+      replaceMessage: (message) => {
+        if (message.serverId === 'm1') throw new Error('asked of a message it did not expect');
+        return message.serverId === 'm2' ? <Broken /> : undefined;
+      },
+    });
+    assert.ok(text().includes('run the sweep'), "a message the host threw on is the panel's");
+    assert.ok(text().includes('Sweep done.'), "a replacement that throws while drawn gives way to the panel's row");
+  } finally {
+    console.error = original;
+  }
+});
+
+test("the reply's placeholder is asked too: a host's `null` leaves out its thinking bubble", async () => {
+  const turn = sseStream();
+  fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined)]);
+  const ref = createRef<Handle>();
+  const asked: boolean[] = [];
+  await render(
+    {
+      replaceMessage: (message, { streaming }) => {
+        if (message.role !== 'assistant') return undefined;
+        asked.push(streaming);
+        return null;
+      },
+    },
+    ref,
+  );
+  await act(async () => {
+    void ref.current!.send('fold the follow-up');
+    await settle();
+  });
+  assert.ok(asked.includes(true), 'the streaming placeholder was not asked');
+  assert.ok(!text().includes('Thinking...'), text());
+  await finish(turn);
+});
+
 const TWO_AGENTS = [...AGENTS, { id: 'a2', name: 'Analyst', slug: 'analyst', icon: null, description: null }];
 const twoAgentsRoute = (req: RecordedRequest) => (req.url === '/api/chat/agents' ? json(TWO_AGENTS) : undefined);
 
