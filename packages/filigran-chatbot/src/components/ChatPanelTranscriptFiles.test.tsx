@@ -107,6 +107,33 @@ test('a file the reply wrote again under the same name and kind is marked supers
   );
 });
 
+test('a file listed twice is one file, never its own draft: only another version supersedes it', async () => {
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'write the brief' },
+      {
+        id: 'm2',
+        role: 'assistant',
+        content: 'The brief is ready.',
+        attachments: [
+          { file_id: 'draft', filename: 'brief.md', content_type: 'text/markdown' },
+          { file_id: 'final', filename: 'brief.md', content_type: 'text/markdown' },
+          // The last version listed again (re-sent on a resume, say).
+          { file_id: 'final', filename: 'brief.md', content_type: 'text/markdown' },
+        ],
+      },
+    ]),
+  ]);
+  await render({ conversationId: 'c1', collapseUnnamedFiles: true });
+  await click(button('Working files (3)'));
+  const rows = [...container.querySelectorAll('li')].map((row) => row.textContent ?? '');
+  assert.deepEqual(
+    rows.map((row) => row.includes('Superseded')),
+    [true, false, false],
+  );
+});
+
 test("a host's predicate picks the unnamed files to collapse", async () => {
   restoreFiles();
   await render({ conversationId: 'c1', collapseUnnamedFiles: (att) => att.fileTag === 'working_file' });

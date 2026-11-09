@@ -119,7 +119,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `onArtifactOpen`    | `(artifact: ChatArtifact) => void`        | —            | Opens a deck, report or video in the host, in place of the `Open in XTM One` link |
 | `headerActions` / `banner` / `composerHeader` / `transcriptFooter` / `welcome` | `React.ReactNode` | — | The host's content in the header, above the thread, above the composer, after the last message, or in place of the welcome screen |
 | `renderMessageExtras` / `messageFooterActions` | `(message, { streaming }) => React.ReactNode` | — | The host's content under a message, and controls in a finished answer's footer; `streaming` while the message is the answer still being written. `message.raw` holds the backend's own fields — see [Host extensions](#host-extensions) |
-| `replaceMessage` | `(message, { streaming }) => React.ReactNode` | — | The host's own drawing of a message: `undefined` leaves it to the panel, `null` leaves it out, anything else is drawn in its place without the message's frame (name, time, actions). For messages a host folds into one of its own, such as a turn cut and resumed shown as one card |
+| `replaceMessage` | `(message, { streaming }) => React.ReactNode` | — | The host's own drawing of a message: `undefined` or a boolean leaves it to the panel, `null` leaves it out, anything else is drawn in its place without the message's frame (name, time, actions). Asked of every message, the reply's empty placeholder included. A throw leaves that message to the panel. For messages a host folds into one of its own, such as a turn cut and resumed shown as one card |
 | `sidebarRowActions` | `(conversation) => React.ReactNode`       | —            | The host's controls on a row of the conversation list |
 | `sidebarHeaderActions` | `React.ReactNode`  | —            | The host's controls beside New conversation |
 | `sidebarSections` | `React.ReactNode \| ((search: ChatSidebarSearch) => React.ReactNode)` | — | Sections under the list; a function draws them from the list's search (`query`, trimmed), again when the search or the function changes (pass a stable one, and put hooks in a component it returns), and offers the search box whatever the number of conversations |
@@ -851,13 +851,15 @@ if the user already typed something new), the send resolves `'failed'` and the
 refusal's [reason](#a-refusals-reason), when there is one, shows above the composer — so a backend
 without steering support degrades gracefully and the message is never silently
 lost. A `409` means no turn is running any more, an ordinary race: no notice
-shows, and with `holdSendsDuringTurn` the message is held and sent as the next
-turn instead of going back to the composer. Set `apiEndpoints.steer` to `null`
-to disable the steering affordances entirely.
+shows, and the message is held and sent as the next turn, with or without
+`holdSendsDuringTurn`. Set `apiEndpoints.steer` to `null` to disable the
+steering affordances entirely.
 
 Steering only applies to sends on the `rest` backend with a known
-`conversation_id` (the first turn of a fresh conversation only receives its id
-on `done`). A message with attachments steers only with `steerAttachments`
+`conversation_id`. The stream names a fresh conversation only on `done`, so
+while steering is on a new chat is created (`POST {sessions}`) before its first
+message, and that first turn can be steered too; with `steer: null` it is not.
+A message with attachments steers only with `steerAttachments`
 (once every file is uploaded); one carrying conversation references, agent
 mentions or body fields of its own (`send`'s `extras`, `onBeforeSend`'s
 `extras`) never steers, since a steer reaches the agent as text alone: it waits

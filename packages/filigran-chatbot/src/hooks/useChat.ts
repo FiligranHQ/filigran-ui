@@ -1690,7 +1690,7 @@ export function useChat({
       // Held, as a send during a turn winding down is: the turn is over, and
       // the message goes out as the next one, whatever `holdSends` says.
       if (res.status === 409) return { result: 'ended' };
-      if (res.status !== 409) detail = await readRefusalDetail(res);
+      detail = await readRefusalDetail(res);
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
     }
