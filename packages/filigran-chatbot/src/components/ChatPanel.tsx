@@ -223,6 +223,19 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const onAgentChange = useLatestCallback(onAgentChangeProp);
   const getRequestExtras = useLatestCallback(getRequestExtrasProp);
   const onBeforeSend = useLatestCallback(onBeforeSendProp);
+  // The workspace groups the user opened, where the host keeps them: held by
+  // the panel, adopted from the host the first time it gives them, so a list
+  // hidden and shown again (another mode, `hideConversationList`) finds them
+  // as the user left them, whatever seed the host keeps passing.
+  const [openedWorkspaceGroups, setOpenedWorkspaceGroups] = useState<string[] | undefined>(expandedWorkspaceGroups);
+  if (expandedWorkspaceGroups && openedWorkspaceGroups === undefined) setOpenedWorkspaceGroups(expandedWorkspaceGroups);
+  const onOpenedWorkspaceGroupsChange = useCallback(
+    (keys: string[]) => {
+      setOpenedWorkspaceGroups(keys);
+      onExpandedWorkspaceGroupsChange?.(keys);
+    },
+    [onExpandedWorkspaceGroupsChange],
+  );
   const onHeldSendSettled = useLatestCallback(onHeldSendSettledProp);
   const onStreamEvent = useLatestCallback(onStreamEventProp);
   const onTurnRunningChange = useLatestCallback(onTurnRunningChangeProp);
@@ -1613,8 +1626,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
                 : undefined
             }
             storageKeyPrefix={storageKeyPrefix}
-            expandedGroups={expandedWorkspaceGroups}
-            onExpandedGroupsChange={onExpandedWorkspaceGroupsChange}
+            expandedGroups={openedWorkspaceGroups}
+            onExpandedGroupsChange={onOpenedWorkspaceGroupsChange}
             rowActions={sidebarRowActions}
             headerActions={sidebarHeaderActions}
             sections={sidebarSections}

@@ -61,6 +61,24 @@ const click = (element: Element | undefined) =>
     await settle(10);
   });
 
+test('a workspace group the user opened stays open when the list is hidden and shown again', async () => {
+  fakeBackend([
+    agentsRoute,
+    listRoute([{ conversation_id: 'c1', title: 'Hunt', workspace_id: 'w1' }]),
+    (req) => (req.url === '/api/chat/workspaces' && req.method === 'GET' ? json([{ id: 'w1', name: 'Shared hunts', can_manage: true }]) : undefined),
+  ]);
+  // The host gives its seed once and keeps passing it, as a host that only reads the profile at load does.
+  const props = { apiEndpoints: { workspaces: '/chat/workspaces' }, expandedWorkspaceGroups: [] as string[] };
+  await render(props);
+  const header = () => [...container.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')].find((b) => b.textContent?.includes('Shared hunts'));
+  assert.equal(header()?.getAttribute('aria-expanded'), 'false');
+  await click(header());
+  assert.equal(header()?.getAttribute('aria-expanded'), 'true');
+  await render({ ...props, hideConversationList: true });
+  await render({ ...props, hideConversationList: false });
+  assert.equal(header()?.getAttribute('aria-expanded'), 'true', 'the list shown again collapsed the group the user opened');
+});
+
 test('a move the host refuses leaves the conversation where it was; one it agrees to files it', async () => {
   const requests = fakeBackend([
     agentsRoute,

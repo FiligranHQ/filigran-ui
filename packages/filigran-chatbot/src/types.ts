@@ -842,8 +842,10 @@ export interface ChatPanelProps {
    * other group starts collapsed until the user opens it, so many workspaces
    * do not push the conversations in none below the fold; one the user creates
    * from the list opens. Read once, the first time it is given: a host still
-   * reading them passes `undefined` until it has them. Unset, groups start
-   * open and the ones the user collapses are remembered per browser.
+   * reading them passes `undefined` until it has them. The panel keeps what
+   * the user opens from then on, while the list is hidden and shown again too.
+   * Unset, groups start open and the ones the user collapses are remembered
+   * per browser.
    */
   expandedWorkspaceGroups?: string[];
   /** The workspace groups the user has opened, each time they open or collapse one (see `expandedWorkspaceGroups`). */
