@@ -35,6 +35,11 @@ interface UseAgentsReturn {
   agentMenuOpen: boolean;
   setAgentMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleSwitchAgent: (agent: XtmAgent, onSwitch?: () => void) => void;
+  /**
+   * Select *agent* as the picker following the conversation on screen does:
+   * kept for the next start, as a pick is, without the menu's other effects.
+   */
+  followAgent: (agent: XtmAgent) => void;
   /** Read the agent list again: agents created or changed since. */
   reloadAgents: () => void;
 }
@@ -158,6 +163,14 @@ export function useAgents({
     onSwitch?.();
   };
 
+  const followAgent = useCallback(
+    (agent: XtmAgent) => {
+      setSelectedAgent(agent);
+      if (agent.slug) writeStorage('local', agentStorageKey, agent.slug);
+    },
+    [agentStorageKey],
+  );
+
   return {
     agents,
     agentsLoading,
@@ -169,6 +182,7 @@ export function useAgents({
     agentMenuOpen,
     setAgentMenuOpen,
     handleSwitchAgent,
+    followAgent,
     reloadAgents,
   };
 }

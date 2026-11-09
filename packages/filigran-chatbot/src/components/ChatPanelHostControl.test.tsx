@@ -702,6 +702,26 @@ test('the picker follows the conversation opened to its agent, and a new chat st
   await finish(turn);
 });
 
+test('the agent the picker followed is the one a new chat starts with after a reload', async () => {
+  const turn = sseStream();
+  const requests = fakeBackend([
+    twoAgentsRoute,
+    restoreRoute([{ id: 'm1', role: 'assistant', content: 'Earlier answer' }], { agent_name: 'Analyst' }),
+    (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined),
+  ]);
+  // Hunter, the first agent, is the starting one: then the conversation opened by Analyst.
+  await render({ conversationId: 'c1' });
+  await unmount();
+  const ref = createRef<Handle>();
+  await render({}, ref);
+  await act(async () => {
+    void ref.current!.send('after the reload');
+    await settle();
+  });
+  assert.equal(slugOf(requests.filter((r) => r.url === '/api/chat/messages').at(-1)), 'analyst', 'the reload forgot the agent followed');
+  await finish(turn);
+});
+
 /** A read-back of `c1` by Analyst that answers only when *release* is called. */
 function heldRestore() {
   let release!: () => void;
