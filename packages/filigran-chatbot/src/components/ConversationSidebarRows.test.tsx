@@ -95,6 +95,37 @@ test("a row shows its agent's own icon, the agent as a pill and the relative tim
   await unmount();
 });
 
+test('a cut title or agent pill says its whole text on hover, a title shown whole opens no tooltip', async () => {
+  const { container, rows, unmount } = await renderSidebar([
+    { conversationId: 'c1', title: 'Hunting the APT28 beacons across the fleet', agentName: 'CTEM Assistant' },
+  ]);
+  const [row] = rows();
+  const title = [...row.querySelectorAll('span')].find((s) => s.textContent === 'Hunting the APT28 beacons across the fleet' && !s.children.length)!;
+  const pill = row.querySelector<HTMLElement>('[data-agent-pill]')!;
+  const hover = async (el: HTMLElement) => {
+    await act(async () => {
+      el.parentElement!.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+      await settle();
+    });
+  };
+  const tip = () => container.ownerDocument.querySelector('[role="tooltip"]')?.textContent ?? null;
+  await hover(title);
+  assert.equal(tip(), null, 'shown whole: nothing to add');
+  for (const el of [title, pill]) {
+    Object.defineProperty(el, 'scrollWidth', { configurable: true, value: 200 });
+    Object.defineProperty(el, 'clientWidth', { configurable: true, value: 68 });
+  }
+  await hover(title);
+  assert.equal(tip(), 'Hunting the APT28 beacons across the fleet');
+  await act(async () => {
+    title.parentElement!.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }));
+    await settle();
+  });
+  await hover(pill);
+  assert.equal(tip(), 'CTEM Assistant');
+  await unmount();
+});
+
 test("the host names a row's channel, or hides it", async () => {
   const { rows, unmount } = await renderSidebar(
     [

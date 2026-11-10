@@ -912,7 +912,7 @@ const ConversationRow = ({
           onSelect(c.conversationId);
         }
       }}
-      className={`group flex w-full items-start gap-2.5 chat-radius-sm px-2.5 py-2 text-left cursor-pointer transition-colors ${
+      className={`group relative flex w-full items-start gap-2.5 chat-radius-sm px-2.5 py-2 text-left cursor-pointer transition-colors ${
         isActive ? 'bg-[var(--chat-accent)]/10' : 'hover:chat-surface-hover-100/6'
       }`}
     >
@@ -943,9 +943,12 @@ const ConversationRow = ({
             className="w-full chat-radius-sm chat-input-surface-white/10 px-1.5 py-0.5 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
           />
         ) : (
-          <span className={`block truncate text-[0.8125rem] ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
-            {c.title || t('Untitled conversation')}
-          </span>
+          // The whole title on hover when the row still cuts it.
+          <Tooltip title={c.title || t('Untitled conversation')} truncated>
+            <span className={`block min-w-0 truncate text-[0.8125rem] ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
+              {c.title || t('Untitled conversation')}
+            </span>
+          </Tooltip>
         )}
         {/*
           Agent before time, on one line: which agent a thread is with
@@ -974,19 +977,26 @@ const ConversationRow = ({
               </span>
             )}
             {c.agentName && (
-              <span
-                data-agent-pill=""
-                className="min-w-0 truncate rounded-full border chat-border-200/10 chat-surface-subtle-100/6 px-1.5 leading-4 chat-text-secondary-500/50"
-              >
-                {c.agentName}
-              </span>
+              <Tooltip title={c.agentName} truncated>
+                <span
+                  data-agent-pill=""
+                  className="min-w-0 truncate rounded-full border chat-border-200/10 chat-surface-subtle-100/6 px-1.5 leading-4 chat-text-secondary-500/50"
+                >
+                  {c.agentName}
+                </span>
+              </Tooltip>
             )}
             {c.updatedAt && <span className="shrink-0 whitespace-nowrap">{timeAgo(c.updatedAt, t)}</span>}
           </span>
         )}
       </span>
       {!isEditing && (
-        <span className="flex shrink-0 self-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        // Over the row's end, not beside it: hidden, the actions keep no
+        // width, so the title and the agent pill take the whole row.
+        <span
+          data-row-actions=""
+          className="pointer-events-none absolute right-1.5 top-1/2 flex -translate-y-1/2 chat-radius-sm border chat-border-200/10 chat-menu-surface opacity-0 shadow-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100"
+        >
           {actions && (
             // The row selects on click and on Enter/Space: the host's controls keep theirs.
             <span className="flex" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
