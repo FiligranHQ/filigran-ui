@@ -10,6 +10,15 @@ This file starts at 3.10.0; earlier releases are on the
 
 ## 3.21.0 — unreleased
 
+### Changed
+
+- The header's agent control is one switcher: a click anywhere on the icon,
+  the name or the chevron opens a searchable list of the agents (always
+  searchable, ArrowUp / ArrowDown move, Enter switches, Escape closes, the
+  current agent checked). With `agentHref` or `onAgentNameClick`, the agent's
+  page moves to an "Open agent page" item of that menu, with the same rules
+  (in place, a modifier key left to the browser); the name is no longer a link.
+
 ### Added
 
 - `onConversationChange` says why the conversation changed: its second argument
