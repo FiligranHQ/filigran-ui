@@ -68,18 +68,6 @@ const RESTORE_RETRY_BASE_MS = 5000;
 const RESTORE_RETRY_MAX_MS = 60000;
 
 /**
- * Fallback suggestions, translated where they are written so extraction sees
- * the keys — the host's own list and the backend's are translated too (they may
- * be keys), but only these belong to the package.
- */
-const defaultSuggestions = (t: Translate) => [
-  t('Help me create a new simulation scenario'),
-  t('What are the latest attack patterns?'),
-  t('How do I configure detection rules?'),
-  t('Summarize my recent findings'),
-];
-
-/**
  * The panel, its requests reporting the end of the user's session
  * (`onSessionEnded`): once per set of `requestHeaders`, whichever request or
  * stream said it first.
@@ -456,12 +444,12 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
 
   /**
    * Suggestions shown on the welcome screen, resolved to final text here rather
-   * than in `ChatWelcome`: the backend's and the host's lists still go through
-   * `t` (a host may well pass keys), while the package's own fallback is
-   * translated at its definition so the keys stay extractable.
+   * than in `ChatWelcome`: the backend's and the host's lists go through `t` (a
+   * host may well pass keys). The package has no list of its own: an agent with
+   * no suggestions shows none, never generic prompts that are not the agent's.
    */
   const suggestions = useMemo(
-    () => (agentSuggestions ?? promptSuggestions)?.map((s) => t(s)) ?? defaultSuggestions(t),
+    () => (agentSuggestions ?? promptSuggestions)?.map((s) => t(s)) ?? [],
     [agentSuggestions, promptSuggestions, t],
   );
 
@@ -1691,12 +1679,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
                 firstName={firstName}
                 logoIcon={resolvedLogo}
                 // The agent's own suggestions when the backend serves them, the
-                // host's list otherwise, this package's list when there is neither —
-                // never an empty section.
+                // host's list otherwise, none when there is neither. The agent's
+                // description is not passed: it is picker and agent-page prose.
                 promptSuggestions={suggestions}
                 suggestionsLoading={suggestionsLoading}
                 agentName={selectedAgent?.name}
-                agentDescription={selectedAgent?.description}
                 onPromptClick={readOnly ? undefined : setInputValue}
                 t={t}
               />

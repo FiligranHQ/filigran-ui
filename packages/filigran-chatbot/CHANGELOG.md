@@ -12,6 +12,13 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Changed
 
+- The new-conversation screen is short: the agent's mark, one greeting line
+  naming the agent, and the agent's own suggestions as compact chips. The
+  agent's description is no longer shown there (`ChatWelcome`'s
+  `agentDescription` is deprecated and ignored), the "Suggestions" heading is
+  gone, and the package's four generic fallback suggestions are removed: an
+  agent the suggestions route answers nothing for, with no host
+  `promptSuggestions`, shows no suggestion.
 - The header's agent control is one switcher: a click anywhere on the icon,
   the name or the chevron opens a searchable list of the agents (always
   searchable, ArrowUp / ArrowDown move, Enter switches, Escape closes, the

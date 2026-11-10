@@ -1443,11 +1443,14 @@ A host behind its own proxy points the routes at it, relative to its
 `{ prompts: '/prompts', quota: '/quota', feedback: '/conversations' }`
 (`feedback`: see [Message feedback](#message-feedback)).
 
-The welcome screen names the selected agent and shows its own suggestions —
-which is also how switching agent is confirmed: the thread resets to that
-screen, so without it nothing tells you who the next message will reach. When
-the suggestions route is unavailable the host's `promptSuggestions` prop is used
-instead, so the section is never empty.
+The welcome screen is short: the agent's mark, one greeting line naming the
+selected agent (which is also how switching agent is confirmed: the thread
+resets to that screen, so without it nothing tells you who the next message
+will reach), and the agent's own suggestions as compact chips. The agent's
+description is never shown there (it is picker and agent-page prose). When the
+suggestions route is unavailable the host's `promptSuggestions` prop is used
+instead; with neither, no suggestion is shown: the package carries no generic
+list of its own.
 
 Dictation needs no configuration at all: it uses the browser's own Web Speech
 API, so the mic button appears inside the text field, next to Send, wherever

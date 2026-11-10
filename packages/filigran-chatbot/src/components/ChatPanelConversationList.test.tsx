@@ -290,6 +290,34 @@ test('a read-only panel offers no suggestions heading, and still a new conversat
   assert.equal(button('New chat')?.disabled, false);
 });
 
+test('a new conversation is a short empty state: the greeting, never the agent description, and no suggestion the agent does not serve', async () => {
+  const description = 'Assistant of the fleet and its orchestrator, with a description that runs to twenty lines in the agent picker.';
+  fakeBackend([
+    (req) => (req.url === '/api/chat/agents' ? json([{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: null, description }]) : undefined),
+    listRoute([]),
+  ]);
+  await render({});
+  assert.ok(text().includes('Hunter'), 'the greeting names the agent');
+  assert.ok(!text().includes(description), 'the description stays in the picker');
+  assert.equal(container.querySelector('[role="group"][aria-label="Suggestions"]'), null, 'no generic suggestion');
+  assert.ok(!text().includes('simulation scenario'));
+});
+
+test('the agent own suggestions show as chips on the empty state', async () => {
+  fakeBackend([
+    agentsRoute,
+    listRoute([]),
+    (req) => (req.url.startsWith('/api/chat/suggestions') ? json({ suggestions: ['Hunt APT28 in the last week', 'Triage new alerts'] }) : undefined),
+  ]);
+  await render({});
+  const group = container.querySelector('[role="group"][aria-label="Suggestions"]');
+  assert.ok(group, 'the suggestions group');
+  assert.deepEqual(
+    [...group!.querySelectorAll('button')].map((b) => b.textContent),
+    ['Hunt APT28 in the last week', 'Triage new alerts'],
+  );
+});
+
 test('the header shows the title and subtitle the host draws from the conversation, and its switcher links the agent page', async () => {
   fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'Hunting APT28', channel: 'slack' }]), restoreRoute]);
   const clicked: string[] = [];
