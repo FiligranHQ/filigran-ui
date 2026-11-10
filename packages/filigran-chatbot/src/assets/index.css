@@ -87,6 +87,22 @@
 @utility chat-composer-surface {
   background-color: var(--filigran-chat-input-surface, transparent);
 }
+/*
+ * The composer's box takes the host's field corners, and its focus as a 2 px ring
+ * around it (a design system's text-field focus) while the field has the focus:
+ * the border keeps its colour, so dictation's red border still reads.
+ */
+.filigran-chat-composer-box {
+  border-radius: var(--filigran-chat-input-radius, 0.75rem);
+}
+.filigran-chat-composer-box:has(textarea:focus) {
+  outline: 2px solid var(--filigran-chat-focus-ring, var(--chat-accent));
+  outline-offset: 2px;
+}
+/* Two lines at rest, so the field reads as the place to write; it grows from there. */
+.filigran-chat-composer-field {
+  min-height: var(--filigran-chat-input-min-height, calc(2lh + 0.75rem));
+}
 @utility chat-skeleton-fill {
   background-color: var(--filigran-chat-border, var(--chat-default-skeleton-fill));
 }

@@ -355,8 +355,9 @@ export const ChatInput = ({
       {/* items-end keeps the buttons on the last line once the field grows.
           `relative` anchors the @ menu, which opens above the field. */}
       <div
-        className={`relative flex items-end border rounded-xl chat-composer-surface px-2 py-1 transition-colors ${
-          dictation.listening ? 'border-red-500/50' : 'chat-border-200/10 focus-within:border-[var(--chat-accent)]'
+        data-testid="filigran-chat-composer-box"
+        className={`filigran-chat-composer-box relative flex items-end border chat-composer-surface px-2 py-1 transition-colors ${
+          dictation.listening ? 'border-red-500/50' : 'chat-border-200/10'
         } ${isLoading ? 'filigran-chat-active-border' : ''}`}
       >
         {isFileManagementEnabled && (
@@ -396,7 +397,7 @@ export const ChatInput = ({
           {...mentionMenu.textareaAria}
           onPaste={onPaste}
           rows={1}
-          className="flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 chat-text-900/100 placeholder:chat-text-muted-400/30 filigran-chat-scrollable"
+          className="filigran-chat-composer-field flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 chat-text-900/100 placeholder:chat-text-muted-400/30 filigran-chat-scrollable"
           style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}
         />
         <MentionMenu

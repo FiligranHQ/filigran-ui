@@ -399,6 +399,12 @@ export interface ChatPanelTheme {
   surfaceHover?: string;
   /** A text field: the composer (no fill unless set), a rename field, the feedback and approval comments (`--filigran-chat-input-surface`). */
   inputSurface?: string;
+  /** The composer's corners, as the host's text fields draw theirs (`--filigran-chat-input-radius`, 0.75rem unset). */
+  inputRadius?: string;
+  /** The composer field's height at rest, before it grows with the text (`--filigran-chat-input-min-height`, two lines unset). */
+  inputMinHeight?: string;
+  /** The 2 px ring drawn around the composer while it has the focus (`--filigran-chat-focus-ring`, the accent unset). */
+  focusRing?: string;
   /** The header's background, a colour or an image; `none` for the surface alone (`--filigran-chat-header-background`). */
   headerBackground?: string;
   /** Text (`--filigran-chat-text`). */

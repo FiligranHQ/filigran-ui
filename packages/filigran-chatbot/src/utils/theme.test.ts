@@ -15,6 +15,14 @@ test('a theme sets the variables of the entries it gives a value, and only those
   });
 });
 
+test('the composer entries set its corners, resting height and focus ring', () => {
+  assert.deepEqual(themeVariables({ inputRadius: 'var(--radius-sm)', inputMinHeight: '4rem', focusRing: 'var(--color-focus)' }), {
+    '--filigran-chat-input-radius': 'var(--radius-sm)',
+    '--filigran-chat-input-min-height': '4rem',
+    '--filigran-chat-focus-ring': 'var(--color-focus)',
+  });
+});
+
 test('no theme sets nothing', () => {
   assert.deepEqual(themeVariables(undefined), {});
   assert.deepEqual(themeVariables({}), {});

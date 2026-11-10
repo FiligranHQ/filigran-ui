@@ -1287,6 +1287,9 @@ both. The same variables may be set in CSS on an ancestor instead.
 | `surfaceSubtle`    | `--filigran-chat-surface-subtle`    | Cards, search boxes, a table's or a code block's header |
 | `surfaceHover`     | `--filigran-chat-surface-hover`     | A row or a button under the pointer |
 | `inputSurface`     | `--filigran-chat-input-surface`     | A text field: the composer (no fill unless set), a rename field, the feedback and approval comments |
+| `inputRadius`      | `--filigran-chat-input-radius`      | The composer's corners (0.75rem unset) |
+| `inputMinHeight`   | `--filigran-chat-input-min-height`  | The composer field's height at rest, before it grows with the text (two lines unset) |
+| `focusRing`        | `--filigran-chat-focus-ring`        | The 2 px ring around the composer while it has the focus (the accent unset) |
 | `headerBackground` | `--filigran-chat-header-background` | The header's background, a colour or an image (`none` for the surface alone) |
 | `text`             | `--filigran-chat-text`              | Text |
 | `textMuted`        | `--filigran-chat-text-muted`        | Times, labels, hints and placeholders |
