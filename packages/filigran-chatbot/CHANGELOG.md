@@ -18,6 +18,18 @@ This file starts at 3.10.0; earlier releases are on the
   a reload or in place of a deleted one, and when it is left for a new chat. A
   host could not tell an opened conversation from a created one, as both came
   after a new chat.
+- The composer takes the host's field tokens: `theme.inputRadius`,
+  `theme.inputMinHeight` and `theme.focusRing` set its corners, its height at
+  rest and its focus ring, so a host draws it with its design system and no
+  local override.
+
+### Changed
+
+- The composer opens at two lines instead of one, and still grows with the
+  text up to its maximum: at one line it did not read as the place to write.
+- The composer's focus is a 2 px ring around its box instead of an accent
+  border, the text-field focus of a design system; the border keeps its colour,
+  so dictation's red border still reads.
 
 ## 3.20.0 — 2026-11-10
 
