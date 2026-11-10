@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   install:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -43,7 +43,7 @@ jobs:
           key: workspace-${{ github.sha }}
 
   build-packages:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: install
     strategy:
       matrix:
@@ -83,7 +83,7 @@ jobs:
           echo "✅ Build completed successfully for ${{ matrix.package }}"
 
   build-website:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-packages
     steps:
       - name: Setup Node
@@ -116,7 +116,7 @@ jobs:
           echo "✅ Build completed successfully for filigran-website"
 
   test-build-summary:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [build-packages, build-website]
     if: always()
     steps:
