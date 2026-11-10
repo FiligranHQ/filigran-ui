@@ -30,6 +30,13 @@ test('the radius entries pass the design-system corners to every card and contro
   });
 });
 
+test('the feedback entries pass the design-system danger and warning tones', () => {
+  assert.deepEqual(themeVariables({ danger: 'var(--color-error)', warning: 'var(--color-warning)' }), {
+    '--filigran-chat-danger': 'var(--color-error)',
+    '--filigran-chat-warning': 'var(--color-warning)',
+  });
+});
+
 test('no theme sets nothing', () => {
   assert.deepEqual(themeVariables(undefined), {});
   assert.deepEqual(themeVariables({}), {});

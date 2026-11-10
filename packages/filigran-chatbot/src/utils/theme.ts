@@ -12,6 +12,8 @@ const THEME_VARIABLES: Readonly<Record<keyof ChatPanelTheme, string>> = {
   radiusMd: '--filigran-chat-radius-md',
   inputMinHeight: '--filigran-chat-input-min-height',
   focusRing: '--filigran-chat-focus-ring',
+  danger: '--filigran-chat-danger',
+  warning: '--filigran-chat-warning',
   headerBackground: '--filigran-chat-header-background',
   text: '--filigran-chat-text',
   textMuted: '--filigran-chat-text-muted',

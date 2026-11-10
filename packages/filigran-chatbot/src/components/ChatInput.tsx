@@ -340,7 +340,7 @@ export const ChatInput = ({
           <span className="shrink-0 chat-text-secondary-500/50">{t('Sends when the answer ends:')}</span>
           <span className="min-w-0 flex-1 truncate chat-text-800/80">{heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}</span>
           {onCancelHeld && (
-            <button type="button" onClick={onCancelHeld} className="shrink-0 chat-text-muted-400/40 hover:text-red-500">
+            <button type="button" onClick={onCancelHeld} className="shrink-0 chat-text-muted-400/40 hover:text-[var(--chat-danger)]">
               {t('Cancel')}
             </button>
           )}
@@ -353,7 +353,7 @@ export const ChatInput = ({
               key={i}
               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[0.7rem] ${
                 f.uploadStatus === 'error'
-                  ? 'border-red-500/25 bg-red-500/[0.06] text-red-700 dark:text-red-300'
+                  ? 'border-[var(--chat-danger)]/25 bg-[var(--chat-danger)]/[0.06] text-[var(--chat-danger)]'
                   : f.uploadStatus === 'pending'
                     ? 'chat-border-200/10 chat-text-muted-400/40'
                     : 'chat-border-200/10 chat-text-secondary-600/60'
@@ -393,7 +393,7 @@ export const ChatInput = ({
         // the focus ring stands aside until the turn ends (index.css).
         data-working={isLoading ? '' : undefined}
         className={`filigran-chat-composer-box relative flex flex-col border chat-composer-surface px-2 pt-1 pb-1.5 transition-colors ${
-          dictation.listening ? 'border-red-500/50' : 'chat-border-200/10'
+          dictation.listening ? 'border-[var(--chat-danger)]/50' : 'chat-border-200/10'
         } ${isLoading ? 'filigran-chat-active-border' : ''}`}
       >
         <textarea
@@ -466,11 +466,13 @@ export const ChatInput = ({
                 aria-label={t('Dictate a message')}
                 aria-pressed={dictation.listening}
                 className={`relative w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm mr-0.5 transition-colors ${
-                  dictation.listening ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'chat-text-muted-400/30 hover:chat-surface-hover-100/10'
+                  dictation.listening
+                    ? 'text-[var(--chat-danger)] bg-[var(--chat-danger)]/10 hover:bg-[var(--chat-danger)]/20'
+                    : 'chat-text-muted-400/30 hover:chat-surface-hover-100/10'
                 }`}
               >
                 {dictation.listening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
-                {dictation.listening && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500 motion-safe:animate-pulse" />}
+                {dictation.listening && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--chat-danger)] motion-safe:animate-pulse" />}
               </button>
             </Tooltip>
           )}
@@ -506,7 +508,7 @@ export const ChatInput = ({
               disabled={!isLoading && !canSend}
               className={`p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 ${
                 isLoading
-                  ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20 ml-0.5'
+                  ? 'text-[var(--chat-danger)] bg-[var(--chat-danger)]/10 hover:bg-[var(--chat-danger)]/20 ml-0.5'
                   : canSend
                     ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20'
                     : 'chat-text-muted-300/20 cursor-not-allowed'
@@ -521,8 +523,8 @@ export const ChatInput = ({
       {/* The footer's one line: words heard but not yet final, else a status,
           else the disclaimer. */}
       {dictation.interim ? (
-        <p className="flex items-center justify-center gap-1.5 text-[0.65rem] italic text-red-500 dark:text-red-400 mt-1.5 min-h-[1lh]">
-          <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-red-500 motion-safe:animate-pulse" />
+        <p className="flex items-center justify-center gap-1.5 text-[0.65rem] italic text-[var(--chat-danger)] mt-1.5 min-h-[1lh]">
+          <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-[var(--chat-danger)] motion-safe:animate-pulse" />
           <span className="truncate">{dictation.interim}</span>
         </p>
       ) : status ? (

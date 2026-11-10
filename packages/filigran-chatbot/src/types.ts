@@ -409,6 +409,10 @@ export interface ChatPanelTheme {
   inputMinHeight?: string;
   /** The 2 px ring drawn around the composer while it has the focus (`--filigran-chat-focus-ring`, the accent unset). */
   focusRing?: string;
+  /** The danger tone of every error state: notices, a failed upload, dictation, stop (`--filigran-chat-danger`, a red unset). */
+  danger?: string;
+  /** The warning tone of every warning notice (`--filigran-chat-warning`, an amber unset). */
+  warning?: string;
   /** The header's background, a colour or an image; `none` for the surface alone (`--filigran-chat-header-background`). */
   headerBackground?: string;
   /** Text (`--filigran-chat-text`). */

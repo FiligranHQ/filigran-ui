@@ -390,6 +390,22 @@ test('the agent switcher filters as you type, walks with the arrow keys and swit
   await key('Enter');
   assert.equal(changed.length, 1, 'Enter switches');
   assert.ok(target.startsWith(changed[0]), `${target} / ${changed[0]}`);
+  assert.equal(document.activeElement, switcher, 'choosing an agent hands the focus back to the trigger');
+});
+
+test('Escape in the agent switcher closes it and hands the focus back to the trigger', async () => {
+  fakeBackend([agentsRoute]);
+  await render({});
+  const switcher = container.querySelector<HTMLButtonElement>('[data-testid="filigran-chat-agent-switcher"]')!;
+  await click(switcher);
+  const search = document.body.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+  await act(async () => {
+    search.focus();
+    search.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await settle();
+  });
+  assert.equal(switcher.getAttribute('aria-expanded'), 'false', 'the menu closes');
+  assert.equal(document.activeElement, switcher, 'the focus is on the trigger, never the page body');
 });
 
 test('a restored conversation whose agent is not in the list links no agent, never the one picked', async () => {
