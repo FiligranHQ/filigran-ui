@@ -261,17 +261,12 @@ export const ChatInput = ({
           : isLoading && waitsForTurn
             ? t('This message waits for the current response')
             : null;
-  // Wider than the floating window, the footer has a line of its own for what
-  // the keys do, above the disclaimer; an idle composer says how to send.
-  // The floating window has one line: a status takes the disclaimer's place.
-  const hintLine = mode !== 'floating';
-  const hint = status ?? (hintLine && !isLoading && !hasFilesUploading ? t('Enter to send · Shift+Enter for new line') : null);
-  const footerLine = 'text-center text-[0.65rem] chat-text-muted-400/30 opacity-70';
-  const disclaimer = (
-    <p data-testid="filigran-chat-disclaimer" className={`${footerLine} ${hintLine ? 'mt-0.5' : 'mt-1.5'}`}>
-      {t('Uses AI. Verify results.')}
-    </p>
-  );
+  // One footer line under the composer, the same on every surface (inline,
+  // sidebar, fullscreen, floating): a status when there is one, else the
+  // disclaimer. How to send is the Send button's tooltip, not a line of its
+  // own. The line keeps its height, so the composer never jumps.
+  const footerLine = 'text-center text-[0.65rem] chat-text-muted-400/30 opacity-70 mt-1.5 min-h-[1lh] truncate';
+  const sendTooltip = hasFilesUploading ? t('Files uploading...') : t('Enter to send · Shift+Enter for new line');
 
   return (
     <div
@@ -461,7 +456,7 @@ export const ChatInput = ({
               </button>
             </Tooltip>
           )}
-          <Tooltip title={isLoading ? t('Stop generating') : hasFilesUploading ? t('Files uploading...') : ''}>
+          <Tooltip title={isLoading ? t('Stop generating') : sendTooltip}>
             <button
               type="button"
               onClick={isLoading ? onStop : send}
@@ -481,20 +476,22 @@ export const ChatInput = ({
         </div>
       </div>
 
-      {/* Words heard but not yet final take the place of the hint (of the
-          footer's one line in the floating window), so the preview never
-          shifts the composer's height; the hint line keeps its height empty. */}
+      {/* The footer's one line: words heard but not yet final, else a status,
+          else the disclaimer. */}
       {dictation.interim ? (
-        <p className="flex items-center justify-center gap-1.5 text-[0.65rem] italic text-red-500 dark:text-red-400 mt-1.5">
+        <p className="flex items-center justify-center gap-1.5 text-[0.65rem] italic text-red-500 dark:text-red-400 mt-1.5 min-h-[1lh]">
           <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-red-500 motion-safe:animate-pulse" />
           <span className="truncate">{dictation.interim}</span>
         </p>
-      ) : hint || hintLine ? (
-        <p data-testid="filigran-chat-composer-hint" className={`${footerLine} mt-1.5 min-h-[1lh]`}>
-          {hint}
+      ) : status ? (
+        <p data-testid="filigran-chat-composer-hint" className={footerLine}>
+          {status}
         </p>
-      ) : null}
-      {(hintLine || (!dictation.interim && !hint)) && disclaimer}
+      ) : (
+        <p data-testid="filigran-chat-disclaimer" className={footerLine}>
+          {t('Uses AI. Verify results.')}
+        </p>
+      )}
     </div>
   );
 };

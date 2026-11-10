@@ -1281,41 +1281,44 @@ const draft = (ref: React.RefObject<Handle | null>, value: string) =>
     await settle();
   });
 
-for (const mode of ['inline', 'sidebar', 'fullscreen'] as const) {
-  test(`${mode}, an idle composer says how to send, above the disclaimer, which says only that`, async () => {
+for (const mode of ['inline', 'sidebar', 'fullscreen', 'floating'] as const) {
+  test(`${mode}, an idle composer has one footer line, the disclaimer, and Send's tooltip says how to send`, async () => {
     fakeBackend([agentsRoute]);
     await render({ mode });
-    assert.equal(footer('composer-hint')?.textContent, SEND_HINT);
+    assert.equal(footer('composer-hint'), null, 'no send hint line');
     assert.equal(footer('disclaimer')?.textContent, DISCLAIMER);
+    assert.ok(!text().includes(SEND_HINT), 'the keys are in the tooltip, not on the page');
+    const send = container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!;
+    assert.equal(send.closest('[data-testid="filigran-chat-composer"]')?.querySelectorAll('p').length, 1, 'one footer line');
   });
 }
 
-test('while a turn runs the send hint goes and leaves its line empty, the disclaimer kept below', async () => {
+test('while a turn runs without a status, the disclaimer is the one footer line', async () => {
   const stream = sseStream();
   fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
   const ref = createRef<Handle>();
   await render({ conversationId: 'c1', apiEndpoints: { steer: null } }, ref);
   await startTurn(ref, stream);
-  assert.equal(footer('composer-hint')?.textContent, '', 'an empty line, so the composer keeps its height');
-  assert.equal(footer('disclaimer')?.textContent, DISCLAIMER);
-  await finish(stream);
-  await act(async () => settle(10));
-  assert.equal(footer('composer-hint')?.textContent, SEND_HINT, 'idle again');
-});
-
-test('a status takes the hint line, the disclaimer kept below', async () => {
-  const stream = sseStream();
-  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
-  const ref = createRef<Handle>();
-  await render({ conversationId: 'c1' }, ref);
-  await startTurn(ref, stream);
-  await draft(ref, 'steer it');
-  assert.equal(footer('composer-hint')?.textContent, 'Enter to send now · Esc to stop');
+  assert.equal(footer('composer-hint'), null);
   assert.equal(footer('disclaimer')?.textContent, DISCLAIMER);
   await finish(stream);
 });
 
-test('the send hint waits for an attached file to upload', async () => {
+for (const mode of ['sidebar', 'floating'] as const) {
+  test(`${mode}, a status takes the footer line in place of the disclaimer`, async () => {
+    const stream = sseStream();
+    fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+    const ref = createRef<Handle>();
+    await render({ mode, conversationId: 'c1' }, ref);
+    await startTurn(ref, stream);
+    await draft(ref, 'steer it');
+    assert.equal(footer('composer-hint')?.textContent, 'Enter to send now · Esc to stop');
+    assert.equal(footer('disclaimer'), null);
+    await finish(stream);
+  });
+}
+
+test('an uploading file shows no send hint; the disclaimer stays', async () => {
   let uploaded!: () => void;
   fakeBackend([
     agentsRoute,
@@ -1330,25 +1333,11 @@ test('the send hint waits for an attached file to upload', async () => {
     input.dispatchEvent(new Event('change', { bubbles: true }));
     await settle(10);
   });
-  assert.equal(footer('composer-hint')?.textContent, '', 'Enter sends nothing while it uploads');
+  assert.equal(footer('composer-hint'), null);
+  assert.equal(footer('disclaimer')?.textContent, DISCLAIMER);
   await act(async () => {
     uploaded();
     await settle(10);
   });
-  assert.equal(footer('composer-hint')?.textContent, SEND_HINT);
-});
-
-test('the floating window has one footer line, the disclaimer, which a status replaces, and no send hint', async () => {
-  const stream = sseStream();
-  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
-  const ref = createRef<Handle>();
-  await render({ mode: 'floating', conversationId: 'c1' }, ref);
-  assert.equal(footer('composer-hint'), null);
   assert.equal(footer('disclaimer')?.textContent, DISCLAIMER);
-  assert.ok(!text().includes(SEND_HINT));
-  await startTurn(ref, stream);
-  await draft(ref, 'steer it');
-  assert.equal(footer('composer-hint')?.textContent, 'Enter to send now · Esc to stop');
-  assert.equal(footer('disclaimer'), null);
-  await finish(stream);
 });
