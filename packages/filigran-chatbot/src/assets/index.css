@@ -48,12 +48,14 @@
    * Feedback tones: the design system's danger and warning colours, passed by
    * the host through the theme (`danger` / `warning`, e.g. `var(--color-error)`);
    * unset, a red and an amber that read at 4.5:1 or more on the panel's own
-   * surfaces. Every error and warning state of the panel (notices, a failed
+   * surfaces under a notice's 6 % wash (light: red-700 5.1:1, amber-800 5.8:1
+   * on gray-100; red-600 and amber-700 fell to 3.8:1 and 4.1:1,
+   * XTM-One-Platform/xtm-one#10911 UX round 1, B2). Every error and warning state of the panel (notices, a failed
    * upload, dictation, stop) reads these, with an opacity modifier for a wash
    * or a border (`bg-[var(--chat-danger)]/10`), never a Tailwind red or amber.
    */
-  --chat-danger: var(--filigran-chat-danger, var(--color-red-600));
-  --chat-warning: var(--filigran-chat-warning, var(--color-amber-700));
+  --chat-danger: var(--filigran-chat-danger, var(--color-red-700));
+  --chat-warning: var(--filigran-chat-warning, var(--color-amber-800));
   --chat-default-surface: var(--color-gray-50);
   --chat-default-surface-raised: var(--color-white);
   --chat-default-menu-surface: var(--color-white);

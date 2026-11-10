@@ -305,6 +305,18 @@ test('a new conversation is a short empty state: the greeting, never the agent d
   assert.ok(!text().includes('simulation scenario'));
 });
 
+test('an agent whose suggestions route answers an empty list shows no Suggestions section (xtm-one#10911 UX round 1, B1)', async () => {
+  fakeBackend([
+    agentsRoute,
+    listRoute([]),
+    (req) => (req.url.startsWith('/api/chat/suggestions') ? json({ suggestions: [] }) : undefined),
+  ]);
+  await render({});
+  assert.equal(container.querySelector('[role="group"][aria-label="Suggestions"]'), null, 'no suggestions group');
+  assert.ok(!text().includes('Suggestions'), 'no Suggestions title');
+  assert.ok(!text().includes('simulation scenario'), 'no generic prompt');
+});
+
 test('the agent own suggestions show as chips on the empty state', async () => {
   fakeBackend([
     agentsRoute,
