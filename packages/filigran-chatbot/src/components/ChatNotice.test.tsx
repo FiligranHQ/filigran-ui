@@ -47,11 +47,22 @@ test('the close button names itself and closes', async () => {
   );
   const button = container.querySelector<HTMLButtonElement>('button')!;
   assert.equal(button.getAttribute('aria-label'), 'Close');
+  assert.equal(button.getAttribute('title'), null, "the panel's tooltip, never a native title");
   await act(async () => {
     button.click();
     await settle();
   });
   assert.equal(closed, 1);
+});
+
+test('the notice and composer tones come from the theme variables, never a Tailwind red or amber', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+  const dir = fileURLToPath(new URL('.', import.meta.url));
+  for (const file of ['ChatNotice.tsx', 'ChatInput.tsx']) {
+    const source = readFileSync(dir + file, 'utf8');
+    assert.ok(!/(text|bg|border)-(red|amber)-\d/.test(source), `${file} uses a Tailwind red or amber`);
+  }
 });
 
 test('no notice of the panel is raw coloured text any more', async () => {

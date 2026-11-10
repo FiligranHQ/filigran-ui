@@ -221,11 +221,25 @@ export const ChatHeader = ({
     listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView?.({ block: 'nearest' });
   }, [activeAgentIndex]);
 
+  // Closing the menu from inside it (Escape, an agent chosen) hands the focus
+  // back to the trigger, so a keyboard user carries on from where they opened
+  // it instead of landing on the page body. A click outside leaves the focus
+  // where that click put it.
+  const closeAgentMenuToTrigger = () => {
+    onAgentMenuClose();
+    agentAnchorRef.current?.focus();
+  };
+  const switchAgentFromMenu = (agent: XtmAgent) => {
+    onSwitchAgent(agent);
+    agentAnchorRef.current?.focus();
+  };
+
   const onAgentSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     // Escape closes the whole menu rather than only clearing the query, the
     // same key the rest of the panel uses to dismiss.
     if (e.key === 'Escape') {
-      onAgentMenuClose();
+      e.preventDefault();
+      closeAgentMenuToTrigger();
       return;
     }
     if (orderedAgents.length === 0) return;
@@ -236,7 +250,7 @@ export const ChatHeader = ({
     } else if (e.key === 'Enter') {
       e.preventDefault();
       const agent = orderedAgents[Math.min(activeAgentIndex, orderedAgents.length - 1)];
-      if (agent) onSwitchAgent(agent);
+      if (agent) switchAgentFromMenu(agent);
     }
   };
 
@@ -261,7 +275,7 @@ export const ChatHeader = ({
             aria-expanded={agentMenuOpen}
             title={t('Switch to another agent')}
             data-testid="filigran-chat-agent-switcher"
-            className={`flex max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1.5 py-1 chat-radius-sm border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
+            className={`flex h-8 max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1.5 chat-radius-sm border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
               agentMenuOpen ? 'chat-surface-hover-100/10 chat-border-200/10' : ''
             }`}
           >
@@ -374,7 +388,7 @@ export const ChatHeader = ({
                   aria-selected={isCurrent}
                   data-active={isActive ? 'true' : undefined}
                   tabIndex={-1}
-                  onClick={() => onSwitchAgent(agent)}
+                  onClick={() => switchAgentFromMenu(agent)}
                   onMouseMove={() => {
                     if (!isActive) setActiveAgentIndex(index);
                   }}

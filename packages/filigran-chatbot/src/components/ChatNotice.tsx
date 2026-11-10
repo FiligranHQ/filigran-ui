@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AlertTriangleIcon, CloseIcon, InfoIcon, XCircleIcon } from './icons';
+import { Tooltip } from './Tooltip';
 
 /** How serious a notice is: its colour and its icon follow. */
 export type ChatNoticeTone = 'error' | 'warning' | 'info';
@@ -17,12 +18,13 @@ interface ChatNoticeProps {
   'data-testid'?: string;
 }
 
-// One tinted container per tone: a light wash, a border of the same hue, the
-// text a step darker in light mode and lighter in dark mode, so it reads on
-// every surface the panel is mounted on.
+// One tinted container per tone: a light wash, a border of the same hue and
+// the text in the tone itself. The tones are theme variables (index.css:
+// `--chat-danger`, `--chat-warning`, the host's design-system colours when it
+// passes them), each a step darker in light mode and lighter in dark mode.
 const TONE_CLASS: Record<ChatNoticeTone, string> = {
-  error: 'border-red-500/25 bg-red-500/[0.06] text-red-700 dark:text-red-300',
-  warning: 'border-amber-500/25 bg-amber-500/[0.06] text-amber-800 dark:text-amber-200',
+  error: 'border-[var(--chat-danger)]/25 bg-[var(--chat-danger)]/[0.06] text-[var(--chat-danger)]',
+  warning: 'border-[var(--chat-warning)]/25 bg-[var(--chat-warning)]/[0.06] text-[var(--chat-warning)]',
   info: 'border-[var(--chat-accent-40)] bg-[var(--chat-accent-10)] chat-text-secondary-700/80',
 };
 
@@ -57,15 +59,19 @@ export const ChatNotice = ({
       <Icon size={14} className="mt-[3px] shrink-0" />
       <div className="min-w-0 flex-1 break-words">{children}</div>
       {onDismiss && (
-        <button
-          type="button"
-          onClick={onDismiss}
-          aria-label={dismissLabel}
-          title={dismissLabel}
-          className="-mr-1 mt-px shrink-0 chat-radius-sm p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
-        >
-          <CloseIcon size={12} />
-        </button>
+        // A 24 px hit area (WCAG 2.5.8) around the 12 px glyph, pulled into the
+        // padding so the notice keeps its height; the panel's own tooltip.
+        <Tooltip title={dismissLabel ?? ''}>
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label={dismissLabel}
+            data-testid="filigran-chat-notice-dismiss"
+            className="-my-0.5 -mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center chat-radius-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
+          >
+            <CloseIcon size={12} />
+          </button>
+        </Tooltip>
       )}
     </div>
   );

@@ -12,6 +12,16 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Changed
 
+- Error and warning states take the host's design-system tones: `theme.danger`
+  and `theme.warning` (`--filigran-chat-danger`, `--filigran-chat-warning`)
+  colour the notices, a failed upload, dictation and the stop button; unset, a
+  red and an amber per mode. No Tailwind red or amber is left in the notice or
+  the composer.
+- A notice's close button shows the panel's tooltip instead of a native title,
+  with a 24 px hit area.
+- The agent switcher hands the focus back to its trigger on Escape and when an
+  agent is chosen, and the trigger is 32 px high like the other header controls.
+
 - Answers render their Markdown at the old chat page's quality and past it.
   Fenced code is coloured by language (Python, TypeScript and JavaScript, JSON,
   shell, SQL, YAML and their usual aliases) in light and dark, with no new
