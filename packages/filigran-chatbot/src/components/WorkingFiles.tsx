@@ -21,13 +21,19 @@ const versionKey = (file: ChatAttachment) =>
 
 /**
  * The files of a reply that it wrote again afterwards, by id: drafts. A file
- * is superseded when the last file of its name and kind is another file; the
- * same file listed twice (re-sent on a resume, say) is never its own draft.
+ * is superseded when another file of its name and kind first appears after
+ * it. A file ranks where it first appears: listed again (re-sent on a resume,
+ * say), it is never its own draft, nor newer than a version written since.
  */
 export function supersededInReply(files: readonly ChatAttachment[]): Set<string> {
-  const last = new Map<string, string>();
-  for (const file of files) last.set(versionKey(file), file.fileId);
-  return new Set(files.filter((file) => last.get(versionKey(file)) !== file.fileId).map((file) => file.fileId));
+  const seen = new Set<string>();
+  const latest = new Map<string, string>();
+  for (const file of files) {
+    if (seen.has(file.fileId)) continue;
+    seen.add(file.fileId);
+    latest.set(versionKey(file), file.fileId);
+  }
+  return new Set(files.filter((file) => latest.get(versionKey(file)) !== file.fileId).map((file) => file.fileId));
 }
 
 /** Called once the list has opened: the thread keeps the view where it is if the list pushed its end out of view. */
