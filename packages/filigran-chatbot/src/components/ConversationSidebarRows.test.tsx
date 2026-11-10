@@ -1,7 +1,7 @@
 /**
  * Rendering tests of the conversation list's rows and search - `yarn test`.
  */
-import { test } from 'node:test';
+import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act } from 'react';
 
@@ -14,6 +14,12 @@ const { createRoot } = await import('react-dom/client');
 const { ConversationSidebar } = await import('./ConversationSidebar.tsx');
 
 type SidebarProps = Parameters<typeof ConversationSidebar>[0];
+
+// The workspace actions are read with the Workspaces line open, as for a user who opened it once.
+beforeEach(() => {
+  localStorage.clear();
+  localStorage.setItem('filigran-chat-workspaces-open', '1');
+});
 
 async function renderSidebar(conversations: ChatConversationSummary[], props: Partial<SidebarProps> = {}) {
   const container = document.createElement('div');

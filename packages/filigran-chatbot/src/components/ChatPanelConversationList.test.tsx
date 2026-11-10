@@ -34,6 +34,8 @@ let root: ReturnType<typeof createRoot>;
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
+  // The workspace groups are read with the Workspaces line open, as for a user who opened it once.
+  localStorage.setItem('filigran-chat-workspaces-open', '1');
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
