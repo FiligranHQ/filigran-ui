@@ -93,6 +93,7 @@ export const zh: Catalog = {
   'Good response': '回复很好',
   'Help me create a new simulation scenario': '帮我创建一个新的模拟场景',
   'Hide conversations': '隐藏对话',
+  'Resize the conversation list': '调整对话列表的宽度',
   'How can I help you, {name}?': '{name}，有什么可以帮您？',
   'How can {agent} help you, {name}?': '{name}，{agent} 能为您做些什么？',
   'How do I configure detection rules?': '如何配置检测规则？',

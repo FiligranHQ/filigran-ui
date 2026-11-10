@@ -94,6 +94,7 @@ export const ja: Catalog = {
   'Good response': '適切な回答',
   'Help me create a new simulation scenario': '新しいシミュレーションシナリオの作成を手伝ってください',
   'Hide conversations': '会話を非表示にする',
+  'Resize the conversation list': '会話リストのサイズを変更',
   'How can I help you, {name}?': '{name} さん、何かお手伝いできることはありますか？',
   'How can {agent} help you, {name}?': '{name} さん、{agent} がお手伝いできることはありますか？',
   'How do I configure detection rules?': '検出ルールはどのように設定すればよいですか？',

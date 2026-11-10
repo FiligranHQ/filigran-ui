@@ -94,6 +94,7 @@ export const it: Catalog = {
   'Good response': 'Risposta valida',
   'Help me create a new simulation scenario': 'Aiutami a creare un nuovo scenario di simulazione',
   'Hide conversations': 'Nascondi le conversazioni',
+  'Resize the conversation list': 'Ridimensiona l\'elenco delle conversazioni',
   'How can I help you, {name}?': 'Come posso aiutarti, {name}?',
   'How can {agent} help you, {name}?': 'Come può aiutarti {agent}, {name}?',
   'How do I configure detection rules?': 'Come configuro le regole di rilevamento?',

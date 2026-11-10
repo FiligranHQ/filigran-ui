@@ -18,6 +18,11 @@ This file starts at 3.10.0; earlier releases are on the
   a reload or in place of a deleted one, and when it is left for a new chat. A
   host could not tell an opened conversation from a created one, as both came
   after a new chat.
+- The conversation list of fullscreen and inline modes is resizable: drag its
+  right edge between 224 and 480 px, or move it with the arrow keys, Home and
+  End once focused; a double-click puts back the 256 px it always had. The
+  width is remembered per browser (`filigranChatConversationListWidth`,
+  namespaced by `storageKeyPrefix`) and kept while the list is collapsed.
 
 ## 3.20.0 — 2026-11-10
 

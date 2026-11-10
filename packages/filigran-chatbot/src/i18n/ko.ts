@@ -94,6 +94,7 @@ export const ko: Catalog = {
   'Good response': '좋은 응답',
   'Help me create a new simulation scenario': '새 시뮬레이션 시나리오 만들기를 도와줘',
   'Hide conversations': '대화 숨기기',
+  'Resize the conversation list': '대화 목록 크기 조정',
   'How can I help you, {name}?': '{name}님, 무엇을 도와드릴까요?',
   'How can {agent} help you, {name}?': '{name}님, {agent}이(가) 무엇을 도와드릴까요?',
   'How do I configure detection rules?': '탐지 규칙은 어떻게 구성하나요?',

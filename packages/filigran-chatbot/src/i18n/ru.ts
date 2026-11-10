@@ -94,6 +94,7 @@ export const ru: Catalog = {
   'Good response': 'Хороший ответ',
   'Help me create a new simulation scenario': 'Помоги мне создать новый сценарий симуляции',
   'Hide conversations': 'Скрыть диалоги',
+  'Resize the conversation list': 'Изменить ширину списка диалогов',
   'How can I help you, {name}?': 'Чем я могу помочь, {name}?',
   'How can {agent} help you, {name}?': 'Чем {agent} может помочь, {name}?',
   'How do I configure detection rules?': 'Как настроить правила обнаружения?',

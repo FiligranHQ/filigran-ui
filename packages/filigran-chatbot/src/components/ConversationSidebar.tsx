@@ -112,6 +112,24 @@ function readCollapsed(key: string): Set<string> {
   }
 }
 
+/**
+ * The list's width in fullscreen, in px: dragged from its right edge between
+ * `min` and `max`, back to `default` (the width it always had) on a
+ * double-click, remembered per browser.
+ */
+export const LIST_WIDTH = { min: 224, default: 256, max: 480 } as const;
+/** What an arrow key moves the list's edge by. */
+const LIST_WIDTH_STEP = 16;
+
+export function clampListWidth(width: number): number {
+  return Math.round(Math.min(Math.max(width, LIST_WIDTH.min), LIST_WIDTH.max));
+}
+
+function readListWidth(key: string): number {
+  const parsed = Number.parseInt(readStorage('local', key) ?? '', 10);
+  return Number.isNaN(parsed) ? LIST_WIDTH.default : clampListWidth(parsed);
+}
+
 const iconButton = 'p-1 rounded-md chat-text-muted-400/30 hover:chat-icon-hover transition-colors disabled:opacity-40 disabled:pointer-events-none';
 const sectionLabel = 'text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40';
 
@@ -165,6 +183,14 @@ export const ConversationSidebar = ({
   // Or, where the host keeps them per user, the groups the user has opened.
   const openedGroups = useMemo(() => (expandedGroups ? new Set(expandedGroups) : null), [expandedGroups]);
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
+  // The list's width, kept while it is collapsed and across reloads.
+  const widthKey = storageKey(storageKeyPrefix, STORAGE_KEYS.conversationListWidth);
+  const [width, setWidth] = useState(() => readListWidth(widthKey));
+  const resize = (next: number, commit: boolean) => {
+    setWidth(next);
+    // The default width is no choice: nothing is kept for it.
+    if (commit) writeStorage('local', widthKey, next === LIST_WIDTH.default ? null : String(next));
+  };
 
   const startRename = (id: string, current: string) => {
     settledRef.current = false;
@@ -292,7 +318,8 @@ export const ConversationSidebar = ({
   );
 
   return (
-    <div className="w-64 shrink-0 flex flex-col border-r chat-border-200/10">
+    <div className="relative shrink-0 flex flex-col border-r chat-border-200/10" style={{ width }}>
+      <ListResizeHandle width={width} onResize={resize} t={t} />
       <div className="flex items-center gap-1 px-3 py-3">
         <button
           type="button"
@@ -435,6 +462,82 @@ export const ConversationSidebar = ({
           {notice}
         </p>
       )}
+    </div>
+  );
+};
+
+/**
+ * The list's right edge, dragged to resize it: arrow keys move it by a step,
+ * Home and End to its bounds, a double-click puts the default width back.
+ */
+const ListResizeHandle = ({
+  width,
+  onResize,
+  t,
+}: {
+  width: number;
+  /** `commit`: the gesture is over, the width is the one to keep. */
+  onResize: (width: number, commit: boolean) => void;
+  t: (key: string) => string;
+}) => {
+  // `last`: the width the pointer reached, which a release before the next
+  // render must keep rather than the one this render was drawn at.
+  const drag = useRef<{ x: number; width: number; last: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const end = () => {
+    if (!drag.current) return;
+    const { last } = drag.current;
+    drag.current = null;
+    setDragging(false);
+    onResize(last, true);
+  };
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={t('Resize the conversation list')}
+      aria-valuemin={LIST_WIDTH.min}
+      aria-valuemax={LIST_WIDTH.max}
+      aria-valuenow={width}
+      tabIndex={0}
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        // No text selected along the way.
+        e.preventDefault();
+        drag.current = { x: e.clientX, width, last: width };
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        setDragging(true);
+      }}
+      onPointerMove={(e) => {
+        if (!drag.current) return;
+        drag.current.last = clampListWidth(drag.current.width + e.clientX - drag.current.x);
+        onResize(drag.current.last, false);
+      }}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onDoubleClick={() => onResize(LIST_WIDTH.default, true)}
+      onKeyDown={(e) => {
+        const next =
+          e.key === 'ArrowLeft'
+            ? width - LIST_WIDTH_STEP
+            : e.key === 'ArrowRight'
+              ? width + LIST_WIDTH_STEP
+              : e.key === 'Home'
+                ? LIST_WIDTH.min
+                : e.key === 'End'
+                  ? LIST_WIDTH.max
+                  : null;
+        if (next === null) return;
+        e.preventDefault();
+        onResize(clampListWidth(next), true);
+      }}
+      className="group absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize touch-none outline-hidden"
+    >
+      <span
+        className={`absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 transition-colors ${
+          dragging ? 'bg-[var(--chat-accent)]' : 'group-hover:bg-[var(--chat-accent)]/40 group-focus-visible:bg-[var(--chat-accent)]'
+        }`}
+      />
     </div>
   );
 };
