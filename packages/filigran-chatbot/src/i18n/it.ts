@@ -80,6 +80,7 @@ export const it: Catalog = {
   'Drop a conversation here, or start one with {icon}.': 'Trascina qui una conversazione o avviane una con {icon}.',
   'Drop files to attach them': 'Trascina qui i file per allegarli',
   'End voice call': 'Termina la chiamata vocale',
+  'Enter to send · Shift+Enter for new line': 'Invio per inviare · Maiusc+Invio per andare a capo',
   'Enter to send now · Esc to stop': 'Invio per inviare subito · Esc per interrompere',
   'Enter to send when the answer ends · Esc to stop': 'Invio per inviare al termine della risposta · Esc per interrompere',
   'Every conversation is in a workspace.': 'Ogni conversazione si trova in un’area di lavoro.',

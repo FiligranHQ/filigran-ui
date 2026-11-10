@@ -249,7 +249,7 @@ export const ChatInput = ({
     }
   };
 
-  const footerText = showHoldSend
+  const status = showHoldSend
     ? t('Enter to send when the answer ends · Esc to stop')
     : failedFileWaits
       ? t('A file failed to upload: remove it to send the message')
@@ -259,7 +259,18 @@ export const ChatInput = ({
           ? t('Attachments wait for the current response')
           : isLoading && waitsForTurn
             ? t('This message waits for the current response')
-            : t('Uses AI. Verify results.');
+            : null;
+  // Wider than the floating window, the footer has a line of its own for what
+  // the keys do, above the disclaimer; an idle composer says how to send.
+  // The floating window has one line: a status takes the disclaimer's place.
+  const hintLine = mode !== 'floating';
+  const hint = status ?? (hintLine && !isLoading && !hasFilesUploading ? t('Enter to send · Shift+Enter for new line') : null);
+  const footerLine = 'text-center text-[0.65rem] chat-text-muted-400/30 opacity-70';
+  const disclaimer = (
+    <p data-testid="filigran-chat-disclaimer" className={`${footerLine} ${hintLine ? 'mt-0.5' : 'mt-1.5'}`}>
+      {t('Uses AI. Verify results.')}
+    </p>
+  );
 
   return (
     <div
@@ -459,18 +470,20 @@ export const ChatInput = ({
         </div>
       )}
 
-      {/* Words heard but not yet final take the footer's place, so the preview
-          never shifts the composer's height. */}
+      {/* Words heard but not yet final take the place of the hint (of the
+          footer's one line in the floating window), so the preview never
+          shifts the composer's height; the hint line keeps its height empty. */}
       {dictation.interim ? (
         <p className="flex items-center justify-center gap-1.5 text-[0.65rem] italic text-red-500 dark:text-red-400 mt-1.5">
           <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-red-500 motion-safe:animate-pulse" />
           <span className="truncate">{dictation.interim}</span>
         </p>
-      ) : (
-        <p data-testid="filigran-chat-disclaimer" className="text-center text-[0.65rem] chat-text-muted-400/30 mt-1.5 opacity-70">
-          {footerText}
+      ) : hint || hintLine ? (
+        <p data-testid="filigran-chat-composer-hint" className={`${footerLine} mt-1.5 min-h-[1lh]`}>
+          {hint}
         </p>
-      )}
+      ) : null}
+      {(hintLine || (!dictation.interim && !hint)) && disclaimer}
     </div>
   );
 };
