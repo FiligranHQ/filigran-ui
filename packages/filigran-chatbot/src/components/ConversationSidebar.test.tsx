@@ -3,7 +3,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { act, useMemo, type ReactNode } from 'react';
+import { act, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 
 import { installDom, settle } from '../../test/dom.ts';
 
@@ -15,6 +15,31 @@ const { ConversationSidebar } = await import('./ConversationSidebar.tsx');
 const { setValue } = await import('../utils/pageActions.ts');
 
 const WORKSPACE = { id: 'w1', name: 'Hunts', isOwn: true, isDefault: false, canManage: true };
+
+type SidebarProps = ComponentProps<typeof ConversationSidebar>;
+
+/**
+ * The list's opened groups held as the panel holds them: each change applied
+ * to the set open then, and the host told of each one, never of its seed.
+ */
+function HeldGroups({ initial, report, ...props }: Omit<SidebarProps, 'expandedGroups' | 'onGroupOpenedChange'> & { initial: string[]; report: (keys: string[]) => void }) {
+  const [opened, setOpened] = useState(initial);
+  const reported = useRef(opened);
+  useEffect(() => {
+    if (opened === reported.current) return;
+    reported.current = opened;
+    report(opened);
+  }, [opened, report]);
+  return (
+    <ConversationSidebar
+      {...props}
+      expandedGroups={opened}
+      onGroupOpenedChange={(key, open) =>
+        setOpened((prev) => (prev.includes(key) === open ? prev : open ? [...prev, key] : prev.filter((k) => k !== key)))
+      }
+    />
+  );
+}
 
 async function renderEmptyWorkspace(t: (key: string) => string) {
   const container = document.createElement('div');
@@ -321,7 +346,7 @@ test('given the groups a user opened, the others start collapsed, a toggle says 
   const root = createRoot(container);
   const draw = () =>
     root.render(
-      <ConversationSidebar
+      <HeldGroups
         conversations={[conversation('c1', 'w1'), conversation('c2', 'w2')]}
         loading={false}
         activeConversationId={null}
@@ -330,8 +355,8 @@ test('given the groups a user opened, the others start collapsed, a toggle says 
         onSelect={() => undefined}
         onDelete={() => undefined}
         onNewChat={() => undefined}
-        expandedGroups={['w2']}
-        onExpandedGroupsChange={(keys) => reported.push(keys)}
+        initial={['w2']}
+        report={(keys) => reported.push(keys)}
         workspaces={{
           list,
           pendingWorkspaceId: null,
@@ -393,7 +418,7 @@ test('a group opened while a workspace is being created stays open once it is', 
   const root = createRoot(container);
   const draw = () =>
     root.render(
-      <ConversationSidebar
+      <HeldGroups
         conversations={[conversation('c1', 'w1'), conversation('c2', 'w2')]}
         loading={false}
         activeConversationId={null}
@@ -402,8 +427,8 @@ test('a group opened while a workspace is being created stays open once it is', 
         onSelect={() => undefined}
         onDelete={() => undefined}
         onNewChat={() => undefined}
-        expandedGroups={['w2']}
-        onExpandedGroupsChange={(keys) => reported.push(keys)}
+        initial={['w2']}
+        report={(keys) => reported.push(keys)}
         workspaces={{
           list,
           pendingWorkspaceId: null,

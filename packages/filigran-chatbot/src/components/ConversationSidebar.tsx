@@ -62,9 +62,13 @@ interface ConversationSidebarProps {
   workspaces?: SidebarWorkspaces;
   /** Namespace of the browser-storage keys (see `storageKeyPrefix` on the panel). */
   storageKeyPrefix?: string;
-  /** The groups the user has opened, every other one collapsed (see `expandedWorkspaceGroups` on the panel). */
+  /**
+   * The groups the user has opened, every other one collapsed (see
+   * `expandedWorkspaceGroups` on the panel): held by the panel, which applies
+   * each `onGroupOpenedChange` to the set it has then.
+   */
   expandedGroups?: string[];
-  onExpandedGroupsChange?: (keys: string[]) => void;
+  onGroupOpenedChange?: (key: string, open: boolean) => void;
   /** The host's controls on a row, before rename and delete. */
   rowActions?: (conversation: ChatConversationSummary) => ReactNode;
   /** The host's controls beside New conversation. */
@@ -137,7 +141,7 @@ export const ConversationSidebar = ({
   workspaces,
   storageKeyPrefix,
   expandedGroups,
-  onExpandedGroupsChange,
+  onGroupOpenedChange,
   rowActions,
   headerActions,
   sections,
@@ -159,13 +163,7 @@ export const ConversationSidebar = ({
   const collapsedKey = storageKey(storageKeyPrefix, STORAGE_KEYS.collapsedWorkspaces);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => readCollapsed(collapsedKey));
   // Or, where the host keeps them per user, the groups the user has opened.
-  const [openedGroups, setOpenedGroups] = useState<Set<string> | null>(() => (expandedGroups ? new Set(expandedGroups) : null));
-  // A host still reading them when the list mounts gives them once it has them.
-  if (expandedGroups && !openedGroups) setOpenedGroups(new Set(expandedGroups));
-  // The groups open now, for a change made after an await (a workspace
-  // created): the set its render saw may have changed meanwhile.
-  const openedGroupsRef = useRef(openedGroups);
-  openedGroupsRef.current = openedGroups;
+  const openedGroups = useMemo(() => (expandedGroups ? new Set(expandedGroups) : null), [expandedGroups]);
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
 
   const startRename = (id: string, current: string) => {
@@ -190,15 +188,10 @@ export const ConversationSidebar = ({
     setEditingId(null);
   };
 
+  // Said as a change, not a set: the panel applies it to the groups open
+  // then, so one made after an await (a workspace created) loses no other.
   const setGroupOpened = (key: string, open: boolean) => {
-    const current = openedGroupsRef.current;
-    if (!current || current.has(key) === open) return;
-    const next = new Set(current);
-    if (open) next.add(key);
-    else next.delete(key);
-    openedGroupsRef.current = next;
-    setOpenedGroups(next);
-    onExpandedGroupsChange?.([...next]);
+    if (openedGroups) onGroupOpenedChange?.(key, open);
   };
 
   const toggleGroup = (key: string) => {
