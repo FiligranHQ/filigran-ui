@@ -25,6 +25,7 @@ import {
   TrashIcon,
 } from './icons';
 import { Spinner } from './Spinner';
+import { ChatNotice } from './ChatNotice';
 import { Tooltip } from './Tooltip';
 
 /**
@@ -431,9 +432,9 @@ export const ConversationSidebar = ({
       </div>
 
       {notice && (
-        <p role="alert" className="mx-3 mb-3 rounded-md bg-red-500/10 px-2.5 py-1.5 text-[0.7rem] text-red-600 dark:text-red-400">
+        <ChatNotice tone="error" className="mx-3 mb-3">
           {notice}
-        </p>
+        </ChatNotice>
       )}
     </div>
   );

@@ -199,7 +199,7 @@ test("a failed upload's chip says why, and the message is not sent until the fil
   const ref = createRef<Handle>();
   await render({ conversationId: 'c1' }, ref);
   await attach(sized('report.pdf', 10));
-  assert.equal(container.querySelector('[data-testid="filigran-chat-upload-error"]')?.textContent, '✕The file is over the 5 MB limit.');
+  assert.equal(container.querySelector('[data-testid="filigran-chat-upload-error"]')?.textContent, 'The file is over the 5 MB limit.');
   await act(async () => {
     ref.current!.setDraft('read this');
     await settle();
@@ -259,7 +259,7 @@ test('a failed upload whose backend gave no reason says it failed', async () => 
   fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/upload' ? new Response('Bad gateway', { status: 502 }) : undefined)]);
   await render({ conversationId: 'c1' });
   await attach(sized('report.pdf', 10));
-  assert.equal(container.querySelector('[data-testid="filigran-chat-upload-error"]')?.textContent, '✕Upload failed');
+  assert.equal(container.querySelector('[data-testid="filigran-chat-upload-error"]')?.textContent, 'Upload failed');
 });
 
 test('onBeforeSend is told how many files the message carries', async () => {

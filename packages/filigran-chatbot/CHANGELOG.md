@@ -18,6 +18,13 @@ This file starts at 3.10.0; earlier releases are on the
   current agent checked). With `agentHref` or `onAgentNameClick`, the agent's
   page moves to an "Open agent page" item of that menu, with the same rules
   (in place, a modifier key left to the browser); the name is no longer a link.
+- Every error, warning and notice of the panel renders through one notice
+  block (`ChatNotice`): a tone (error, warning, info) with its icon, a tinted
+  container at the panel's radius, and a close button where the notice is not
+  tied to a live state. The composer's refused attachment and refused steer
+  or Stop notices close on a click; no notice is raw coloured text any more.
+  `useChat` returns `dismissNotice` and `dismissFileNotice`, and `ChatInput`
+  takes `onDismissNotice` and `onDismissFileNotice`.
 
 ### Added
 

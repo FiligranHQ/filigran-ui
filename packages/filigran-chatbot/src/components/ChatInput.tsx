@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
-import { AlertTriangleIcon, AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
+import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon, XCircleIcon } from './icons';
+import { ChatNotice } from './ChatNotice';
 import { useMentionMenu } from '../hooks/useMentionMenu';
 import { useDictation } from '../hooks/useDictation';
 import { referencedConversations } from '../utils/conversationRefs';
@@ -26,6 +27,10 @@ interface ChatInputProps {
   notice?: string | null;
   /** Which files the last attach refused, and why. */
   fileNotice?: string | null;
+  /** Closes `notice`; without it the notice has no close button. */
+  onDismissNotice?: () => void;
+  /** Closes `fileNotice`; without it the notice has no close button. */
+  onDismissFileNotice?: () => void;
   /** The conversation's agent is meant for assignments rather than chat (`XtmAgent.disableChat`); an agent the draft mentions is warned of too. */
   agentNotForChat?: boolean;
   onCancelHeld?: () => void;
@@ -108,6 +113,8 @@ export const ChatInput = ({
   heldMessage,
   notice,
   fileNotice,
+  onDismissNotice,
+  onDismissFileNotice,
   agentNotForChat = false,
   onCancelHeld,
   inputValue,
@@ -281,23 +288,33 @@ export const ChatInput = ({
     >
       {header && <div className="mb-2">{header}</div>}
       {notice && (
-        <div role="alert" data-testid="filigran-chat-composer-notice" className="mb-2 text-[0.75rem] text-red-500 dark:text-red-400">
+        <ChatNotice
+          tone="warning"
+          role="alert"
+          data-testid="filigran-chat-composer-notice"
+          className="mb-2"
+          onDismiss={onDismissNotice}
+          dismissLabel={t('Close')}
+        >
           {notice}
-        </div>
+        </ChatNotice>
       )}
       {fileNotice && (
-        <div role="alert" data-testid="filigran-chat-file-notice" className="mb-2 text-[0.75rem] text-red-500 dark:text-red-400">
+        <ChatNotice
+          tone="warning"
+          role="alert"
+          data-testid="filigran-chat-file-notice"
+          className="mb-2"
+          onDismiss={onDismissFileNotice}
+          dismissLabel={t('Close')}
+        >
           {fileNotice}
-        </div>
+        </ChatNotice>
       )}
       {warnsNotForChat && (
-        <div
-          data-testid="filigran-chat-agent-not-for-chat"
-          className="mb-2 flex items-start gap-1.5 text-[0.7rem] text-amber-600 dark:text-amber-400"
-        >
-          <AlertTriangleIcon size={12} className="mt-0.5 shrink-0" />
-          <span>{t('This agent is designed for assignments, not direct chat. It may not respond well to conversational interactions.')}</span>
-        </div>
+        <ChatNotice tone="warning" data-testid="filigran-chat-agent-not-for-chat" className="mb-2">
+          {t('This agent is designed for assignments, not direct chat. It may not respond well to conversational interactions.')}
+        </ChatNotice>
       )}
       {heldMessage && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
@@ -317,7 +334,7 @@ export const ChatInput = ({
               key={i}
               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[0.7rem] ${
                 f.uploadStatus === 'error'
-                  ? 'border-red-300 dark:border-red-500/30 text-red-500 dark:text-red-400'
+                  ? 'border-red-500/25 bg-red-500/[0.06] text-red-700 dark:text-red-300'
                   : f.uploadStatus === 'pending'
                     ? 'chat-border-200/10 chat-text-muted-400/40'
                     : 'chat-border-200/10 chat-text-secondary-600/60'
@@ -330,10 +347,8 @@ export const ChatInput = ({
               )}
               {f.name}
               {f.uploadStatus === 'error' && (
-                <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1 text-red-400">
-                  <span aria-hidden="true" className="text-[0.6rem]">
-                    ✕
-                  </span>
+                <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1">
+                  <XCircleIcon size={12} className="shrink-0" />
                   <span className="max-w-[16rem] truncate" title={f.uploadError ?? t('Upload failed')}>
                     {f.uploadError ?? t('Upload failed')}
                   </span>

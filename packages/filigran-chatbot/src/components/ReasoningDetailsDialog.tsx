@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ChatMessage, ChatToolLabels, ToolCallTraceEntry } from '../types';
 import {
-  AlertTriangleIcon,
   ArrowRightLeftIcon,
   BotIcon,
   BrainIcon,
@@ -13,6 +12,7 @@ import {
   XCircleIcon,
 } from './icons';
 import { cleanReasoningText, hostToolLabel } from './ChatThinking';
+import { ChatNotice } from './ChatNotice';
 import { findChatbotRoot, translate } from '../utils';
 
 /** Trace values longer than this are shown raw instead of pretty-printed JSON. */
@@ -214,25 +214,23 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
 
               <div className="px-4 py-3 overflow-y-auto filigran-chat-scrollable flex flex-col gap-3">
                 {msg.isTruncated && (
-                  <div className="flex items-start gap-2.5 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 text-[0.72rem] text-amber-600 dark:text-amber-300/90">
-                    <AlertTriangleIcon size={14} className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" />
+                  <ChatNotice tone="warning">
                     <span>
                       <span className="font-semibold">{t('Turn limit reached.')}</span>{' '}
                       {t(
                         "The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far.",
                       )}
                     </span>
-                  </div>
+                  </ChatNotice>
                 )}
 
                 {msg.interrupted && (
-                  <div className="flex items-start gap-2.5 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 text-[0.72rem] text-amber-600 dark:text-amber-300/90">
-                    <AlertTriangleIcon size={14} className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" />
+                  <ChatNotice tone="warning">
                     <span>
                       <span className="font-semibold">{t('Interrupted by a server restart.')}</span>{' '}
                       {t('The server restarted while this turn was running, so it stopped before it could finish.')}
                     </span>
-                  </div>
+                  </ChatNotice>
                 )}
 
                 {reasoning && (
