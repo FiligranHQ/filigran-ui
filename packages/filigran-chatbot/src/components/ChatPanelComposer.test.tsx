@@ -72,6 +72,23 @@ test('a paste of office cells reaches the text box; a screenshot is attached', a
   );
 });
 
+test('every composer control sits in one action row below the text area, so none moves as the text grows', async () => {
+  fakeBackend([agentsRoute]);
+  await render({ composerToolbar: <button type="button">Host control</button> });
+  const field = container.querySelector('[data-testid="filigran-chat-composer-field"]')!;
+  const row = container.querySelector('[data-testid="filigran-chat-composer-actions"]')!;
+  assert.ok(field && row, 'the field and its action row render');
+  assert.equal(row.parentElement, field, 'the action row is inside the field');
+  assert.equal(textarea().parentElement, field, 'the text area is inside the field');
+  assert.ok(textarea().compareDocumentPosition(row) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'the text area comes first, the row under it');
+  assert.ok(!row.contains(textarea()), 'the text area grows on its own, never in the row');
+  for (const name of ['Attach files', 'Send']) {
+    assert.ok(row.querySelector(`button[aria-label="${name}"]`), `${name} is in the action row`);
+  }
+  const host = [...container.querySelectorAll('button')].find((b) => b.textContent === 'Host control')!;
+  assert.ok(row.contains(host), 'host controls join the same row, never a second row outside the field');
+});
+
 test('Enter while an input method composes does not send', async () => {
   const requests = fakeBackend([agentsRoute]);
   const ref = createRef<Handle>();
