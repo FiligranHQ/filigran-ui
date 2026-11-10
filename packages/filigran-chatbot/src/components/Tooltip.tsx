@@ -6,9 +6,17 @@ import { ANCHOR_GAP, placeTooltip, tooltipMaxWidth, tooltipOpening, type Tooltip
 interface TooltipProps {
   title: string;
   children: React.ReactElement;
+  /**
+   * For a label cut with an ellipsis: the tooltip says the whole text only
+   * while its child is actually cut, and the wrapper may shrink with it.
+   */
+  truncated?: boolean;
 }
 
-export const Tooltip = ({ title, children }: TooltipProps) => {
+/** Whether a label shows less than its text (an ellipsis is drawn). */
+export const isCut = (el: Element | null): boolean => !!el && el.scrollWidth > el.clientWidth;
+
+export const Tooltip = ({ title, children, truncated = false }: TooltipProps) => {
   const ref = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLSpanElement>(null);
   const [opening, setOpening] = useState<TooltipOpening | null>(null);
@@ -29,6 +37,7 @@ export const Tooltip = ({ title, children }: TooltipProps) => {
 
   const open = () => {
     if (!ref.current) return;
+    if (truncated && !isCut(ref.current.firstElementChild)) return;
     const panel = findChatbotRoot(ref.current).getBoundingClientRect();
     setOpening(tooltipOpening(ref.current.getBoundingClientRect(), panel, window.innerWidth));
   };
@@ -44,7 +53,7 @@ export const Tooltip = ({ title, children }: TooltipProps) => {
   return (
     <span
       ref={ref}
-      className="inline-flex"
+      className={truncated ? 'flex min-w-0 max-w-full' : 'inline-flex'}
       onMouseEnter={open}
       onMouseLeave={() => setOpening(null)}
       onFocus={handleFocus}
