@@ -1760,6 +1760,49 @@ test('a wait stays on screen through what it reports, and ends on any other stat
   await finish(stream);
 });
 
+test('a wait a resumed turn continued ends on wait_continued, and the turn says it analyzes', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('go');
+    await settle();
+    stream.send({ type: 'status', status: 'wait_start', seconds: 120, reason: 'Waiting for the enrichment' });
+    await settle(10);
+  });
+  assert.ok(text().includes('Waiting for the enrichment'));
+  await act(async () => {
+    stream.send({ type: 'status', status: 'wait_continued' });
+    await settle(10);
+  });
+  assert.ok(!text().includes('Waiting for the enrichment'), 'the wait is over');
+  assert.ok(text().includes('Analyzing results…'));
+  await finish(stream);
+});
+
+test('wait_continued leaves a status other than a wait as it is', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('go');
+    await settle();
+    stream.send({ type: 'status', status: 'tool_start', tools: ['search'] });
+    await settle(10);
+  });
+  const during = text();
+  await act(async () => {
+    // A late one, after the wait it ended gave way to the tool.
+    stream.send({ type: 'status', status: 'wait_continued' });
+    await settle(10);
+  });
+  assert.equal(text(), during, 'the tool status changed on wait_continued');
+  assert.ok(!text().includes('Analyzing results…'));
+  await finish(stream);
+});
+
 test('a steer read back into the turn keeps the words its bubble shows', async () => {
   const timers = manualTimers([1000, 5000]);
   try {

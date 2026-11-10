@@ -2036,6 +2036,11 @@ export function useChat({
           waitReason: parsed.waitReason,
           waitStartMs: Date.now(),
         }));
+      } else if (parsed.status === 'wait_continued') {
+        // A resumed turn finished the wait the worker that stopped it had cut
+        // (announced by its own `wait_start`): the pause is over, and the turn
+        // moves on to read what it waited for.
+        setAgentStatus((prev) => (prev?.status === 'wait_start' ? { status: 'analyzing', thinkingContent: prev.thinkingContent } : prev));
       } else {
         // What a wait reports while it lasts (what it watches, a running
         // tool's progress) leaves it on screen, with its countdown and
