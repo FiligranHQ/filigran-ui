@@ -253,13 +253,13 @@ export const ChatHeader = ({
         <div className="flex min-w-0 items-center gap-1">
           {/* One control: icon, name and chevron all open the switcher. The
               agent's page is an item of the menu, never this click. */}
+          <Tooltip title={agentMenuOpen ? '' : t('Switch to another agent')} className="inline-flex min-w-0 max-w-full">
           <button
             ref={agentAnchorRef}
             type="button"
             onClick={onAgentMenuToggle}
             aria-haspopup="listbox"
             aria-expanded={agentMenuOpen}
-            title={t('Switch to another agent')}
             data-testid="filigran-chat-agent-switcher"
             className={`flex max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1.5 py-1 rounded-lg border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
               agentMenuOpen ? 'chat-surface-hover-100/10 chat-border-200/10' : ''
@@ -272,6 +272,7 @@ export const ChatHeader = ({
               className={`shrink-0 chat-text-muted-400/40 transition-transform ${agentMenuOpen ? 'rotate-180' : ''}`}
             />
           </button>
+          </Tooltip>
           {title && (
             <>
               <span aria-hidden className="shrink-0 chat-text-muted-400/30">
@@ -491,15 +492,16 @@ export const ChatHeader = ({
                       {when && <div className="text-[0.7rem] chat-text-muted-500/40 truncate">{when}</div>}
                     </button>
                     {onDeleteConversation && (
-                      <button
-                        type="button"
-                        onClick={() => onDeleteConversation(conv.conversationId)}
-                        title={t('Delete conversation')}
-                        aria-label={t('Delete conversation')}
-                        className="shrink-0 p-1 rounded-md chat-text-muted-400/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
-                      >
-                        <TrashIcon size={14} />
-                      </button>
+                      <Tooltip title={t('Delete conversation')} className="inline-flex shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => onDeleteConversation(conv.conversationId)}
+                          aria-label={t('Delete conversation')}
+                          className="shrink-0 p-1 rounded-md chat-text-muted-400/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
+                        >
+                          <TrashIcon size={14} />
+                        </button>
+                      </Tooltip>
                     )}
                   </div>
                 );

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AlertTriangleIcon, CloseIcon, InfoIcon, XCircleIcon } from './icons';
+import { Tooltip } from './Tooltip';
 
 /** How serious a notice is: its colour and its icon follow. */
 export type ChatNoticeTone = 'error' | 'warning' | 'info';
@@ -57,15 +58,16 @@ export const ChatNotice = ({
       <Icon size={14} className="mt-[3px] shrink-0" />
       <div className="min-w-0 flex-1 break-words">{children}</div>
       {onDismiss && (
+        <Tooltip title={dismissLabel} className="-mr-1 mt-px inline-flex shrink-0">
         <button
           type="button"
           onClick={onDismiss}
           aria-label={dismissLabel}
-          title={dismissLabel}
-          className="-mr-1 mt-px shrink-0 rounded p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
+          className="rounded p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
         >
           <CloseIcon size={12} />
         </button>
+        </Tooltip>
       )}
     </div>
   );

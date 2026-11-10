@@ -344,9 +344,9 @@ export const ChatInput = ({
               {f.uploadStatus === 'error' && (
                 <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1">
                   <XCircleIcon size={12} className="shrink-0" />
-                  <span className="max-w-[16rem] truncate" title={f.uploadError ?? t('Upload failed')}>
-                    {f.uploadError ?? t('Upload failed')}
-                  </span>
+                  <Tooltip title={f.uploadError ?? t('Upload failed')} className="inline-flex min-w-0">
+                    <span className="max-w-[16rem] truncate">{f.uploadError ?? t('Upload failed')}</span>
+                  </Tooltip>
                 </span>
               )}
               <button type="button" onClick={() => onFileRemove?.(i)} className="ml-0.5 chat-text-muted-400/30 hover:chat-text-secondary-600/60">

@@ -1,5 +1,6 @@
 import type { Translate } from '../types';
 import { translate, translateAround } from '../utils';
+import { Tooltip } from './Tooltip';
 
 /**
  * The greeting, as one sentence the locale owns end to end. The agent's name is
@@ -75,15 +76,15 @@ export const ChatWelcome = ({ firstName, logoIcon, promptSuggestions, onPromptCl
             // replaced by the new agent's own suggestions.
             [0, 1, 2].map((i) => <div key={i} aria-hidden className="h-8 w-32 rounded-full border chat-border-200/10 chat-skeleton-card animate-pulse" />)
           : promptSuggestions.map((prompt) => (
+              <Tooltip key={prompt} title={prompt} className="inline-flex min-w-0 max-w-full">
               <button
-                key={prompt}
                 type="button"
-                title={prompt}
                 onClick={() => onPromptClick(prompt)}
                 className="h-8 max-w-full truncate rounded-full border chat-border-200/10 bg-transparent px-3 text-[0.8125rem] chat-text-800/100 transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent)]"
               >
                 {prompt}
               </button>
+              </Tooltip>
             ))}
       </div>
     )}
