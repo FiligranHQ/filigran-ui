@@ -91,11 +91,15 @@
  * The composer's box takes the host's field corners, and its focus as a 2 px ring
  * around it (a design system's text-field focus) while the field has the focus:
  * the border keeps its colour, so dictation's red border still reads.
+ * While the agent works (`data-working`), the working glow wins: the field keeps
+ * the focus but draws no ring, so the turning comet and its halo read whether the
+ * field is focused or not (Sam, 10 Nov 2026, as on the previous chat page). The
+ * ring comes back as soon as the turn ends or is stopped.
  */
 .filigran-chat-composer-box {
   border-radius: var(--filigran-chat-input-radius, 0.75rem);
 }
-.filigran-chat-composer-box:has(textarea:focus) {
+.filigran-chat-composer-box:not([data-working]):has(textarea:focus) {
   outline: 2px solid var(--filigran-chat-focus-ring, var(--chat-accent));
   outline-offset: 2px;
 }
