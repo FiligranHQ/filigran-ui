@@ -44,6 +44,12 @@ This file starts at 3.10.0; earlier releases are on the
 - `initialConversationListCollapsed` starts the conversation list collapsed to
   its strip, from which the user opens it: for a phone or a narrow window.
   Read once, when the panel mounts.
+- `replaceMessage(message, { streaming })` lets a host draw a message its own
+  way: `undefined` or a boolean leaves it to the panel, `null` leaves it out,
+  and anything else is drawn in its place without the message's frame. It is
+  asked of every message, the reply's empty placeholder included, and a throw
+  leaves that message to the panel. For messages a host folds into one of its
+  own, such as the replies of a turn cut and resumed shown as one card.
 
 ### Changed
 

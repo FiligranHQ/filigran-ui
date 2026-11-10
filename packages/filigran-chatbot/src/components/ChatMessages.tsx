@@ -162,6 +162,7 @@ interface ChatMessagesProps {
   transformMessageText?: (text: string, message: ChatMessage) => string;
   onArtifactOpen?: (artifact: ChatArtifact) => void;
   renderMessageExtras?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
+  replaceMessage?: ChatPanelProps['replaceMessage'];
   messageFooterActions?: (message: ChatMessage, context: ChatMessageSlotContext) => React.ReactNode;
   /** Shown after the last message. */
   transcriptFooter?: React.ReactNode;
@@ -956,6 +957,7 @@ export const ChatMessages = ({
   transformMessageText,
   onArtifactOpen,
   renderMessageExtras,
+  replaceMessage,
   messageFooterActions,
   transcriptFooter,
   onLoadEarlier,
@@ -1217,6 +1219,90 @@ export const ChatMessages = ({
   // handler the controls would collect verdicts with nowhere to send them.
   const awaitingApproval = !!pendingApprovals?.length && !!onSubmitApprovalDecisions;
 
+  // A host's throw on a message is said once: asked again on every delta, it would log each time.
+  const replaceErrorsLogged = useRef(new Set<string>());
+  /** The host's own drawing of *msg* (`replaceMessage`), asked safely: a throw, or a boolean (`isCut(m) && <Card />`), leaves it to the panel. */
+  const askReplacement = (msg: ChatMessage, streaming: boolean): React.ReactNode => {
+    if (!replaceMessage) return undefined;
+    try {
+      const node = replaceMessage(msg, { streaming });
+      return typeof node === 'boolean' ? undefined : node;
+    } catch (error) {
+      // By the server's id where there is one: a read back gives the row a new local id.
+      const key = msg.serverId ?? msg.id;
+      if (!replaceErrorsLogged.current.has(key)) {
+        replaceErrorsLogged.current.add(key);
+        console.error('A replaced chat message failed to render', error);
+      }
+      return undefined;
+    }
+  };
+
+  /** The panel's own drawing of *msg*: the live status bubble for the reply's empty placeholder, else its row. */
+  const drawOwnMessage = (msg: ChatMessage, isStreamingMessage: boolean): React.ReactNode => {
+    // An assistant message with no content yet is the "agent is working"
+    // placeholder, replaced by the live status bubble.
+    if (msg.role === 'assistant' && !msg.content && isStreamingMessage) {
+      // A turn paused for approval is not working, it is waiting on the
+      // person reading it — so the progress bubble (and the waiting game
+      // it grows into) gives way to the prompt rendered below.
+      if (awaitingApproval) return null;
+      return (
+        <div key={msg.id}>
+        <ChatThinking
+          agentStatus={agentStatus}
+          logoIcon={logoIcon}
+          t={t}
+          miniGameEnabled={miniGameEnabled}
+          onPlayWaitingGame={onPlayWaitingGame}
+          waitingGameUrl={waitingGameUrl}
+          keepEndInView={follower.keepUp}
+          onSkipWait={onSkipWait}
+          {...thinking}
+        />
+        </div>
+      );
+    }
+    return (
+      <MessageRow
+        key={msg.id}
+        msg={msg}
+        isStreaming={isStreamingMessage}
+        agentName={agentName}
+        logoIcon={logoIcon}
+        onRelativeLinkClick={onRelativeLinkClick}
+        onDownloadFile={onDownloadFile}
+        resolveAttachmentUrl={resolveAttachmentUrl}
+        onDownloadArtifact={onDownloadArtifact}
+        onRefreshArtifact={onRefreshArtifact}
+        requestHeaders={requestHeaders}
+        feedbackMode={msg.role === 'assistant' ? feedbackModeOf(msg.serverId, feedbackUrl, conversationId, !!onMessageFeedback) : null}
+        feedback={feedbackEntries[feedbackKeyOf(msg)]}
+        onRate={rate}
+        onSaveComment={saveComment}
+        onSkipComment={skipComment}
+        locale={locale}
+        canSpeak={speech.supported}
+        isSpeaking={speakingId === feedbackKeyOf(msg)}
+        onToggleSpeech={speech.toggle}
+        // Only to a row that needs them: a new list of openable
+        // conversations must not re-render every row of the thread.
+        openableConversationIds={msg.conversationRefs?.length ? openableConversationIds : undefined}
+        onOpenConversation={msg.conversationRefs?.length ? onOpenConversation : undefined}
+        markerRenderers={markerRenderers}
+        markerKindList={markerKindList}
+        codeBlockRenderers={codeBlockRenderers}
+        transformMessageText={transformMessageText}
+        onArtifactOpen={onArtifactOpen}
+        renderMessageExtras={renderMessageExtras}
+        messageFooterActions={messageFooterActions}
+        collapseUnnamedFiles={collapseUnnamedFiles}
+        toolLabels={thinking?.toolLabels}
+        t={t}
+      />
+    );
+  };
+
   // A tab stop of its own, so the keys scroll the thread (and are read as
   // leaving the bottom) without first focusing something inside it.
   return (
@@ -1253,67 +1339,20 @@ export const ChatMessages = ({
       <KeepViewContext.Provider value={follower.stay}>
         {visibleMessages.map((msg) => {
           const isStreamingMessage = msg.id === streamingMessageId;
-          // An assistant message with no content yet is the "agent is working"
-          // placeholder, replaced by the live status bubble.
-          if (msg.role === 'assistant' && !msg.content && isStreamingMessage) {
-            // A turn paused for approval is not working, it is waiting on the
-            // person reading it — so the progress bubble (and the waiting game
-            // it grows into) gives way to the prompt rendered below.
-            if (awaitingApproval) return null;
-            return (
-              <div key={msg.id}>
-                <ChatThinking
-                  agentStatus={agentStatus}
-                  logoIcon={logoIcon}
-                  t={t}
-                  miniGameEnabled={miniGameEnabled}
-                  onPlayWaitingGame={onPlayWaitingGame}
-                  waitingGameUrl={waitingGameUrl}
-                  keepEndInView={follower.keepUp}
-                  onSkipWait={onSkipWait}
-                  {...thinking}
-                />
-              </div>
-            );
-          }
-
+          // The host is asked first, the reply's placeholder included: `null`
+          // leaves the message out, a node takes its place.
+          const replaced = askReplacement(msg, isStreamingMessage);
+          if (replaced === null) return null;
+          const own = drawOwnMessage(msg, isStreamingMessage);
+          if (replaced === undefined) return own;
           return (
-            <MessageRow
-              key={msg.id}
-              msg={msg}
-              isStreaming={isStreamingMessage}
-              agentName={agentName}
-              logoIcon={logoIcon}
-              onRelativeLinkClick={onRelativeLinkClick}
-              onDownloadFile={onDownloadFile}
-              resolveAttachmentUrl={resolveAttachmentUrl}
-              onDownloadArtifact={onDownloadArtifact}
-              onRefreshArtifact={onRefreshArtifact}
-              requestHeaders={requestHeaders}
-              feedbackMode={msg.role === 'assistant' ? feedbackModeOf(msg.serverId, feedbackUrl, conversationId, !!onMessageFeedback) : null}
-              feedback={feedbackEntries[feedbackKeyOf(msg)]}
-              onRate={rate}
-              onSaveComment={saveComment}
-              onSkipComment={skipComment}
-              locale={locale}
-              canSpeak={speech.supported}
-              isSpeaking={speakingId === feedbackKeyOf(msg)}
-              onToggleSpeech={speech.toggle}
-              // Only to a row that needs them: a new list of openable
-              // conversations must not re-render every row of the thread.
-              openableConversationIds={msg.conversationRefs?.length ? openableConversationIds : undefined}
-              onOpenConversation={msg.conversationRefs?.length ? onOpenConversation : undefined}
-              markerRenderers={markerRenderers}
-              markerKindList={markerKindList}
-              codeBlockRenderers={codeBlockRenderers}
-              transformMessageText={transformMessageText}
-              onArtifactOpen={onArtifactOpen}
-              renderMessageExtras={renderMessageExtras}
-              messageFooterActions={messageFooterActions}
-              collapseUnnamedFiles={collapseUnnamedFiles}
-              toolLabels={thinking?.toolLabels}
-              t={t}
-            />
+            <div key={msg.id} data-message-id={msg.serverId ?? msg.id} data-testid="filigran-chat-replaced-message" className="flex w-full">
+              {/* A replacement that throws while drawn gives way to the panel's own row,
+                  and is drawn again once the answer stops streaming: never on each delta. */}
+              <HostRenderBoundary label="A replaced chat message" resetKey={`${msg.id}\u0000${isStreamingMessage}`} fallback={own}>
+                {replaced}
+              </HostRenderBoundary>
+            </div>
           );
         })}
       </KeepViewContext.Provider>
