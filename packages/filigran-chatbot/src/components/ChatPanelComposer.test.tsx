@@ -75,7 +75,7 @@ test('a paste of office cells reaches the text box; a screenshot is attached', a
 test('every composer control sits in one action row below the text area, so none moves as the text grows', async () => {
   fakeBackend([agentsRoute]);
   await render({ composerToolbar: <button type="button">Host control</button> });
-  const field = container.querySelector('[data-testid="filigran-chat-composer-field"]')!;
+  const field = container.querySelector('[data-testid="filigran-chat-composer-box"]')!;
   const row = container.querySelector('[data-testid="filigran-chat-composer-actions"]')!;
   assert.ok(field && row, 'the field and its action row render');
   assert.equal(row.parentElement, field, 'the action row is inside the field');
