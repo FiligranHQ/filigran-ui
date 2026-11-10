@@ -224,14 +224,19 @@ export const ChatHeader = ({
   // Closing the menu from inside it (Escape, an agent chosen) hands the focus
   // back to the trigger, so a keyboard user carries on from where they opened
   // it instead of landing on the page body. A click outside leaves the focus
-  // where that click put it.
+  // where that click put it. The focus moves once the key's own dispatch and
+  // the re-render it starts are over, never from inside the handler: moving it
+  // there blurs the search field while React is still handling its keydown.
+  const focusTriggerLater = () => {
+    setTimeout(() => agentAnchorRef.current?.focus(), 0);
+  };
   const closeAgentMenuToTrigger = () => {
     onAgentMenuClose();
-    agentAnchorRef.current?.focus();
+    focusTriggerLater();
   };
   const switchAgentFromMenu = (agent: XtmAgent) => {
     onSwitchAgent(agent);
-    agentAnchorRef.current?.focus();
+    focusTriggerLater();
   };
 
   const onAgentSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
