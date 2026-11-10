@@ -265,6 +265,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     agentMenuOpen,
     setAgentMenuOpen,
     handleSwitchAgent,
+    followAgent,
     reloadAgents,
   } = useAgents({
     apiBaseUrl,
@@ -1256,9 +1257,16 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const selectedAgentRef = useRef(selectedAgent);
   selectedAgentRef.current = selectedAgent;
 
-  // Ready once the agent is chosen and the conversation on screen is read back:
-  // what the host does through the handle before then waits for it.
-  const ready = agentsSettled && !restoringHistory;
+  // The agent of the conversation on screen, and the one the picker last
+  // followed to (see the effect below): a change the picker has not followed
+  // yet keeps the panel from being ready.
+  const conversationAgent = conversationAgentName ? (agents.find((a) => a.name === conversationAgentName) ?? null) : null;
+  const [followedAgentId, setFollowedAgentId] = useState<string | null>(null);
+  const followPending = (conversationAgent?.id ?? null) !== followedAgentId;
+  // Ready once the agent is chosen, the conversation on screen is read back and
+  // the picker followed its agent: what the host does through the handle before
+  // then waits for it, so a queued choice or send never meets the agent before.
+  const ready = agentsSettled && !restoringHistory && !followPending;
   // Read once the panel is ready (no read-back pending or in flight) and no turn
   // runs there: a history read mid-turn would land on the turn's answer.
   useEffect(() => {
@@ -1330,13 +1338,25 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // The header's agent (linked, and given to its title and subtitle) is the
   // one it names: a restored conversation's agent missing from the list is
   // none there, never the one picked, which the header does not name.
-  const conversationAgent = conversationAgentName ? (agents.find((a) => a.name === conversationAgentName) ?? null) : null;
   const headerAgent = transferredAgent
     ? (agents.find((a) => a.id === transferredAgent.id) ?? null)
     : conversationAgentName
       ? conversationAgent
       : selectedAgent;
   const addressedAgentId = transferredAgent?.id ?? conversationAgent?.id ?? selectedAgent?.id ?? null;
+
+  // The picker follows the conversation on screen as its agent changes (one
+  // opened, read back, or continued with another agent): a new chat then
+  // starts with that agent, a reload included, and the host hears of it. Only
+  // on that change: an agent picked in the menu meanwhile stays picked.
+  useEffect(() => {
+    const id = conversationAgent?.id ?? null;
+    if (id === followedAgentId) return;
+    setFollowedAgentId(id);
+    if (!conversationAgent || conversationAgent.id === selectedAgent?.id) return;
+    followAgent(conversationAgent);
+    onAgentChange?.(conversationAgent);
+  }, [conversationAgent, followedAgentId, selectedAgent, followAgent, onAgentChange]);
   const agentLink = useMemo(() => {
     if (!headerAgent || (!agentHrefProp && !onAgentNameClick)) return undefined;
     // Followed in place: an http(s) URL, or a path of the page's own origin.
