@@ -1,5 +1,5 @@
 import { createContext, useContext, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import type { Translate } from '../types';
+import type { ChatAttachment, Translate } from '../types';
 import { translate } from '../utils';
 import { useImageSrc } from './ChatImage';
 import { ChevronDownIcon, ImageIcon } from './icons';
@@ -11,6 +11,29 @@ export interface WorkingFile {
   isImage: boolean;
   /** The picture's URL; none shows the picture icon. */
   imageUrl?: string;
+  /** The reply wrote the file again after it ({@link supersededInReply}). */
+  superseded?: boolean;
+}
+
+/** What makes two files versions of one another: the same name and kind (MIME type without its parameters, else the type label). */
+const versionKey = (file: ChatAttachment) =>
+  `${file.filename.trim()}\n${(file.contentType || file.type || '').split(';')[0].trim().toLowerCase()}`;
+
+/**
+ * The files of a reply that it wrote again afterwards, by id: drafts. A file
+ * is superseded when another file of its name and kind first appears after
+ * it. A file ranks where it first appears: listed again (re-sent on a resume,
+ * say), it is never its own draft, nor newer than a version written since.
+ */
+export function supersededInReply(files: readonly ChatAttachment[]): Set<string> {
+  const seen = new Set<string>();
+  const latest = new Map<string, string>();
+  for (const file of files) {
+    if (seen.has(file.fileId)) continue;
+    seen.add(file.fileId);
+    latest.set(versionKey(file), file.fileId);
+  }
+  return new Set(files.filter((file) => latest.get(versionKey(file)) !== file.fileId).map((file) => file.fileId));
 }
 
 /** Called once the list has opened: the thread keeps the view where it is if the list pushed its end out of view. */
@@ -85,6 +108,7 @@ export function WorkingFiles({ files, requestHeaders, t }: { files: WorkingFile[
           <li key={file.key} className="flex items-center gap-1.5">
             {opened && file.isImage && <WorkingFileThumbnail url={file.imageUrl} requestHeaders={requestHeaders} />}
             {file.card}
+            {file.superseded && <span className="shrink-0 text-[0.7rem] chat-text-muted-400/40">{t('Superseded')}</span>}
           </li>
         ))}
       </ul>

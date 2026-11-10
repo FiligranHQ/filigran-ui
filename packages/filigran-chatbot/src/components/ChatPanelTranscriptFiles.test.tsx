@@ -81,6 +81,87 @@ test('collapsed, unnamed files are one closed line; opened, each has its card, a
   assert.equal(toggle.getAttribute('aria-expanded'), 'false');
 });
 
+test('a file the reply wrote again under the same name and kind is marked superseded in the list, its last version not', async () => {
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'write the brief' },
+      {
+        id: 'm2',
+        role: 'assistant',
+        content: 'The brief is ready.',
+        attachments: [
+          { file_id: 'draft', filename: 'brief.md', content_type: 'text/markdown' },
+          { file_id: 'plain', filename: 'brief.md', content_type: 'text/plain' },
+          { file_id: 'final', filename: 'brief.md', content_type: 'text/markdown; charset=utf-8' },
+        ],
+      },
+    ]),
+  ]);
+  await render({ conversationId: 'c1', collapseUnnamedFiles: true });
+  await click(button('Working files (3)'));
+  const rows = [...container.querySelectorAll('li')].map((row) => row.textContent ?? '');
+  assert.deepEqual(
+    rows.map((row) => row.includes('Superseded')),
+    [true, false, false],
+  );
+});
+
+test('a file listed twice is one file, never its own draft: only another version supersedes it', async () => {
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'write the brief' },
+      {
+        id: 'm2',
+        role: 'assistant',
+        content: 'The brief is ready.',
+        attachments: [
+          { file_id: 'draft', filename: 'brief.md', content_type: 'text/markdown' },
+          { file_id: 'final', filename: 'brief.md', content_type: 'text/markdown' },
+          // The last version listed again (re-sent on a resume, say).
+          { file_id: 'final', filename: 'brief.md', content_type: 'text/markdown' },
+        ],
+      },
+    ]),
+  ]);
+  await render({ conversationId: 'c1', collapseUnnamedFiles: true });
+  await click(button('Working files (3)'));
+  const rows = [...container.querySelectorAll('li')].map((row) => row.textContent ?? '');
+  assert.deepEqual(
+    rows.map((row) => row.includes('Superseded')),
+    [true, false, false],
+  );
+});
+
+test('a draft listed again after its final version stays the draft: a file ranks where it first appears', async () => {
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'write the brief' },
+      {
+        id: 'm2',
+        role: 'assistant',
+        content: 'The brief is ready.',
+        attachments: [
+          { file_id: 'draft', filename: 'brief.md', content_type: 'text/markdown' },
+          { file_id: 'final', filename: 'brief.md', content_type: 'text/markdown' },
+          // The draft re-sent on a resume: not a newer version of it.
+          { file_id: 'draft', filename: 'brief.md', content_type: 'text/markdown' },
+        ],
+      },
+    ]),
+  ]);
+  await render({ conversationId: 'c1', collapseUnnamedFiles: true });
+  await click(button('Working files (3)'));
+  const rows = [...container.querySelectorAll('li')].map((row) => row.textContent ?? '');
+  assert.deepEqual(
+    rows.map((row) => row.includes('Superseded')),
+    [true, false, true],
+    'the final version was marked superseded by a repeat of its draft',
+  );
+});
+
 test("a host's predicate picks the unnamed files to collapse", async () => {
   restoreFiles();
   await render({ conversationId: 'c1', collapseUnnamedFiles: (att) => att.fileTag === 'working_file' });

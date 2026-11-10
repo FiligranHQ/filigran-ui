@@ -192,6 +192,7 @@ export const ko: Catalog = {
   'Summarize my recent findings': '최근 발견 사항을 요약해 줘',
   'Summarized conversation': '요약된 대화',
   'Summarizing earlier conversation…': '이전 대화 요약 중…',
+  'Superseded': '대체됨',
   'Switch to': '전환 대상',
   'Switch to another agent': '다른 에이전트로 전환',
   'Switch view': '보기 전환',
