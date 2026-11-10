@@ -8,7 +8,18 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
-## 3.20.0 — unreleased
+## 3.21.0 — unreleased
+
+### Added
+
+- `onConversationChange` says why the conversation changed: its second argument
+  is `{ created }`, true for a conversation the panel has just created from a
+  new chat (its first message or file), false for one opened from the list, on
+  a reload or in place of a deleted one, and when it is left for a new chat. A
+  host could not tell an opened conversation from a created one, as both came
+  after a new chat.
+
+## 3.20.0 — 2026-11-10
 
 ### Added
 

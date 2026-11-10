@@ -9,6 +9,7 @@ import type {
   ChatTurnOutcome,
   BackendType,
   ChatContextUsage,
+  ChatConversationChange,
   ChatConversationRef,
   ChatFile,
   ChatFileRefusal,
@@ -540,8 +541,8 @@ interface UseChatOptions {
    * panel on its own persisted one. A controlled id is never written to storage.
    */
   controlledConversationId?: string | null;
-  /** Called whenever the active conversation changes, whoever changed it. */
-  onConversationIdChange?: (id: string | null) => void;
+  /** Called whenever the active conversation changes, whoever changed it, saying whether the panel created it. */
+  onConversationIdChange?: (id: string | null, change: ChatConversationChange) => void;
   /** Extra fields merged into each REST message body (see `getRequestExtras` on the panel). */
   getRequestExtras?: () => Record<string, unknown> | undefined;
   /** Every frame of the message stream and the event stream, as received. */
@@ -1438,12 +1439,12 @@ export function useChat({
   const onConversationIdChangeRef = useRef(onConversationIdChange);
   onConversationIdChangeRef.current = onConversationIdChange;
   const updateConversationId = useCallback(
-    (id: string | null, { notify = true }: { notify?: boolean } = {}) => {
+    (id: string | null, { notify = true, created = false }: { notify?: boolean; created?: boolean } = {}) => {
       const changed = conversationIdRef.current !== id;
       conversationIdRef.current = id;
       setConversationId(id);
       if (!isControlled) writeStorage('local', conversationStorageKey, id);
-      if (changed && notify) onConversationIdChangeRef.current?.(id);
+      if (changed && notify) onConversationIdChangeRef.current?.(id, { created });
     },
     [isControlled, conversationStorageKey],
   );
@@ -1515,7 +1516,7 @@ export function useChat({
         // panel's restore would fetch it while the first turn streams and
         // replace the answer being written with the one message persisted.
         historyLoadedRef.current = true;
-        updateConversationId(convId);
+        updateConversationId(convId, { created: true });
         pendingWorkspaceRef.current = null;
         setPendingWorkspaceId(null);
       }
@@ -2160,7 +2161,9 @@ export function useChat({
 
   /** What a `done` changes beyond its answer: the conversation's id (own turns), the context gauge, a transfer. */
   const applyDoneEffects = (parsed: DoneAction, relayed: boolean) => {
-    if (parsed.conversationId && !relayed) updateConversationId(parsed.conversationId);
+    // A first turn the message endpoint created learns its id here. A different
+    // id while one is set replaces a conversation that was opened: not created.
+    if (parsed.conversationId && !relayed) updateConversationId(parsed.conversationId, { created: !conversationIdRef.current });
     // Closing reading wins: a turn whose last iteration compacted ends lower
     // than it peaked mid-run.
     if (parsed.contextUsage) setContextUsage(parsed.contextUsage);
@@ -3028,6 +3031,7 @@ export function useChat({
 
   const adoptRecreatedConversation = (id: string) => {
     resetChat(undefined, false, true);
+    // Put in place of a deleted conversation that was opened, not created from a new chat.
     updateConversationId(id);
   };
 

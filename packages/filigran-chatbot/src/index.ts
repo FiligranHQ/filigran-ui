@@ -33,6 +33,7 @@ export type {
   ChatArtifactKind,
   ChatContextBreakdown,
   ChatContextUsage,
+  ChatConversationChange,
   ChatConversationRef,
   ChatConversationReferenceCandidate,
   ChatConversationSummary,
