@@ -13,10 +13,11 @@ This file starts at 3.10.0; earlier releases are on the
 ### Added
 
 - `onConversationChange` says why the conversation changed: its second argument
-  is `{ created }`, true for a conversation the panel has just created (a first
-  message or file from a new chat, or one recreated after it was deleted), false
-  for one opened from the list or left for a new chat. A host could not tell an
-  opened conversation from a created one, as both came after a new chat.
+  is `{ created }`, true for a conversation the panel has just created from a
+  new chat (its first message or file), false for one opened from the list, on
+  a reload or in place of a deleted one, and when it is left for a new chat. A
+  host could not tell an opened conversation from a created one, as both came
+  after a new chat.
 
 ## 3.20.0 — 2026-11-10
 

@@ -1444,7 +1444,7 @@ export function useChat({
       conversationIdRef.current = id;
       setConversationId(id);
       if (!isControlled) writeStorage('local', conversationStorageKey, id);
-      if (changed && notify) onConversationIdChangeRef.current?.(id, { created: created && id !== null });
+      if (changed && notify) onConversationIdChangeRef.current?.(id, { created });
     },
     [isControlled, conversationStorageKey],
   );
@@ -2161,7 +2161,8 @@ export function useChat({
 
   /** What a `done` changes beyond its answer: the conversation's id (own turns), the context gauge, a transfer. */
   const applyDoneEffects = (parsed: DoneAction, relayed: boolean) => {
-    // A first turn of a host without a sessions route learns its new id here.
+    // A first turn the message endpoint created learns its id here. A different
+    // id while one is set replaces a conversation that was opened: not created.
     if (parsed.conversationId && !relayed) updateConversationId(parsed.conversationId, { created: !conversationIdRef.current });
     // Closing reading wins: a turn whose last iteration compacted ends lower
     // than it peaked mid-run.
@@ -3030,7 +3031,8 @@ export function useChat({
 
   const adoptRecreatedConversation = (id: string) => {
     resetChat(undefined, false, true);
-    updateConversationId(id, { created: true });
+    // Put in place of a deleted conversation that was opened, not created from a new chat.
+    updateConversationId(id);
   };
 
   const clearPendingWorkspace = (workspaceId: string) => {

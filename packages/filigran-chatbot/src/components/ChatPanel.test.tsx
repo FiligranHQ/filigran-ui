@@ -195,6 +195,40 @@ test('a conversation the first message creates is reported created, one opened f
   ]);
 });
 
+test('a conversation a first message learns from its done is reported created', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const changes: [string | null, { created: boolean }][] = [];
+  const ref = createRef<Handle>();
+  // No sessions route: the message endpoint creates the conversation and names it in `done`.
+  await render({ apiEndpoints: { sessions: null }, onConversationChange: (id, change) => changes.push([id, change]) }, ref);
+  await act(async () => {
+    ref.current!.send('hello');
+    await settle();
+  });
+  await act(async () => {
+    stream.send({ type: 'done', content: 'hi', conversation_id: 'c-done' });
+    stream.close();
+    await settle();
+  });
+  assert.deepEqual(changes, [['c-done', { created: true }]]);
+});
+
+test('a conversation the backend puts in place of a deleted one that was opened is not reported created', async () => {
+  const session: Record<string, unknown> = { conversation_id: 'c1', messages: [] };
+  fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/sessions' && req.method === 'POST' ? json(session) : undefined)]);
+  const changes: [string | null, { created: boolean }][] = [];
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1', onConversationChange: (id, change) => changes.push([id, change]) }, ref);
+  // The backend no longer holds c1 and starts c2 in its place.
+  session.conversation_id = 'c2';
+  await act(async () => {
+    ref.current!.reloadConversation();
+    await settle(10);
+  });
+  assert.deepEqual(changes, [['c2', { created: false }]]);
+});
+
 test('the event stream renders a turn started elsewhere, and its own turns are named to the backend', async () => {
   const events = sseStream();
   const requests = fakeBackend([
