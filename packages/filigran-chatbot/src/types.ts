@@ -477,7 +477,7 @@ export interface ChatPanelProps {
   onDownloadError?: (error: unknown, attachment: ChatAttachment) => void;
   /** Maximum number of files attachable in one chat context. Default: 10. */
   maxFileCount?: number;
-  /** Maximum total size in bytes for attached files. Default: 50 * 1024 * 1024 (50 MB). */
+  /** Maximum total size in bytes for attached files; `Infinity` for none. Default: 50 * 1024 * 1024 (50 MB). */
   maxTotalSize?: number;
   /** Maximum size in bytes of one attached file. Default: none (only `maxTotalSize`). */
   maxFileSize?: number;
