@@ -188,6 +188,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     agentMentions: agentMentionsEnabled = false,
     hideConversationList = false,
     initialConversationListCollapsed = false,
+    expandedWorkspaceGroups,
+    onExpandedWorkspaceGroupsChange,
     onBeforeMove: onBeforeMoveProp,
     onConversationActionFailed: onConversationActionFailedProp,
     sidebarSearchThreshold,
@@ -221,6 +223,29 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   const onAgentChange = useLatestCallback(onAgentChangeProp);
   const getRequestExtras = useLatestCallback(getRequestExtrasProp);
   const onBeforeSend = useLatestCallback(onBeforeSendProp);
+  // The workspace groups the user opened, where the host keeps them: held by
+  // the panel, adopted from the host the first time it gives them, so a list
+  // hidden and shown again (another mode, `hideConversationList`) finds them
+  // as the user left them, whatever seed the host keeps passing.
+  const [openedWorkspaceGroups, setOpenedWorkspaceGroups] = useState<string[] | undefined>(expandedWorkspaceGroups);
+  if (expandedWorkspaceGroups && openedWorkspaceGroups === undefined) setOpenedWorkspaceGroups(expandedWorkspaceGroups);
+  // A group opened or closed in the list: applied to the groups open now, so a
+  // change made after an await (a workspace created) loses no other.
+  const onWorkspaceGroupOpenedChange = useCallback((key: string, open: boolean) => {
+    setOpenedWorkspaceGroups((prev) => {
+      if (!prev || prev.includes(key) === open) return prev;
+      return open ? [...prev, key] : prev.filter((k) => k !== key);
+    });
+  }, []);
+  // The host hears of each change the user makes, never of its own seed, and
+  // from outside the state update, which React may run twice.
+  const reportedWorkspaceGroups = useRef(openedWorkspaceGroups);
+  useEffect(() => {
+    const before = reportedWorkspaceGroups.current;
+    if (openedWorkspaceGroups === before) return;
+    reportedWorkspaceGroups.current = openedWorkspaceGroups;
+    if (before !== undefined && openedWorkspaceGroups) onExpandedWorkspaceGroupsChange?.(openedWorkspaceGroups);
+  }, [openedWorkspaceGroups, onExpandedWorkspaceGroupsChange]);
   const onHeldSendSettled = useLatestCallback(onHeldSendSettledProp);
   const onStreamEvent = useLatestCallback(onStreamEventProp);
   const onTurnRunningChange = useLatestCallback(onTurnRunningChangeProp);
@@ -1611,6 +1636,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
                 : undefined
             }
             storageKeyPrefix={storageKeyPrefix}
+            expandedGroups={openedWorkspaceGroups}
+            onGroupOpenedChange={onWorkspaceGroupOpenedChange}
             rowActions={sidebarRowActions}
             headerActions={sidebarHeaderActions}
             sections={sidebarSections}

@@ -50,6 +50,12 @@ This file starts at 3.10.0; earlier releases are on the
   asked of every message, the reply's empty placeholder included, and a throw
   leaves that message to the panel. For messages a host folds into one of its
   own, such as the replies of a turn cut and resumed shown as one card.
+- `expandedWorkspaceGroups` and `onExpandedWorkspaceGroupsChange` let a host
+  keep, per user, which workspace groups of the conversation list are open.
+  Given, every other group starts collapsed until the user opens it, and a
+  workspace the user creates from the list opens. A host still reading them
+  passes `undefined` until it has them. Unset, groups start open and the ones
+  the user collapses are remembered per browser, as before.
 
 ### Changed
 

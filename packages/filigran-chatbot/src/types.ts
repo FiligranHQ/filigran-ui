@@ -837,6 +837,20 @@ export interface ChatPanelProps {
    */
   initialConversationListCollapsed?: boolean;
   /**
+   * The workspace groups of the conversation list the user has opened (their
+   * keys: a workspace's id), for a host that keeps them per user. Given, every
+   * other group starts collapsed until the user opens it, so many workspaces
+   * do not push the conversations in none below the fold; one the user creates
+   * from the list opens. Read once, the first time it is given: a host still
+   * reading them passes `undefined` until it has them. The panel keeps what
+   * the user opens from then on, while the list is hidden and shown again too.
+   * Unset, groups start open and the ones the user collapses are remembered
+   * per browser.
+   */
+  expandedWorkspaceGroups?: string[];
+  /** The workspace groups the user has opened, each time they open or collapse one (see `expandedWorkspaceGroups`). */
+  onExpandedWorkspaceGroupsChange?: (keys: string[]) => void;
+  /**
    * Asked before a conversation is filed into a workspace (`null`: taken out
    * of its workspace), by a drag or the row's Move menu: `false` (or a promise
    * of it) leaves it where it is, e.g. once the user declined to share it with

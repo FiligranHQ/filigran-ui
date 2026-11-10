@@ -61,6 +61,31 @@ const click = (element: Element | undefined) =>
     await settle(10);
   });
 
+test('a workspace group the user opened stays open when the list is hidden and shown again', async () => {
+  fakeBackend([
+    agentsRoute,
+    listRoute([{ conversation_id: 'c1', title: 'Hunt', workspace_id: 'w1' }]),
+    (req) => (req.url === '/api/chat/workspaces' && req.method === 'GET' ? json([{ id: 'w1', name: 'Shared hunts', can_manage: true }]) : undefined),
+  ]);
+  // The host gives its seed once and keeps passing it, as a host that only reads the profile at load does.
+  const reported: string[][] = [];
+  const props = {
+    apiEndpoints: { workspaces: '/chat/workspaces' },
+    expandedWorkspaceGroups: [] as string[],
+    onExpandedWorkspaceGroupsChange: (keys: string[]) => void reported.push(keys),
+  };
+  await render(props);
+  const header = () => [...container.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')].find((b) => b.textContent?.includes('Shared hunts'));
+  assert.equal(header()?.getAttribute('aria-expanded'), 'false');
+  assert.deepEqual(reported, [], 'the host is told of its own seed');
+  await click(header());
+  assert.equal(header()?.getAttribute('aria-expanded'), 'true');
+  assert.deepEqual(reported, [['w1']], 'the host is not told of the group opened');
+  await render({ ...props, hideConversationList: true });
+  await render({ ...props, hideConversationList: false });
+  assert.equal(header()?.getAttribute('aria-expanded'), 'true', 'the list shown again collapsed the group the user opened');
+});
+
 test('a move the host refuses leaves the conversation where it was; one it agrees to files it', async () => {
   const requests = fakeBackend([
     agentsRoute,
