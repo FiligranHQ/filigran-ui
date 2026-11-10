@@ -5,6 +5,7 @@ import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon
 import { ChatNotice } from './ChatNotice';
 import { useMentionMenu } from '../hooks/useMentionMenu';
 import { useDictation } from '../hooks/useDictation';
+import type { ChatHeldReason } from '../hooks/useChat';
 import { referencedConversations } from '../utils/conversationRefs';
 import { hasFailedUpload } from '../utils/failedUpload';
 import { isComposing } from '../utils/keyboard';
@@ -23,6 +24,8 @@ interface ChatInputProps {
   canHold?: boolean;
   /** The message held, shown (in the words its bubble will show) with a way to take it back. */
   heldMessage?: { text: string; displayText?: string } | null;
+  /** Why the held message waits beyond the running answer: said under it. */
+  heldReason?: ChatHeldReason | null;
   /** What the backend said when it refused a steer or a Stop. */
   notice?: string | null;
   /** Which files the last attach refused, and why. */
@@ -111,6 +114,7 @@ export const ChatInput = ({
   steerAttachments = false,
   canHold = false,
   heldMessage,
+  heldReason,
   notice,
   fileNotice,
   onDismissNotice,
@@ -321,6 +325,15 @@ export const ChatInput = ({
             </button>
           )}
         </div>
+      )}
+      {heldMessage && heldReason && (
+        <ChatNotice tone="info" data-testid="filigran-chat-held-reason" className="mb-2">
+          {heldReason === 'mentions'
+            ? t('The agents you mentioned are asked as soon as the current answer ends.')
+            : heldReason === 'references'
+              ? t('The conversations you referenced are read with your message once the current answer ends.')
+              : t('Several agents are answering: your message is sent once they are done.')}
+        </ChatNotice>
       )}
       {hasAttachments && (
         <div className="flex gap-1.5 flex-wrap mb-2">

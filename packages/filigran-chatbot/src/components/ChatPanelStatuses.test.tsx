@@ -175,7 +175,11 @@ test('while mentioned agents answer, a send is held for the next turn, not steer
   });
   assert.equal(steers().length, 1, 'not steered');
   assert.ok(text().includes('Sends when the answer ends:'), text());
+  // Why it waits is said under it, as the previous chat page said it.
+  const reason = document.querySelector('[data-testid="filigran-chat-held-reason"]');
+  assert.equal(reason?.textContent, 'Several agents are answering: your message is sent once they are done.');
   await finish(stream);
+  assert.equal(document.querySelector('[data-testid="filigran-chat-held-reason"]'), null, 'gone once the held message leaves');
 });
 
 test('a turn ending in the same tick as the next one starts leaves no mention phase to the next', async () => {
