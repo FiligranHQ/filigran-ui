@@ -71,6 +71,24 @@ test('a row shows its last message and the messaging channel it was started in, 
   await unmount();
 });
 
+test("a row shows its agent's own icon, the agent as a pill and the relative time", async () => {
+  const updatedAt = new Date(Date.now() - 3 * 86_400_000).toISOString();
+  const { rows, unmount } = await renderSidebar([
+    { conversationId: 'c1', title: 'Hunting', agentName: 'Hunter', agentIcon: 'https://example.test/hunter.png', updatedAt },
+    { conversationId: 'c2', title: 'Triage', agentName: 'Analyst', agentIcon: '🛰️', updatedAt },
+    { conversationId: 'c3', title: 'Legacy', agentName: 'Retired', agentIcon: 'lucide:bot', updatedAt },
+  ]);
+  const [image, emoji, legacy] = rows();
+  assert.equal(image.querySelector('img[data-agent-icon="image"]')?.getAttribute('src'), 'https://example.test/hunter.png');
+  assert.equal(emoji.querySelector('[data-agent-icon="emoji"]')?.textContent, '🛰️');
+  assert.equal(legacy.querySelector('[data-agent-icon]'), null, 'an icon the panel cannot draw keeps the bot glyph');
+  assert.ok(legacy.querySelector('svg'));
+  assert.equal(image.querySelector('[data-agent-pill]')?.textContent, 'Hunter');
+  assert.ok(image.textContent?.endsWith('3d ago'), image.textContent ?? '');
+  assert.ok(!image.textContent?.includes(' · '), 'the pill replaces the dot separator');
+  await unmount();
+});
+
 test("the host names a row's channel, or hides it", async () => {
   const { rows, unmount } = await renderSidebar(
     [

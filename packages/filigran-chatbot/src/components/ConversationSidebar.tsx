@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
-import { timeAgo, translate, translateAround } from '../utils';
+import { agentIconKind, timeAgo, translate, translateAround } from '../utils';
 import { channelName, conversationMatches } from '../utils/conversationList';
 import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
@@ -693,6 +693,22 @@ const WorkspaceGroupSection = ({
   );
 };
 
+/**
+ * A row's leading icon: the conversation agent's own (an image or an emoji,
+ * as the header draws it), the panel's bot glyph when there is none it can draw.
+ */
+const RowAgentIcon = ({ icon }: { icon: string | undefined }) => {
+  const kind = agentIconKind(icon);
+  if (kind === 'image') return <img src={icon!.trim()} alt="" data-agent-icon="image" className="h-4 w-4 rounded-sm object-cover" />;
+  if (kind === 'emoji')
+    return (
+      <span data-agent-icon="emoji" className="text-[0.8125rem] leading-none">
+        {icon!.trim()}
+      </span>
+    );
+  return <BotIcon size={13} />;
+};
+
 const ConversationRow = ({
   conversation: c,
   isActive,
@@ -764,7 +780,7 @@ const ConversationRow = ({
           isActive ? 'bg-[var(--chat-accent)]/20 text-[var(--chat-accent)]' : 'chat-surface-subtle-100/6 chat-text-muted-400/30'
         }`}
       >
-        <BotIcon size={13} />
+        <RowAgentIcon icon={c.agentIcon} />
       </span>
       <span className="min-w-0 flex-1">
         {isEditing ? (
@@ -793,9 +809,10 @@ const ConversationRow = ({
         {/*
           Agent before time, on one line: which agent a thread is with
           is what tells two similarly-titled conversations apart, and
-          knowing it before opening one is the point. Omitted entirely
-          when the backend does not report it, rather than padded with
-          a placeholder.
+          knowing it before opening one is the point. The agent is a pill
+          the eye finds without reading, the time stays whole beside it.
+          Omitted entirely when the backend does not report it, rather
+          than padded with a placeholder.
         */}
         {c.lastMessagePreview && !isEditing && (
           <span className="block truncate text-[0.7rem] chat-text-secondary-500/50">{c.lastMessagePreview}</span>
@@ -809,11 +826,15 @@ const ConversationRow = ({
                 </span>
               </Tooltip>
             )}
-            <span className="truncate">
-              {c.agentName}
-              {c.agentName && c.updatedAt ? ' · ' : ''}
-              {c.updatedAt ? timeAgo(c.updatedAt, t) : ''}
-            </span>
+            {c.agentName && (
+              <span
+                data-agent-pill=""
+                className="min-w-0 truncate rounded-full border chat-border-200/10 chat-surface-subtle-100/6 px-1.5 leading-4 chat-text-secondary-500/50"
+              >
+                {c.agentName}
+              </span>
+            )}
+            {c.updatedAt && <span className="shrink-0 whitespace-nowrap">{timeAgo(c.updatedAt, t)}</span>}
           </span>
         )}
       </span>
