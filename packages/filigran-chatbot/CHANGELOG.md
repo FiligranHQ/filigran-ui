@@ -44,6 +44,10 @@ This file starts at 3.10.0; earlier releases are on the
   or Stop notices close on a click; no notice is raw coloured text any more.
   `useChat` returns `dismissNotice` and `dismissFileNotice`, and `ChatInput`
   takes `onDismissNotice` and `onDismissFileNotice`.
+- While the agent thinks or acts, the composer's working glow plays whether the
+  field has the focus or not: the focus ring stands aside for the turn (the box
+  carries `data-working`) and comes back when the turn ends or is stopped. The
+  field keeps the focus after Enter, as before.
 
 ### Added
 

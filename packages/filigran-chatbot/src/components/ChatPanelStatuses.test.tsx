@@ -86,6 +86,22 @@ test("a host's status label sees the setup step and names it, the panel's names 
   await finish(stream);
 });
 
+test('the composer shows the working glow for the whole turn, focused or not, and its focus ring once the turn ends', async () => {
+  const { stream, send } = await running();
+  const box = () => container.querySelector('[data-testid="filigran-chat-composer-box"]')!;
+  const field = container.querySelector('textarea')!;
+  field.focus();
+  await send(status('thinking'));
+  assert.equal(document.activeElement, field, 'the field keeps the focus while the agent works');
+  assert.ok(box().hasAttribute('data-working'), 'the box is marked working while focused, so the ring stands aside');
+  assert.ok(box().matches('.filigran-chat-active-border'), 'the working glow plays on the focused box');
+  field.blur();
+  assert.ok(box().hasAttribute('data-working'), 'the box stays marked working once the focus leaves');
+  await finish(stream);
+  assert.ok(!box().hasAttribute('data-working'), 'the turn ended: the focus ring is back');
+  assert.ok(!box().matches('.filigran-chat-active-border'), 'the turn ended: the glow stops');
+});
+
 test('a transfer names the agent the conversation goes to', async () => {
   const { stream, send } = await running();
   await send(status('transfer_start', { agent_id: 'a2', agent_name: 'Analyst' }));

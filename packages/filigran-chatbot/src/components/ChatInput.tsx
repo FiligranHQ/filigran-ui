@@ -365,6 +365,9 @@ export const ChatInput = ({
           `relative` anchors the @ menu, which opens above the field. */}
       <div
         data-testid="filigran-chat-composer-box"
+        // The agent is working: the working glow plays, focused or not, and
+        // the focus ring stands aside until the turn ends (index.css).
+        data-working={isLoading ? '' : undefined}
         className={`filigran-chat-composer-box relative flex flex-col border chat-composer-surface px-2 pt-1 pb-1.5 transition-colors ${
           dictation.listening ? 'border-red-500/50' : 'chat-border-200/10'
         } ${isLoading ? 'filigran-chat-active-border' : ''}`}
