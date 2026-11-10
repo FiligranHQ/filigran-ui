@@ -1627,8 +1627,9 @@ export function useChat({
    * backend without steering support answering non-2xx) the optimistic bubble
    * is rolled back and what the user typed (*draft*) is restored into the
    * composer — prepended on its own line if the user already typed something
-   * new — unless the host sent it (`null`), or a 409 holds it, so the message
-   * is never silently lost and never resets the in-flight run state.
+   * new — unless the host sent it (`null`), or a 409 holds it for the next
+   * turn, so the message is never silently lost and never resets the
+   * in-flight run state.
    */
   const steerMessage = async (
     content: string,
@@ -1669,10 +1670,10 @@ export function useChat({
       }
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       // Nothing running any more: the turn ended while this was on its way.
-      // Held where the host allows it; otherwise the text goes back to the
-      // composer, with no notice for an ordinary race.
-      if (res.status === 409 && holdSends) return { result: 'ended' };
-      if (res.status !== 409) detail = await readRefusalDetail(res);
+      // Held, as a send during a turn winding down is: the turn is over, and
+      // the message goes out as the next one, whatever `holdSends` says.
+      if (res.status === 409) return { result: 'ended' };
+      detail = await readRefusalDetail(res);
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
     }
@@ -2501,10 +2502,11 @@ export function useChat({
       // there: the message endpoint would create it in no workspace. Should
       // that fail (the workspace was archived or is no longer shared), the
       // message still goes, in a conversation of no workspace, rather than
-      // being lost. So is one whose turns outlive their stream: Stop,
-      // "Continue now" and steering name the conversation from the first turn.
+      // being lost. So is one whose turns outlive their stream, or that can be
+      // steered: Stop, "Continue now" and a steer name the conversation, and
+      // from the first turn on.
       const turnsOutliveStream = !!(getCancelUrl() || getSkipWaitUrl() || hasEvents);
-      if (!conversationIdRef.current && (pendingWorkspaceRef.current || turnsOutliveStream)) {
+      if (!conversationIdRef.current && (pendingWorkspaceRef.current || turnsOutliveStream || getSteerUrl() !== null)) {
         const generation = sessionGate.generation;
         const created = await ensureConversation();
         // A new chat replaced this one meanwhile: the send went with it, and

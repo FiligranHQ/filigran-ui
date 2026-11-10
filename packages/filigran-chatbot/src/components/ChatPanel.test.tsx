@@ -67,8 +67,14 @@ test('the handle sends with per-message extras on top of the host extras, and th
   const requests = fakeBackend([agentsRoute, restoreRoute(), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
   const changes: (string | null)[] = [];
   const ref = createRef<Handle>();
+  // No steering: a host that steers has the conversation created before the send.
   await render(
-    { storageKeyPrefix: 'xtm', getRequestExtras: () => ({ desktop_runner_id: 'r1' }), onConversationChange: (id) => changes.push(id) },
+    {
+      storageKeyPrefix: 'xtm',
+      apiEndpoints: { steer: null },
+      getRequestExtras: () => ({ desktop_runner_id: 'r1' }),
+      onConversationChange: (id) => changes.push(id),
+    },
     ref,
   );
   await act(async () => {
