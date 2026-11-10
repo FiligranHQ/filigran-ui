@@ -44,11 +44,13 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
           aria-label={t('Insert prompt template')}
           aria-haspopup="menu"
           aria-expanded={open}
-          className={`w-7 h-7 flex items-center justify-center chat-radius-sm transition-colors ${
+          // Same box and glyph as every other composer action (attach, dictate,
+          // send): one 32 px control height and one 18 px icon per row.
+          className={`w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm transition-colors ${
             open ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10' : 'chat-text-muted-400/30 hover:chat-surface-hover-100/10'
           }`}
         >
-          <SparklesIcon size={15} />
+          <SparklesIcon size={18} />
         </button>
       </Tooltip>
 
