@@ -37,6 +37,7 @@ import { useVoiceCall } from '../hooks/useVoiceCall';
 import { PanelRequestsProvider, usePanelRequests, type PanelRequests } from '../hooks/usePanelRequests';
 import { watchSessionEnd } from '../utils/sessionEnd';
 import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
+import { ChatNotice } from './ChatNotice';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
@@ -383,6 +384,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     heldMessage,
     notice,
     fileNotice,
+    dismissNotice,
+    dismissFileNotice,
     composerFocusRequest,
     cancelHeldMessage,
     agentMentions,
@@ -1586,9 +1589,9 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         t={t}
       />
       {listNotice && (!showConversationSidebar || sidebarCollapsed) && (
-        <p role="alert" className="mx-3 mt-2 shrink-0 rounded-md bg-red-500/10 px-2.5 py-1.5 text-[0.7rem] text-red-600 dark:text-red-400">
+        <ChatNotice tone="error" className="mx-3 mt-2 shrink-0" onDismiss={() => setListNotice(null)} dismissLabel={t('Close')}>
           {listNotice.text}
-        </p>
+        </ChatNotice>
       )}
       {/* Fullscreen puts the conversation list beside the thread. The header
           stays full width above both: it carries the agent picker, the mode
@@ -1755,6 +1758,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               heldMessage={heldMessage}
               notice={notice}
               fileNotice={fileNotice}
+              onDismissNotice={dismissNotice}
+              onDismissFileNotice={dismissFileNotice}
               agentNotForChat={!!headerAgent?.disableChat}
               onCancelHeld={cancelHeldMessage}
               agentMentions={agentMentionsEnabled && agents.length > 0 ? { agents, mentions: agentMentions, onPick: addAgentMention } : undefined}

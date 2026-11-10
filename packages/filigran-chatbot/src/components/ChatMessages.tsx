@@ -52,6 +52,7 @@ import {
 import { ArtifactCard } from './ArtifactCard';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
+import { ChatNotice } from './ChatNotice';
 import { ChatThinking, type ThinkingOverrides } from './ChatThinking';
 import { HostRenderBoundary, HostRenderFallback, HostRendered } from './HostRenderBoundary';
 import { MarkdownMessage } from './MarkdownMessage';
@@ -912,9 +913,9 @@ const MessageRow = memo(
           />
         )}
         {showActions && feedback?.error && (
-          <p role="alert" className="mt-0.5 pl-1 text-[0.7rem] text-red-600 dark:text-red-400">
+          <ChatNotice tone="error" className="mt-1">
             {feedback.error}
-          </p>
+          </ChatNotice>
         )}
         {showReasoning && <ReasoningDetailsDialog msg={msg} onClose={() => setShowReasoning(false)} toolLabels={toolLabels} t={t} />}
       </div>

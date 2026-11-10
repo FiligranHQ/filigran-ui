@@ -760,6 +760,10 @@ interface UseChatReturn {
   notice: string | null;
   /** Which files the last attach refused, and why, shown by the composer; `null` when none. */
   fileNotice: string | null;
+  /** Close `notice` (its close button). */
+  dismissNotice: () => void;
+  /** Close `fileNotice` (its close button). */
+  dismissFileNotice: () => void;
   /** Bumped on each switch to another conversation or a new one: the composer takes the focus, unless it is elsewhere. */
   composerFocusRequest: number;
   cancelHeldMessage: () => void;
@@ -1037,6 +1041,11 @@ export function useChat({
   const [fileNotice, setFileNotice] = useState<string | null>(null);
   // The notice says what becomes of the next send: it outlives the turn's end.
   const noticeUntilSendRef = useRef(false);
+  const dismissNotice = useCallback(() => {
+    noticeUntilSendRef.current = false;
+    setNotice(null);
+  }, []);
+  const dismissFileNotice = useCallback(() => setFileNotice(null), []);
   // Relayed turns ended by a provisional end, by turn id, with the answer each
   // left on screen: their stored end only gives that answer its id.
   const provisionalEndsRef = useRef(new Map<string, string>());
@@ -3730,6 +3739,8 @@ export function useChat({
     heldMessage,
     notice,
     fileNotice,
+    dismissNotice,
+    dismissFileNotice,
     composerFocusRequest,
     cancelHeldMessage: cancelHeld,
     reloadHistory,

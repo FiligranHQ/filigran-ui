@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { ToolApprovalDecision, ToolApprovalProposal, ToolApprovalVerdict } from '../types';
 import { translate } from '../utils';
 import { AlertTriangleIcon, CheckIcon, WrenchIcon, XCircleIcon } from './icons';
+import { ChatNotice } from './ChatNotice';
 
 interface ChatApprovalPromptProps {
   proposals: ToolApprovalProposal[];
@@ -313,15 +314,14 @@ export const ChatApprovalPrompt = ({ proposals, onSubmit, isSubmitting, error, t
       ))}
 
       {willRunAlways && (
-        <p className="flex items-start gap-1.5 text-[0.7rem] text-amber-700 dark:text-amber-300/90">
-          <AlertTriangleIcon size={13} className="mt-0.5 shrink-0" />
+        <ChatNotice tone="warning">
           {t(
             '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.',
           )}
-        </p>
+        </ChatNotice>
       )}
 
-      {error && <p className="text-[0.7rem] text-red-600 dark:text-red-300">{error}</p>}
+      {error && <ChatNotice tone="error">{error}</ChatNotice>}
 
       <div ref={footerRef} className="flex items-center justify-between gap-2">
         {/* The counter earns its place only when there is more than one thing
