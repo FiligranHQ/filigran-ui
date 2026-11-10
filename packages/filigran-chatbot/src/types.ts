@@ -624,8 +624,13 @@ export interface ChatPanelProps {
    * is a new chat. Left `undefined`, the panel remembers its own.
    */
   conversationId?: string | null;
-  /** Called whenever the conversation on screen changes, whoever changed it. */
-  onConversationChange?: (conversationId: string | null) => void;
+  /**
+   * Called whenever the conversation on screen changes, whoever changed it.
+   * `created` is true for a conversation the panel has just created (a first
+   * send or file from a new chat, or one recreated after it was deleted), false
+   * for one opened or left (the list, a new chat).
+   */
+  onConversationChange?: (conversationId: string | null, change: ChatConversationChange) => void;
   /** Agent selected once the list loads, by id or slug, over the remembered one. */
   initialAgent?: string;
   /**
@@ -971,6 +976,12 @@ export interface ChatStreamEventInfo {
 }
 
 /** What a host can do to a mounted panel, through its `ref`. */
+/** Why the conversation on screen changed (see `onConversationChange`). */
+export interface ChatConversationChange {
+  /** The panel has just created this conversation; false when it was opened or left. */
+  created: boolean;
+}
+
 export interface ChatPanelHandle {
   /** Send *text* as the user, leaving the composer's own draft alone; resolves to what became of it. */
   send: (text: string, options?: ChatSendOptions) => Promise<ChatSendOutcome>;

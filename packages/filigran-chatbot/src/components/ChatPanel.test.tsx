@@ -157,6 +157,44 @@ test('a Stop while the first message creates its conversation keeps the turn sto
   assert.ok(!container.textContent?.includes('Stopping…'));
 });
 
+test('a conversation the first message creates is reported created, one opened from a new chat is not', async () => {
+  const stream = sseStream();
+  fakeBackend([
+    agentsRoute,
+    (req) => {
+      if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+      const opened = (req.body as { conversation_id?: string } | undefined)?.conversation_id;
+      return json(opened ? { conversation_id: opened, messages: [] } : { conversation_id: 'c-new' });
+    },
+    (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined),
+  ]);
+  const changes: [string | null, { created: boolean }][] = [];
+  const ref = createRef<Handle>();
+  await render({ onConversationChange: (id, change) => changes.push([id, change]) }, ref);
+  await act(async () => {
+    ref.current!.send('hello');
+    await settle();
+  });
+  await act(async () => {
+    stream.send({ type: 'done', content: 'hi' });
+    stream.close();
+    await settle();
+  });
+  await act(async () => {
+    ref.current!.newConversation();
+    await settle();
+  });
+  await act(async () => {
+    ref.current!.selectConversation('c-old');
+    await settle();
+  });
+  assert.deepEqual(changes, [
+    ['c-new', { created: true }],
+    [null, { created: false }],
+    ['c-old', { created: false }],
+  ]);
+});
+
 test('the event stream renders a turn started elsewhere, and its own turns are named to the backend', async () => {
   const events = sseStream();
   const requests = fakeBackend([
