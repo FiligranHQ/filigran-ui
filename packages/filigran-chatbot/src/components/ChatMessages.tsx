@@ -1219,8 +1219,8 @@ export const ChatMessages = ({
   // handler the controls would collect verdicts with nowhere to send them.
   const awaitingApproval = !!pendingApprovals?.length && !!onSubmitApprovalDecisions;
 
-  // A tab stop of its own, so the keys scroll the thread (and are read as
-  // leaving the bottom) without first focusing something inside it.
+  // A host's throw on a message is said once: asked again on every delta, it would log each time.
+  const replaceErrorsLogged = useRef(new Set<string>());
   /** The host's own drawing of *msg* (`replaceMessage`), asked safely: a throw, or a boolean (`isCut(m) && <Card />`), leaves it to the panel. */
   const askReplacement = (msg: ChatMessage, streaming: boolean): React.ReactNode => {
     if (!replaceMessage) return undefined;
@@ -1228,7 +1228,12 @@ export const ChatMessages = ({
       const node = replaceMessage(msg, { streaming });
       return typeof node === 'boolean' ? undefined : node;
     } catch (error) {
-      console.error('A replaced chat message failed to render', error);
+      // By the server's id where there is one: a read back gives the row a new local id.
+      const key = msg.serverId ?? msg.id;
+      if (!replaceErrorsLogged.current.has(key)) {
+        replaceErrorsLogged.current.add(key);
+        console.error('A replaced chat message failed to render', error);
+      }
       return undefined;
     }
   };
@@ -1298,6 +1303,8 @@ export const ChatMessages = ({
     );
   };
 
+  // A tab stop of its own, so the keys scroll the thread (and are read as
+  // leaving the bottom) without first focusing something inside it.
   return (
     <div
       ref={scrollRef}
@@ -1341,7 +1348,7 @@ export const ChatMessages = ({
           return (
             <div key={msg.id} data-message-id={msg.serverId ?? msg.id} data-testid="filigran-chat-replaced-message" className="flex w-full">
               {/* A replacement that throws while drawn gives way to the panel's own row. */}
-              <HostRenderBoundary label="A replaced chat message" resetKey={`${msg.id}\u0000${msg.content.length}\u0000${isStreamingMessage}`} fallback={own}>
+              <HostRenderBoundary label="A replaced chat message" resetKey={msg.id} fallback={own}>
                 {replaced}
               </HostRenderBoundary>
             </div>
