@@ -170,10 +170,10 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
         <div className="px-3.5 pb-1">
           {rows.map((row) => (
             <div key={row.field} className="flex items-center gap-2 py-[3px]">
-              {/* Radius set inline: the panel's reset rounds small spans to a
-                  pill, which turns the swatches into dots that read as bullets
-                  rather than as keys to the bar's segments. */}
-              <span className="h-2 w-2 shrink-0" style={{ backgroundColor: row.color, borderRadius: 2 }} aria-hidden="true" />
+              {/* A square corner from the design system (chat-radius-sm), not a
+                  dot: a round swatch reads as a bullet rather than as the key
+                  to the bar's segment. */}
+              <span className="h-2 w-2 shrink-0 chat-radius-sm" style={{ backgroundColor: row.color }} aria-hidden="true" />
               <span className="text-[0.75rem] chat-text-secondary-700/70 truncate">{row.label(t)}</span>
               <span className="ml-auto text-[0.7rem] tabular-nums chat-text-muted-500/40 shrink-0">{compactCount(breakdown?.[row.field] ?? 0)}</span>
             </div>
