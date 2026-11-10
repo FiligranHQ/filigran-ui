@@ -132,6 +132,7 @@ export const ko: Catalog = {
   'Not recommended for chat': '채팅에는 권장되지 않음',
   'Not rendered yet': '아직 렌더링되지 않음',
   Open: '열기',
+  'Open agent page': '에이전트 페이지 열기',
   'Open conversation': '대화 열기',
   'Open in XTM One': 'XTM One에서 열기',
   'Other workspaces': '다른 작업 공간',

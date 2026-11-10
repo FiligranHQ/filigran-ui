@@ -146,8 +146,8 @@ import { ChatPanel } from '@filigran/chatbot';
 | `sidebarSearchThreshold` | `number`                             | `7`          | The conversation list's search box shows above this many conversations; `0` shows it from the first |
 | `channelLabel`      | `(channel: string) => string \| null \| undefined` | — | Names the channel a conversation was started in, on its row (`Started in {channel}`) and in the header (`Agent · {channel}`); `null` shows nothing, `undefined` keeps the panel's names (Slack, Teams, WhatsApp, Telegram, Discord, Google Chat) |
 | `headerTitle` / `headerSubtitle` | `React.ReactNode \| ((context: ChatHeaderContext) => React.ReactNode)` | — | A title beside the header's agent name and a line under it, or functions of the conversation on screen (as the list holds it) and the agent. Without `headerSubtitle`, the line reads `Agent · {channel}` for a conversation started in a channel its row names |
-| `agentHref`         | `(agent: XtmAgent) => string \| undefined` | —          | Links the header's agent name to this address (http(s) or a path of the host's origin), in place; the chevron beside it opens the picker |
-| `onAgentNameClick`  | `(agent: XtmAgent) => void`               | —            | Takes a plain click on the header's agent name (over `agentHref`); the chevron beside it opens the picker |
+| `agentHref`         | `(agent: XtmAgent) => string \| undefined` | —          | The agent's page (http(s) or a path of the host's origin), followed in place from the "Open agent page" item of the agent switcher; the header's agent control itself always opens the switcher |
+| `onAgentNameClick`  | `(agent: XtmAgent) => void`               | —            | Takes a plain click on the switcher's "Open agent page" item (over `agentHref`) |
 | `clearAllAction`    | `'delete' \| 'archive'`                   | `'delete'`   | What Clear all does, for its wording (`Archive all conversations`) |
 
 Plain-data props (`requestHeaders`, `apiEndpoints`, `pageContext`, `promptSuggestions`) are compared by content and callback props are called

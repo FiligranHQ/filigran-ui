@@ -288,7 +288,7 @@ test('a read-only panel offers no suggestions heading, and still a new conversat
   assert.equal(button('New chat')?.disabled, false);
 });
 
-test('the header shows the title and subtitle the host draws from the conversation, and links the agent', async () => {
+test('the header shows the title and subtitle the host draws from the conversation, and its switcher links the agent page', async () => {
   fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'Hunting APT28', channel: 'slack' }]), restoreRoute]);
   const clicked: string[] = [];
   await render({
@@ -300,16 +300,64 @@ test('the header shows the title and subtitle the host draws from the conversati
   });
   assert.equal(container.querySelector('[data-testid="filigran-chat-header-title"]')?.textContent, 'Hunting APT28');
   assert.equal(container.querySelector('[data-testid="filigran-chat-header-subtitle"]')?.textContent, 'Hunter · slack');
-  const link = container.querySelector<HTMLAnchorElement>('a[href="/agents/a1"]');
-  assert.ok(link, 'the agent name is a link');
-  assert.equal(link.textContent, 'Hunter');
+  assert.equal(container.querySelector('a[href="/agents/a1"]'), null, 'the agent name is no longer a link');
+  const switcher = container.querySelector<HTMLButtonElement>('[data-testid="filigran-chat-agent-switcher"]');
+  assert.ok(switcher, 'one control for the agent');
+  assert.ok(switcher.textContent?.includes('Hunter'));
+  await click(switcher);
+  assert.equal(switcher.getAttribute('aria-expanded'), 'true');
+  assert.ok(document.body.textContent?.includes('Scout'), 'a click on the name opens the switcher');
+  assert.deepEqual(clicked, [], 'the switcher click never opens the agent page');
+  const link = document.body.querySelector<HTMLAnchorElement>('a[href="/agents/a1"]');
+  assert.ok(link, 'the agent page is an item of the menu');
+  assert.equal(link.textContent, 'Open agent page');
   await act(async () => {
     link.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
     await settle();
   });
   assert.deepEqual(clicked, ['a1']);
-  await click(button('Switch to another agent'));
-  assert.ok(document.body.textContent?.includes('Scout'), 'the chevron opens the picker');
+  assert.equal(switcher.getAttribute('aria-expanded'), 'false', 'the menu closes');
+});
+
+test('the agent switcher filters as you type, walks with the arrow keys and switches on Enter', async () => {
+  fakeBackend([agentsRoute]);
+  const changed: string[] = [];
+  await render({ onAgentChange: (agent) => void changed.push(agent.name) });
+  const switcher = container.querySelector<HTMLButtonElement>('[data-testid="filigran-chat-agent-switcher"]')!;
+  await click(switcher);
+  const search = document.body.querySelector<HTMLInputElement>('input[role="combobox"]');
+  assert.ok(search, 'searchable, whatever the number of agents');
+  const options = () => [...document.body.querySelectorAll('[role="option"]')].map((o) => o.textContent);
+  assert.ok(options().some((o) => o?.startsWith('Hunter')));
+  assert.ok(options().some((o) => o?.startsWith('Scout')));
+  const current = document.body.querySelector('[role="option"][aria-selected="true"]');
+  assert.ok(current?.textContent?.startsWith('Hunter'), 'the current agent is marked');
+  const type = async (value: string) =>
+    act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(search, value);
+      search.dispatchEvent(new window.Event('input', { bubbles: true }));
+      await settle();
+    });
+  const key = async (k: string) =>
+    act(async () => {
+      search.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      await settle();
+    });
+  await type('sco');
+  assert.deepEqual(
+    options().map((o) => o?.slice(0, 5)),
+    ['Scout'],
+    'typing filters',
+  );
+  await type('');
+  await key('ArrowDown');
+  const active = document.body.querySelector('[role="option"][data-active="true"]');
+  assert.ok(active && !active.textContent?.startsWith('Hunter'), 'the arrow key moves off the current agent');
+  const target = active.textContent!;
+  await key('Enter');
+  assert.equal(changed.length, 1, 'Enter switches');
+  assert.ok(target.startsWith(changed[0]), `${target} / ${changed[0]}`);
 });
 
 test('a restored conversation whose agent is not in the list links no agent, never the one picked', async () => {
@@ -418,16 +466,21 @@ test('the same failure said again stays for its own time', async () => {
 test("the agent's link follows a new agentHref from the host, as when its language changes", async () => {
   fakeBackend([agentsRoute]);
   await render({ agentHref: (agent) => `/en/agents/${agent.id}` });
-  assert.ok(container.querySelector('a[href="/en/agents/a1"]'));
+  await click(container.querySelector<HTMLButtonElement>('[data-testid="filigran-chat-agent-switcher"]') ?? undefined);
+  assert.ok(document.body.querySelector('a[href="/en/agents/a1"]'));
   await render({ agentHref: (agent) => `/fr/agents/${agent.id}` });
-  assert.ok(container.querySelector('a[href="/fr/agents/a1"]'), container.querySelector('a')?.getAttribute('href') ?? 'no link');
+  const link = () => document.body.querySelector('[data-testid="filigran-chat-agent-page-link"]');
+  assert.equal(link()?.getAttribute('href'), '/fr/agents/a1');
 });
 
 test('an agent address that is not http(s) or a path links nothing, and no option keeps the header as it was', async () => {
   fakeBackend([agentsRoute]);
   await render({ agentHref: () => 'javascript:alert(1)' });
   assert.equal(container.querySelector('a'), null);
-  assert.equal(button('Switch to another agent'), undefined);
+  await click(container.querySelector<HTMLButtonElement>('[data-testid="filigran-chat-agent-switcher"]') ?? undefined);
+  assert.equal(button('Open agent page'), undefined, 'no agent page item');
+  assert.equal(document.body.querySelector('[data-testid="filigran-chat-agent-page-link"]'), null);
+  await click(container.querySelector<HTMLButtonElement>('[data-testid="filigran-chat-agent-switcher"]') ?? undefined);
   assert.equal(container.querySelector('[data-testid="filigran-chat-header-title"]'), null);
 });
 
