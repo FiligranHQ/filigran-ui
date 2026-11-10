@@ -8,6 +8,7 @@ export const de: Catalog = {
     'Eine Datei konnte nicht hochgeladen werden: Entfernen Sie sie, um die Nachricht zu senden',
   'A message references at most {count} conversations': 'Eine Nachricht verweist auf höchstens {count} Unterhaltungen',
   'Acting on the page…': 'Aktion auf der Seite…',
+  'Agent · {channel}': 'Agent · {channel}',
   'Agent switching is not available here': 'Der Agentenwechsel ist hier nicht verfügbar',
   'Almost there': 'Gleich geschafft',
   'Also applies to your scheduled runs, until you revoke it': 'Gilt auch für Ihre geplanten Ausführungen, bis Sie die Freigabe widerrufen',
@@ -117,6 +118,7 @@ export const de: Catalog = {
   'New chat': 'Neuer Chat',
   'New conversation': 'Neue Unterhaltung',
   'New conversation in this workspace': 'Neue Unterhaltung in diesem Arbeitsbereich',
+  'New conversation outside a workspace': 'Neue Unterhaltung außerhalb eines Arbeitsbereichs',
   'New conversation — send a message to start it': 'Neue Unterhaltung — senden Sie eine Nachricht, um sie zu beginnen',
   'New workspace': 'Neuer Arbeitsbereich',
   No: 'Nein',
@@ -128,6 +130,7 @@ export const de: Catalog = {
   'No response was generated. Please try again.': 'Es wurde keine Antwort erzeugt. Bitte versuchen Sie es erneut.',
   'No response.': 'Keine Antwort.',
   'Not in a workspace': 'In keinem Arbeitsbereich',
+  'Not recommended for chat': 'Nicht für den Chat empfohlen',
   'Not rendered yet': 'Noch nicht gerendert',
   Open: 'Öffnen',
   'Open conversation': 'Unterhaltung öffnen',
@@ -212,6 +215,8 @@ export const de: Catalog = {
   'The workspace could not be renamed': 'Der Arbeitsbereich konnte nicht umbenannt werden',
   'Thinking it through': 'Wird durchdacht',
   'Thinking...': 'Denkt nach...',
+  'This agent is designed for assignments, not direct chat. It may not respond well to conversational interactions.':
+    'Dieser Agent ist für Aufträge gedacht, nicht für den direkten Chat. Auf Unterhaltungen antwortet er womöglich schlecht.',
   'This conversation could not be loaded.': 'Diese Unterhaltung konnte nicht geladen werden.',
   'This decision could not be sent. Reload the chat and try again.':
     'Diese Entscheidung konnte nicht gesendet werden. Laden Sie den Chat neu und versuchen Sie es erneut.',

@@ -341,6 +341,11 @@ export const ChatHeader = ({
                           {badge}
                         </span>
                       ))}
+                      {agent.disableChat && (
+                        <span className="shrink-0 rounded bg-amber-500/10 px-1 text-[0.6rem] leading-4 text-amber-600 dark:text-amber-400">
+                          {t('Not recommended for chat')}
+                        </span>
+                      )}
                     </div>
                     {agent.description && <div className="text-[0.7rem] chat-text-secondary-500/40 truncate">{agent.description}</div>}
                   </div>

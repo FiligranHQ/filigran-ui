@@ -836,14 +836,18 @@ export interface ChatPanelProps {
   sidebarSearchThreshold?: number;
   /**
    * Names the channel a conversation was started in, on its row (`Started in
-   * {channel}`): a string names it, `null` shows nothing, `undefined` keeps
+   * {channel}`) and in the header (`Agent · {channel}`): a string names it, `null` shows nothing, `undefined` keeps
    * the panel's own name (Slack, Teams, WhatsApp, Telegram, Discord, Google
    * Chat; no other channel is shown).
    */
   channelLabel?: (channel: string) => string | null | undefined;
   /** A title beside the agent's name in the header (the conversation's, say), or a function of what is on screen. */
   headerTitle?: React.ReactNode | ((context: ChatHeaderContext) => React.ReactNode);
-  /** A line under the agent's name in the header (`Agent · Slack`, say), or a function of what is on screen. */
+  /**
+   * A line under the agent's name in the header, or a function of what is on
+   * screen. Undefined: `Agent · {channel}` for a conversation started in a
+   * channel its row names (see `channelLabel`), nothing otherwise.
+   */
   headerSubtitle?: React.ReactNode | ((context: ChatHeaderContext) => React.ReactNode);
   /**
    * Links the header's agent name to this address (an http(s) URL or a path
@@ -1393,6 +1397,12 @@ export interface XtmAgent {
   group?: string;
   /** Short labels shown after its name in the agent picker (`Company`), already translated. */
   badges?: string[];
+  /**
+   * The agent is meant for assignments rather than chat (`disable_chat`): the
+   * picker says "Not recommended for chat" and the composer warns while it is
+   * the one written to. It stays selectable.
+   */
+  disableChat?: boolean;
 }
 
 export interface IconProps {
