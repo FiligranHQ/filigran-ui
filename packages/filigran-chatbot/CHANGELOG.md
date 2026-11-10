@@ -12,6 +12,18 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Changed
 
+- Conversations come first in the list. The workspaces fold into one
+  "Workspaces" line above the conversations (with their count and the New
+  workspace button), opened on demand and remembered per browser
+  (`filigran-chat-workspaces-open`). Below it, every conversation is listed most
+  recent first, a filed one naming its workspace on its row. The "Not in a
+  workspace" heading becomes "Conversations"; dropping a row there still takes
+  it out of its workspace. Creating, opening, renaming and deleting a workspace,
+  filing a conversation, the default marker and the counts all work as before
+  inside the open line.
+
+### Changed
+
 - The new-conversation screen is short: the agent's mark, one greeting line
   naming the agent, and the agent's own suggestions as compact chips. The
   agent's description is no longer shown there (`ChatWelcome`'s

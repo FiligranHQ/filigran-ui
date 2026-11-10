@@ -8,7 +8,6 @@ import type {
   ChatPanelHandle,
   ChatPanelProps,
   ChatSendOutcome,
-  Translate,
 } from '../types';
 import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds, translate } from '../utils';
 import { channelName } from '../utils/conversationList';

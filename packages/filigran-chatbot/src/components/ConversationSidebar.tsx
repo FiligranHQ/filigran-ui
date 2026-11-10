@@ -5,7 +5,7 @@ import { agentIconKind, timeAgo, translate, translateAround } from '../utils';
 import { channelName, conversationMatches } from '../utils/conversationList';
 import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
-import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
+import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
 import { ConversationListFailed } from './ConversationListFailed';
 import { Dropdown } from './Dropdown';
@@ -184,6 +184,14 @@ export const ConversationSidebar = ({
   // Or, where the host keeps them per user, the groups the user has opened.
   const openedGroups = useMemo(() => (expandedGroups ? new Set(expandedGroups) : null), [expandedGroups]);
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
+  // Conversations come first: the workspaces fold into one line above them,
+  // opened on demand and remembered per browser.
+  const workspacesOpenKey = storageKey(storageKeyPrefix, STORAGE_KEYS.workspacesOpen);
+  const [workspacesShown, setWorkspacesShown] = useState(() => readStorage('local', workspacesOpenKey) === '1');
+  const showWorkspaces = (open: boolean) => {
+    setWorkspacesShown(open);
+    writeStorage('local', workspacesOpenKey, open ? '1' : null);
+  };
   // The list's width, kept while it is collapsed and across reloads.
   const widthKey = storageKey(storageKeyPrefix, STORAGE_KEYS.conversationListWidth);
   const [width, setWidth] = useState(() => readListWidth(widthKey));
@@ -267,7 +275,10 @@ export const ConversationSidebar = ({
     ? new Set((grouped?.groups ?? []).map((group) => group.key).filter((key) => !openedGroups.has(key)))
     : collapsedGroups;
   const fileable = workspaces ? fileableWorkspaces(workspaces.list) : [];
-  const unfiledNote = grouped ? unfiledEmptyNote({ total: conversations.length, unfiled: grouped.unfiled.length, loading, searching: !!q }) : null;
+  const noConversationYet = !loading && !q && conversations.length === 0;
+  // A conversation about to start in a workspace shows where it will be.
+  const workspacesOpen = workspacesShown || creatingWorkspace || (!!workspaces?.pendingWorkspaceId && !activeConversationId);
+  const workspaceNames = useMemo(() => new Map((workspaces?.list ?? []).map((w) => [w.id, w.name])), [workspaces]);
 
   if (collapsed) {
     return (
@@ -314,6 +325,7 @@ export const ConversationSidebar = ({
       onMove={move}
       actions={rowActions}
       channel={channelName(c.channel, channelLabel)}
+      workspaceName={workspaces && c.workspaceId ? (workspaceNames.get(c.workspaceId) ?? t('Other workspaces')) : null}
       t={t}
     />
   );
@@ -374,76 +386,98 @@ export const ConversationSidebar = ({
           <ConversationListFailed onRetry={() => onRetry?.()} className="px-3 py-2" t={t} />
         ) : grouped && workspaces ? (
           <>
+            {/*
+              Conversations first: the workspaces are one line above them,
+              opened on demand, the way a desktop assistant lists its
+              projects. Hidden while searching: the list below shows every
+              match, each naming its workspace.
+            */}
             {!q && (
-              <div className="flex items-center justify-between px-2 pb-1 pt-1">
-                <span className={sectionLabel}>{t('Workspaces')}</span>
-                <Tooltip title={t('New workspace')}>
-                  <button type="button" onClick={() => setCreatingWorkspace(true)} aria-label={t('New workspace')} className={iconButton}>
-                    <FolderPlusIcon size={14} />
+              <div className="mb-1">
+                <div className="group/wsh flex items-center gap-1 rounded-lg px-1.5 py-1 hover:chat-surface-hover-100/6">
+                  <button
+                    type="button"
+                    onClick={() => showWorkspaces(!workspacesOpen)}
+                    aria-expanded={workspacesOpen}
+                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                  >
+                    <ChevronRightIcon size={12} className={`shrink-0 chat-text-muted-400/30 transition-transform ${workspacesOpen ? 'rotate-90' : ''}`} />
+                    <FolderIcon size={14} className="shrink-0 text-[var(--chat-accent)]" />
+                    <span className="truncate text-[0.8125rem] font-medium chat-text-800/80">{t('Workspaces')}</span>
+                    <span className="ml-auto shrink-0 pr-1 text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.groups.length}</span>
+                  </button>
+                  <Tooltip title={t('New workspace')}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        showWorkspaces(true);
+                        setCreatingWorkspace(true);
+                      }}
+                      aria-label={t('New workspace')}
+                      className={iconButton}
+                    >
+                      <FolderPlusIcon size={14} />
+                    </button>
+                  </Tooltip>
+                </div>
+                {workspacesOpen && (
+                  <div className="pl-2">
+                    {creatingWorkspace && (
+                      <NameField
+                        placeholder={t('Workspace name')}
+                        onSubmit={async (name) => {
+                          setCreatingWorkspace(false);
+                          if (!name) return;
+                          const result = await workspaces.onCreate(name);
+                          if (!result.ok) say(result.error, 'The workspace could not be created');
+                          // It opens: it is where the user is about to drop things.
+                          else if (result.workspace) setGroupOpened(result.workspace.id, true);
+                        }}
+                        onCancel={() => setCreatingWorkspace(false)}
+                      />
+                    )}
+                    {grouped.groups.map((group) => (
+                      <WorkspaceGroupSection
+                        key={group.key}
+                        workspace={group.workspace}
+                        count={group.conversations.length}
+                        open={groupIsOpen(group.key, collapsedGroupKeys, group, activeConversationId, false)}
+                        toggleable={groupCanToggle(group, activeConversationId, false)}
+                        pending={!!group.workspace && workspaces.pendingWorkspaceId === group.workspace.id && !activeConversationId}
+                        onToggle={() => toggleGroup(group.key)}
+                        onNewChat={workspaces.onNewChat}
+                        onRename={async (id, name) => {
+                          const result = await workspaces.onRename(id, name);
+                          if (!result.ok) say(result.error, 'The workspace could not be renamed');
+                        }}
+                        onDelete={async (id) => {
+                          const result = await workspaces.onDelete(id);
+                          if (!result.ok) say(result.error, 'The workspace could not be deleted');
+                        }}
+                        onDropConversation={(conversationId) => group.workspace && void move(conversationId, group.workspace.id)}
+                        t={t}
+                      >
+                        {group.conversations.length > 0 ? group.conversations.map(renderRow) : <EmptyWorkspaceHint t={t} />}
+                      </WorkspaceGroupSection>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Every conversation, most recent first; a drop here takes one out of its workspace. */}
+            <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
+              <div className="flex items-center justify-between px-2 pb-1 pt-2">
+                <span className={sectionLabel}>{t('Conversations')}</span>
+                <Tooltip title={t('New conversation outside a workspace')}>
+                  <button type="button" onClick={() => onNewChat()} aria-label={t('New conversation outside a workspace')} className={iconButton}>
+                    <EditIcon size={13} />
                   </button>
                 </Tooltip>
               </div>
-            )}
-            {creatingWorkspace && (
-              <NameField
-                placeholder={t('Workspace name')}
-                onSubmit={async (name) => {
-                  setCreatingWorkspace(false);
-                  if (!name) return;
-                  const result = await workspaces.onCreate(name);
-                  if (!result.ok) say(result.error, 'The workspace could not be created');
-                  // It opens: it is where the user is about to drop things.
-                  else if (result.workspace) setGroupOpened(result.workspace.id, true);
-                }}
-                onCancel={() => setCreatingWorkspace(false)}
-              />
-            )}
-            {grouped.groups.map((group) => (
-              <WorkspaceGroupSection
-                key={group.key}
-                workspace={group.workspace}
-                count={group.conversations.length}
-                open={groupIsOpen(group.key, collapsedGroupKeys, group, activeConversationId, !!q)}
-                toggleable={groupCanToggle(group, activeConversationId, !!q)}
-                pending={!!group.workspace && workspaces.pendingWorkspaceId === group.workspace.id && !activeConversationId}
-                onToggle={() => toggleGroup(group.key)}
-                onNewChat={workspaces.onNewChat}
-                onRename={async (id, name) => {
-                  const result = await workspaces.onRename(id, name);
-                  if (!result.ok) say(result.error, 'The workspace could not be renamed');
-                }}
-                onDelete={async (id) => {
-                  const result = await workspaces.onDelete(id);
-                  if (!result.ok) say(result.error, 'The workspace could not be deleted');
-                }}
-                onDropConversation={(conversationId) => group.workspace && void move(conversationId, group.workspace.id)}
-                t={t}
-              >
-                {group.conversations.length > 0 ? group.conversations.map(renderRow) : <EmptyWorkspaceHint t={t} />}
-              </WorkspaceGroupSection>
-            ))}
-            <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
-              <div className="flex items-center justify-between px-2 pb-1 pt-3">
-                <span className={sectionLabel}>{t('Not in a workspace')}</span>
-                <span className="flex items-center gap-1">
-                  <span className="text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.unfiled.length}</span>
-                  <Tooltip title={t('New conversation outside a workspace')}>
-                    <button type="button" onClick={() => onNewChat()} aria-label={t('New conversation outside a workspace')} className={iconButton}>
-                      <EditIcon size={13} />
-                    </button>
-                  </Tooltip>
-                </span>
-              </div>
-              {grouped.unfiled.map(renderRow)}
-              {unfiledNote && (
-                <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">
-                  {unfiledNote === 'none' ? t('No conversations yet') : t('Every conversation is in a workspace.')}
-                </p>
-              )}
+              {filtered.map(renderRow)}
+              {noConversationYet && <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">{t('No conversations yet')}</p>}
             </DropZone>
-            {q && grouped.groups.length === 0 && grouped.unfiled.length === 0 && (
-              <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>
-            )}
+            {q && filtered.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>}
           </>
         ) : (
           <>
@@ -828,6 +862,7 @@ const ConversationRow = ({
   onMove,
   actions,
   channel,
+  workspaceName = null,
   t,
 }: {
   conversation: ChatConversationSummary;
@@ -846,6 +881,8 @@ const ConversationRow = ({
   actions?: (conversation: ChatConversationSummary) => ReactNode;
   /** The channel the conversation was started in, when the row names it. */
   channel: string | null;
+  /** The workspace the conversation is filed in, said on its row; `null` for none. */
+  workspaceName?: string | null;
   t: (key: string) => string;
 }) => {
   const [moveOpen, setMoveOpen] = useState(false);
@@ -921,7 +958,7 @@ const ConversationRow = ({
         {c.lastMessagePreview && !isEditing && (
           <span className="block truncate text-[0.7rem] chat-text-secondary-500/50">{c.lastMessagePreview}</span>
         )}
-        {(c.agentName || c.updatedAt || channel) && !isEditing && (
+        {(c.agentName || c.updatedAt || channel || workspaceName) && !isEditing && (
           <span className="flex min-w-0 items-center gap-1 text-[0.65rem] chat-text-muted-400/30">
             {channel && (
               <Tooltip title={translate(t, 'Started in {channel}', { channel })}>
@@ -929,6 +966,12 @@ const ConversationRow = ({
                   <MessageSquareIcon size={10} />
                 </span>
               </Tooltip>
+            )}
+            {workspaceName && (
+              <span className="flex min-w-0 max-w-[50%] shrink items-center gap-0.5" data-testid="filigran-chat-row-workspace">
+                <FolderIcon size={10} className="shrink-0 text-[var(--chat-accent)]" />
+                <span className="truncate">{workspaceName}</span>
+              </span>
             )}
             {c.agentName && (
               <span
