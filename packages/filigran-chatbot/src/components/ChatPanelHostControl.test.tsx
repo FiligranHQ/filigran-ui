@@ -749,6 +749,42 @@ test("a host that throws on one message costs that message its replacement, neve
   }
 });
 
+test('a replacement that throws while the answer streams is drawn again once the answer is complete', async () => {
+  const original = console.error;
+  console.error = () => undefined;
+  try {
+    const turn = sseStream();
+    fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined)]);
+    const ref = createRef<Handle>();
+    // It reads a field the answer has only once it is complete.
+    function Card({ streaming }: { streaming: boolean }) {
+      if (streaming) throw new Error('not there yet');
+      return <span data-testid="cut-card">Folded</span>;
+    }
+    await render(
+      { replaceMessage: (message, { streaming }) => (message.role === 'assistant' && message.content ? <Card streaming={streaming} /> : undefined) },
+      ref,
+    );
+    await act(async () => {
+      void ref.current!.send('fold it');
+      await settle();
+    });
+    await act(async () => {
+      turn.send({ type: 'stream', content: 'Partial' });
+      await settle();
+    });
+    assert.equal(container.querySelector('[data-testid="cut-card"]'), null, 'drawn while it throws');
+    await act(async () => {
+      turn.send({ type: 'done', content: 'Partial answer' });
+      await settle();
+    });
+    await finish(turn);
+    assert.ok(container.querySelector('[data-testid="cut-card"]'), 'the replacement stayed on the fallback once the answer was complete');
+  } finally {
+    console.error = original;
+  }
+});
+
 test("the reply's placeholder is asked too: a host's `null` leaves out its thinking bubble", async () => {
   const turn = sseStream();
   fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? turn.response() : undefined)]);

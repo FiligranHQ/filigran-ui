@@ -1347,8 +1347,9 @@ export const ChatMessages = ({
           if (replaced === undefined) return own;
           return (
             <div key={msg.id} data-message-id={msg.serverId ?? msg.id} data-testid="filigran-chat-replaced-message" className="flex w-full">
-              {/* A replacement that throws while drawn gives way to the panel's own row. */}
-              <HostRenderBoundary label="A replaced chat message" resetKey={msg.id} fallback={own}>
+              {/* A replacement that throws while drawn gives way to the panel's own row,
+                  and is drawn again once the answer stops streaming: never on each delta. */}
+              <HostRenderBoundary label="A replaced chat message" resetKey={`${msg.id}\u0000${isStreamingMessage}`} fallback={own}>
                 {replaced}
               </HostRenderBoundary>
             </div>
