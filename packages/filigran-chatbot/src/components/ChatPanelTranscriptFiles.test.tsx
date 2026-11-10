@@ -134,6 +134,34 @@ test('a file listed twice is one file, never its own draft: only another version
   );
 });
 
+test('a draft listed again after its final version stays the draft: a file ranks where it first appears', async () => {
+  fakeBackend([
+    agentsRoute,
+    restoreRoute([
+      { id: 'm1', role: 'user', content: 'write the brief' },
+      {
+        id: 'm2',
+        role: 'assistant',
+        content: 'The brief is ready.',
+        attachments: [
+          { file_id: 'draft', filename: 'brief.md', content_type: 'text/markdown' },
+          { file_id: 'final', filename: 'brief.md', content_type: 'text/markdown' },
+          // The draft re-sent on a resume: not a newer version of it.
+          { file_id: 'draft', filename: 'brief.md', content_type: 'text/markdown' },
+        ],
+      },
+    ]),
+  ]);
+  await render({ conversationId: 'c1', collapseUnnamedFiles: true });
+  await click(button('Working files (3)'));
+  const rows = [...container.querySelectorAll('li')].map((row) => row.textContent ?? '');
+  assert.deepEqual(
+    rows.map((row) => row.includes('Superseded')),
+    [true, false, true],
+    'the final version was marked superseded by a repeat of its draft',
+  );
+});
+
 test("a host's predicate picks the unnamed files to collapse", async () => {
   restoreFiles();
   await render({ conversationId: 'c1', collapseUnnamedFiles: (att) => att.fileTag === 'working_file' });
