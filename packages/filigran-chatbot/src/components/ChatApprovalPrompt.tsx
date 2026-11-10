@@ -73,7 +73,7 @@ function useRevealIntoView<T extends HTMLElement>(active: boolean) {
 }
 
 const BUTTON_BASE =
-  'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex items-center gap-1.5 chat-radius-sm px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50';
 
 interface ApprovalCardProps {
   proposal: ToolApprovalProposal;
@@ -114,7 +114,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
   };
 
   return (
-    <div data-testid="filigran-chat-approval" className="rounded-lg border border-amber-500/25 bg-amber-500/[0.04] p-3 flex flex-col gap-2">
+    <div data-testid="filigran-chat-approval" className="chat-radius-md border border-amber-500/25 bg-amber-500/[0.04] p-3 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex items-start gap-2">
           <WrenchIcon size={13} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -130,7 +130,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
         {verdict && (
           <span
             className={
-              'shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] font-medium ' +
+              'shrink-0 chat-radius-sm px-1.5 py-0.5 text-[0.65rem] font-medium ' +
               (verdict === 'reject' ? 'bg-red-500/15 text-red-600 dark:text-red-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300')
             }
           >
@@ -170,7 +170,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t('e.g. wrong environment — use staging instead')}
-            className="w-full resize-none rounded-md border chat-border-200/10 chat-input-surface-white/3 px-2 py-1 text-[0.7rem] chat-text-800/85 outline-none focus:border-[var(--chat-accent)]/50"
+            className="w-full resize-none chat-radius-sm border chat-border-200/10 chat-input-surface-white/3 px-2 py-1 text-[0.7rem] chat-text-800/85 outline-none focus:border-[var(--chat-accent)]/50"
           />
           <div className="flex items-center gap-1.5">
             <button
@@ -286,7 +286,7 @@ export const ChatApprovalPrompt = ({ proposals, onSubmit, isSubmitting, error, t
   const rootRef = useRevealIntoView<HTMLDivElement>(true);
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.02] p-3">
+    <div ref={rootRef} className="flex flex-col gap-2 chat-radius-md border border-amber-500/20 bg-amber-500/[0.02] p-3">
       <p className="flex items-start gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
         <AlertTriangleIcon size={13} className="mt-0.5 shrink-0" />
         {proposals.length === 1 ? t('The agent needs your approval to run a tool:') : t('The agent needs your approval to run these tools:')}

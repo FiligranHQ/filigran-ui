@@ -1502,7 +1502,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       case 'sidebar':
         return `${base} fixed right-0 bottom-0 flex flex-col chat-surface-raised border-l chat-border-200/10 z-[1200]`;
       case 'floating':
-        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border chat-border-200/10`;
+        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised chat-radius-md shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border chat-border-200/10`;
       case 'fullscreen':
         return `${base} fixed right-0 bottom-0 left-0 flex flex-col chat-surface z-[1400]`;
       case 'inline':
@@ -1527,7 +1527,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     <div ref={rootRef} className={containerClasses} style={containerStyle} data-testid="filigran-chat-panel" {...noDropHandlers}>
       {mode === 'sidebar' && resizable && (
         <div onMouseDown={handleResizeStart} className="absolute top-0 -left-1 bottom-0 w-2 cursor-col-resize z-10 group">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 bottom-0 w-0.5 rounded-sm bg-[var(--chat-accent)] opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 bottom-0 w-0.5 chat-radius-sm bg-[var(--chat-accent)] opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100" />
         </div>
       )}
       <ChatHeader
@@ -1642,7 +1642,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         )}
         <div className={showConversationSidebar ? 'relative flex flex-1 flex-col min-w-0' : 'contents'} {...dropHandlers}>
           {dropping && (
-            <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center rounded-xl border-2 border-dashed border-[var(--chat-accent)] bg-[var(--chat-accent)]/10 text-sm font-medium text-[var(--chat-accent)]">
+            <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center chat-radius-md border-2 border-dashed border-[var(--chat-accent)] bg-[var(--chat-accent)]/10 text-sm font-medium text-[var(--chat-accent)]">
               {t('Drop files to attach them')}
             </div>
           )}
@@ -1651,7 +1651,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             <div data-testid="filigran-chat-loading" className="flex-1 flex flex-col gap-4 px-4 py-6" aria-busy="true">
               {[0, 1, 2].map((i) => (
                 <div key={i} className={`flex ${i % 2 ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`h-10 rounded-xl chat-skeleton-fill animate-pulse ${i % 2 ? 'w-1/3' : 'w-2/3'}`} />
+                  <div className={`h-10 chat-radius-md chat-skeleton-fill animate-pulse ${i % 2 ? 'w-1/3' : 'w-2/3'}`} />
                 </div>
               ))}
             </div>
@@ -1668,7 +1668,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               <button
                 type="button"
                 onClick={retryRefusedRestore}
-                className="rounded-md border chat-border-200/10 px-3 py-1 text-[0.75rem] font-medium chat-text-secondary-700/80 transition-colors hover:chat-surface-hover-100/6"
+                className="chat-radius-sm border chat-border-200/10 px-3 py-1 text-[0.75rem] font-medium chat-text-secondary-700/80 transition-colors hover:chat-surface-hover-100/6"
               >
                 {t('Retry')}
               </button>

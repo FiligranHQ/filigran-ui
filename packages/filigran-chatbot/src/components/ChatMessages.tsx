@@ -208,7 +208,7 @@ function isImageAttachment(att: ChatAttachment): boolean {
  * tabbing onto one sees it through `focus-visible` / `focus-within`.
  */
 const SHOWN_ON_HOVER = 'group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
-const FOOTER_BUTTON = 'p-1 rounded-lg transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
+const FOOTER_BUTTON = 'p-1 chat-radius-sm transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
 const ACCENT_ON_HOVER = 'hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]';
 const REVEALED_BUTTON = `opacity-0 ${SHOWN_ON_HOVER} ${ACCENT_ON_HOVER}`;
 /**
@@ -341,7 +341,7 @@ const FeedbackComment = ({
   const canSave = !pending && !!text.trim();
 
   return (
-    <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 rounded-lg border chat-border-200/10 chat-surface-subtle-50/4 p-2">
+    <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 chat-radius-md border chat-border-200/10 chat-surface-subtle-50/4 p-2">
       <label htmlFor={id} className="text-[0.7rem] chat-text-secondary-600/60">
         {t('Tell us what went wrong (optional)')}
       </label>
@@ -367,7 +367,7 @@ const FeedbackComment = ({
           }
         }}
         placeholder={t('What could be improved?')}
-        className="w-full resize-y rounded-md border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-[0.75rem] leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+        className="w-full resize-y chat-radius-sm border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-[0.75rem] leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
         <button
@@ -376,7 +376,7 @@ const FeedbackComment = ({
             if (!pending) onSkip();
           }}
           aria-disabled={pending || undefined}
-          className="rounded-md px-2 py-0.5 text-[0.7rem] chat-text-secondary-500/50 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+          className="chat-radius-sm px-2 py-0.5 text-[0.7rem] chat-text-secondary-500/50 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
         >
           {t('Skip')}
         </button>
@@ -386,7 +386,7 @@ const FeedbackComment = ({
             if (canSave) onSave(text);
           }}
           aria-disabled={!canSave || undefined}
-          className={`rounded-md px-2 py-0.5 text-[0.7rem] text-white bg-[var(--chat-accent)] transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)] ${canSave ? 'hover:opacity-90' : 'opacity-50 cursor-default'}`}
+          className={`chat-radius-sm px-2 py-0.5 text-[0.7rem] text-white bg-[var(--chat-accent)] transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)] ${canSave ? 'hover:opacity-90' : 'opacity-50 cursor-default'}`}
         >
           {t('Save')}
         </button>
@@ -543,7 +543,7 @@ const MessageRow = memo(
           type="button"
           onClick={() => onDownloadFile?.(att)}
           title={t('Download')}
-          className={`group flex items-center gap-2 text-left rounded-lg border px-2.5 py-1.5 transition-colors cursor-pointer max-w-[90%] ${
+          className={`group flex items-center gap-2 text-left chat-radius-md border px-2.5 py-1.5 transition-colors cursor-pointer max-w-[90%] ${
             isWorking
               ? 'chat-border-200/10 bg-transparent'
               : 'chat-border-200/10 chat-surface-subtle-50/4 hover:border-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/5'
@@ -819,7 +819,7 @@ const MessageRow = memo(
       <div data-message-id={msg.serverId ?? msg.id} className={`group/msg flex flex-col ${isAssistant ? 'items-start' : 'items-end'}`}>
         {isAssistant && (
           <div className="flex items-center gap-1.5 mb-1 select-none">
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
+            <div className="w-6 h-6 chat-radius-sm flex items-center justify-center bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
               <span className="text-[var(--chat-accent)] [&>svg]:w-3 [&>svg]:h-3">{logoIcon}</span>
             </div>
             {/*
@@ -844,7 +844,7 @@ const MessageRow = memo(
           <div data-testid="filigran-chat-assistant-message" className="flex flex-col gap-1.5 w-full items-start">
             {buildAssistantBlocks()}
             {msg.stopped && !isStreaming && <p className="pl-1 text-[0.75rem] italic chat-text-muted-400/40">{t('Stopped')}</p>}
-            {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-xs ml-1 animate-pulse" />}
+            {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-full ml-1 animate-pulse" />}
           </div>
         ) : (
           <div data-testid="filigran-chat-user-message" className="max-w-[90%] chat-user-bubble leading-6 whitespace-pre-wrap break-words">

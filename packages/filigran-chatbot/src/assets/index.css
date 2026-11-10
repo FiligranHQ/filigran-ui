@@ -33,6 +33,17 @@
  */
 .filigran-chatbot {
   --chat-dark: 0;
+  /*
+   * Corners: the two radii of @filigran/design-system (`--radius-sm` 4px for a
+   * control, a chip, an avatar tile; `--radius-md` 12px for a card, a bubble, a
+   * menu, a dialog, the composer). A host passes its own design-system tokens
+   * through the theme (`radiusSm` / `radiusMd`, e.g. `var(--radius-sm)`); unset,
+   * the design system's values. Every corner of the panel reads one of these
+   * through `chat-radius-sm` / `chat-radius-md` (or `rounded-full` for a dot or
+   * a pill), never a Tailwind size.
+   */
+  --chat-radius-sm: var(--filigran-chat-radius-sm, 4px);
+  --chat-radius-md: var(--filigran-chat-radius-md, 12px);
   --chat-default-surface: var(--color-gray-50);
   --chat-default-surface-raised: var(--color-white);
   --chat-default-menu-surface: var(--color-white);
@@ -81,6 +92,24 @@
   --chat-default-hl-property: #7ee787;
   --chat-default-hl-variable: #ffa657;
 }
+@utility chat-radius-sm {
+  border-radius: var(--chat-radius-sm);
+}
+@utility chat-radius-md {
+  border-radius: var(--chat-radius-md);
+}
+@utility chat-radius-r-sm {
+  border-top-right-radius: var(--chat-radius-sm);
+  border-bottom-right-radius: var(--chat-radius-sm);
+}
+@utility chat-radius-t-md {
+  border-top-left-radius: var(--chat-radius-md);
+  border-top-right-radius: var(--chat-radius-md);
+}
+@utility chat-radius-b-md {
+  border-bottom-left-radius: var(--chat-radius-md);
+  border-bottom-right-radius: var(--chat-radius-md);
+}
 @utility chat-text-* {
   color: var(--filigran-chat-text, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
 }
@@ -121,7 +150,7 @@
  * ring comes back as soon as the turn ends or is stopped.
  */
 .filigran-chat-composer-box {
-  border-radius: var(--filigran-chat-input-radius, 0.75rem);
+  border-radius: var(--filigran-chat-input-radius, var(--chat-radius-md));
 }
 .filigran-chat-composer-box:not([data-working]):has(textarea:focus) {
   outline: 2px solid var(--filigran-chat-focus-ring, var(--chat-accent));
@@ -183,7 +212,7 @@
 @utility chat-user-bubble {
   background-color: var(--filigran-chat-user-background, var(--chat-accent-dark));
   color: var(--filigran-chat-user-text, var(--color-white));
-  border-radius: var(--filigran-chat-user-radius, 14px 14px 4px 14px);
+  border-radius: var(--filigran-chat-user-radius, var(--chat-radius-md) var(--chat-radius-md) var(--chat-radius-sm) var(--chat-radius-md));
   padding: var(--filigran-chat-user-padding, 0.5rem 0.875rem);
   font-size: var(--filigran-chat-user-text-size, var(--filigran-chat-text-size, 0.8125rem));
 }
@@ -289,7 +318,7 @@
 }
 .filigran-chat-scrollable::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
-  border-radius: 3px;
+  border-radius: 9999px;
 }
 .dark .filigran-chat-scrollable::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
@@ -320,19 +349,15 @@
 @keyframes chat-reasoning-glow {
   0%,
   100% {
-    border-color: var(--chat-accent, hsl(197 100% 53%));
     border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 15%, transparent);
-    box-shadow: inset 2px 0 8px -4px color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 8%, transparent);
   }
   50% {
-    border-color: var(--chat-accent, hsl(197 100% 53%));
     border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 35%, transparent);
-    box-shadow: inset 2px 0 12px -4px color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 18%, transparent);
   }
 }
 
-/* The reasoning window's breathing glow; under reduced motion it stands still
-   on a static accent border. */
+/* The reasoning window's breathing accent edge (its left border only, no shadow);
+   under reduced motion it stands still on a static accent border. */
 .filigran-chat-reasoning {
   border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 25%, transparent);
   animation:
@@ -405,7 +430,7 @@
 
 /* A message the host jumped to (`scrollToMessage`): a short accent wash. */
 .filigran-chat-highlight {
-  border-radius: 12px;
+  border-radius: var(--chat-radius-md);
   background: color-mix(in srgb, var(--chat-accent) 12%, transparent);
   transition: background-color 600ms ease-out;
 }

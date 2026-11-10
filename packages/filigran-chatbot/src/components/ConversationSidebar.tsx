@@ -131,7 +131,7 @@ function readListWidth(key: string): number {
   return Number.isNaN(parsed) ? LIST_WIDTH.default : clampListWidth(parsed);
 }
 
-const iconButton = 'p-1 rounded-md chat-text-muted-400/30 hover:chat-icon-hover transition-colors disabled:opacity-40 disabled:pointer-events-none';
+const iconButton = 'p-1 chat-radius-sm chat-text-muted-400/30 hover:chat-icon-hover transition-colors disabled:opacity-40 disabled:pointer-events-none';
 const sectionLabel = 'text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40';
 
 /**
@@ -289,7 +289,7 @@ export const ConversationSidebar = ({
             onClick={onToggleCollapsed}
             aria-label={t('Show conversations')}
             aria-expanded={false}
-            className="w-8 h-8 flex items-center justify-center rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
           >
             <SidebarIcon size={17} />
           </button>
@@ -299,7 +299,7 @@ export const ConversationSidebar = ({
             type="button"
             onClick={() => onNewChat()}
             aria-label={t('New conversation')}
-            className="w-8 h-8 flex items-center justify-center rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
           >
             <EditIcon size={17} />
           </button>
@@ -337,7 +337,7 @@ export const ConversationSidebar = ({
         <button
           type="button"
           onClick={() => onNewChat()}
-          className="flex-1 flex items-center gap-2 rounded-lg border chat-border-200/10 px-3 py-1.5 text-[0.8125rem] chat-text-secondary-700/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
+          className="flex-1 flex items-center gap-2 chat-radius-sm border chat-border-200/10 px-3 py-1.5 text-[0.8125rem] chat-text-secondary-700/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
         >
           <EditIcon size={15} />
           {t('New conversation')}
@@ -349,7 +349,7 @@ export const ConversationSidebar = ({
             onClick={onToggleCollapsed}
             aria-label={t('Hide conversations')}
             aria-expanded
-            className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
           >
             <SidebarIcon size={17} />
           </button>
@@ -369,7 +369,7 @@ export const ConversationSidebar = ({
               }}
               placeholder={t('Search conversations...')}
               aria-label={t('Search conversations...')}
-              className="w-full h-7 pl-7 pr-2 rounded-md chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+              className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
             />
           </div>
         </div>
@@ -394,7 +394,7 @@ export const ConversationSidebar = ({
             */}
             {!q && (
               <div className="mb-1">
-                <div className="group/wsh flex items-center gap-1 rounded-lg px-1.5 py-1 hover:chat-surface-hover-100/6">
+                <div className="group/wsh flex items-center gap-1 chat-radius-sm px-1.5 py-1 hover:chat-surface-hover-100/6">
                   <button
                     type="button"
                     onClick={() => showWorkspaces(!workspacesOpen)}
@@ -594,7 +594,7 @@ const DropZone = ({
   const carries = (e: DragEvent) => e.dataTransfer.types.includes(DRAG_TYPE);
   return (
     <div
-      className={`rounded-lg transition-colors ${over ? 'bg-[var(--chat-accent)]/10 ring-1 ring-[var(--chat-accent)]/40' : ''} ${className}`}
+      className={`chat-radius-sm transition-colors ${over ? 'bg-[var(--chat-accent)]/10 ring-1 ring-[var(--chat-accent)]/40' : ''} ${className}`}
       {...(accepts
         ? {
             onDragEnter: (e: DragEvent) => {
@@ -691,7 +691,7 @@ const NameField = ({
       onBlur={commit}
       placeholder={placeholder}
       aria-label={placeholder}
-      className="mx-2 mb-1 w-[calc(100%-1rem)] rounded-md chat-input-surface-white/10 px-2 py-1 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
+      className="mx-2 mb-1 w-[calc(100%-1rem)] chat-radius-sm chat-input-surface-white/10 px-2 py-1 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
     />
   );
 };
@@ -733,7 +733,7 @@ const WorkspaceGroupSection = ({
 
   return (
     <DropZone onDropConversation={onDropConversation} accepts={manageable} className="mb-0.5">
-      <div className="group/ws flex items-center gap-1 rounded-lg px-1.5 py-1 hover:chat-surface-hover-100/6">
+      <div className="group/ws flex items-center gap-1 chat-radius-sm px-1.5 py-1 hover:chat-surface-hover-100/6">
         {renaming && workspace ? (
           <NameField
             initial={workspace.name}
@@ -756,7 +756,7 @@ const WorkspaceGroupSection = ({
             <FolderIcon size={14} className="shrink-0 text-[var(--chat-accent)]" />
             <span className="truncate text-[0.8125rem] font-medium chat-text-800/80">{workspace ? workspace.name : t('Other workspaces')}</span>
             {isMyDefault && (
-              <span className="shrink-0 rounded bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] text-[var(--chat-accent)]">{t('default')}</span>
+              <span className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] text-[var(--chat-accent)]">{t('default')}</span>
             )}
             <span className="ml-auto shrink-0 pr-1 text-[0.625rem] tabular-nums chat-text-muted-400/30">{count}</span>
           </button>
@@ -819,7 +819,7 @@ const WorkspaceGroupSection = ({
       {open && (
         <div className="space-y-0.5 pb-1 pl-3">
           {pending && (
-            <div className="flex items-center gap-2 rounded-lg bg-[var(--chat-accent)]/10 px-2.5 py-1.5 text-[0.75rem] text-[var(--chat-accent)]">
+            <div className="flex items-center gap-2 chat-radius-sm bg-[var(--chat-accent)]/10 px-2.5 py-1.5 text-[0.75rem] text-[var(--chat-accent)]">
               <EditIcon size={12} />
               {t('New conversation — send a message to start it')}
             </div>
@@ -837,7 +837,7 @@ const WorkspaceGroupSection = ({
  */
 const RowAgentIcon = ({ icon }: { icon: string | undefined }) => {
   const kind = agentIconKind(icon);
-  if (kind === 'image') return <img src={icon!.trim()} alt="" data-agent-icon="image" className="h-4 w-4 rounded-sm object-cover" />;
+  if (kind === 'image') return <img src={icon!.trim()} alt="" data-agent-icon="image" className="h-4 w-4 chat-radius-sm object-cover" />;
   if (kind === 'emoji')
     return (
       <span data-agent-icon="emoji" className="text-[0.8125rem] leading-none">
@@ -912,12 +912,12 @@ const ConversationRow = ({
           onSelect(c.conversationId);
         }
       }}
-      className={`group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left cursor-pointer transition-colors ${
+      className={`group flex w-full items-start gap-2.5 chat-radius-sm px-2.5 py-2 text-left cursor-pointer transition-colors ${
         isActive ? 'bg-[var(--chat-accent)]/10' : 'hover:chat-surface-hover-100/6'
       }`}
     >
       <span
-        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${
+        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center chat-radius-sm ${
           isActive ? 'bg-[var(--chat-accent)]/20 text-[var(--chat-accent)]' : 'chat-surface-subtle-100/6 chat-text-muted-400/30'
         }`}
       >
@@ -940,7 +940,7 @@ const ConversationRow = ({
             }}
             onBlur={onCommitRename}
             aria-label={t('Conversation title')}
-            className="w-full rounded-md chat-input-surface-white/10 px-1.5 py-0.5 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
+            className="w-full chat-radius-sm chat-input-surface-white/10 px-1.5 py-0.5 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
           />
         ) : (
           <span className={`block truncate text-[0.8125rem] ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
@@ -1005,7 +1005,7 @@ const ConversationRow = ({
                 aria-label={t('Move to workspace')}
                 title={t('Move to workspace')}
                 aria-expanded={moveOpen}
-                className="p-1 rounded-md chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
+                className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
               >
                 <FolderInputIcon size={13} />
               </button>
@@ -1056,7 +1056,7 @@ const ConversationRow = ({
               }}
               aria-label={t('Rename conversation')}
               title={t('Rename conversation')}
-              className="p-1 rounded-md chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
+              className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
             >
               <EditIcon size={13} />
             </button>
@@ -1071,7 +1071,7 @@ const ConversationRow = ({
             }}
             aria-label={t('Delete conversation')}
             title={t('Delete conversation')}
-            className="p-1 rounded-md chat-text-muted-400/30 hover:text-red-500 dark:hover:text-red-400"
+            className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-red-500 dark:hover:text-red-400"
           >
             <TrashIcon size={13} />
           </button>

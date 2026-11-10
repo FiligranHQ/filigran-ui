@@ -52,7 +52,7 @@ export const ChatNotice = ({
       role={role}
       data-tone={tone}
       data-testid={rest['data-testid']}
-      className={`filigran-chat-notice flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-[0.75rem] leading-5 ${TONE_CLASS[tone]} ${className}`}
+      className={`filigran-chat-notice flex items-start gap-2 chat-radius-md border px-2.5 py-1.5 text-[0.75rem] leading-5 ${TONE_CLASS[tone]} ${className}`}
     >
       <Icon size={14} className="mt-[3px] shrink-0" />
       <div className="min-w-0 flex-1 break-words">{children}</div>
@@ -62,7 +62,7 @@ export const ChatNotice = ({
           onClick={onDismiss}
           aria-label={dismissLabel}
           title={dismissLabel}
-          className="-mr-1 mt-px shrink-0 rounded p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
+          className="-mr-1 mt-px shrink-0 chat-radius-sm p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
         >
           <CloseIcon size={12} />
         </button>

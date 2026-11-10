@@ -76,7 +76,7 @@ interface ChatWaitingPanelProps {
 }
 
 const PLAY_CLASS =
-  'inline-flex items-center gap-1.5 self-start rounded text-xs text-[var(--chat-accent)] opacity-80 transition-opacity hover:opacity-100 focus-visible:opacity-100';
+  'inline-flex items-center gap-1.5 self-start chat-radius-sm text-xs text-[var(--chat-accent)] opacity-80 transition-opacity hover:opacity-100 focus-visible:opacity-100';
 
 /**
  * Waiting experience shown below the status bubble during longer waits:
@@ -120,7 +120,7 @@ export const ChatWaitingPanel = ({ t, enabled = true, onPlay, playUrl, keepEndIn
       {/* Every non-essential animation (fade-ins, the blinking caret) stops
           under prefers-reduced-motion; only the dimmed text rotates. */}
       <div
-        className="flex flex-col gap-1.5 rounded-md bg-[var(--chat-accent)]/[0.03] px-3 py-2.5"
+        className="flex flex-col gap-1.5 chat-radius-md bg-[var(--chat-accent)]/[0.03] px-3 py-2.5"
         style={reducedMotion ? undefined : { animation: 'chat-fade-in 0.5s ease-out' }}
       >
         <span

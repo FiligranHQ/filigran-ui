@@ -107,14 +107,14 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
   // of collapsing it into a single run of inline code.
   if (match || codeStr.includes('\n')) {
     const block = (
-      <div className="my-3 rounded-lg border chat-border-200/10 overflow-hidden chat-code-block">
+      <div className="my-3 chat-radius-md border chat-border-200/10 overflow-hidden chat-code-block">
         <div className="flex items-center justify-between px-3 py-1.5 border-b chat-border-200/10 chat-surface-subtle-100/3 select-none">
           <span className="text-[0.7rem] chat-text-muted-500/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
           <button
             type="button"
             onClick={() => onCopyCode(codeStr)}
             aria-label={copiedBlock === codeStr ? t('Copied') : t('Copy code')}
-            className="p-0.5 rounded-sm hover:chat-surface-hover-200/10 transition-colors"
+            className="p-0.5 chat-radius-sm hover:chat-surface-hover-200/10 transition-colors"
           >
             {copiedBlock === codeStr ? <CheckIcon size={14} className="text-green-500" /> : <CopyIcon size={14} className="chat-text-muted-400/40" />}
           </button>
@@ -133,7 +133,7 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
       </HostRenderBoundary>
     );
   }
-  return <code className="chat-code-inline chat-code px-1.5 py-0.5 rounded-sm text-[var(--chat-accent)]">{children}</code>;
+  return <code className="chat-code-inline chat-code px-1.5 py-0.5 chat-radius-sm text-[var(--chat-accent)]">{children}</code>;
 };
 
 const MarkdownLink = ({ href, children }: { href?: string; children?: React.ReactNode }) => {
@@ -208,7 +208,7 @@ const MARKDOWN_COMPONENTS: Components = {
   em: ({ children }) => <em className="italic">{children}</em>,
   hr: () => <hr className="my-4 chat-border-200/10" />,
   blockquote: ({ children }) => (
-    <blockquote className="my-3 border-l-2 border-[var(--chat-accent)]/30 bg-[var(--chat-accent)]/[0.03] pl-4 pr-3 py-2 rounded-r-md italic chat-text-secondary-500/60">
+    <blockquote className="my-3 border-l-2 border-[var(--chat-accent)]/30 bg-[var(--chat-accent)]/[0.03] pl-4 pr-3 py-2 chat-radius-r-sm italic chat-text-secondary-500/60">
       {children}
     </blockquote>
   ),
@@ -224,7 +224,7 @@ const MARKDOWN_COMPONENTS: Components = {
   // and striped; a table wider than the answer scrolls sideways inside its
   // frame, its columns never squeezed under a readable width.
   table: ({ children }) => (
-    <div className="my-3 max-w-full overflow-x-auto rounded-lg border chat-border-200/15 filigran-chat-scrollable">
+    <div className="my-3 max-w-full overflow-x-auto chat-radius-md border chat-border-200/15 filigran-chat-scrollable">
       <table className="min-w-full border-collapse chat-answer-text">{children}</table>
     </div>
   ),

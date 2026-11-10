@@ -79,12 +79,12 @@ interface ChatHeaderProps {
 }
 
 const headerButton =
-  'w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors';
+  'w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors';
 
 /** An agent's own icon when it has one the panel can draw, the panel's logo otherwise. */
 const AgentIcon = ({ icon, fallback }: { icon: string | null | undefined; fallback: React.ReactNode }) => {
   const kind = agentIconKind(icon);
-  if (kind === 'image') return <img src={icon!.trim()} alt="" className="w-4 h-4 rounded-sm object-cover" />;
+  if (kind === 'image') return <img src={icon!.trim()} alt="" className="w-4 h-4 chat-radius-sm object-cover" />;
   if (kind === 'emoji') return <span className="text-sm leading-none">{icon!.trim()}</span>;
   return <span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{fallback}</span>;
 };
@@ -247,7 +247,7 @@ export const ChatHeader = ({
 
   return (
     <div
-      className={`flex items-center px-3 py-2 min-h-[48px] border-b chat-border-200/10 chat-header-surface ${mode === 'floating' ? 'rounded-t-xl' : ''}`}
+      className={`flex items-center px-3 py-2 min-h-[48px] border-b chat-border-200/10 chat-header-surface ${mode === 'floating' ? 'chat-radius-t-md' : ''}`}
     >
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1">
@@ -261,7 +261,7 @@ export const ChatHeader = ({
             aria-expanded={agentMenuOpen}
             title={t('Switch to another agent')}
             data-testid="filigran-chat-agent-switcher"
-            className={`flex max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1.5 py-1 rounded-lg border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
+            className={`flex max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1.5 py-1 chat-radius-sm border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
               agentMenuOpen ? 'chat-surface-hover-100/10 chat-border-200/10' : ''
             }`}
           >
@@ -341,7 +341,7 @@ export const ChatHeader = ({
                 onKeyDown={onAgentSearchKeyDown}
                 placeholder={t('Search agents...')}
                 aria-label={t('Search agents...')}
-                className="w-full h-7 pl-7 pr-2 rounded-md chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+                className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
               />
             </div>
           </div>
@@ -391,13 +391,13 @@ export const ChatHeader = ({
                       {agent.badges?.map((badge) => (
                         <span
                           key={badge}
-                          className="shrink-0 rounded bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] leading-4 text-[var(--chat-accent)]"
+                          className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] leading-4 text-[var(--chat-accent)]"
                         >
                           {badge}
                         </span>
                       ))}
                       {agent.disableChat && (
-                        <span className="shrink-0 rounded bg-amber-500/10 px-1 text-[0.6rem] leading-4 text-amber-600 dark:text-amber-400">
+                        <span className="shrink-0 chat-radius-sm bg-amber-500/10 px-1 text-[0.6rem] leading-4 text-amber-600 dark:text-amber-400">
                           {t('Not recommended for chat')}
                         </span>
                       )}
@@ -455,7 +455,7 @@ export const ChatHeader = ({
               aria-label={t('Conversation history')}
               aria-haspopup="menu"
               aria-expanded={historyMenuOpen}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
+              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
             >
               <HistoryIcon size={18} />
             </button>
@@ -496,7 +496,7 @@ export const ChatHeader = ({
                         onClick={() => onDeleteConversation(conv.conversationId)}
                         title={t('Delete conversation')}
                         aria-label={t('Delete conversation')}
-                        className="shrink-0 p-1 rounded-md chat-text-muted-400/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
+                        className="shrink-0 p-1 chat-radius-sm chat-text-muted-400/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
                       >
                         <TrashIcon size={14} />
                       </button>
@@ -525,7 +525,7 @@ export const ChatHeader = ({
                 }}
                 action={clearAllAction}
                 className="px-3 pb-2"
-                iconButtonClass="p-1 rounded-md chat-text-muted-400/40 hover:chat-surface-hover-100/10 transition-colors"
+                iconButtonClass="p-1 chat-radius-sm chat-text-muted-400/40 hover:chat-surface-hover-100/10 transition-colors"
                 t={t}
               />
             )}
@@ -549,7 +549,7 @@ export const ChatHeader = ({
               type="button"
               aria-label={t('Switch view')}
               onClick={onModeMenuToggle}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
+              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
             >
               <CurrentModeIcon size={18} />
             </button>
@@ -585,7 +585,7 @@ export const ChatHeader = ({
               type="button"
               aria-label={t('Close')}
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
+              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
             >
               <CloseIcon size={18} />
             </button>

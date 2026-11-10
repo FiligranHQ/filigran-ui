@@ -40,7 +40,7 @@ const status = (name: string, fields: Record<string, unknown> = {}) => ({ type: 
 
 /** The status line as a screen reader reads it: what is hidden from it left out. */
 function spokenLine(): string {
-  const shown = container.querySelector('.filigran-chat-active-border');
+  const shown = container.querySelector('[data-testid="filigran-chat-status"]');
   if (!shown) return '';
   const copy = shown.cloneNode(true) as HTMLElement;
   copy.querySelectorAll('[aria-hidden="true"]').forEach((e) => e.remove());

@@ -52,7 +52,7 @@ export function ClearAllConversations({ onClear, action = 'delete', className, i
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-[0.7rem] chat-text-muted-400/40 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+          className="flex items-center gap-1.5 chat-radius-sm px-1 py-0.5 text-[0.7rem] chat-text-muted-400/40 hover:text-red-500 dark:hover:text-red-400 transition-colors"
         >
           <TrashIcon size={12} />
           {words.offer}

@@ -8,6 +8,8 @@ const THEME_VARIABLES: Readonly<Record<keyof ChatPanelTheme, string>> = {
   surfaceHover: '--filigran-chat-surface-hover',
   inputSurface: '--filigran-chat-input-surface',
   inputRadius: '--filigran-chat-input-radius',
+  radiusSm: '--filigran-chat-radius-sm',
+  radiusMd: '--filigran-chat-radius-md',
   inputMinHeight: '--filigran-chat-input-min-height',
   focusRing: '--filigran-chat-focus-ring',
   headerBackground: '--filigran-chat-header-background',

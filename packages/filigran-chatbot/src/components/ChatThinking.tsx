@@ -361,7 +361,7 @@ function ThinkingTextBubble({ text, action }: { text: string; action?: React.Rea
   }, [text]);
 
   return (
-    <div className="filigran-chat-reasoning ml-11 mt-2.5 max-w-[75%] rounded-md border-l-2 bg-[var(--chat-accent)]/[0.03] py-2 pl-3 pr-3">
+    <div className="filigran-chat-reasoning ml-11 mt-2.5 max-w-[75%] chat-radius-md border-l-2 bg-[var(--chat-accent)]/[0.03] py-2 pl-3 pr-3">
       {/* A float, so one whose content fell back to nothing takes no room from the text. */}
       {action && <div className="float-right -mr-2 -mt-1 ml-2">{action}</div>}
       <div
@@ -496,12 +496,13 @@ export const ChatThinking = ({
   return (
     <>
       <div className="flex gap-3 items-center justify-start">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--chat-accent)]/15 to-[var(--chat-accent)]/5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center chat-radius-sm bg-gradient-to-br from-[var(--chat-accent)]/15 to-[var(--chat-accent)]/5">
           <span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{logoIcon}</span>
         </div>
-        <div className="filigran-chat-active-border rounded-lg chat-surface-subtle-50/3 px-4 py-3 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-[var(--chat-accent)]/[0.03] via-transparent to-[var(--chat-accent)]/[0.03] animate-pulse pointer-events-none" />
-          <div className="relative flex items-center gap-2.5">
+        {/* The status card: the design system's card corner and subtle border, as the
+            answers' cards; the motion is the icon's and the dots', never a glow around it. */}
+        <div data-testid="filigran-chat-status" className="chat-radius-md border chat-border-200/10 chat-surface-subtle-50/3 px-4 py-3">
+          <div className="flex items-center gap-2.5">
             {showDots ? (
               <div className="flex gap-[3px] items-center h-3.5 w-3.5 justify-center">
                 {[0, 0.15, 0.3].map((delay, i) => (
@@ -536,7 +537,7 @@ export const ChatThinking = ({
               <button
                 type="button"
                 onClick={onSkipWait}
-                className="ml-1 shrink-0 rounded-md border border-[var(--chat-accent)]/40 px-2 py-0.5 text-xs text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors"
+                className="ml-1 shrink-0 chat-radius-sm border border-[var(--chat-accent)]/40 px-2 py-0.5 text-xs text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors"
               >
                 {t('Continue now')}
               </button>

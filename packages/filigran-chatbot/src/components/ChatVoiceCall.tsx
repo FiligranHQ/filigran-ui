@@ -102,7 +102,7 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
             {call.lines.map((line, i) => (
               <div key={i} className={`flex ${line.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[85%] rounded-lg px-3 py-1.5 text-[0.75rem] leading-5 ${
+                  className={`max-w-[85%] chat-radius-md px-3 py-1.5 text-[0.75rem] leading-5 ${
                     line.role === 'user' ? 'bg-[var(--chat-accent)]/10 chat-text-800/80' : 'chat-surface-subtle-100/6 chat-text-secondary-700/70'
                   }`}
                 >

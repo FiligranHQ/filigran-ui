@@ -55,7 +55,7 @@ export const Tooltip = ({ title, children }: TooltipProps) => {
         createPortal(
           <span
             ref={tipRef}
-            className={`pointer-events-none fixed z-[10001] w-max -translate-x-1/2 ${placement.below ? '' : '-translate-y-full'} whitespace-normal break-words rounded-md bg-gray-900 dark:bg-gray-100 px-2 py-1 text-xs text-white dark:text-gray-900 shadow-lg`}
+            className={`pointer-events-none fixed z-[10001] w-max -translate-x-1/2 ${placement.below ? '' : '-translate-y-full'} whitespace-normal break-words chat-radius-sm bg-gray-900 dark:bg-gray-100 px-2 py-1 text-xs text-white dark:text-gray-900 shadow-lg`}
             style={{
               top: placement.below ? opening.bottom + ANCHOR_GAP : opening.top - ANCHOR_GAP,
               left: opening.center + placement.shift,

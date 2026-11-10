@@ -301,7 +301,7 @@ export const ChatInput = ({
 
   return (
     <div
-      className={`px-4 py-3 border-t chat-border-200/10 ${mode === 'floating' ? 'rounded-b-xl' : ''}`}
+      className={`px-4 py-3 border-t chat-border-200/10 ${mode === 'floating' ? 'chat-radius-b-md' : ''}`}
       style={separatorColor ? { borderTopColor: separatorColor, borderTopWidth: 1 } : undefined}
       data-testid="filigran-chat-composer"
     >
@@ -336,7 +336,7 @@ export const ChatInput = ({
         </ChatNotice>
       )}
       {heldMessage && (
-        <div className="mb-2 flex items-center gap-2 rounded-lg border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
+        <div className="mb-2 flex items-center gap-2 chat-radius-md border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
           <span className="shrink-0 chat-text-secondary-500/50">{t('Sends when the answer ends:')}</span>
           <span className="min-w-0 flex-1 truncate chat-text-800/80">{heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}</span>
           {onCancelHeld && (
@@ -441,7 +441,7 @@ export const ChatInput = ({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 aria-label={t('Attach files')}
-                className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 mr-0.5 transition-colors"
+                className="w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 mr-0.5 transition-colors"
               >
                 <AttachFileIcon size={18} />
               </button>
@@ -465,7 +465,7 @@ export const ChatInput = ({
                 onClick={dictation.toggle}
                 aria-label={t('Dictate a message')}
                 aria-pressed={dictation.listening}
-                className={`relative w-8 h-8 flex items-center justify-center shrink-0 rounded-lg mr-0.5 transition-colors ${
+                className={`relative w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm mr-0.5 transition-colors ${
                   dictation.listening ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'chat-text-muted-400/30 hover:chat-surface-hover-100/10'
                 }`}
               >
@@ -480,7 +480,7 @@ export const ChatInput = ({
                 type="button"
                 onClick={send}
                 aria-label={t('Send when the answer ends')}
-                className="p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
+                className="p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
               >
                 <SendIcon size={18} />
               </button>
@@ -492,7 +492,7 @@ export const ChatInput = ({
                 type="button"
                 onClick={send}
                 aria-label={t('Send now')}
-                className="p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
+                className="p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
               >
                 <SendIcon size={18} />
               </button>
@@ -504,7 +504,7 @@ export const ChatInput = ({
               onClick={isLoading ? onStop : send}
               aria-label={isLoading ? t('Stop generating') : t('Send')}
               disabled={!isLoading && !canSend}
-              className={`p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 ${
+              className={`p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 ${
                 isLoading
                   ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20 ml-0.5'
                   : canSend

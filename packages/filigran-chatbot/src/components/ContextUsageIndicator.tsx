@@ -131,7 +131,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
           aria-label={`${summary} (${percent}%)`}
           aria-haspopup="dialog"
           aria-expanded={open}
-          className="flex items-center rounded-md px-1 -mx-1 py-0.5 transition-colors hover:chat-surface-hover-100/10"
+          className="flex items-center chat-radius-sm px-1 -mx-1 py-0.5 transition-colors hover:chat-surface-hover-100/10"
         >
           {gauge}
         </button>

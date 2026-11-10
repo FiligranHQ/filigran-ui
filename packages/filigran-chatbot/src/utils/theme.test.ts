@@ -23,6 +23,13 @@ test('the composer entries set its corners, resting height and focus ring', () =
   });
 });
 
+test('the radius entries pass the design-system corners to every card and control', () => {
+  assert.deepEqual(themeVariables({ radiusSm: 'var(--radius-sm)', radiusMd: 'var(--radius-md)' }), {
+    '--filigran-chat-radius-sm': 'var(--radius-sm)',
+    '--filigran-chat-radius-md': 'var(--radius-md)',
+  });
+});
+
 test('no theme sets nothing', () => {
   assert.deepEqual(themeVariables(undefined), {});
   assert.deepEqual(themeVariables({}), {});
