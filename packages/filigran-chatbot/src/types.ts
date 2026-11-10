@@ -1401,6 +1401,12 @@ export interface ChatConversationSummary {
    */
   agentName?: string;
   /**
+   * The conversation agent's icon (`agent_icon`), an image URL or an emoji as
+   * `XtmAgent.icon`, when the backend reports one: the row draws it in place of
+   * the panel's generic glyph.
+   */
+  agentIcon?: string;
+  /**
    * The workspace the conversation is filed in (`null`: none), when the
    * backend reports it. Undefined on backends that do not.
    */

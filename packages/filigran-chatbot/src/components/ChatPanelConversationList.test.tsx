@@ -186,7 +186,7 @@ test("a row shows the backend's preview and channel, and a backend without them 
   fakeBackend([
     agentsRoute,
     listRoute([
-      { conversation_id: 'c1', title: 'From Slack', last_message_preview: 'Here are the IOCs', channel: 'slack' },
+      { conversation_id: 'c1', title: 'From Slack', last_message_preview: 'Here are the IOCs', channel: 'slack', agent_icon: ' 🛰️ ' },
       { conversation_id: 'c2', title: 'Bare' },
     ]),
   ]);
@@ -194,7 +194,9 @@ test("a row shows the backend's preview and channel, and a backend without them 
   const [slack, bare] = rows();
   assert.ok(slack.textContent?.includes('Here are the IOCs'));
   assert.ok(slack.querySelector('[aria-label="Started in Slack"]'));
+  assert.equal(slack.querySelector('[data-agent-icon="emoji"]')?.textContent, '🛰️', "the backend's agent_icon, trimmed");
   assert.equal(bare.textContent, 'Bare');
+  assert.equal(bare.querySelector('[data-agent-icon]'), null);
 });
 
 test('a message sent in an older conversation moves it to the top at once, before the turn ends', async () => {

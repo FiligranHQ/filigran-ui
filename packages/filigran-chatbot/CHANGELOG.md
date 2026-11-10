@@ -21,6 +21,11 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Added
 
+- A conversation row shows its agent's own icon (`agent_icon` of the list,
+  `ChatConversationSummary.agentIcon`: an image URL or an emoji, as
+  `XtmAgent.icon`) in place of the bot glyph, and its last line is the agent as
+  a small pill followed by the relative time, the time never cut. A backend
+  without `agent_icon`, or one the panel cannot draw, keeps the bot glyph.
 - `onConversationChange` says why the conversation changed: its second argument
   is `{ created }`, true for a conversation the panel has just created from a
   new chat (its first message or file), false for one opened from the list, on
