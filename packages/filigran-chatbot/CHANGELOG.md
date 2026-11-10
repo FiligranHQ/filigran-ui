@@ -10,47 +10,19 @@ This file starts at 3.10.0; earlier releases are on the
 
 ## 3.21.0 — unreleased
 
-### Changed
-
-- The header's agent control is one switcher: a click anywhere on the icon,
-  the name or the chevron opens a searchable list of the agents (always
-  searchable, ArrowUp / ArrowDown move, Enter switches, Escape closes, the
-  current agent checked). With `agentHref` or `onAgentNameClick`, the agent's
-  page moves to an "Open agent page" item of that menu, with the same rules
-  (in place, a modifier key left to the browser); the name is no longer a link.
-- Every error, warning and notice of the panel renders through one notice
-  block (`ChatNotice`): a tone (error, warning, info) with its icon, a tinted
-  container at the panel's radius, and a close button where the notice is not
-  tied to a live state. The composer's refused attachment and refused steer
-  or Stop notices close on a click; no notice is raw coloured text any more.
-  `useChat` returns `dismissNotice` and `dismissFileNotice`, and `ChatInput`
-  takes `onDismissNotice` and `onDismissFileNotice`.
-
 ### Added
 
-- A conversation row shows its agent's own icon (`agent_icon` of the list,
-  `ChatConversationSummary.agentIcon`: an image URL or an emoji, as
-  `XtmAgent.icon`) in place of the bot glyph, and its last line is the agent as
-  a small pill followed by the relative time, the time never cut. A backend
-  without `agent_icon`, or one the panel cannot draw, keeps the bot glyph.
 - `onConversationChange` says why the conversation changed: its second argument
   is `{ created }`, true for a conversation the panel has just created from a
   new chat (its first message or file), false for one opened from the list, on
   a reload or in place of a deleted one, and when it is left for a new chat. A
   host could not tell an opened conversation from a created one, as both came
   after a new chat.
-- The composer takes the host's field tokens: `theme.inputRadius`,
-  `theme.inputMinHeight` and `theme.focusRing` set its corners, its height at
-  rest and its focus ring, so a host draws it with its design system and no
-  local override.
-
-### Changed
-
-- The composer opens at two lines instead of one, and still grows with the
-  text up to its maximum: at one line it did not read as the place to write.
-- The composer's focus is a 2 px ring around its box instead of an accent
-  border, the text-field focus of a design system; the border keeps its colour,
-  so dictation's red border still reads.
+- The conversation list of fullscreen and inline modes is resizable: drag its
+  right edge between 224 and 480 px, or move it with the arrow keys, Home and
+  End once focused; a double-click puts back the 256 px it always had. The
+  width is remembered per browser (`filigranChatConversationListWidth`,
+  namespaced by `storageKeyPrefix`) and kept while the list is collapsed.
 
 ## 3.20.0 — 2026-11-10
 
