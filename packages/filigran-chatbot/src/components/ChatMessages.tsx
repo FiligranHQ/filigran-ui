@@ -23,6 +23,7 @@ import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type Feedba
 import { isComposing } from '../utils/keyboard';
 import { formatMessageTime } from '../utils/messageTime';
 import { userMessageText } from '../utils/userMessage';
+import { copyTranscriptSelection, trimBlankLines } from '../utils/copy';
 import {
   createScrollFollower,
   watchContentGrowth,
@@ -237,7 +238,7 @@ const MessageCopyButton = ({ text, label, t }: { text: string; label: string; t:
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(text || '');
+      await navigator.clipboard.writeText(trimBlankLines(text || ''));
       setCopied(true);
       setTimeout(() => setCopied(false), COPY_FEEDBACK_DELAY);
     } catch {
@@ -816,7 +817,7 @@ const MessageRow = memo(
     return (
       <div data-message-id={msg.serverId ?? msg.id} className={`group/msg flex flex-col ${isAssistant ? 'items-start' : 'items-end'}`}>
         {isAssistant && (
-          <div className="flex items-center gap-1.5 mb-1">
+          <div className="flex items-center gap-1.5 mb-1 select-none">
             <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
               <span className="text-[var(--chat-accent)] [&>svg]:w-3 [&>svg]:h-3">{logoIcon}</span>
             </div>
@@ -856,7 +857,7 @@ const MessageRow = memo(
 
         {/* The user's side mirrors the answer's: the time hugs the bubble's edge. */}
         {!isAssistant && (
-          <div className="mt-0.5 flex items-center justify-end gap-0.5 chat-text-muted-400/40">
+          <div className="mt-0.5 flex items-center justify-end gap-0.5 chat-text-muted-400/40 select-none">
             {!!userText && <MessageCopyButton text={userText} label={t('Copy message')} t={t} />}
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
           </div>
@@ -864,7 +865,7 @@ const MessageRow = memo(
 
         {/* A reply cut short keeps its warning even with no text to act on. */}
         {(showActions || (isAssistant && !isStreaming && cutShort)) && (
-          <div className="mt-0.5 flex flex-wrap items-center gap-0.5 chat-text-muted-400/40">
+          <div className="mt-0.5 flex flex-wrap items-center gap-0.5 chat-text-muted-400/40 select-none">
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
             {hasReasoningDetails && (
               <Tooltip title={reasoningLabel}>
@@ -1317,6 +1318,7 @@ export const ChatMessages = ({
       onPointerDown={handlePointerDown}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
+      onCopy={copyTranscriptSelection}
       data-testid="filigran-chat-transcript"
       // `relative`: what a message positions absolutely (its screen-reader time)
       // is clipped by this scroll, not laid out down the page, which would scroll.

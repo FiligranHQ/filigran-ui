@@ -7,6 +7,7 @@ import { useDictation } from '../hooks/useDictation';
 import { referencedConversations } from '../utils/conversationRefs';
 import { hasFailedUpload } from '../utils/failedUpload';
 import { isComposing } from '../utils/keyboard';
+import { pastedText, spliceText } from '../utils/copy';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
 import { MentionMenu } from './MentionMenu';
 import { PromptPicker } from './PromptPicker';
@@ -198,6 +199,29 @@ export const ChatInput = ({
     textareaRef.current?.focus();
   };
 
+  // A paste of text inserts it without the blank lines that open or close it
+  // (a selection copied from a page that ended on a block): never a phantom
+  // line. What the user typed is kept; a paste of files is the host's.
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    onPaste?.(e);
+    if (e.defaultPrevented) return;
+    let text: string;
+    try {
+      text = e.clipboardData?.getData('text/plain') ?? '';
+    } catch {
+      return;
+    }
+    const inserted = pastedText(text);
+    if (inserted === null) return;
+    e.preventDefault();
+    const el = e.currentTarget;
+    const next = spliceText(inputValue, el.selectionStart ?? inputValue.length, el.selectionEnd ?? inputValue.length, inserted);
+    onInputChange(next.value);
+    requestAnimationFrame(() => {
+      if (textareaRef.current) textareaRef.current.selectionStart = textareaRef.current.selectionEnd = next.caret;
+    });
+  };
+
   // Attaching may be off while files attached before stay, shown and removable.
   const isFileManagementEnabled = Boolean(onFileAdd && onFileRemove && onPaste);
   const hasAttachments = attachedFiles.length > 0;
@@ -371,7 +395,7 @@ export const ChatInput = ({
           onFocus={mentionMenu.sync}
           onBlur={mentionMenu.close}
           {...mentionMenu.textareaAria}
-          onPaste={onPaste}
+          onPaste={handlePaste}
           rows={1}
           className="filigran-chat-composer-field w-full bg-transparent border-none outline-hidden resize-none text-[0.8125rem] px-1 py-1.5 chat-text-900/100 placeholder:chat-text-muted-400/30 filigran-chat-scrollable"
           style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}

@@ -72,7 +72,7 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
   if (match || codeStr.includes('\n')) {
     const block = (
       <div className="my-3 rounded-lg border chat-border-200/10 overflow-hidden chat-code-block">
-        <div className="flex items-center justify-between px-3 py-1.5 border-b chat-border-200/10 chat-surface-subtle-100/3">
+        <div className="flex items-center justify-between px-3 py-1.5 border-b chat-border-200/10 chat-surface-subtle-100/3 select-none">
           <span className="text-[0.7rem] chat-text-muted-500/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
           <button
             type="button"
