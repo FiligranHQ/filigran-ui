@@ -35,8 +35,8 @@ This file starts at 3.10.0; earlier releases are on the
   conversation outside a workspace` button, beside each workspace's own.
 - In a reply's "Working files" list, a file the same reply wrote again later,
   with the same name and kind of file (MIME type without its parameters, else
-  the type label), carries a "Superseded" tag; its last version carries none,
-  nor does a file listed twice.
+  the type label), carries a "Superseded" tag; its last version carries none.
+  A file listed again ranks where it first appeared.
 - `ChatPanelHandle.attachFiles(files)` puts files in the composer's tray as if
   the user picked them, uploaded and held to the same limits, for the next
   message: files another app shared to the host. Nothing happens where the

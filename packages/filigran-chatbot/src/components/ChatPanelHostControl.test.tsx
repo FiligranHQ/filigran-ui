@@ -720,21 +720,30 @@ test("a host's `false` keeps the panel's row, as `undefined` does", async () => 
 
 test("a host that throws on one message costs that message its replacement, never the panel", async () => {
   const original = console.error;
-  console.error = () => undefined;
+  const said: string[] = [];
+  console.error = (...args: unknown[]) => void said.push(String(args[0]));
   try {
     fakeBackend([agentsRoute, SWEEP]);
     function Broken(): never {
       throw new Error('no raw content');
     }
-    await render({
+    // A new function on each host render, as an inline one is.
+    const props = () => ({
       conversationId: 'c1',
-      replaceMessage: (message) => {
+      replaceMessage: (message: { serverId?: string }) => {
         if (message.serverId === 'm1') throw new Error('asked of a message it did not expect');
         return message.serverId === 'm2' ? <Broken /> : undefined;
       },
     });
+    await render(props());
     assert.ok(text().includes('run the sweep'), "a message the host threw on is the panel's");
     assert.ok(text().includes('Sweep done.'), "a replacement that throws while drawn gives way to the panel's row");
+    const logged = () => said.filter((line) => line.includes('A replaced chat message failed to render')).length;
+    const once = logged();
+    assert.ok(once > 0, 'a throw is said');
+    await render(props());
+    await render(props());
+    assert.equal(logged(), once, 'a message that throws is said again on every render');
   } finally {
     console.error = original;
   }
