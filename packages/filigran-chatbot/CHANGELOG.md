@@ -12,6 +12,14 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Changed
 
+- Answers render their Markdown at the old chat page's quality and past it.
+  Fenced code is coloured by language (Python, TypeScript and JavaScript, JSON,
+  shell, SQL, YAML and their usual aliases) in light and dark, with no new
+  dependency; an unknown language stays plain. Tables read at the prose's size
+  with a filled header row, ruled and striped rows, cells that keep a readable
+  width and a frame that scrolls sideways when the table is wider than the
+  answer. Nested lists tighten and change bullet by level, task lists show
+  read-only boxes, h4 to h6, strikethrough and footnotes are styled.
 - Conversations come first in the list. The workspaces fold into one
   "Workspaces" line above the conversations (with their count and the New
   workspace button), opened on demand and remembered per browser

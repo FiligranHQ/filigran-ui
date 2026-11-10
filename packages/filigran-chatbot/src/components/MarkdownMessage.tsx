@@ -8,6 +8,7 @@ import { HostRenderBoundary, HostRenderFallback } from './HostRenderBoundary';
 import type { ChatCodeBlockRenderer } from '../types';
 import { identity, markdownUrlTransform, prepareMarkdown } from '../utils';
 import { MarkdownBlockSplitter } from '../utils/markdownBlocks';
+import { highlightCode, type HighlightTokenType } from '../utils/highlight';
 import { isRelativeHref, toInternalHref } from '../utils/pageActions';
 
 interface MarkdownMessageProps {
@@ -54,6 +55,41 @@ const MarkdownRenderContext = createContext<MarkdownRenderContextValue>({
   t: identity,
 });
 
+/** Each token kind's colour class, written whole so the stylesheet compiles it. */
+const TOKEN_CLASS: Record<HighlightTokenType, string | undefined> = {
+  comment: 'chat-hl-comment',
+  string: 'chat-hl-string',
+  number: 'chat-hl-number',
+  keyword: 'chat-hl-keyword',
+  literal: 'chat-hl-literal',
+  builtin: 'chat-hl-builtin',
+  function: 'chat-hl-function',
+  property: 'chat-hl-property',
+  variable: 'chat-hl-variable',
+  plain: undefined,
+};
+
+/** A fenced block's code, coloured by language; a language the highlighter does not know stays plain. */
+const HighlightedCode = memo(({ code, language }: { code: string; language?: string }) => {
+  const tokens = useMemo(() => highlightCode(code, language), [code, language]);
+  return (
+    <>
+      {tokens.map((token, index) => {
+        const className = TOKEN_CLASS[token.type];
+        return className ? (
+          <span key={index} className={className}>
+            {token.text}
+          </span>
+        ) : (
+          token.text
+        );
+      })}
+    </>
+  );
+});
+
+HighlightedCode.displayName = 'HighlightedCode';
+
 /** A host's code block, called inside its boundary; nothing drawn keeps the block as code. */
 function HostCodeBlock({ draw, block }: { draw: () => React.ReactNode; block: React.ReactNode }) {
   const node = draw();
@@ -84,7 +120,9 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
           </button>
         </div>
         <pre className="m-0 px-3 py-2 overflow-x-auto">
-          <code className="chat-code leading-[1.7] chat-text-800/90 whitespace-pre">{codeStr}</code>
+          <code className="chat-code leading-[1.7] chat-text-800/90 whitespace-pre" data-language={match?.[1]?.toLowerCase()}>
+            <HighlightedCode code={codeStr} language={match?.[1]} />
+          </code>
         </pre>
       </div>
     );
@@ -144,9 +182,28 @@ const MARKDOWN_COMPONENTS: Components = {
   // `list-disc` / `list-decimal` are required, not decorative: the
   // package's scoped preflight resets `list-style` inside the panel, so
   // without them every list renders as unmarked, indented prose.
-  ul: ({ children }) => <ul className="list-disc pl-5 mb-3 chat-answer-text [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 chat-answer-text [&_li]:mb-1 marker:text-[var(--chat-accent)]/50">{children}</ol>,
+  // A nested list sits tight under its item, and a bullet list one level down
+  // takes a circle so the levels read apart. A GFM task list has no bullets:
+  // its checkboxes are the markers.
+  ul: ({ className, children }) => (
+    <ul
+      className={`${className?.includes('contains-task-list') ? 'list-none pl-1' : 'list-disc pl-5'} mb-3 chat-answer-text [&_li]:mb-1 [&_ul]:list-[circle] [&_ul]:mt-1 [&_ul]:mb-1 [&_ol]:mt-1 [&_ol]:mb-1 marker:text-[var(--chat-accent)]/50`}
+    >
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-decimal pl-5 mb-3 chat-answer-text [&_li]:mb-1 [&_ul]:mt-1 [&_ul]:mb-1 [&_ol]:mt-1 [&_ol]:mb-1 marker:text-[var(--chat-accent)]/50">
+      {children}
+    </ol>
+  ),
   li: ({ children }) => <li className="leading-7 break-words">{children}</li>,
+  // A task list's box: read-only, in the accent colour, aligned on the text.
+  input: ({ type, checked }) =>
+    type === 'checkbox' ? (
+      <input type="checkbox" checked={!!checked} readOnly disabled className="mr-2 align-[-2px] accent-[var(--chat-accent)]" />
+    ) : null,
+  del: ({ children }) => <del className="chat-text-muted-500/50">{children}</del>,
   strong: ({ children }) => <strong className="font-semibold chat-text-900/100">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   hr: () => <hr className="my-4 chat-border-200/10" />,
@@ -160,16 +217,41 @@ const MARKDOWN_COMPONENTS: Components = {
   h1: ({ children }) => <h1 className="mt-4 first:mt-0 mb-2 font-bold chat-answer-heading-1 chat-text-900/100">{children}</h1>,
   h2: ({ children }) => <h2 className="mt-3 first:mt-0 mb-2 font-bold chat-answer-heading-2 chat-text-900/100">{children}</h2>,
   h3: ({ children }) => <h3 className="mt-3 first:mt-0 mb-1.5 font-semibold chat-answer-heading-3 chat-text-900/100">{children}</h3>,
+  h4: ({ children }) => <h4 className="mt-3 first:mt-0 mb-1 font-semibold chat-answer-text chat-text-900/100">{children}</h4>,
+  h5: ({ children }) => <h5 className="mt-2 first:mt-0 mb-1 font-semibold chat-answer-text chat-text-secondary-700/80">{children}</h5>,
+  h6: ({ children }) => <h6 className="mt-2 first:mt-0 mb-1 font-semibold chat-answer-text chat-text-muted-500/60">{children}</h6>,
+  // A table reads at the prose's size, its header on a filled row, rows ruled
+  // and striped; a table wider than the answer scrolls sideways inside its
+  // frame, its columns never squeezed under a readable width.
   table: ({ children }) => (
-    <div className="my-3 overflow-x-auto rounded-lg border chat-border-200/10">
-      <table className="w-full border-collapse text-xs">{children}</table>
+    <div className="my-3 max-w-full overflow-x-auto rounded-lg border chat-border-200/15 filigran-chat-scrollable">
+      <table className="min-w-full border-collapse chat-answer-text">{children}</table>
     </div>
   ),
-  tr: ({ children }) => <tr className="transition-colors hover:chat-surface-hover-50/2">{children}</tr>,
-  th: ({ children }) => (
-    <th className="px-3 py-2 text-left font-semibold chat-surface-subtle-50/4 border-b chat-border-200/10 chat-text-900/100">{children}</th>
+  thead: ({ children }) => <thead className="chat-table-head">{children}</thead>,
+  tbody: ({ children }) => <tbody className="[&>tr:nth-child(even)]:chat-table-stripe">{children}</tbody>,
+  tr: ({ children }) => <tr className="border-t chat-border-200/15 first:border-t-0 transition-colors hover:chat-surface-hover-100/5">{children}</tr>,
+  th: ({ children, style }) => (
+    <th
+      style={style}
+      className="px-3 py-2 min-w-[6rem] text-left align-bottom font-semibold leading-5 border-b chat-border-200/15 chat-text-900/100"
+    >
+      {children}
+    </th>
   ),
-  td: ({ children }) => <td className="px-3 py-2 border-b chat-border-200/10 chat-text-secondary-700/80">{children}</td>,
+  td: ({ children, style }) => (
+    <td style={style} className="px-3 py-2 min-w-[6rem] max-w-[32rem] align-top leading-6 break-words chat-text-secondary-700/90">
+      {children}
+    </td>
+  ),
+  // GFM footnotes: the notes under a rule, at a smaller size.
+  section: ({ className, children }) =>
+    className?.includes('footnotes') ? (
+      <section className="mt-4 pt-2 border-t chat-border-200/10 text-xs chat-text-muted-500/60 [&_ol]:mb-0 [&_h2]:sr-only">{children}</section>
+    ) : (
+      <section className={className}>{children}</section>
+    ),
+  sup: ({ children }) => <sup className="text-[0.7em] leading-none">{children}</sup>,
 };
 
 const REMARK_PLUGINS = [remarkGfm, remarkBreaks];
