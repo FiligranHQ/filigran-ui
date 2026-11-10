@@ -132,6 +132,7 @@ export const zh: Catalog = {
   'Not recommended for chat': '不建议用于聊天',
   'Not rendered yet': '尚未渲染',
   Open: '打开',
+  'Open agent page': '打开智能体页面',
   'Open conversation': '打开对话',
   'Open in XTM One': '在 XTM One 中打开',
   'Other workspaces': '其他工作区',

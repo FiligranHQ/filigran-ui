@@ -133,6 +133,7 @@ export const ru: Catalog = {
   'Not recommended for chat': 'Не рекомендуется для чата',
   'Not rendered yet': 'Ещё не отрисовано',
   Open: 'Открыть',
+  'Open agent page': 'Открыть страницу агента',
   'Open conversation': 'Открыть диалог',
   'Open in XTM One': 'Открыть в XTM One',
   'Other workspaces': 'Другие рабочие пространства',

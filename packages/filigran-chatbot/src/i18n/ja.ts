@@ -133,6 +133,7 @@ export const ja: Catalog = {
   'Not recommended for chat': 'チャットには非推奨',
   'Not rendered yet': 'まだレンダリングされていません',
   Open: '開く',
+  'Open agent page': 'エージェントのページを開く',
   'Open conversation': '会話を開く',
   'Open in XTM One': 'XTM One で開く',
   'Other workspaces': 'その他のワークスペース',

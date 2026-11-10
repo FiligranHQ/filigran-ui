@@ -133,6 +133,7 @@ export const fr: Catalog = {
   'Not recommended for chat': 'Déconseillé pour le chat',
   'Not rendered yet': 'Rendu non lancé',
   Open: 'Ouvrir',
+  'Open agent page': "Ouvrir la page de l'agent",
   'Open conversation': 'Ouvrir la conversation',
   'Open in XTM One': 'Ouvrir dans XTM One',
   'Other workspaces': 'Autres espaces de travail',
