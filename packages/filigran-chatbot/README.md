@@ -80,6 +80,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `t`                 | `(key: string) => string`                 | —            | The host's translations; a key it returns unchanged falls back to the panel's catalog in `locale` (none without `locale`) — see [Internationalization](#internationalization) |
 | `accentColor`       | `string`                                  | `'#7b5cff'`  | Primary accent color (hex)                                       |
 | `logoIcon`          | `React.ReactNode`                         | default icon | Custom logo/icon for the assistant                               |
+| `renderAgentIcon`   | `(name: string, { size }) => ReactNode`   | —            | Draws an agent icon given by name (`brain-circuit`) in the conversation rows, the switcher and its trigger; `null` keeps the panel's glyph. Image URLs and emoji are drawn by the panel |
 | `promptSuggestions` | `string[]`                                | default list | Prompt suggestions shown on welcome screen                       |
 | `draftBorderColor`  | `string`                                  | —            | Color of the line above the composer (e.g. a draft context)      |
 | `draftLabel`        | `string`                                  | —            | Accepted, and not shown                                          |

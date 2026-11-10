@@ -1,7 +1,8 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
-import { agentIconKind, timeAgo, translate, translateAround } from '../utils';
+import { timeAgo, translate, translateAround } from '../utils';
+import { AgentIconGlyph } from './AgentIconGlyph';
 import { channelName, conversationMatches } from '../utils/conversationList';
 import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
@@ -832,20 +833,18 @@ const WorkspaceGroupSection = ({
 };
 
 /**
- * A row's leading icon: the conversation agent's own (an image or an emoji,
- * as the header draws it), the panel's bot glyph when there is none it can draw.
+ * A row's leading icon: the conversation agent's own (an image, an emoji or a
+ * name the host draws, as the header does), the panel's bot glyph otherwise.
  */
-const RowAgentIcon = ({ icon }: { icon: string | undefined }) => {
-  const kind = agentIconKind(icon);
-  if (kind === 'image') return <img src={icon!.trim()} alt="" data-agent-icon="image" className="h-4 w-4 chat-radius-sm object-cover" />;
-  if (kind === 'emoji')
-    return (
-      <span data-agent-icon="emoji" className="text-[0.8125rem] leading-none">
-        {icon!.trim()}
-      </span>
-    );
-  return <BotIcon size={13} />;
-};
+const RowAgentIcon = ({ icon }: { icon: string | undefined }) => (
+  <AgentIconGlyph
+    icon={icon}
+    size={14}
+    fallback={<BotIcon size={13} />}
+    imageClassName="h-4 w-4 chat-radius-sm object-cover"
+    emojiClassName="text-[0.8125rem] leading-none"
+  />
+);
 
 const ConversationRow = ({
   conversation: c,
@@ -971,9 +970,12 @@ const ConversationRow = ({
               </Tooltip>
             )}
             {workspaceName && (
-              <span className="flex min-w-0 max-w-[50%] shrink items-center gap-0.5" data-testid="filigran-chat-row-workspace">
+              // Never squeezed to an ellipsis alone (min-w), and the whole name on hover when cut.
+              <span className="flex min-w-[4.5rem] max-w-[50%] shrink items-center gap-0.5" data-testid="filigran-chat-row-workspace">
                 <FolderIcon size={10} className="shrink-0 text-[var(--chat-accent)]" />
-                <span className="truncate">{workspaceName}</span>
+                <Tooltip title={workspaceName} truncated>
+                  <span className="min-w-0 truncate">{workspaceName}</span>
+                </Tooltip>
               </span>
             )}
             {c.agentName && (

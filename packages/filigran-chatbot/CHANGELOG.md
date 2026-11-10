@@ -10,8 +10,17 @@ This file starts at 3.10.0; earlier releases are on the
 
 ## 3.21.0 — unreleased
 
+### Added
+
+- `renderAgentIcon(name, { size })`: the host draws an agent icon given by
+  name (an icon library's, such as `brain-circuit`) in the conversation rows,
+  the agent switcher and its trigger; `null` keeps the panel's glyph. Image
+  URLs and emoji are still drawn by the panel.
+
 ### Changed
 
+- A row's workspace marker keeps a readable minimum width and shows the whole
+  workspace name in the panel's tooltip when it is cut.
 - Error and warning states take the host's design-system tones: `theme.danger`
   and `theme.warning` (`--filigran-chat-danger`, `--filigran-chat-warning`)
   colour the notices, a failed upload, dictation and the stop button; unset, a

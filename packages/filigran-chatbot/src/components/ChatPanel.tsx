@@ -36,6 +36,7 @@ import { useVoiceCall } from '../hooks/useVoiceCall';
 import { PanelRequestsProvider, usePanelRequests, type PanelRequests } from '../hooks/usePanelRequests';
 import { watchSessionEnd } from '../utils/sessionEnd';
 import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
+import { AgentIconRendererProvider } from './AgentIconGlyph';
 import { ChatNotice } from './ChatNotice';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
@@ -88,7 +89,9 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   }, []);
   return (
     <PanelRequestsProvider value={requests}>
-      <ChatPanelBody {...props} ref={ref} />
+      <AgentIconRendererProvider value={props.renderAgentIcon}>
+        <ChatPanelBody {...props} ref={ref} />
+      </AgentIconRendererProvider>
     </PanelRequestsProvider>
   );
 });

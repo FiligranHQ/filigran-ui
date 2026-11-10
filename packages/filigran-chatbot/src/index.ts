@@ -27,6 +27,7 @@ export type {
   ChatToggleButtonProps,
   ChatMessage,
   ChatMessagePersistedFeedback,
+  ChatAgentIconRenderer,
   ChatAnsweredBy,
   ChatAttachment,
   ChatArtifact,

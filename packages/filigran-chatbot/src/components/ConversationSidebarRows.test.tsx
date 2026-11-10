@@ -95,6 +95,90 @@ test("a row shows its agent's own icon, the agent as a pill and the relative tim
   await unmount();
 });
 
+test("a row draws a named agent icon through the host's renderAgentIcon, and keeps the bot glyph when the host has none", async () => {
+  const { AgentIconRendererProvider } = await import('./AgentIconGlyph.tsx');
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const asked: [string, number][] = [];
+  await act(async () => {
+    root.render(
+      <AgentIconRendererProvider
+        value={(name, { size }) => {
+          asked.push([name, size]);
+          return name === 'unknown' ? null : <svg data-host-icon={name} width={size} height={size} />;
+        }}
+      >
+        <ConversationSidebar
+          conversations={[
+            { conversationId: 'c1', title: 'Hunting', agentName: 'Hunter', agentIcon: 'brain-circuit' },
+            { conversationId: 'c2', title: 'Scan', agentName: 'Scanner', agentIcon: 'scan-eye' },
+            { conversationId: 'c3', title: 'Other', agentName: 'Other', agentIcon: 'unknown' },
+          ]}
+          loading={false}
+          activeConversationId={null}
+          collapsed={false}
+          onToggleCollapsed={() => undefined}
+          onSelect={() => undefined}
+          onDelete={() => undefined}
+          onNewChat={() => undefined}
+          t={(key) => key}
+        />
+      </AgentIconRendererProvider>,
+    );
+    await settle();
+  });
+  const [brain, scan, unknown] = [...container.querySelectorAll<HTMLElement>('[role="button"][aria-current]')];
+  assert.equal(brain.querySelector('[data-agent-icon="named"] svg')?.getAttribute('data-host-icon'), 'brain-circuit');
+  assert.equal(scan.querySelector('[data-agent-icon="named"] svg')?.getAttribute('data-host-icon'), 'scan-eye');
+  assert.equal(unknown.querySelector('[data-agent-icon]'), null, 'the host has no such icon: the bot glyph');
+  assert.ok(unknown.querySelector('svg'));
+  assert.ok(asked.some(([name, size]) => name === 'brain-circuit' && size === 14));
+  await act(async () => root.unmount());
+  container.remove();
+});
+
+test('a cut workspace marker says the whole workspace name on hover', async () => {
+  // The Workspaces line folded (its default): filed conversations are listed with the others, their workspace on the row.
+  localStorage.clear();
+  const name = 'Threat hunting for the European fleet';
+  const { container, rows, unmount } = await renderSidebar(
+    [{ conversationId: 'c1', title: 'Hunting', agentName: 'Hunter', updatedAt: '2026-11-01T00:00:00Z', workspaceId: 'w1' }],
+    {
+      workspaces: {
+        list: [{ id: 'w1', name, isOwn: true, isDefault: false, canManage: true }],
+        pendingWorkspaceId: null,
+        onCreate: async () => ({ ok: true }),
+        onRename: async () => ({ ok: true }),
+        onDelete: async () => ({ ok: true }),
+        onMove: async () => undefined,
+        onNewChat: () => undefined,
+      },
+    },
+  );
+  const marker = rows()[0]?.querySelector<HTMLElement>('[data-testid="filigran-chat-row-workspace"]');
+  assert.ok(marker, 'a filed conversation names its workspace on its row');
+  const label = [...marker.querySelectorAll('span')].find((s) => s.textContent === name && !s.children.length)!;
+  const tip = () => container.ownerDocument.querySelector('[role="tooltip"]')?.textContent ?? null;
+  const hover = async () => {
+    await act(async () => {
+      label.parentElement!.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+      await settle();
+    });
+  };
+  await hover();
+  assert.equal(tip(), null, 'shown whole: nothing to add');
+  await act(async () => {
+    label.parentElement!.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }));
+    await settle();
+  });
+  Object.defineProperty(label, 'scrollWidth', { configurable: true, value: 200 });
+  Object.defineProperty(label, 'clientWidth', { configurable: true, value: 40 });
+  await hover();
+  assert.equal(tip(), name);
+  await unmount();
+});
+
 test('a cut title or agent pill says its whole text on hover, a title shown whole opens no tooltip', async () => {
   const { container, rows, unmount } = await renderSidebar([
     { conversationId: 'c1', title: 'Hunting the APT28 beacons across the fleet', agentName: 'CTEM Assistant' },

@@ -437,6 +437,9 @@ export interface ChatPanelTheme {
   codeSurface?: string;
 }
 
+/** Draws an agent icon given by name at `size` pixels; `null` when the host has no such icon. */
+export type ChatAgentIconRenderer = (name: string, options: { size: number }) => React.ReactNode;
+
 export interface ChatPanelProps {
   mode: ChatPanelMode;
   /** Shows the close button; inline mode has none. */
@@ -469,6 +472,13 @@ export interface ChatPanelProps {
   t?: Translate;
   accentColor?: string;
   logoIcon?: React.ReactNode;
+  /**
+   * Draws an agent icon given by name (`XtmAgent.icon`,
+   * `ChatConversationSummary.agentIcon`, e.g. `brain-circuit`), which the
+   * panel cannot draw itself: in the conversation rows and the agent switcher.
+   * `null` keeps the panel's glyph. Image URLs and emoji are drawn by the panel.
+   */
+  renderAgentIcon?: ChatAgentIconRenderer;
   promptSuggestions?: string[];
   /** Accepted, and not shown. */
   draftLabel?: string;
@@ -1463,7 +1473,7 @@ export interface XtmAgent {
   id: string;
   name: string;
   slug: string | null;
-  /** An image URL or an emoji; anything else shows the panel's logo. */
+  /** An image URL, an emoji, or a name drawn by `ChatPanelProps.renderAgentIcon`; else the panel's logo. */
   icon: string | null;
   description: string | null;
   /** The heading the agent picker lists it under; ungrouped agents come first. */

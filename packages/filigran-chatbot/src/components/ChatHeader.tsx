@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, ChatPanelMode, Translate, XtmAgent } from '../types';
-import { agentIconKind, groupAgents, timeAgo, translate } from '../utils';
+import { groupAgents, timeAgo, translate } from '../utils';
+import { AgentIconGlyph } from './AgentIconGlyph';
 import {
   AlertTriangleIcon,
   BotIcon,
@@ -81,13 +82,16 @@ interface ChatHeaderProps {
 const headerButton =
   'w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors';
 
-/** An agent's own icon when it has one the panel can draw, the panel's logo otherwise. */
-const AgentIcon = ({ icon, fallback }: { icon: string | null | undefined; fallback: React.ReactNode }) => {
-  const kind = agentIconKind(icon);
-  if (kind === 'image') return <img src={icon!.trim()} alt="" className="w-4 h-4 chat-radius-sm object-cover" />;
-  if (kind === 'emoji') return <span className="text-sm leading-none">{icon!.trim()}</span>;
-  return <span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{fallback}</span>;
-};
+/** An agent's own icon when it has one the panel or the host can draw, the panel's logo otherwise. */
+const AgentIcon = ({ icon, fallback, size = 16 }: { icon: string | null | undefined; fallback: React.ReactNode; size?: number }) => (
+  <AgentIconGlyph
+    icon={icon}
+    size={size}
+    fallback={<span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{fallback}</span>}
+    imageClassName="w-4 h-4 chat-radius-sm object-cover"
+    emojiClassName="text-sm leading-none"
+  />
+);
 
 // Labels are thunks rather than bare strings so each key stays a literal call
 // on the host's translator in the source: a table of plain keys resolved later
@@ -284,7 +288,16 @@ export const ChatHeader = ({
               agentMenuOpen ? 'chat-surface-hover-100/10 chat-border-200/10' : ''
             }`}
           >
-            <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
+            <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">
+              {/* The current agent's own icon when it has one drawable, the panel's logo otherwise. */}
+              <AgentIconGlyph
+                icon={selectedAgent?.icon}
+                size={18}
+                fallback={logoIcon}
+                imageClassName="w-[18px] h-[18px] chat-radius-sm object-cover"
+                emojiClassName="text-base leading-none"
+              />
+            </span>
             <span className="min-w-0 truncate">{agentName}</span>
             <ChevronDownIcon
               size={16}
