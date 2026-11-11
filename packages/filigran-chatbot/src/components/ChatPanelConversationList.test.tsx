@@ -196,17 +196,18 @@ test("a row shows the backend's preview and channel, and a backend without them 
   fakeBackend([
     agentsRoute,
     listRoute([
-      { conversation_id: 'c1', title: 'From Slack', last_message_preview: 'Here are the IOCs', channel: 'slack', agent_icon: ' 🛰️ ' },
-      { conversation_id: 'c2', title: 'Bare' },
+      // Two agents in the list: each row draws its agent's icon.
+      { conversation_id: 'c1', title: 'From Slack', last_message_preview: 'Here are the IOCs', channel: 'slack', agent_icon: ' 🛰️ ', agent_name: 'Hunter' },
+      { conversation_id: 'c2', title: 'Bare', agent_name: 'Scout' },
     ]),
   ]);
   await render({});
   const [slack, bare] = rows();
-  assert.ok(slack.textContent?.includes('Here are the IOCs'));
-  assert.ok(slack.querySelector('[aria-label="Started in Slack"]'));
+  assert.equal(slack.textContent, '🛰️From Slack', 'one line: the agent icon and the title');
+  assert.equal(slack.getAttribute('aria-description'), 'Here are the IOCs · Hunter · Started in Slack');
   assert.equal(slack.querySelector('[data-agent-icon="emoji"]')?.textContent, '🛰️', "the backend's agent_icon, trimmed");
   assert.equal(bare.textContent, 'Bare');
-  assert.equal(bare.querySelector('[data-agent-icon]'), null);
+  assert.equal(bare.querySelector('[data-agent-icon]'), null, 'no icon reported: the bot glyph');
 });
 
 test('a message sent in an older conversation moves it to the top at once, before the turn ends', async () => {
@@ -229,8 +230,8 @@ test('a message sent in an older conversation moves it to the top at once, befor
   });
   const first = rows()[0];
   assert.ok(first.textContent?.startsWith('Older'), first.textContent ?? '');
-  assert.ok(first.textContent?.includes('what changed since?'));
-  assert.ok(!first.textContent?.includes('old words'));
+  assert.ok(first.getAttribute('aria-description')?.includes('what changed since?'));
+  assert.ok(!first.getAttribute('aria-description')?.includes('old words'));
   await act(async () => {
     stream.send({ type: 'done', content: 'ok', conversation_id: 'c1' });
     stream.close();
@@ -266,7 +267,7 @@ test('a message steering the running turn moves its conversation up too, with it
   });
   const first = rows()[0];
   assert.ok(first.textContent?.startsWith('Older'), first.textContent ?? '');
-  assert.ok(first.textContent?.includes('and the lateral movement?'), first.textContent ?? '');
+  assert.ok(first.getAttribute('aria-description')?.includes('and the lateral movement?'), first.getAttribute('aria-description') ?? '');
   await act(async () => {
     stream.send({ type: 'done', content: 'ok', conversation_id: 'c1' });
     stream.close();
@@ -517,7 +518,7 @@ test('a message the backend refuses leaves its conversation where it was', async
     await settle(10);
   });
   assert.ok(rows()[0].textContent?.startsWith('Newer'));
-  assert.ok(rows()[1].textContent?.includes('old words'));
+  assert.ok(rows()[1].getAttribute('aria-description')?.includes('old words'));
 });
 
 test('the same failure said again stays for its own time', async () => {

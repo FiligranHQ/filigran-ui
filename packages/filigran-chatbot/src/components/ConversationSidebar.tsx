@@ -18,7 +18,6 @@ import {
   ChevronRightIcon,
   CloseIcon,
   EditIcon,
-  MessageSquareIcon,
   FolderIcon,
   FolderInputIcon,
   FolderPlusIcon,
@@ -895,11 +894,14 @@ const ConversationRow = ({
     .filter(Boolean)
     .join(' · ');
   const rowHint = hintExtra ? `${shownTitle}\n${hintExtra}` : shownTitle;
+  // Read out after the title: the last words and the details the tooltip shows.
+  const description = [c.title?.trim() ? c.lastMessagePreview?.trim() : null, hintExtra].filter(Boolean).join(' · ') || undefined;
   return (
     <div
       role="button"
       tabIndex={0}
       aria-current={isActive}
+      aria-description={description}
       draggable={movable}
       onDragStart={
         movable

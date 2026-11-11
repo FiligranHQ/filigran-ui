@@ -68,34 +68,86 @@ async function renderSidebar(conversations: ChatConversationSummary[], props: Pa
   };
 }
 
-test('a row shows its last message and the messaging channel it was started in, and a row without them shows neither', async () => {
-  const { rows, unmount } = await renderSidebar([
-    { conversationId: 'c1', title: 'Hunting', lastMessagePreview: 'Found two beacons', channel: 'slack', agentName: 'Hunter' },
+/** The title span of *row*. */
+const titleOf = (row: HTMLElement, text: string) => [...row.querySelectorAll<HTMLElement>('span')].find((s) => s.textContent === text && !s.children.length)!;
+
+/** The tooltip *el* opens on hover, `null` for none. */
+async function hoverTip(container: HTMLElement, el: HTMLElement) {
+  await act(async () => {
+    el.parentElement!.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+    await pastTheDelay();
+    await settle();
+  });
+  const text = container.ownerDocument.querySelector('[role="tooltip"]')?.textContent ?? null;
+  await act(async () => {
+    el.parentElement!.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }));
+    await settle();
+  });
+  return text;
+}
+
+test('a row is one line: its title, the agent, the channel and the time said in its tooltip', async () => {
+  const updatedAt = new Date(Date.now() - 3 * 86_400_000).toISOString();
+  const { container, rows, unmount } = await renderSidebar([
+    { conversationId: 'c1', title: 'Hunting', lastMessagePreview: 'Found two beacons', channel: 'slack', agentName: 'Hunter', updatedAt },
     { conversationId: 'c2', title: 'Plain', channel: 'web' },
   ]);
   const [slack, plain] = rows();
-  assert.ok(slack.textContent?.includes('Found two beacons'));
-  assert.ok(slack.querySelector('[role="img"][aria-label="Started in Slack"]'), 'the channel, named');
-  assert.equal(plain.textContent, 'Plain', 'the title alone: no preview line, no channel for the panel’s own');
-  assert.equal(plain.querySelector('[role="img"]'), null);
+  assert.equal(slack.textContent, 'Hunting', 'no preview line, no agent pill, no time on the row');
+  assert.equal(slack.querySelector('[data-agent-pill]'), null);
+  assert.equal(await hoverTip(container, titleOf(slack, 'Hunting')), 'Hunting\nHunter · Started in Slack · 3d ago');
+  assert.equal(plain.textContent, 'Plain');
   await unmount();
 });
 
-test("a row shows its agent's own icon, the agent as a pill and the relative time", async () => {
-  const updatedAt = new Date(Date.now() - 3 * 86_400_000).toISOString();
-  const { rows, unmount } = await renderSidebar([
-    { conversationId: 'c1', title: 'Hunting', agentName: 'Hunter', agentIcon: 'https://example.test/hunter.png', updatedAt },
-    { conversationId: 'c2', title: 'Triage', agentName: 'Analyst', agentIcon: '🛰️', updatedAt },
-    { conversationId: 'c3', title: 'Legacy', agentName: 'Retired', agentIcon: 'lucide:bot', updatedAt },
+test('a row without a title shows the first words of its conversation', async () => {
+  const { rows, unmount } = await renderSidebar([{ conversationId: 'c1', title: '', lastMessagePreview: 'Which hosts beaconed to the C2 last night?' }]);
+  assert.equal(rows()[0].textContent, 'Which hosts beaconed to the C2 last night?');
+  await unmount();
+});
+
+test("a list of several agents shows each row's agent icon, a list of one agent shows none", async () => {
+  const several = await renderSidebar([
+    { conversationId: 'c1', title: 'Hunting', agentName: 'Hunter', agentIcon: 'https://example.test/hunter.png' },
+    { conversationId: 'c2', title: 'Triage', agentName: 'Analyst', agentIcon: '🛰️' },
+    { conversationId: 'c3', title: 'Legacy', agentName: 'Retired', agentIcon: 'lucide:bot' },
   ]);
-  const [image, emoji, legacy] = rows();
+  const [image, emoji, legacy] = several.rows();
   assert.equal(image.querySelector('img[data-agent-icon="image"]')?.getAttribute('src'), 'https://example.test/hunter.png');
   assert.equal(emoji.querySelector('[data-agent-icon="emoji"]')?.textContent, '🛰️');
   assert.equal(legacy.querySelector('[data-agent-icon]'), null, 'an icon the panel cannot draw keeps the bot glyph');
   assert.ok(legacy.querySelector('svg'));
-  assert.equal(image.querySelector('[data-agent-pill]')?.textContent, 'Hunter');
-  assert.ok(image.textContent?.endsWith('3d ago'), image.textContent ?? '');
-  assert.ok(!image.textContent?.includes(' · '), 'the pill replaces the dot separator');
+  await several.unmount();
+
+  const one = await renderSidebar([
+    { conversationId: 'c1', title: 'Hunting', agentName: 'Hunter', agentIcon: 'https://example.test/hunter.png' },
+    { conversationId: 'c2', title: 'Triage', agentName: 'Hunter', agentIcon: 'https://example.test/hunter.png' },
+  ]);
+  assert.equal(one.rows()[0].querySelector('[data-agent-icon]'), null, 'filtered to one agent: no per-row icon');
+  await one.unmount();
+});
+
+test('the list is cut into date groups under sticky headers, most recent first', async () => {
+  const { container, rows, unmount } = await renderSidebar([
+    { conversationId: 'c1', title: 'Now', updatedAt: new Date().toISOString() },
+    { conversationId: 'c2', title: 'Old', updatedAt: '2020-03-05T09:00:00Z' },
+  ]);
+  const groups = [...container.querySelectorAll<HTMLElement>('[role="group"]')].map((g) => g.getAttribute('aria-label'));
+  assert.equal(groups[0], 'Today');
+  assert.ok(groups[1]?.includes('2020'), groups[1] ?? '');
+  assert.deepEqual(
+    rows().map((r) => r.textContent),
+    ['Now', 'Old'],
+  );
+  await unmount();
+});
+
+test('a loading list shows 32 px skeleton rows, marked busy', async () => {
+  const { container, unmount } = await renderSidebar([], { loading: true });
+  const loading = container.querySelector<HTMLElement>('[data-testid="filigran-chat-list-loading"]');
+  assert.ok(loading);
+  assert.equal(loading.getAttribute('aria-busy'), 'true');
+  assert.equal(loading.querySelectorAll('.h-8').length, 6);
   await unmount();
 });
 
@@ -142,12 +194,12 @@ test("a row draws a named agent icon through the host's renderAgentIcon, and kee
   container.remove();
 });
 
-test('a cut workspace marker says the whole workspace name on hover', async () => {
-  // The Workspaces line folded (its default): filed conversations are listed with the others, their workspace on the row.
+test('a filed conversation names its workspace in its row tooltip, never as a second line', async () => {
+  // The Workspaces line folded (its default): filed conversations are listed with the others.
   localStorage.clear();
   const name = 'Threat hunting for the European fleet';
   const { container, rows, unmount } = await renderSidebar(
-    [{ conversationId: 'c1', title: 'Hunting', agentName: 'Hunter', updatedAt: '2026-11-01T00:00:00Z', workspaceId: 'w1' }],
+    [{ conversationId: 'c1', title: 'Hunting', agentName: 'Hunter', workspaceId: 'w1' }],
     {
       workspaces: {
         list: [{ id: 'w1', name, isOwn: true, isDefault: false, canManage: true }],
@@ -160,64 +212,26 @@ test('a cut workspace marker says the whole workspace name on hover', async () =
       },
     },
   );
-  const marker = rows()[0]?.querySelector<HTMLElement>('[data-testid="filigran-chat-row-workspace"]');
-  assert.ok(marker, 'a filed conversation names its workspace on its row');
-  const label = [...marker.querySelectorAll('span')].find((s) => s.textContent === name && !s.children.length)!;
-  const tip = () => container.ownerDocument.querySelector('[role="tooltip"]')?.textContent ?? null;
-  const hover = async () => {
-    await act(async () => {
-      label.parentElement!.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
-      await pastTheDelay();
-      await settle();
-    });
-  };
-  await hover();
-  assert.equal(tip(), null, 'shown whole: nothing to add');
-  await act(async () => {
-    label.parentElement!.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }));
-    await settle();
-  });
-  Object.defineProperty(label, 'scrollWidth', { configurable: true, value: 200 });
-  Object.defineProperty(label, 'clientWidth', { configurable: true, value: 40 });
-  await hover();
-  assert.equal(tip(), name);
-  await unmount();
-});
-
-test('a cut title or agent pill says its whole text on hover, a title shown whole opens no tooltip', async () => {
-  const { container, rows, unmount } = await renderSidebar([
-    { conversationId: 'c1', title: 'Hunting the APT28 beacons across the fleet', agentName: 'CTEM Assistant' },
-  ]);
   const [row] = rows();
-  const title = [...row.querySelectorAll('span')].find((s) => s.textContent === 'Hunting the APT28 beacons across the fleet' && !s.children.length)!;
-  const pill = row.querySelector<HTMLElement>('[data-agent-pill]')!;
-  const hover = async (el: HTMLElement) => {
-    await act(async () => {
-      el.parentElement!.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
-      await pastTheDelay();
-      await settle();
-    });
-  };
-  const tip = () => container.ownerDocument.querySelector('[role="tooltip"]')?.textContent ?? null;
-  await hover(title);
-  assert.equal(tip(), null, 'shown whole: nothing to add');
-  for (const el of [title, pill]) {
-    Object.defineProperty(el, 'scrollWidth', { configurable: true, value: 200 });
-    Object.defineProperty(el, 'clientWidth', { configurable: true, value: 68 });
-  }
-  await hover(title);
-  assert.equal(tip(), 'Hunting the APT28 beacons across the fleet');
-  await act(async () => {
-    title.parentElement!.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }));
-    await settle();
-  });
-  await hover(pill);
-  assert.equal(tip(), 'CTEM Assistant');
+  assert.ok(!row.textContent?.includes(name), 'one line: the title alone');
+  assert.equal(row.querySelector('[data-testid="filigran-chat-row-workspace"]'), null);
+  assert.equal(await hoverTip(container, titleOf(row, 'Hunting')), `Hunting\nHunter · ${name}`);
   await unmount();
 });
 
-test("the host names a row's channel, or hides it", async () => {
-  const { rows, unmount } = await renderSidebar(
+test('a row with nothing more to say opens no tooltip while its title shows whole, and the whole title once cut', async () => {
+  const { container, rows, unmount } = await renderSidebar([{ conversationId: 'c1', title: 'Hunting the APT28 beacons across the fleet' }]);
+  const [row] = rows();
+  const title = titleOf(row, 'Hunting the APT28 beacons across the fleet');
+  assert.equal(await hoverTip(container, title), null, 'shown whole: nothing to add');
+  Object.defineProperty(title, 'scrollWidth', { configurable: true, value: 200 });
+  Object.defineProperty(title, 'clientWidth', { configurable: true, value: 68 });
+  assert.equal(await hoverTip(container, title), 'Hunting the APT28 beacons across the fleet');
+  await unmount();
+});
+
+test("the host names a row's channel in its tooltip, or hides it", async () => {
+  const { container, rows, unmount } = await renderSidebar(
     [
       { conversationId: 'c1', title: 'One', channel: 'slack' },
       { conversationId: 'c2', title: 'Two', channel: 'mattermost' },
@@ -225,8 +239,8 @@ test("the host names a row's channel, or hides it", async () => {
     { channelLabel: (channel) => (channel === 'slack' ? null : 'Mattermost') },
   );
   const [one, two] = rows();
-  assert.equal(one.querySelector('[role="img"]'), null);
-  assert.ok(two.querySelector('[role="img"][aria-label="Started in Mattermost"]'));
+  assert.equal(await hoverTip(container, titleOf(one, 'One')), null);
+  assert.equal(await hoverTip(container, titleOf(two, 'Two')), 'Two\nStarted in Mattermost');
   await unmount();
 });
 

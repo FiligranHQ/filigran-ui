@@ -586,9 +586,9 @@ test('conversations come first: ten workspaces fold into one line, and every con
   assert.equal(rows.length, 12, 'filed conversations are listed too');
   assert.ok(rows[0].startsWith('Chat 0'), 'the most recent first');
   assert.ok(rows[1].startsWith('Chat 1'));
-  const marker = container.querySelector('[data-testid="filigran-chat-row-workspace"]');
-  assert.equal(marker?.textContent, 'Workspace 0', 'a filed conversation names its workspace on its row');
-  assert.equal(container.querySelectorAll('[data-testid="filigran-chat-row-workspace"]').length, 4, 'an unfiled one names none');
+  const described = [...container.querySelectorAll('[role="button"][aria-current]')].map((r) => r.getAttribute('aria-description'));
+  assert.ok(described[0]?.startsWith('Workspace 0 · '), 'a filed conversation names its workspace, read out after its title');
+  assert.equal(described.filter((d) => d?.includes('Workspace')).length, 4, 'an unfiled one names none');
   assert.ok(container.querySelector('button[aria-label="New workspace"]'), 'a workspace can still be created from the folded line');
   await unmount();
 });
