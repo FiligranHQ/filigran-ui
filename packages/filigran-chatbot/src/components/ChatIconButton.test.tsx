@@ -115,9 +115,10 @@ for (const file of TEXT_BUTTONS) {
 }
 
 // Files whose remaining raw <button>s are only audited exemptions: a combobox
-// trigger, listbox options and two-action rows the DS Menu cannot hold. Each
-// says why as its first attribute and has a row in the audit table.
-const EXEMPT_ONLY = ['ChatHeader.tsx'];
+// trigger, listbox options and two-action rows the DS Menu cannot hold, and the
+// workspace disclosure rows (the design system has no disclosure). Each says why
+// as its first attribute and has a row in the audit table.
+const EXEMPT_ONLY = ['ChatHeader.tsx', 'ConversationSidebar.tsx'];
 
 for (const file of EXEMPT_ONLY) {
   test(`${file} draws a raw <button> only as an audited data-ds-exempt row`, () => {

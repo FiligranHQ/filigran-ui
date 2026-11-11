@@ -62,6 +62,14 @@ const click = (element: Element | undefined) =>
     (element as HTMLElement).click();
     await settle(10);
   });
+// The design system's Menu opens on pointer down or on the keyboard, never on a
+// bare click: the test opens it the keyboard's way and picks a row by its role.
+const openMenu = (element: Element | undefined) =>
+  act(async () => {
+    element?.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await settle(10);
+  });
+const menuItem = (label: string) => [...document.body.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent?.trim() === label);
 
 test('a workspace group the user opened stays open when the list is hidden and shown again', async () => {
   fakeBackend([
@@ -104,8 +112,8 @@ test('a move the host refuses leaves the conversation where it was; one it agree
       return answer;
     },
   });
-  await click(button('Move to workspace'));
-  await click(button('Shared hunts'));
+  await openMenu(button('Move to workspace'));
+  await click(menuItem('Shared hunts'));
   assert.equal(asked.length, 1);
   assert.equal(asked[0][0].conversationId, 'c1');
   assert.equal(asked[0][1]?.id, 'w1');
@@ -113,8 +121,8 @@ test('a move the host refuses leaves the conversation where it was; one it agree
   assert.equal(alertText(), null, 'a refusal is the host’s: nothing to say');
 
   answer = true;
-  await click(button('Move to workspace'));
-  await click(button('Shared hunts'));
+  await openMenu(button('Move to workspace'));
+  await click(menuItem('Shared hunts'));
   assert.deepEqual(requests.find((r) => r.method === 'PATCH')?.body, { workspace_id: 'w1' });
 });
 

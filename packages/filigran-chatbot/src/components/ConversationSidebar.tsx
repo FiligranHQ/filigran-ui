@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { Button } from '@filigran/design-system';
+import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
@@ -10,7 +10,6 @@ import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/st
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
 import { ConversationListFailed } from './ConversationListFailed';
-import { Dropdown } from './Dropdown';
 import {
   BotIcon,
   CheckIcon,
@@ -364,6 +363,7 @@ export const ConversationSidebar = ({
               <div className="mb-1">
                 <div className="group/wsh flex items-center gap-1 chat-radius-sm px-1.5 py-1 hover:chat-surface-hover-100/6">
                   <button
+                    data-ds-exempt="disclosure-row"
                     type="button"
                     onClick={() => showWorkspaces(!workspacesOpen)}
                     aria-expanded={workspacesOpen}
@@ -706,6 +706,7 @@ const WorkspaceGroupSection = ({
           />
         ) : (
           <button
+            data-ds-exempt="disclosure-row"
             type="button"
             onClick={onToggle}
             disabled={!toggleable}
@@ -825,7 +826,6 @@ const ConversationRow = ({
   t: (key: string) => string;
 }) => {
   const [moveOpen, setMoveOpen] = useState(false);
-  const moveAnchor = useRef<HTMLButtonElement>(null);
   const movable = !!fileable && !isEditing;
   return (
     <div
@@ -937,7 +937,7 @@ const ConversationRow = ({
         // width, so the title and the agent pill take the whole row.
         <span
           data-row-actions=""
-          className="pointer-events-none absolute right-1.5 top-1/2 flex -translate-y-1/2 chat-radius-sm border chat-border-200/10 chat-menu-surface opacity-0 shadow-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100"
+          className="pointer-events-none absolute inset-y-0 right-1.5 my-auto flex h-fit chat-radius-sm border chat-border-200/10 chat-menu-surface opacity-0 shadow-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100"
         >
           {actions && (
             // The row selects on click and on Enter/Space: the host's controls keep theirs.
@@ -946,58 +946,45 @@ const ConversationRow = ({
             </span>
           )}
           {movable && (
-            <>
-              <ChatIconButton
-                ref={moveAnchor}
-                label={t('Move to workspace')}
-                icon={<FolderInputIcon size={16} />}
-                size="sm"
-                tooltip={!moveOpen}
-                active={moveOpen}
-                aria-haspopup="menu"
-                aria-expanded={moveOpen}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMoveOpen((v) => !v);
-                }}
-              />
-              <Dropdown open={moveOpen} onClose={() => setMoveOpen(false)} anchorRef={moveAnchor} placement="bottom-end" width={220}>
-                <div className="py-1" onClick={(e) => e.stopPropagation()}>
-                  <p className="px-3 pb-1 pt-1.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40">
-                    {t('Move to workspace')}
-                  </p>
-                  {fileable.map((w) => (
-                    <button
-                      key={w.id}
-                      type="button"
-                      disabled={w.id === c.workspaceId}
-                      onClick={() => {
-                        setMoveOpen(false);
-                        onMove(c.conversationId, w.id);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[0.8125rem] chat-text-secondary-700/80 hover:chat-surface-hover-100/10 disabled:opacity-40"
-                    >
-                      <FolderIcon size={13} className="shrink-0 text-[var(--chat-accent)]" />
-                      <span className="truncate">{w.name}</span>
-                      {w.id === c.workspaceId && <CheckIcon size={12} className="ml-auto shrink-0" />}
-                    </button>
-                  ))}
-                  <div className="my-1 h-px chat-border-fill-200/10" />
-                  <button
-                    type="button"
-                    disabled={!c.workspaceId}
-                    onClick={() => {
-                      setMoveOpen(false);
-                      onMove(c.conversationId, null);
-                    }}
-                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[0.8125rem] chat-text-secondary-700/80 hover:chat-surface-hover-100/10 disabled:opacity-40"
+            // The design system's Menu, kept inside the panel's stacking context
+            // (portalled={false}) and non-modal, like the header's view switcher.
+            // The actions bar is centred without a transform, so the menu's
+            // fixed position is the viewport's, never clipped by the list.
+            <Menu open={moveOpen} onOpenChange={setMoveOpen} modal={false}>
+              <MenuTrigger asChild>
+                <ChatIconButton
+                  label={t('Move to workspace')}
+                  icon={<FolderInputIcon size={16} />}
+                  size="sm"
+                  tooltip={!moveOpen}
+                  active={moveOpen}
+                  // The row selects on click: the menu's trigger keeps its own.
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </MenuTrigger>
+              <MenuContent portalled={false} align="end" className="z-[10000]" onClick={(e) => e.stopPropagation()}>
+                <MenuLabel>{t('Move to workspace')}</MenuLabel>
+                {fileable.map((w) => (
+                  <MenuItem
+                    key={w.id}
+                    startIcon={<FolderIcon size={16} />}
+                    selected={w.id === c.workspaceId}
+                    disabled={w.id === c.workspaceId}
+                    onSelect={() => onMove(c.conversationId, w.id)}
                   >
-                    <CloseIcon size={13} className="shrink-0" />
-                    {t('Remove from workspace')}
-                  </button>
-                </div>
-              </Dropdown>
-            </>
+                    {w.name}
+                  </MenuItem>
+                ))}
+                <MenuSeparator />
+                <MenuItem
+                  startIcon={<CloseIcon size={16} />}
+                  disabled={!c.workspaceId}
+                  onSelect={() => onMove(c.conversationId, null)}
+                >
+                  {t('Remove from workspace')}
+                </MenuItem>
+              </MenuContent>
+            </Menu>
           )}
           {onStartRename && (
             <ChatIconButton

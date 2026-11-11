@@ -178,6 +178,8 @@ test("the design system IconButton's classes compile inside the panel, reading t
     ['data-\\\\\\[highlighted\\\\\\]\\\\:bg-input-hover', 'background-color', '--bg-input-hover'],
     ['text-input-value', 'color', '--text-input-value'],
     ['min-h-9', 'min-height', null],
+    // Its group rule (the conversation row's move-to-workspace menu, slice 2).
+    ['border-elevation-subtle', 'border-color', '--border-elevation-subtle'],
   ]) {
     const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
     assert.ok(matching.length > 0, `.${name} is compiled`);

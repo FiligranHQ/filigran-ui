@@ -42,10 +42,10 @@
 
 /*
  * The classes @filigran/design-system's <Menu> renders (MenuContent,
- * MenuItem, MenuLabel): the panel surface, the 36 px row, its hover, selected
- * and disabled states, the caption label.
+ * MenuItem, MenuLabel, MenuSeparator): the panel surface, the 36 px row, its
+ * hover, selected and disabled states, the caption label, the group rule.
  */
-@source inline('group/menu-item relative flex min-h-9 w-full cursor-pointer select-none items-end items-center gap-2 px-2 px-4 py-1 pb-1 h-8 text-left outline-none font-content-base text-content-base leading-content-base tracking-content-base font-content-caption text-content-caption leading-content-caption tracking-content-caption text-input-value text-default-secondary data-[highlighted]:bg-input-hover data-[selected]:bg-input-hover data-[state=open]:bg-input-hover data-[disabled]:pointer-events-none data-[disabled]:text-input-disabled group-data-[highlighted]/menu-item:text-default-primary group-data-[disabled]/menu-item:text-default-disabled ring-focus focus-visible:z-10 rounded-sm bg-elevation-highlight min-w-50 max-w-75 shadow-global-shadow max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-x-hidden overflow-y-auto opacity-0 transition-opacity duration-150 motion-reduce:transition-none data-[state=open]:opacity-100 data-[state=closed]:opacity-0 z-[10000]');
+@source inline('group/menu-item relative flex min-h-9 w-full cursor-pointer select-none items-end items-center gap-2 px-2 px-4 py-1 pb-1 h-8 text-left outline-none font-content-base text-content-base leading-content-base tracking-content-base font-content-caption text-content-caption leading-content-caption tracking-content-caption text-input-value text-default-secondary data-[highlighted]:bg-input-hover data-[selected]:bg-input-hover data-[state=open]:bg-input-hover data-[disabled]:pointer-events-none data-[disabled]:text-input-disabled group-data-[highlighted]/menu-item:text-default-primary group-data-[disabled]/menu-item:text-default-disabled ring-focus focus-visible:z-10 rounded-sm bg-elevation-highlight min-w-50 max-w-75 shadow-global-shadow max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-x-hidden overflow-y-auto opacity-0 transition-opacity duration-150 motion-reduce:transition-none data-[state=open]:opacity-100 data-[state=closed]:opacity-0 z-[10000] my-1 h-px border-t border-elevation-subtle');
 
 /*
  * The classes @filigran/design-system's <Chip> renders for the welcome screen's
@@ -82,6 +82,7 @@
   --color-input-value: var(--text-input-value, currentColor);
   --color-input-disabled: var(--text-input-disabled, color-mix(in oklab, currentColor 40%, transparent));
   --color-default-secondary: var(--text-default-secondary, color-mix(in oklab, currentColor 70%, transparent));
+  --color-elevation-subtle: var(--border-elevation-subtle, var(--filigran-chat-border, color-mix(in oklab, currentColor 12%, transparent)));
   --shadow-global-shadow: var(--shadow-global-shadow, 0px 2px 4px 0px #00000066);
   --text-content-base: var(--text-content-base, 0.875rem);
   --font-content-base: var(--font-content-base, inherit);
