@@ -8,6 +8,16 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.24.1 — 2026-11-11
+
+### Fixed
+
+- Every `chat-radius-md` surface (the status card under a working turn,
+  menus, dialogs, artifact cards) reads the host's 12 px design-system corner
+  again instead of Tailwind's 6 px: the stylesheet no longer declares
+  `--radius-sm` / `--radius-md` on `.filigran-chatbot`, so the host values are
+  not shadowed (#10910).
+
 ## 3.24.0 — 2026-11-11
 
 ### Changed
