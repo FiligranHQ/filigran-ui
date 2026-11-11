@@ -137,6 +137,15 @@
   --text-1: var(--text-1, 0.75rem);
   --text-2: var(--text-2, 0.75rem);
   --text-3: var(--text-3, 0.875rem);
+  /*
+   * The two corners of the design system, never Tailwind's. Tailwind's theme declares `--radius-sm: .25rem`
+   * and `--radius-md: .375rem` on the panel root, the element that also carries the host's
+   * `--filigran-chat-radius-md: var(--radius-md)`: the host's 12px card corner then resolved to Tailwind's
+   * 6px (UX retest of #10910). Inlined here and declared nowhere, `rounded-sm` / `rounded-md` read the
+   * panel's corners and the host's `--radius-sm` / `--radius-md` reach the panel root unshadowed.
+   */
+  --radius-sm: var(--chat-radius-sm);
+  --radius-md: var(--chat-radius-md);
 }
 
 @plugin "tailwindcss-scoped-preflight" {
