@@ -21,6 +21,7 @@ import type { TtsRoute } from '../utils/speech';
 import { answerMarkdownSources, artifactKey, formatFileSize, splitAnswerMarkers, standaloneMarker, stripAnswerMarkers } from '../utils';
 import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type FeedbackMode } from '../utils/feedback';
 import { isComposing } from '../utils/keyboard';
+import { chatColumnClass, chatGutterClass, type ChatDisplayMode } from '../utils/layout';
 import { formatMessageTime } from '../utils/messageTime';
 import { userMessageText } from '../utils/userMessage';
 import { copyTranscriptSelection, trimBlankLines } from '../utils/copy';
@@ -179,6 +180,8 @@ interface ChatMessagesProps {
   collapseUnnamedFiles?: ChatPanelProps['collapseUnnamedFiles'];
   /** The host's overrides of the status line and the waiting panel. */
   thinking?: ThinkingOverrides;
+  /** How the panel is shown: a page or full screen centres a reading column, a panel fills its width. */
+  display?: ChatDisplayMode;
   t: (key: string) => string;
 }
 
@@ -950,6 +953,7 @@ export const ChatMessages = ({
   collapseUnnamedFiles,
   ttsRoute,
   thinking,
+  display = 'floating',
   t,
 }: ChatMessagesProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1307,8 +1311,11 @@ export const ChatMessages = ({
       data-testid="filigran-chat-transcript"
       // `relative`: what a message positions absolutely (its screen-reader time)
       // is clipped by this scroll, not laid out down the page, which would scroll.
-      className="relative flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 filigran-chat-scrollable outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent-50)]"
+      // The scroll spans the panel (its bar at the panel's edge); what it
+      // scrolls is the reading column, the composer's below it on the same axis.
+      className={`relative flex-1 overflow-y-auto ${chatGutterClass(display)} py-3 filigran-chat-scrollable outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent-50)]`}
     >
+      <div data-testid="filigran-chat-column" className={`${chatColumnClass(display)} flex min-h-full flex-col gap-4`}>
       {(hasEarlierMessages || onLoadEarlier) && (
         <div className="flex justify-center">
           <Button
@@ -1391,6 +1398,7 @@ export const ChatMessages = ({
             }}
           />
         )}
+      </div>
       </div>
     </div>
   );
