@@ -153,6 +153,7 @@ export const ja: Catalog = {
   'Recalling memory…': 'メモリを呼び出し中…',
   'Reconnecting…': '再接続中…',
   'Reference a conversation': '会話を参照',
+  'Remove {name}': '{name} を削除',
   'Remove from workspace': 'ワークスペースから外す',
   'Rename conversation': '会話の名前を変更',
   'Rename workspace': 'ワークスペースの名前を変更',

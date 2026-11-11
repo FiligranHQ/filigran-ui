@@ -153,6 +153,7 @@ export const fr: Catalog = {
   'Recalling memory…': 'Rappel de la mémoire…',
   'Reconnecting…': 'Reconnexion…',
   'Reference a conversation': 'Faire référence à une conversation',
+  'Remove {name}': 'Retirer {name}',
   'Remove from workspace': 'Retirer de l’espace de travail',
   'Rename conversation': 'Renommer la conversation',
   'Rename workspace': 'Renommer l’espace de travail',

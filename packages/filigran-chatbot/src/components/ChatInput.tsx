@@ -1,7 +1,8 @@
+import { Button } from '@filigran/design-system';
 import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
-import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon, XCircleIcon } from './icons';
+import { AttachFileIcon, CloseIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon, XCircleIcon } from './icons';
 import { ChatIconButton } from './ChatIconButton';
 import { ChatNotice } from './ChatNotice';
 import { useMentionMenu } from '../hooks/useMentionMenu';
@@ -11,6 +12,7 @@ import { referencedConversations } from '../utils/conversationRefs';
 import { hasFailedUpload } from '../utils/failedUpload';
 import { isComposing } from '../utils/keyboard';
 import { pastedText, spliceText } from '../utils/copy';
+import { translate } from '../utils';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
 import { MentionMenu } from './MentionMenu';
 import { PromptPicker } from './PromptPicker';
@@ -345,9 +347,9 @@ export const ChatInput = ({
           <span className="shrink-0 chat-text-secondary-500/50">{t('Sends when the answer ends:')}</span>
           <span className="min-w-0 flex-1 truncate chat-text-800/80">{heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}</span>
           {onCancelHeld && (
-            <button type="button" onClick={onCancelHeld} className="shrink-0 chat-text-muted-400/40 hover:text-[var(--chat-danger)]">
+            <Button variant="destructive" priority="tertiary" size="sm" className="shrink-0" onClick={onCancelHeld}>
               {t('Cancel')}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -387,9 +389,12 @@ export const ChatInput = ({
                   </Tooltip>
                 </span>
               )}
-              <button type="button" onClick={() => onFileRemove?.(i)} className="ml-0.5 chat-text-muted-400/30 hover:chat-text-secondary-600/60">
-                ×
-              </button>
+              <ChatIconButton
+                label={translate(t, 'Remove {name}', { name: f.name })}
+                icon={<CloseIcon size={16} />}
+                size="sm"
+                onClick={() => onFileRemove?.(i)}
+              />
             </span>
           ))}
         </div>

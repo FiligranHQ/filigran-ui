@@ -152,6 +152,7 @@ export const zh: Catalog = {
   'Recalling memory…': '正在调取记忆…',
   'Reconnecting…': '正在重新连接…',
   'Reference a conversation': '引用对话',
+  'Remove {name}': '移除 {name}',
   'Remove from workspace': '从工作区中移除',
   'Rename conversation': '重命名对话',
   'Rename workspace': '重命名工作区',

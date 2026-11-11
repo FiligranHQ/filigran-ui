@@ -1,3 +1,4 @@
+import { Button } from '@filigran/design-system';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ToolApprovalDecision, ToolApprovalProposal, ToolApprovalVerdict } from '../types';
 import { translate } from '../utils';
@@ -72,9 +73,6 @@ function useRevealIntoView<T extends HTMLElement>(active: boolean) {
   }, [active]);
   return ref;
 }
-
-const BUTTON_BASE =
-  'inline-flex items-center gap-1.5 chat-radius-sm px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50';
 
 interface ApprovalCardProps {
   proposal: ToolApprovalProposal;
@@ -174,60 +172,37 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
             className="w-full resize-none chat-radius-sm border chat-border-200/10 chat-input-surface-white/3 px-2 py-1 text-[0.7rem] chat-text-800/85 outline-none focus:border-[var(--chat-accent)]/50"
           />
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => decide('reject')}
-              className={`${BUTTON_BASE} bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-300`}
-            >
-              <XCircleIcon size={13} />
+            <Button variant="destructive" size="sm" disabled={disabled} startIcon={<XCircleIcon size={16} />} onClick={() => decide('reject')}>
               {t('Decline this call')}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              priority="tertiary"
+              size="sm"
               disabled={disabled}
               onClick={() => {
                 setRejecting(false);
                 setReason('');
               }}
-              className={`${BUTTON_BASE} chat-text-secondary-500/50 hover:chat-surface-hover-100/5`}
             >
               {t('Back')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {!verdict && !rejecting && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => setRejecting(true)}
-            className={`${BUTTON_BASE} text-red-600 hover:bg-red-500/10 dark:text-red-300`}
-          >
-            <XCircleIcon size={13} />
+          <Button variant="destructive" priority="tertiary" size="sm" disabled={disabled} startIcon={<XCircleIcon size={16} />} onClick={() => setRejecting(true)}>
             {t('No')}
-          </button>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => decide('approve')}
-            className={`${BUTTON_BASE} bg-[var(--chat-accent)] text-white hover:opacity-90`}
-          >
-            <CheckIcon size={13} />
+          </Button>
+          <Button size="sm" disabled={disabled} startIcon={<CheckIcon size={16} />} onClick={() => decide('approve')}>
             {t('Yes')}
-          </button>
+          </Button>
           {/* This is the one verdict whose effect outlives the turn: its tooltip says so. */}
           <Tooltip title={t('Also applies to your scheduled runs, until you revoke it')}>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => decide('approve_always')}
-            className={`${BUTTON_BASE} border chat-border-200/15 chat-text-secondary-700/70 hover:chat-surface-hover-100/5`}
-          >
-            {t('Yes, always')}
-          </button>
+            <Button priority="secondary" size="sm" disabled={disabled} onClick={() => decide('approve_always')}>
+              {t('Yes, always')}
+            </Button>
           </Tooltip>
         </div>
       )}
@@ -331,14 +306,9 @@ export const ChatApprovalPrompt = ({ proposals, onSubmit, isSubmitting, error, t
         <span className="text-[0.7rem] chat-text-muted-500/40">
           {proposals.length > 1 ? translate(t, '{decided}/{total} decided', { decided: decidedCount, total: proposals.length }) : ''}
         </span>
-        <button
-          type="button"
-          disabled={!allDecided || busy}
-          onClick={() => submit(proposals.map((p) => decisions[p.toolCallId]))}
-          className={`${BUTTON_BASE} bg-[var(--chat-accent)] text-white hover:opacity-90`}
-        >
+        <Button size="sm" disabled={!allDecided || busy} onClick={() => submit(proposals.map((p) => decisions[p.toolCallId]))}>
           {busy ? t('Sending…') : t('Confirm')}
-        </button>
+        </Button>
       </div>
     </div>
   );

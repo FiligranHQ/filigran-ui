@@ -85,7 +85,21 @@ const MIGRATED = [
   'ChatVoiceCall.tsx',
   'ChatInput.tsx',
   'PromptPicker.tsx',
+  'ArtifactCard.tsx',
+  'ChatApprovalPrompt.tsx',
+  'ConversationListFailed.tsx',
 ];
+
+// The text buttons migrated to the design system's Button (chatbot 3.23.0, slice 2).
+const TEXT_BUTTONS = ['ArtifactCard.tsx', 'ChatApprovalPrompt.tsx', 'ConversationListFailed.tsx'];
+
+for (const file of TEXT_BUTTONS) {
+  test(`${file} draws no raw <button>: every text action is the design system's Button`, () => {
+    const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /<button\b/, 'a raw <button> is left');
+    assert.match(source, /from '@filigran\/design-system'/);
+  });
+}
 
 for (const file of MIGRATED) {
   test(`${file} draws no hand-styled icon button: every icon-only control goes through ChatIconButton`, () => {

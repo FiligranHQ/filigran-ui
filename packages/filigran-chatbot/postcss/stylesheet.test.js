@@ -167,6 +167,12 @@ test("the design system IconButton's classes compile inside the panel, reading t
     // The design system Chip of the welcome screen's suggestions (xtm-one#10911 UX round 2, B1).
     ['bg-feedback-neutral-secondary-transparency-30', 'background-color', '--color-feedback-neutral-secondary-transparency-30'],
     ['h-6', 'height', null],
+    // The design system Button of the approval, artifact and retry actions (chatbot 3.23.0, slice 2).
+    ['bg-filigran-brand-primary', 'background-color', '--color-filigran-brand-primary'],
+    ['text-negative-primary', 'color', '--text-negative-primary'],
+    ['hover\\\\:bg-filigran-brand-tertiary', 'background-color', '--color-filigran-brand-tertiary'],
+    ['border-filigran-brand-primary-transparency-55', 'border-color', '--color-filigran-brand-primary-transparency-55'],
+    ['text-content-button', 'font-size', '--text-content-button'],
   ]) {
     const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
     assert.ok(matching.length > 0, `.${name} is compiled`);

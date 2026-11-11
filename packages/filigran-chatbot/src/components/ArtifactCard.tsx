@@ -1,3 +1,4 @@
+import { Button } from '@filigran/design-system';
 import { useEffect, useState } from 'react';
 import type { ChatArtifact, ChatArtifactKind, Translate } from '../types';
 import { artifactDownloadLabel, artifactFacts, artifactKindLabel, artifactLink, isRenderInProgress, translate, videoRenderLabel } from '../utils';
@@ -14,9 +15,6 @@ const KIND_ICONS: Record<ChatArtifactKind, typeof PresentationIcon> = {
   report: FileTextIcon,
   video: ClapperboardIcon,
 };
-
-const ACTION =
-  'inline-flex items-center gap-1 chat-radius-sm border chat-border-200/10 px-2 py-1 text-[0.7rem] chat-text-secondary-700/70 transition-colors hover:border-[var(--chat-accent)] hover:text-[var(--chat-accent)] disabled:opacity-50 disabled:cursor-default outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
 
 interface ArtifactCardProps {
   artifact: ChatArtifact;
@@ -99,30 +97,32 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh, onOpen }: Art
       {(link || onOpen || downloads.length > 0) && (
         <div className="flex flex-wrap items-center gap-1.5 pl-[28px]">
           {onOpen && (
-            <button type="button" className={ACTION} onClick={() => onOpen(current)}>
+            <Button priority="secondary" size="sm" onClick={() => onOpen(current)}>
               {t('Open')}
-            </button>
+            </Button>
           )}
           {link && (
-            <a href={link} target="_blank" rel="noopener noreferrer" className={ACTION}>
-              {t('Open in XTM One')}
-              <ExternalLinkIcon size={12} />
-            </a>
+            <Button asChild priority="secondary" size="sm">
+              <a href={link} target="_blank" rel="noopener noreferrer">
+                {t('Open in XTM One')}
+                <ExternalLinkIcon size={16} />
+              </a>
+            </Button>
           )}
           {downloads.map((format) => {
             const label = artifactDownloadLabel(format, t);
             return (
-              <button
+              <Button
                 key={format}
-                type="button"
-                className={ACTION}
+                priority="secondary"
+                size="sm"
                 disabled={busyFormat !== null}
                 aria-label={translate(t, 'Download {format}', { format: label })}
+                startIcon={busyFormat === format ? <Spinner size={16} /> : <DownloadIcon size={16} />}
                 onClick={() => void download(format)}
               >
-                {busyFormat === format ? <Spinner size={11} /> : <DownloadIcon size={12} />}
                 {label}
-              </button>
+              </Button>
             );
           })}
         </div>

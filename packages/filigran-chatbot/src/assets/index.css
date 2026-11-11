@@ -32,6 +32,15 @@
 @source inline('border-0 bg-transparent p-0 m-0 box-border text-inherit cursor-pointer font-[family-name:inherit] font-[number:inherit] text-[length:inherit] leading-[inherit] inline-flex items-center justify-center rounded-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-focus disabled:pointer-events-none focus-visible:ring-filigran-brand-primary focus-visible:ring-feedback-error-primary disabled:text-icon-disabled aria-disabled:text-icon-disabled aria-disabled:bg-transparent h-6 w-6 h-9 w-9 text-icon-highlight hover:bg-filigran-brand-primary-transparency-10 active:bg-filigran-brand-primary-transparency-10 bg-filigran-brand-primary-transparency-10 text-feedback-error-primary hover:bg-feedback-error-secondary-transparency-20 active:bg-feedback-error-secondary-transparency-20 bg-feedback-error-secondary-transparency-20');
 
 /*
+ * The classes @filigran/design-system's <Button> renders (default and
+ * destructive, primary, secondary and tertiary priority, sizes sm and md, its
+ * label type, focus ring, disabled state) and the filled and outlined
+ * <IconButton>: the approval card, the artifact card, the composer's held
+ * message and file chips, the conversation list's retry.
+ */
+@source inline('no-underline whitespace-nowrap gap-2 text-content-button font-content-button font-semibold leading-content-button tracking-content-button data-[disabled]:pointer-events-none h-6 px-2 h-9 px-4 border disabled:bg-elevation-disabled disabled:text-default-primary disabled:border-transparent data-[disabled]:bg-elevation-disabled data-[disabled]:text-default-primary data-[disabled]:border-transparent disabled:text-default-disabled disabled:border-elevation-disabled data-[disabled]:text-default-disabled data-[disabled]:border-elevation-disabled aria-disabled:bg-elevation-disabled aria-disabled:text-default-primary aria-disabled:border-elevation-disabled bg-filigran-brand-primary text-negative-primary hover:bg-filigran-brand-tertiary active:bg-filigran-brand-tertiary border-filigran-brand-primary-transparency-55 text-filigran-brand-primary bg-feedback-error-primary hover:bg-feedback-error-tertiary active:bg-feedback-error-tertiary border-feedback-error-primary');
+
+/*
  * The classes @filigran/design-system's <Chip> renders for the welcome screen's
  * suggestions (neutral, clickable, md, no delete): its fill and the stacked
  * hover and focus layer, its box, its label cut, its focus ring.
@@ -56,6 +65,18 @@
   --color-feedback-error-secondary-transparency-20: var(--color-feedback-error-secondary-transparency-20, color-mix(in srgb, var(--chat-danger) 20%, transparent));
   --color-feedback-neutral-secondary-transparency-30: var(--color-feedback-neutral-secondary-transparency-30, color-mix(in srgb, currentColor 14%, transparent));
   --color-focus: var(--bg-elevation-default, var(--filigran-chat-surface, var(--chat-default-surface)));
+  --color-filigran-brand-tertiary: var(--color-filigran-brand-tertiary, color-mix(in srgb, var(--chat-accent) 85%, black));
+  --color-filigran-brand-primary-transparency-55: var(--color-filigran-brand-primary-transparency-55, color-mix(in srgb, var(--chat-accent) 55%, transparent));
+  --color-feedback-error-tertiary: var(--color-feedback-error-tertiary, color-mix(in srgb, var(--chat-danger) 85%, black));
+  --color-negative-primary: var(--text-negative-primary, var(--color-white));
+  --color-default-primary: var(--text-default-primary, currentColor);
+  --color-default-disabled: var(--text-default-disabled, color-mix(in oklab, currentColor 40%, transparent));
+  /* One name for the DS's two disabled tokens: the fill (--bg-) and the border (--border-elevation-disabled) share it. */
+  --color-elevation-disabled: var(--bg-elevation-disabled, color-mix(in oklab, currentColor 12%, transparent));
+  --text-content-button: var(--text-content-button, var(--text-3, 0.875rem));
+  --font-content-button: var(--font-content-button, inherit);
+  --leading-content-button: var(--leading-content-button, 1.5);
+  --tracking-content-button: var(--tracking-content-button, normal);
 }
 
 @plugin "tailwindcss-scoped-preflight" {

@@ -153,6 +153,7 @@ export const ko: Catalog = {
   'Recalling memory…': '메모리 불러오는 중…',
   'Reconnecting…': '다시 연결하는 중…',
   'Reference a conversation': '대화 참조',
+  'Remove {name}': '{name} 제거',
   'Remove from workspace': '작업 공간에서 제거',
   'Rename conversation': '대화 이름 바꾸기',
   'Rename workspace': '작업 공간 이름 바꾸기',

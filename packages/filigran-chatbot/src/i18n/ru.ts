@@ -153,6 +153,7 @@ export const ru: Catalog = {
   'Recalling memory…': 'Обращение к памяти…',
   'Reconnecting…': 'Повторное подключение…',
   'Reference a conversation': 'Сослаться на диалог',
+  'Remove {name}': 'Убрать {name}',
   'Remove from workspace': 'Убрать из рабочего пространства',
   'Rename conversation': 'Переименовать диалог',
   'Rename workspace': 'Переименовать рабочее пространство',

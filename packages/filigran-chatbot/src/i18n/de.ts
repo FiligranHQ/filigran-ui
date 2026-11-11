@@ -154,6 +154,7 @@ export const de: Catalog = {
   'Recalling memory…': 'Gedächtnis wird abgerufen…',
   'Reconnecting…': 'Verbindung wird wiederhergestellt…',
   'Reference a conversation': 'Auf eine Unterhaltung verweisen',
+  'Remove {name}': '{name} entfernen',
   'Remove from workspace': 'Aus Arbeitsbereich entfernen',
   'Rename conversation': 'Unterhaltung umbenennen',
   'Rename workspace': 'Arbeitsbereich umbenennen',
