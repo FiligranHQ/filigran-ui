@@ -20,6 +20,13 @@ interface TooltipProps {
   truncated?: boolean;
   /** Layout of the wrapper, which is the anchor: `inline-flex` unless the control needs more (a width, a position). */
   className?: string;
+  /**
+   * For a control drawn inside a design-system component that takes no tooltip
+   * of its own (the delete button of a `Chip`): a selector of that control. The
+   * tooltip then opens only while the pointer is over it or it has the keyboard
+   * focus, and points at it, not at the whole component.
+   */
+  forSelector?: string;
 }
 
 /** Whether a label shows less than its text (an ellipsis is drawn). */
@@ -43,7 +50,7 @@ const TOOLTIP_MAX_WIDTH = 300;
  * panel's stacking context, where a host bar would hide it (below). Recorded as
  * a library gap in fds-migration/LIBRARY-FEEDBACK.md (2, portal container).
  */
-export const Tooltip = ({ title, children, truncated = false, className = 'inline-flex' }: TooltipProps) => {
+export const Tooltip = ({ title, children, truncated = false, className = 'inline-flex', forSelector }: TooltipProps) => {
   const wrapperClassName = truncated ? 'flex min-w-0 max-w-full' : className;
   const ref = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLSpanElement>(null);
@@ -81,12 +88,18 @@ export const Tooltip = ({ title, children, truncated = false, className = 'inlin
     timer.current = null;
   }
 
+  // The element the tooltip names: the wrapper, or the one control `forSelector` picks inside it.
+  const anchor = (): Element | null => (forSelector ? (ref.current?.querySelector(forSelector) ?? null) : ref.current);
+  const onTarget = (target: EventTarget | null): boolean =>
+    !forSelector || (typeof (target as Element | null)?.closest === 'function' && !!(target as Element).closest(forSelector));
+
   const open = () => {
     cancel();
-    if (!ref.current) return;
+    const el = anchor();
+    if (!ref.current || !el) return;
     if (truncated && !isCut(ref.current.firstElementChild)) return;
     const panel = findChatbotRoot(ref.current).getBoundingClientRect();
-    setOpening(tooltipOpening(ref.current.getBoundingClientRect(), panel, window.innerWidth));
+    setOpening(tooltipOpening(el.getBoundingClientRect(), panel, window.innerWidth));
   };
 
   // A pointer passing over the controls does not flash every tooltip on its way.
@@ -105,11 +118,28 @@ export const Tooltip = ({ title, children, truncated = false, className = 'inlin
   // hover has already shown the tooltip then.
   const handleFocus = (event: FocusEvent) => {
     const target = event.target as HTMLElement;
+    if (!onTarget(target)) return;
     if (typeof target.matches === 'function' && target.matches(':focus-visible')) open();
   };
 
+  // With `forSelector`, the pointer moving within the component opens the
+  // tooltip over the control and closes it anywhere else.
+  const handleMouseOver = (event: { target: EventTarget | null }) => {
+    if (onTarget(event.target)) {
+      if (!opening && !timer.current) openSoon();
+    } else close();
+  };
+
   return (
-    <span ref={ref} className={wrapperClassName} onMouseEnter={openSoon} onMouseLeave={close} onFocus={handleFocus} onBlur={close}>
+    <span
+      ref={ref}
+      className={wrapperClassName}
+      onMouseEnter={forSelector ? undefined : openSoon}
+      onMouseOver={forSelector ? handleMouseOver : undefined}
+      onMouseLeave={close}
+      onFocus={handleFocus}
+      onBlur={close}
+    >
       {children}
       {opening &&
         createPortal(

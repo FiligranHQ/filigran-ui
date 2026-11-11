@@ -37,11 +37,38 @@ test('a picture sits inside the bubble, above the text, as one compact thumbnail
   assert.equal(text.textContent, 'look at these');
   assert.ok(files.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING, 'the files come before the text');
   const img = bubble().querySelector('img[alt="shot-0.png"]')!;
-  assert.ok(img.className.includes('max-w-[280px]') && img.className.includes('max-h-[240px]'), 'capped, aspect ratio kept');
+  assert.ok(img.className.includes('object-contain'), 'aspect ratio kept');
+  const frame = img.closest('button')!;
+  assert.equal(frame.style.width, '280px', 'the frame is the 16:9 box at the full width');
+  assert.equal(frame.style.height, '158px');
   assert.equal(img.getAttribute('loading'), 'lazy');
   assert.ok(bubble().textContent?.includes('report.pdf'), 'the PDF is a chip in the bubble');
   assert.ok(bubble().textContent?.includes('PDF · 2'), 'with its type and size');
   assert.equal(container.querySelectorAll('[data-testid="filigran-chat-user-bubble"]').length, 1, 'nothing outside the bubble');
+});
+
+test('a single picture holds its final box while it loads: the bubble does not move when it arrives', async () => {
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  fakeBackend([
+    agentsRoute,
+    // A file this page has not drawn yet: an earlier test's picture is served from its cache.
+    restoreRoute([{ id: 'm1', role: 'user', content: 'one picture', attachments: [{ file_id: 'held', filename: 'held.png', content_type: 'image/png' }] }]),
+    (req) =>
+      req.url.startsWith('/api/chat/files/') ? held.then(() => new Response(new Blob(['png'], { type: 'image/png' }))) : undefined,
+  ]);
+  // With request headers the picture is fetched by the panel, so its bytes can be held.
+  await render({ conversationId: 'c1', requestHeaders: { Authorization: 'Bearer t' } });
+  const placeholder = bubble().querySelector<HTMLElement>('[data-testid="filigran-chat-picture-placeholder"]')!;
+  assert.ok(placeholder, 'a placeholder while the bytes are held');
+  const before = { width: placeholder.style.width, height: placeholder.style.height };
+  assert.deepEqual(before, { width: '280px', height: '158px' });
+  await act(async () => {
+    release();
+    await settle();
+  });
+  const frame = bubble().querySelector<HTMLElement>('button[data-ds-exempt="attachment-thumbnail"]')!;
+  assert.deepEqual({ width: frame.style.width, height: frame.style.height }, before, 'same box, same border: no jump');
 });
 
 test('twelve pictures show one row of four, the fourth reading +9, and the lightbox walks all twelve', async () => {
