@@ -164,6 +164,9 @@ test("the design system IconButton's classes compile inside the panel, reading t
     ['rounded-sm', 'border-radius', null],
     ['text-feedback-error-primary', 'color', '--color-feedback-error-primary'],
     ['hover\\\\:bg-filigran-brand-primary-transparency-10', 'background-color', '--color-filigran-brand-primary-transparency-10'],
+    // The design system Chip of the welcome screen's suggestions (xtm-one#10911 UX round 2, B1).
+    ['bg-feedback-neutral-secondary-transparency-30', 'background-color', '--color-feedback-neutral-secondary-transparency-30'],
+    ['h-6', 'height', null],
   ]) {
     const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
     assert.ok(matching.length > 0, `.${name} is compiled`);

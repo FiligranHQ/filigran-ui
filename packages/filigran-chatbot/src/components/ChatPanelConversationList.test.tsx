@@ -330,6 +330,22 @@ test('the agent own suggestions show as chips on the empty state', async () => {
     [...group!.querySelectorAll('button')].map((b) => b.textContent),
     ['Hunt APT28 in the last week', 'Triage new alerts'],
   );
+  // The design system's Chip (xtm-one#10911 UX round 2, B1): its 24px filled box, never a bordered pill.
+  for (const chip of group!.querySelectorAll('button')) {
+    assert.ok(chip.className.includes('h-6'), `a DS chip box: ${chip.className}`);
+    assert.ok(!chip.className.includes('rounded-full'), 'no pill');
+  }
+});
+
+test('the empty state draws the selected agent own icon, the panel mark only when it has none (xtm-one#10911 UX round 2, B4)', async () => {
+  fakeBackend([
+    (req) => (req.url === '/api/chat/agents' ? json([{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: '🕵️', description: null }]) : undefined),
+    listRoute([]),
+  ]);
+  await render({});
+  const mark = container.querySelector('[data-chat-welcome-mark]');
+  assert.ok(mark, 'the welcome mark');
+  assert.equal(mark!.querySelector('[data-agent-icon="emoji"]')?.textContent, '🕵️');
 });
 
 test('the header shows the title and subtitle the host draws from the conversation, and its switcher links the agent page', async () => {

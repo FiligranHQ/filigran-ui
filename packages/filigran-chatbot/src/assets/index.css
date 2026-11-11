@@ -32,6 +32,13 @@
 @source inline('border-0 bg-transparent p-0 m-0 box-border text-inherit cursor-pointer font-[family-name:inherit] font-[number:inherit] text-[length:inherit] leading-[inherit] inline-flex items-center justify-center rounded-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-focus disabled:pointer-events-none focus-visible:ring-filigran-brand-primary focus-visible:ring-feedback-error-primary disabled:text-icon-disabled aria-disabled:text-icon-disabled aria-disabled:bg-transparent h-6 w-6 h-9 w-9 text-icon-highlight hover:bg-filigran-brand-primary-transparency-10 active:bg-filigran-brand-primary-transparency-10 bg-filigran-brand-primary-transparency-10 text-feedback-error-primary hover:bg-feedback-error-secondary-transparency-20 active:bg-feedback-error-secondary-transparency-20 bg-feedback-error-secondary-transparency-20');
 
 /*
+ * The classes @filigran/design-system's <Chip> renders for the welcome screen's
+ * suggestions (neutral, clickable, md, no delete): its fill and the stacked
+ * hover and focus layer, its box, its label cut, its focus ring.
+ */
+@source inline('relative inline-flex items-center gap-2 h-6 px-2 truncate max-w-[250px] bg-feedback-neutral-secondary-transparency-30 before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:pointer-events-none before:transition-opacity before:content-[\'\'] before:bg-feedback-neutral-secondary-transparency-30 hover:before:opacity-100 focus-visible:before:opacity-100 focus-visible:ring-offset-1');
+
+/*
  * The design-system colours those classes name, read from the host's own
  * @filigran/design-system variables (`--icon-highlight`, `--color-filigran-*`,
  * `--color-feedback-*`, `--bg-elevation-default`) where it loads the design
@@ -47,6 +54,7 @@
   --color-filigran-brand-primary-transparency-10: var(--color-filigran-brand-primary-transparency-10, color-mix(in srgb, var(--chat-accent) 10%, transparent));
   --color-feedback-error-primary: var(--color-feedback-error-primary, var(--chat-danger));
   --color-feedback-error-secondary-transparency-20: var(--color-feedback-error-secondary-transparency-20, color-mix(in srgb, var(--chat-danger) 20%, transparent));
+  --color-feedback-neutral-secondary-transparency-30: var(--color-feedback-neutral-secondary-transparency-30, color-mix(in srgb, currentColor 14%, transparent));
   --color-focus: var(--bg-elevation-default, var(--filigran-chat-surface, var(--chat-default-surface)));
 }
 

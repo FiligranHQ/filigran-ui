@@ -1693,6 +1693,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               <ChatWelcome
                 firstName={firstName}
                 logoIcon={resolvedLogo}
+                agentIcon={selectedAgent?.icon}
                 // The agent's own suggestions when the backend serves them, the
                 // host's list otherwise, none when there is neither. The agent's
                 // description is not passed: it is picker and agent-page prose.
