@@ -23,6 +23,9 @@ This file starts at 3.10.0; earlier releases are on the
 
 - With no agent list (`apiEndpoints.agents: null`) and no agent page or dashboard link, the header draws the
   agent as a label: no chevron and no dead-end "Agent switching is not available here" popover.
+- The left track of the keyboard-active agent row now draws: the active rule sets the track colour as a
+  variable the row's border reads, so the row's own `border-left` shorthand no longer resets it to
+  transparent when the stylesheet emits it later (XTM-One-Platform/xtm-one#10910).
 
 ## 3.24.1 — 2026-11-11
 

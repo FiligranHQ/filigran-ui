@@ -375,12 +375,15 @@
 /* A menu option: a 2px left track, transparent at rest, drawn on the
    keyboard-active row (`menuActiveBorder`, the design system's
    `--border-input-hover`), so the row reads at 3:1 or more against the menu
-   even where the hover fill is a step off the menu surface. */
+   even where the hover fill is a step off the menu surface. The colour travels
+   as a variable the base rule reads: both utilities have the same specificity
+   and Tailwind may emit the base after the active one, where its shorthand
+   would reset an active border-left-color to transparent (xtm-one#10910). */
 @utility chat-menu-row {
-  border-left: 2px solid transparent;
+  border-left: 2px solid var(--chat-menu-row-track, transparent);
 }
 @utility chat-menu-row-active {
-  border-left-color: var(--filigran-chat-menu-active-border, var(--border-input-hover, var(--chat-accent)));
+  --chat-menu-row-track: var(--filigran-chat-menu-active-border, var(--border-input-hover, var(--chat-accent)));
 }
 /* A colour or an image: `background` takes either. */
 @utility chat-header-surface {
