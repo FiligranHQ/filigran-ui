@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Spinner } from '@filigran/design-system';
+import { Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, SearchField, Spinner } from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
@@ -21,7 +21,6 @@ import {
   FolderInputIcon,
   FolderPlusIcon,
   PencilIcon,
-  SearchIcon,
   SidebarIcon,
   TrashIcon,
 } from './icons';
@@ -324,20 +323,19 @@ export const ConversationSidebar = ({
 
       {searchOffered && (
         <div className="px-3 pb-2">
-          <div className="relative">
-            <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 chat-text-muted-400/40" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape' && !isComposing(e)) setQuery('');
-              }}
-              placeholder={t('Search conversations...')}
-              aria-label={t('Search conversations...')}
-              className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-content-compact chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
-            />
-          </div>
+          <SearchField
+            fullWidth
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              // An IME composing its text keeps its Escape.
+              if (e.key === 'Escape' && isComposing(e)) e.preventDefault();
+            }}
+            onClear={() => setQuery('')}
+            clearLabel={t('Clear search')}
+            placeholder={t('Search conversations...')}
+            aria-label={t('Search conversations...')}
+          />
         </div>
       )}
 

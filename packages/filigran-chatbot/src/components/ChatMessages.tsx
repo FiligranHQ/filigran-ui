@@ -50,7 +50,7 @@ import {
   VolumeIcon,
   VolumeOffIcon,
 } from './icons';
-import { Button, Chip } from '@filigran/design-system';
+import { Button, Chip, Textarea } from '@filigran/design-system';
 import { ArtifactCard } from './ArtifactCard';
 import { ChatIconButton } from './ChatIconButton';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
@@ -341,11 +341,10 @@ const FeedbackComment = ({
 
   return (
     <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 chat-radius-md border chat-border-200/10 chat-surface-subtle-50/4 p-2">
-      <label htmlFor={id} className="text-content-compact chat-text-secondary-600/60">
-        {t('Tell us what went wrong (optional)')}
-      </label>
-      <textarea
+      <Textarea
         id={id}
+        label={t('Tell us what went wrong (optional)')}
+        resize="vertical"
         // Opened by the user's own thumbs down, to be typed into.
         autoFocus
         rows={2}
@@ -366,7 +365,6 @@ const FeedbackComment = ({
           }
         }}
         placeholder={t('What could be improved?')}
-        className="w-full resize-y chat-radius-sm border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-content-compact leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
         <Button

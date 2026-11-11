@@ -1,4 +1,4 @@
-import { Button } from '@filigran/design-system';
+import { Button, Textarea } from '@filigran/design-system';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ToolApprovalDecision, ToolApprovalProposal, ToolApprovalVerdict } from '../types';
 import { translate } from '../utils';
@@ -159,17 +159,15 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
 
       {!verdict && rejecting && (
         <div ref={rejectPanelRef} className="flex flex-col gap-1.5">
-          <label htmlFor={reasonId} className="text-content-compact chat-text-secondary-500/45">
-            {t('Why not? The agent sees this and can adapt (optional)')}
-          </label>
-          <textarea
+          <Textarea
             id={reasonId}
+            label={t('Why not? The agent sees this and can adapt (optional)')}
             autoFocus
             rows={2}
+            resize="none"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t('e.g. wrong environment — use staging instead')}
-            className="w-full resize-none chat-radius-sm border chat-border-200/10 chat-input-surface-white/3 px-2 py-1 text-content-compact chat-text-800/85 outline-none focus:border-[var(--chat-accent)]/50"
           />
           <div className="flex items-center gap-1.5">
             <Button variant="destructive" size="sm" disabled={disabled} startIcon={<XCircleIcon size={16} />} onClick={() => decide('reject')}>

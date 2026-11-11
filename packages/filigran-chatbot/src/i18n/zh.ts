@@ -30,6 +30,7 @@ export const zh: Catalog = {
   Cancel: '取消',
   'Cancel question': '取消问题',
   'Clear all conversations': '清除所有对话',
+  'Clear search': '清除搜索',
   Close: '关闭',
   'Collecting results from one task…': '正在收集 1 个任务的结果…',
   'Collecting results from {count} tasks…': '正在收集 {count} 个任务的结果…',

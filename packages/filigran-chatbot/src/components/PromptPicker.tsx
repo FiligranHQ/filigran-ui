@@ -1,3 +1,4 @@
+import { SearchField } from '@filigran/design-system';
 import { useRef, useState } from 'react';
 import type { ChatPromptTemplate } from '../types';
 import { isComposing } from '../utils/keyboard';
@@ -54,17 +55,21 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
 
         {prompts.length > SEARCH_THRESHOLD && (
           <div className="px-3 pb-2 pt-1">
-            <input
+            <SearchField
+              fullWidth
               autoFocus
-              type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Escape' && !isComposing(e)) close();
+                if (e.key !== 'Escape' || isComposing(e)) return;
+                // Escape closes the picker, as it closes every menu of the panel.
+                e.preventDefault();
+                close();
               }}
+              onClear={() => setQuery('')}
+              clearLabel={t('Clear search')}
               placeholder={t('Search prompts...')}
               aria-label={t('Search prompts...')}
-              className="w-full h-7 px-2 chat-radius-sm chat-surface-subtle-100/6 text-content-compact chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
             />
           </div>
         )}

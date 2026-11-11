@@ -31,6 +31,7 @@ export const de: Catalog = {
   Cancel: 'Abbrechen',
   'Cancel question': 'Frage abbrechen',
   'Clear all conversations': 'Alle Unterhaltungen leeren',
+  'Clear search': 'Suche leeren',
   Close: 'Schließen',
   'Collecting results from one task…': 'Ergebnisse einer Aufgabe werden gesammelt…',
   'Collecting results from {count} tasks…': 'Ergebnisse von {count} Aufgaben werden gesammelt…',

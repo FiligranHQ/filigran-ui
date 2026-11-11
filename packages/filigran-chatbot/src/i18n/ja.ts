@@ -30,6 +30,7 @@ export const ja: Catalog = {
   Cancel: 'キャンセル',
   'Cancel question': '質問をキャンセル',
   'Clear all conversations': 'すべての会話を消去',
+  'Clear search': '検索をクリア',
   Close: '閉じる',
   'Collecting results from one task…': '1 件のタスクの結果を収集中…',
   'Collecting results from {count} tasks…': '{count} 件のタスクの結果を収集中…',

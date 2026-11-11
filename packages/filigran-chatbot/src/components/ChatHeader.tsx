@@ -1,4 +1,4 @@
-import { Badge, Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger, Spinner } from '@filigran/design-system';
+import { Badge, Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger, SearchField, Spinner } from '@filigran/design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, ChatPanelMode, Translate, XtmAgent } from '../types';
 import { groupAgents, timeAgo, translate } from '../utils';
@@ -15,7 +15,6 @@ import {
   FullscreenExitIcon,
   FullscreenIcon,
   HistoryIcon,
-  SearchIcon,
   SidebarIcon,
   TrashIcon,
   UserPlusIcon,
@@ -358,11 +357,9 @@ export const ChatHeader = ({
         )}
         {showAgentSearch && (
           <div className="px-3 pb-2 pt-1">
-            <div className="relative">
-              <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 chat-text-muted-400/40" />
-              <input
+            <SearchField
+                fullWidth
                 autoFocus
-                type="text"
                 role="combobox"
                 aria-expanded
                 aria-controls="filigran-chat-agent-options"
@@ -374,9 +371,9 @@ export const ChatHeader = ({
                 onKeyDown={onAgentSearchKeyDown}
                 placeholder={t('Search agents...')}
                 aria-label={t('Search agents...')}
-                className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-content-compact chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+                onClear={() => setAgentQuery('')}
+                clearLabel={t('Clear search')}
               />
-            </div>
           </div>
         )}
         <div

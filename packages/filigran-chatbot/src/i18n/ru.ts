@@ -30,6 +30,7 @@ export const ru: Catalog = {
   Cancel: 'Отмена',
   'Cancel question': 'Отменить вопрос',
   'Clear all conversations': 'Очистить все диалоги',
+  'Clear search': 'Очистить поиск',
   Close: 'Закрыть',
   'Collecting results from one task…': 'Сбор результатов одной задачи…',
   'Collecting results from {count} tasks…': 'Сбор результатов задач ({count})…',
