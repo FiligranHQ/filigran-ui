@@ -384,19 +384,23 @@ export const ChatInput = ({
         <div className="flex gap-1.5 flex-wrap mb-2">
           {attachedFiles.map((f, i) => (
             <span key={i} data-testid="filigran-chat-attachment" className="inline-flex min-w-0 max-w-full items-center gap-1">
-              <Chip
-                label={f.name}
-                severity={f.uploadStatus === 'error' ? 'critical' : 'neutral'}
-                startIcon={
-                  <>
-                    {f.uploadStatus === 'pending' && <Spinner size="sm" tone="inherit" />}
-                    {f.uploadStatus !== 'pending' && <PendingFileGlyph file={f} />}
-                  </>
-                }
-                aria-busy={f.uploadStatus === 'pending' || undefined}
-                onDelete={() => onFileRemove?.(i)}
-                deleteLabel={translate(t, 'Remove {name}', { name: f.name })}
-              />
+              {/* The chip's delete is the design system's IconButton, drawn by the Chip with no
+                  tooltip of its own: the panel's tooltip names it on hover and keyboard focus. */}
+              <Tooltip title={translate(t, 'Remove {name}', { name: f.name })} forSelector="button" className="inline-flex min-w-0 max-w-full">
+                <Chip
+                  label={f.name}
+                  severity={f.uploadStatus === 'error' ? 'critical' : 'neutral'}
+                  startIcon={
+                    <>
+                      {f.uploadStatus === 'pending' && <Spinner size="sm" tone="inherit" />}
+                      {f.uploadStatus !== 'pending' && <PendingFileGlyph file={f} />}
+                    </>
+                  }
+                  aria-busy={f.uploadStatus === 'pending' || undefined}
+                  onDelete={() => onFileRemove?.(i)}
+                  deleteLabel={translate(t, 'Remove {name}', { name: f.name })}
+                />
+              </Tooltip>
               {f.uploadStatus === 'error' && (
                 <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1 text-content-compact text-[var(--chat-danger)]">
                   <XCircleIcon size={12} className="shrink-0" />
