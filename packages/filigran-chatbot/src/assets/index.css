@@ -251,6 +251,14 @@
 .filigran-chat-composer-box {
   border-radius: var(--filigran-chat-input-radius, var(--chat-radius-md));
 }
+/* The design system's Textarea: no border at rest, the hover tone under the
+ * pointer. Dictation keeps its red border (data-listening). */
+.filigran-chat-composer-box:not([data-listening]) {
+  border-color: transparent;
+}
+.filigran-chat-composer-box:not([data-listening]):hover {
+  border-color: var(--filigran-chat-input-border-hover, var(--filigran-chat-border, color-mix(in oklab, currentColor 24%, transparent)));
+}
 .filigran-chat-composer-box:not([data-working]):has(textarea:focus) {
   outline: 2px solid var(--filigran-chat-focus-ring, var(--chat-accent));
   outline-offset: 2px;

@@ -401,6 +401,8 @@ export interface ChatPanelTheme {
   inputSurface?: string;
   /** The composer's corners, as the host's text fields draw theirs (`--filigran-chat-input-radius`, `radiusMd` unset). */
   inputRadius?: string;
+  /** The composer's border under the pointer, the design system's `--border-input-hover`; none at rest (`--filigran-chat-input-border-hover`, `border` unset). */
+  inputBorderHover?: string;
   /** The small corner of every control, chip and avatar tile, the design system's `--radius-sm` (`--filigran-chat-radius-sm`, 4px unset). */
   radiusSm?: string;
   /** The card corner of every card, bubble, status indicator, menu and dialog, the design system's `--radius-md` (`--filigran-chat-radius-md`, 12px unset). */

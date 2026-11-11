@@ -1289,6 +1289,7 @@ both. The same variables may be set in CSS on an ancestor instead.
 | `surfaceHover`     | `--filigran-chat-surface-hover`     | A row or a button under the pointer |
 | `inputSurface`     | `--filigran-chat-input-surface`     | A text field: the composer (no fill unless set), a rename field, the feedback and approval comments |
 | `inputRadius`      | `--filigran-chat-input-radius`      | The composer's corners (0.75rem unset) |
+| `inputBorderHover` | `--filigran-chat-input-border-hover` | The composer's border under the pointer; none at rest, as the design system's Textarea (`border` unset) |
 | `inputMinHeight`   | `--filigran-chat-input-min-height`  | The composer field's height at rest, before it grows with the text (two lines unset) |
 | `focusRing`        | `--filigran-chat-focus-ring`        | The 2 px ring around the composer while it has the focus (the accent unset) |
 | `danger`           | `--filigran-chat-danger`            | The tone of every error state: error notices, a failed upload, dictation, stop (a red unset, e.g. `var(--color-error)`) |

@@ -8,6 +8,15 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## Unreleased
+
+### Changed
+
+- The composer draws its border as the design system's Textarea: none at
+  rest, `theme.inputBorderHover` (`--filigran-chat-input-border-hover`, the
+  panel border unset) under the pointer. Dictation keeps its red border and
+  the focus keeps its 2 px ring.
+
 ## 3.22.0 — 2026-11-11
 
 ### Added

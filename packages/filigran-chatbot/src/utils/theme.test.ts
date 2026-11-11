@@ -23,6 +23,12 @@ test('the composer entries set its corners, resting height and focus ring', () =
   });
 });
 
+test('the composer hover border entry sets its variable', () => {
+  assert.deepEqual(themeVariables({ inputBorderHover: 'var(--border-input-hover)' }), {
+    '--filigran-chat-input-border-hover': 'var(--border-input-hover)',
+  });
+});
+
 test('the radius entries pass the design-system corners to every card and control', () => {
   assert.deepEqual(themeVariables({ radiusSm: 'var(--radius-sm)', radiusMd: 'var(--radius-md)' }), {
     '--filigran-chat-radius-sm': 'var(--radius-sm)',

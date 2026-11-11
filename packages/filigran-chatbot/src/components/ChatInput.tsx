@@ -411,8 +411,11 @@ export const ChatInput = ({
         // The agent is working: the working glow plays, focused or not, and
         // the focus ring stands aside until the turn ends (index.css).
         data-working={isLoading ? '' : undefined}
+        // Dictation keeps its red border; otherwise the border is the design
+        // system Textarea's: none at rest, the hover tone under the pointer (index.css).
+        data-listening={dictation.listening ? '' : undefined}
         className={`filigran-chat-composer-box relative flex flex-col border chat-composer-surface px-2 pt-1 pb-1.5 transition-colors ${
-          dictation.listening ? 'border-[var(--chat-danger)]/50' : 'chat-border-200/10'
+          dictation.listening ? 'border-[var(--chat-danger)]/50' : ''
         } ${isLoading ? 'filigran-chat-active-border' : ''}`}
       >
         <textarea
