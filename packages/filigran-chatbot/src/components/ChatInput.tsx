@@ -11,6 +11,7 @@ import type { ChatHeldReason } from '../hooks/useChat';
 import { referencedConversations } from '../utils/conversationRefs';
 import { hasFailedUpload } from '../utils/failedUpload';
 import { isComposing } from '../utils/keyboard';
+import { chatColumnClass, chatDisplayMode, chatGutterClass } from '../utils/layout';
 import { pastedText, spliceText } from '../utils/copy';
 import { translate } from '../utils';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
@@ -321,15 +322,19 @@ export const ChatInput = ({
   // sidebar, fullscreen, floating): a status when there is one, else the
   // disclaimer. How to send is the Send button's tooltip, not a line of its
   // own. The line keeps its height, so the composer never jumps.
-  const footerLine = 'text-center text-content-compact chat-text-muted-400/30 opacity-70 mt-1.5 min-h-[1lh] truncate';
+  // No opacity on top of the muted token: it took the line to 3.7:1 in the light theme (4.5:1 is the floor).
+  const footerLine = 'text-center text-content-compact chat-text-muted-400/30 mt-1.5 min-h-[1lh] truncate';
   const sendTooltip = hasFilesUploading ? t('Files uploading...') : t('Enter to send · Shift+Enter for new line');
 
+  // The transcript's reading column and gutters: the composer's left edge is the messages'.
+  const display = chatDisplayMode(mode ?? 'floating');
   return (
     <div
-      className={`px-4 py-3 border-t chat-border-200/10 ${mode === 'floating' ? 'chat-radius-b-md' : ''}`}
+      className={`${chatGutterClass(display)} py-3 border-t chat-border-200/10 ${mode === 'floating' ? 'chat-radius-b-md' : ''}`}
       style={separatorColor ? { borderTopColor: separatorColor, borderTopWidth: 1 } : undefined}
       data-testid="filigran-chat-composer"
     >
+      <div data-testid="filigran-chat-composer-column" className={chatColumnClass(display)}>
       {header && <div className="mb-2">{header}</div>}
       {notice && (
         <ChatNotice
@@ -538,6 +543,7 @@ export const ChatInput = ({
           {t('Uses AI. Verify results.')}
         </p>
       )}
+      </div>
     </div>
   );
 };

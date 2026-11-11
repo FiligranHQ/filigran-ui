@@ -47,7 +47,12 @@ test('an end is provisional only when it says so: the stored end follows it; a b
   });
   assert.deepEqual(parseRestEvent({ type: 'cancelled' }, ctx()), { action: 'cancelled' });
   assert.deepEqual(parseRestEvent({ type: 'error', content: 'Boom' }, ctx()), { action: 'error', content: 'Boom' });
-  assert.deepEqual(parseRestEvent({ type: 'error', content: 'Lost', reason: 'lost' }, ctx()), { action: 'error', content: 'Lost' });
+  assert.deepEqual(parseRestEvent({ type: 'error', content: 'Lost', reason: 'lost' }, ctx()), { action: 'error', content: 'Lost', reason: 'lost' });
+  assert.deepEqual(parseRestEvent({ type: 'error', content: 'Cut', reason: 'interrupted' }, ctx()), {
+    action: 'error',
+    content: 'Cut',
+    reason: 'interrupted',
+  });
   assert.deepEqual(parseRestEvent({ type: 'cancelled', message_id: 'm2' }, ctx()), {
     action: 'cancelled',
     messageId: 'm2',

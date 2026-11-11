@@ -1290,6 +1290,7 @@ for (const mode of ['inline', 'sidebar', 'fullscreen', 'floating'] as const) {
     assert.ok(!text().includes(SEND_HINT), 'the keys are in the tooltip, not on the page');
     const send = container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!;
     assert.equal(send.closest('[data-testid="filigran-chat-composer"]')?.querySelectorAll('p').length, 1, 'one footer line');
+    assert.ok(!/\bopacity-/.test(footer('disclaimer')!.className), 'no opacity over the muted token, which keeps the line at 4.5:1 or more');
   });
 }
 

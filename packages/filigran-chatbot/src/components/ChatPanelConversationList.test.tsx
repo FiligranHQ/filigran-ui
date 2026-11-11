@@ -70,6 +70,16 @@ const openMenu = (element: Element | undefined) =>
     await settle(10);
   });
 const menuItem = (label: string) => [...document.body.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent?.trim() === label);
+// A row's actions live in its More menu (UX spec C): open it, then pick the action.
+const rowAction = async (label: string) => {
+  await openMenu(button('More actions'));
+  await click(menuItem(label));
+};
+// Delete is confirmed in a dialog: open the menu, ask, confirm.
+const deleteFirstRow = async () => {
+  await rowAction('Delete conversation');
+  await click(buttons().find((b) => b.closest('[role="dialog"]') && b.textContent?.trim() === 'Delete'));
+};
 
 test('a workspace group the user opened stays open when the list is hidden and shown again', async () => {
   fakeBackend([
@@ -112,8 +122,7 @@ test('a move the host refuses leaves the conversation where it was; one it agree
       return answer;
     },
   });
-  await openMenu(button('Move to workspace'));
-  await click(menuItem('Shared hunts'));
+  await rowAction('Shared hunts');
   assert.equal(asked.length, 1);
   assert.equal(asked[0][0].conversationId, 'c1');
   assert.equal(asked[0][1]?.id, 'w1');
@@ -121,8 +130,7 @@ test('a move the host refuses leaves the conversation where it was; one it agree
   assert.equal(alertText(), null, 'a refusal is the host’s: nothing to say');
 
   answer = true;
-  await openMenu(button('Move to workspace'));
-  await click(menuItem('Shared hunts'));
+  await rowAction('Shared hunts');
   assert.deepEqual(requests.find((r) => r.method === 'PATCH')?.body, { workspace_id: 'w1' });
 });
 
@@ -134,7 +142,7 @@ test('a failed rename tells the user and the host, and keeps the old title', asy
   ]);
   const failures: unknown[][] = [];
   await render({ onConversationActionFailed: (...args) => void failures.push(args) });
-  await click(button('Rename conversation'));
+  await rowAction('Rename conversation');
   const input = container.querySelector<HTMLInputElement>('input[aria-label="Conversation title"]')!;
   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(input, 'New title');
   await act(async () => {
@@ -162,7 +170,7 @@ test('a failed delete says so, in its own words when the backend gives none, and
   failingDelete();
   const failures: unknown[][] = [];
   await render({ onConversationActionFailed: (...args) => void failures.push(args) });
-  await click(button('Delete conversation'));
+  await deleteFirstRow();
   assert.equal(alertText(), 'The conversation could not be deleted');
   assert.equal(failures.length, 1);
   assert.deepEqual([failures[0][0], (failures[0][1] as ChatConversationSummary).conversationId, failures[0][2]], ['delete', 'c1', null]);
@@ -172,7 +180,7 @@ test('a failed delete says so, in its own words when the backend gives none, and
 test('a failed delete the host told the user of is not said again', async () => {
   failingDelete();
   await render({ onConversationActionFailed: () => true });
-  await click(button('Delete conversation'));
+  await deleteFirstRow();
   assert.equal(alertText(), null);
 });
 
@@ -196,17 +204,18 @@ test("a row shows the backend's preview and channel, and a backend without them 
   fakeBackend([
     agentsRoute,
     listRoute([
-      { conversation_id: 'c1', title: 'From Slack', last_message_preview: 'Here are the IOCs', channel: 'slack', agent_icon: ' 🛰️ ' },
-      { conversation_id: 'c2', title: 'Bare' },
+      // Two agents in the list: each row draws its agent's icon.
+      { conversation_id: 'c1', title: 'From Slack', last_message_preview: 'Here are the IOCs', channel: 'slack', agent_icon: ' 🛰️ ', agent_name: 'Hunter' },
+      { conversation_id: 'c2', title: 'Bare', agent_name: 'Scout' },
     ]),
   ]);
   await render({});
   const [slack, bare] = rows();
-  assert.ok(slack.textContent?.includes('Here are the IOCs'));
-  assert.ok(slack.querySelector('[aria-label="Started in Slack"]'));
+  assert.equal(slack.textContent, '🛰️From Slack', 'one line: the agent icon and the title');
+  assert.equal(slack.getAttribute('aria-description'), 'Here are the IOCs · Hunter · Started in Slack');
   assert.equal(slack.querySelector('[data-agent-icon="emoji"]')?.textContent, '🛰️', "the backend's agent_icon, trimmed");
   assert.equal(bare.textContent, 'Bare');
-  assert.equal(bare.querySelector('[data-agent-icon]'), null);
+  assert.equal(bare.querySelector('[data-agent-icon]'), null, 'no icon reported: the bot glyph');
 });
 
 test('a message sent in an older conversation moves it to the top at once, before the turn ends', async () => {
@@ -229,8 +238,8 @@ test('a message sent in an older conversation moves it to the top at once, befor
   });
   const first = rows()[0];
   assert.ok(first.textContent?.startsWith('Older'), first.textContent ?? '');
-  assert.ok(first.textContent?.includes('what changed since?'));
-  assert.ok(!first.textContent?.includes('old words'));
+  assert.ok(first.getAttribute('aria-description')?.includes('what changed since?'));
+  assert.ok(!first.getAttribute('aria-description')?.includes('old words'));
   await act(async () => {
     stream.send({ type: 'done', content: 'ok', conversation_id: 'c1' });
     stream.close();
@@ -266,7 +275,7 @@ test('a message steering the running turn moves its conversation up too, with it
   });
   const first = rows()[0];
   assert.ok(first.textContent?.startsWith('Older'), first.textContent ?? '');
-  assert.ok(first.textContent?.includes('and the lateral movement?'), first.textContent ?? '');
+  assert.ok(first.getAttribute('aria-description')?.includes('and the lateral movement?'), first.getAttribute('aria-description') ?? '');
   await act(async () => {
     stream.send({ type: 'done', content: 'ok', conversation_id: 'c1' });
     stream.close();
@@ -281,7 +290,7 @@ test('a failure said while the list is hidden shows under the header', async () 
   });
   fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'Keep me' }]), (req) => (req.method === 'DELETE' ? deleted : undefined)]);
   await render({});
-  await click(button('Delete conversation'));
+  await deleteFirstRow();
   await click(button('Hide conversations'));
   await act(async () => {
     fail();
@@ -517,7 +526,7 @@ test('a message the backend refuses leaves its conversation where it was', async
     await settle(10);
   });
   assert.ok(rows()[0].textContent?.startsWith('Newer'));
-  assert.ok(rows()[1].textContent?.includes('old words'));
+  assert.ok(rows()[1].getAttribute('aria-description')?.includes('old words'));
 });
 
 test('the same failure said again stays for its own time', async () => {
@@ -528,13 +537,21 @@ test('the same failure said again stays for its own time', async () => {
     act(async () => {
       for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve));
     });
+  // The menu and the dialog step through I/O turns too: settle() waits on setTimeout, mocked here.
+  const deleteNow = async () => {
+    await act(async () => void button('More actions')?.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+    await flush();
+    await act(async () => (menuItem('Delete conversation') as HTMLElement).click());
+    await flush();
+    await act(async () => buttons().find((b) => b.closest('[role="dialog"]') && b.textContent?.trim() === 'Delete')!.click());
+  };
   mock.timers.enable({ apis: ['setTimeout'] });
   try {
-    await act(async () => button('Delete conversation')!.click());
+    await deleteNow();
     await flush();
     assert.equal(alertText(), 'The conversation could not be deleted');
     mock.timers.tick(4000);
-    await act(async () => button('Delete conversation')!.click());
+    await deleteNow();
     await flush();
     mock.timers.tick(4000);
     await flush();
@@ -619,7 +636,8 @@ test('the list starts a conversation outside the workspaces, after one was about
   await render({ apiEndpoints: { workspaces: '/chat/workspaces', steer: null } }, ref);
   await click(button('New conversation in this workspace'));
   assert.ok(text().includes('New conversation — send a message to start it'), 'about to start in the workspace');
-  await click(button('New conversation outside a workspace'));
+  // The header's New conversation starts one outside a workspace: the list has no second button for it.
+  await click(button('New conversation'));
   assert.ok(!text().includes('New conversation — send a message to start it'), 'no longer');
   await act(async () => {
     ref.current!.send('hello');
@@ -637,7 +655,7 @@ test('the list starts a conversation outside the workspaces, after one was about
   });
 });
 
-test('a list without workspaces offers no New conversation outside a workspace', async () => {
+test('the list offers one New conversation, in its header, with or without workspaces', async () => {
   fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'Hunt' }])]);
   await render({});
   assert.equal(button('New conversation outside a workspace'), undefined);
@@ -690,6 +708,40 @@ test('the header names the channel a restore reports, before the list is read', 
   await render({ mode: 'floating', conversationId: 'c1' });
   assert.equal(requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'GET').length, 0, 'the list is not read');
   assert.equal(container.querySelector('[data-testid="filigran-chat-header-subtitle"]')?.textContent, 'Agent · Teams');
+});
+
+test('a docked panel and a floating window open the list as a drawer over the thread, closed by a pick, the scrim or Escape', async () => {
+  for (const mode of ['sidebar', 'floating'] as const) {
+    const requests = fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'Old hunt' }]), restoreRoute]);
+    await render({ mode });
+    const drawer = () => container.querySelector('[data-testid="filigran-chat-list-drawer"]');
+    const listReads = () => requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'GET').length;
+    assert.equal(drawer(), null, `${mode}: no list beside the thread`);
+    assert.equal(listReads(), 0, `${mode}: nothing read before it opens`);
+
+    await click(button('Conversation history'));
+    assert.ok(drawer(), `${mode}: the drawer opens`);
+    assert.equal(button('Conversation history')?.getAttribute('aria-expanded'), 'true');
+    assert.ok(listReads() > 0, `${mode}: read on opening`);
+    assert.equal(container.querySelector('[role="separator"]'), null, `${mode}: no resize handle in the drawer`);
+    assert.ok(rows().some((row) => row.textContent?.includes('Old hunt')));
+
+    await click(rows().find((row) => row.textContent?.includes('Old hunt')));
+    assert.equal(drawer(), null, `${mode}: a pick closes it`);
+
+    await click(button('Conversation history'));
+    await click(container.querySelector('[data-testid="filigran-chat-list-drawer-scrim"]')!);
+    assert.equal(drawer(), null, `${mode}: the scrim closes it`);
+
+    await click(button('Conversation history'));
+    await act(async () => {
+      drawer()!.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await settle(10);
+    });
+    assert.equal(drawer(), null, `${mode}: Escape closes it`);
+    await act(async () => root.unmount());
+    root = createRoot(container);
+  }
 });
 
 test('a restored conversation whose agent is not in the list warns of no agent, never of the one picked', async () => {

@@ -11,7 +11,7 @@ installDom();
 // After the DOM: react-dom reads at load whether the page fires input events,
 // and the search box's typing reaches it only if it does.
 const { createRoot } = await import('react-dom/client');
-const { ConversationSidebar } = await import('./ConversationSidebar.tsx');
+const { ConversationSidebar, inWorkspaceFilter, WORKSPACE_FILTER } = await import('./ConversationSidebar.tsx');
 const { setValue } = await import('../utils/pageActions.ts');
 
 const WORKSPACE = { id: 'w1', name: 'Hunts', isOwn: true, isDefault: false, canManage: true };
@@ -276,8 +276,15 @@ test('Enter while an input method composes does not commit a rename', async () =
     );
     await settle();
   });
+  // Rename lives in the row's More menu, which opens from the keyboard.
   await act(async () => {
-    container.querySelector<HTMLButtonElement>('button[aria-label="Rename conversation"]')!.click();
+    container
+      .querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!
+      .dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }) as unknown as Event);
+    await settle();
+  });
+  await act(async () => {
+    [...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) => item.textContent?.trim() === 'Rename conversation')!.click();
     await settle();
   });
   const field = () => container.querySelector<HTMLInputElement>('input[aria-label="Conversation title"]');
@@ -586,10 +593,65 @@ test('conversations come first: ten workspaces fold into one line, and every con
   assert.equal(rows.length, 12, 'filed conversations are listed too');
   assert.ok(rows[0].startsWith('Chat 0'), 'the most recent first');
   assert.ok(rows[1].startsWith('Chat 1'));
-  const marker = container.querySelector('[data-testid="filigran-chat-row-workspace"]');
-  assert.equal(marker?.textContent, 'Workspace 0', 'a filed conversation names its workspace on its row');
-  assert.equal(container.querySelectorAll('[data-testid="filigran-chat-row-workspace"]').length, 4, 'an unfiled one names none');
+  const described = [...container.querySelectorAll('[role="button"][aria-current]')].map((r) => r.getAttribute('aria-description'));
+  assert.ok(described[0]?.startsWith('Workspace 0 · '), 'a filed conversation names its workspace, read out after its title');
+  assert.equal(described.filter((d) => d?.includes('Workspace')).length, 4, 'an unfiled one names none');
   assert.ok(container.querySelector('button[aria-label="New workspace"]'), 'a workspace can still be created from the folded line');
+  await unmount();
+});
+
+test('the workspaces leave the top of the list: their folded line comes after every conversation', async () => {
+  localStorage.clear();
+  const { container, workspacesLine, unmount } = await renderTenWorkspaces();
+  const rows = [...container.querySelectorAll('[role="button"][aria-current]')];
+  const line = workspacesLine()!;
+  assert.ok(rows.length > 0);
+  for (const row of rows) assert.ok(row.compareDocumentPosition(line) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'the line follows the conversations');
+  assert.equal(container.querySelector('button[aria-label="New conversation outside a workspace"]'), null, 'one New conversation, in the header');
+  await unmount();
+});
+
+test('beside the workspace filter, New conversation is an icon button named by its label, so the header never cuts it', async () => {
+  localStorage.clear();
+  const { container, unmount } = await renderTenWorkspaces();
+  const filter = container.querySelector('[data-testid="filigran-chat-workspace-filter"]');
+  assert.ok(filter, 'the workspace filter is shown');
+  const newChat = container.querySelector('button[aria-label="New conversation"]');
+  assert.ok(newChat, 'named for screen readers and its tooltip');
+  assert.ok(newChat!.compareDocumentPosition(filter!) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'beside the filter, before it');
+  assert.equal(newChat!.textContent?.trim(), '', 'no visible label to cut');
+  await unmount();
+});
+
+test('at the 220 px minimum the workspace filter shrinks: its box and the DS wrapper both give up their content width', async () => {
+  localStorage.clear();
+  const { container, unmount } = await renderTenWorkspaces();
+  const box = container.querySelector('[data-testid="filigran-chat-workspace-filter-box"]');
+  assert.ok(box, 'the filter sits in its own box');
+  for (const cls of ['min-w-0', 'flex-1', '[&>span]:min-w-0', '[&>span]:flex-1']) assert.ok(box!.classList.contains(cls), `box has ${cls}`);
+  const trigger = container.querySelector('[data-testid="filigran-chat-workspace-filter"]');
+  assert.equal(trigger?.parentElement?.parentElement, box, 'the DS wrapper span is the direct child the rule shrinks');
+  await unmount();
+});
+
+test('the row actions take their own room at the end of the row, never laid over the title', async () => {
+  localStorage.clear();
+  const { container, unmount } = await renderTenWorkspaces();
+  const actions = container.querySelector('[role="button"][aria-current] [data-row-actions]');
+  assert.ok(actions, 'a row has its actions');
+  assert.ok(!actions!.classList.contains('absolute'), 'in the flow, not over the title');
+  assert.ok(actions!.classList.contains('shrink-0'), 'the title truncates before them');
+  assert.ok(actions!.classList.contains('group-hover:flex') && actions!.classList.contains('group-focus-within:flex'), 'shown on hover and focus');
+  await unmount();
+});
+
+test('the conversation whose answer is being written ends its row with a labelled spinner, the others none', async () => {
+  localStorage.clear();
+  const { container, unmount } = await renderTenWorkspaces({ generatingConversationId: 'c1' });
+  // The design system's labelled Spinner: a status region holding the words read out.
+  const spinners = [...container.querySelectorAll('[role="status"]')].filter((s) => s.textContent === 'Writing an answer');
+  assert.equal(spinners.length, 1);
+  assert.ok(spinners[0].closest('[role="button"][aria-current]')?.textContent?.startsWith('Chat 1'), 'on the generating row');
   await unmount();
 });
 
@@ -624,4 +686,44 @@ test('a conversation about to start in a workspace shows that workspace, the lin
   assert.equal(workspacesLine()?.getAttribute('aria-expanded'), 'true');
   assert.ok(container.textContent?.includes('Hunts'));
   await unmount();
+});
+
+test('the header offers one workspace filter: every workspace, the unfiled conversations, or one workspace', async () => {
+  localStorage.clear();
+  const { container, unmount } = await renderTenWorkspaces();
+  const trigger = container.querySelector('[data-testid="filigran-chat-workspace-filter"]');
+  assert.ok(trigger, 'the filter sits in the header');
+  assert.equal(trigger?.getAttribute('aria-label'), 'Filter by workspace');
+  assert.ok(trigger?.textContent?.includes('All workspaces'), 'every workspace by default');
+  await unmount();
+  const filed = { conversationId: 'a', title: 'Filed', workspaceId: 'w1' };
+  const unfiled = { conversationId: 'b', title: 'Unfiled', workspaceId: null };
+  assert.ok(inWorkspaceFilter(filed, WORKSPACE_FILTER.all) && inWorkspaceFilter(unfiled, WORKSPACE_FILTER.all));
+  assert.ok(!inWorkspaceFilter(filed, WORKSPACE_FILTER.none) && inWorkspaceFilter(unfiled, WORKSPACE_FILTER.none));
+  assert.ok(inWorkspaceFilter(filed, 'w1') && !inWorkspaceFilter(filed, 'w2') && !inWorkspaceFilter(unfiled, 'w1'));
+});
+
+test('without workspaces the header has no workspace filter', async () => {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <ConversationSidebar
+        conversations={[{ conversationId: 'c1', title: 'One' }]}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onNewChat={() => undefined}
+        t={(key) => key}
+      />,
+    );
+    await settle();
+  });
+  assert.equal(container.querySelector('[data-testid="filigran-chat-workspace-filter"]'), null);
+  await act(async () => root.unmount());
+  container.remove();
 });

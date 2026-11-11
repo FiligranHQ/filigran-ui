@@ -1,12 +1,36 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Input, SearchField, Spinner } from '@filigran/design-system';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+  Input,
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuLabel,
+  MenuSeparator,
+  MenuTrigger,
+  SearchField,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Skeleton,
+  Spinner,
+} from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
 import { AgentIconGlyph } from './AgentIconGlyph';
 import { channelName, conversationMatches } from '../utils/conversationList';
+import { groupByDate, rowTitle, showsSeveralAgents } from '../utils/dateGroups';
 import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
+import { LIST_WIDTH, listLayout } from '../utils/layout';
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
 import { ConversationListFailed } from './ConversationListFailed';
@@ -16,11 +40,13 @@ import {
   ChevronRightIcon,
   CloseIcon,
   EditIcon,
-  MessageSquareIcon,
   FolderIcon,
-  FolderInputIcon,
   FolderPlusIcon,
+  MoreIcon,
   PencilIcon,
+  PinIcon,
+  PinOffIcon,
+  SearchIcon,
   SidebarIcon,
   TrashIcon,
 } from './icons';
@@ -84,6 +110,19 @@ interface ConversationSidebarProps {
   searchThreshold?: number;
   /** The host's names of the channels a conversation was started in (see `channelLabel` on the panel). */
   channelLabel?: (channel: string) => string | null | undefined;
+  /**
+   * The panel's width in px, once measured: the list never takes more than a
+   * quarter of it nor leaves the conversation under 680 px, and folds to its
+   * rail when even its minimum would.
+   */
+  panelWidth?: number | null;
+  /**
+   * Drawn as a drawer over a docked panel or a floating window (UX spec A): its
+   * default width, a raised surface, no resize handle and no rail.
+   */
+  overlay?: boolean;
+  /** The conversation whose answer is being written: its row ends with a spinner. */
+  generatingConversationId?: string | null;
   /** What failed in the list, said under it. */
   notice?: string | null;
   /** Says what failed in the list (`notice` shows it). */
@@ -93,6 +132,16 @@ interface ConversationSidebarProps {
 
 /** Below this many conversations the list is quicker to scan than to filter. */
 const SEARCH_THRESHOLD = 7;
+
+/** The workspace filter's values beside the workspace ids: every conversation, or the unfiled ones. */
+export const WORKSPACE_FILTER = { all: '__all__', none: '__none__' } as const;
+
+/** Whether a conversation passes the header's workspace filter. */
+export function inWorkspaceFilter(conversation: ChatConversationSummary, filter: string): boolean {
+  if (filter === WORKSPACE_FILTER.all) return true;
+  if (filter === WORKSPACE_FILTER.none) return !conversation.workspaceId;
+  return conversation.workspaceId === filter;
+}
 
 /**
  * A host's sections drawn from the search, as a component of their own: drawn
@@ -114,11 +163,11 @@ function readCollapsed(key: string): Set<string> {
 }
 
 /**
- * The list's width in fullscreen, in px: dragged from its right edge between
- * `min` and `max`, back to `default` (the width it always had) on a
+ * The list's width in a page or full screen, in px (`utils/layout`): dragged
+ * from its right edge between `min` and `max`, back to `default` on a
  * double-click, remembered per browser.
  */
-export const LIST_WIDTH = { min: 224, default: 256, max: 480 } as const;
+export { LIST_WIDTH };
 /** What an arrow key moves the list's edge by. */
 const LIST_WIDTH_STEP = 16;
 
@@ -130,8 +179,6 @@ function readListWidth(key: string): number {
   const parsed = Number.parseInt(readStorage('local', key) ?? '', 10);
   return Number.isNaN(parsed) ? LIST_WIDTH.default : clampListWidth(parsed);
 }
-
-const sectionLabel = 'text-content-compact font-medium uppercase tracking-wide chat-text-muted-400/40';
 
 /**
  * Persistent conversation list for fullscreen mode, mirroring the XTM One web
@@ -167,11 +214,18 @@ export const ConversationSidebar = ({
   clearAllAction,
   searchThreshold = SEARCH_THRESHOLD,
   channelLabel,
+  panelWidth = null,
+  overlay = false,
+  generatingConversationId = null,
   notice,
   onNotice,
   t,
 }: ConversationSidebarProps) => {
   const [query, setQuery] = useState('');
+  // The header's workspace filter (UX spec C): every workspace by default.
+  const [workspaceFilter, setWorkspaceFilter] = useState<string>(WORKSPACE_FILTER.all);
+  // Asked from the rail: once the list is open, its search box takes the focus.
+  const [focusSearch, setFocusSearch] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   // Guards the input's onBlur: committing and then blurring would fire the
@@ -187,6 +241,18 @@ export const ConversationSidebar = ({
   // opened on demand and remembered per browser.
   const workspacesOpenKey = storageKey(storageKeyPrefix, STORAGE_KEYS.workspacesOpen);
   const [workspacesShown, setWorkspacesShown] = useState(() => readStorage('local', workspacesOpenKey) === '1');
+  // The conversations pinned in this browser, listed first under Pinned (UX spec C).
+  const pinnedKey = storageKey(storageKeyPrefix, STORAGE_KEYS.pinnedConversations);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => readCollapsed(pinnedKey));
+  const togglePin = (id: string) =>
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      writeStorage('local', pinnedKey, next.size > 0 ? JSON.stringify([...next]) : null);
+      return next;
+    });
+  const isPinned = (c: ChatConversationSummary) => c.pinned === true || pinnedIds.has(c.conversationId);
   const showWorkspaces = (open: boolean) => {
     setWorkspacesShown(open);
     writeStorage('local', workspacesOpenKey, open ? '1' : null);
@@ -194,7 +260,10 @@ export const ConversationSidebar = ({
   // The list's width, kept while it is collapsed and across reloads.
   const widthKey = storageKey(storageKeyPrefix, STORAGE_KEYS.conversationListWidth);
   const [width, setWidth] = useState(() => readListWidth(widthKey));
+  // What this panel leaves the list: its bounds, the width drawn, or its rail.
+  const layout = listLayout(panelWidth, width);
   const resize = (next: number, commit: boolean) => {
+    next = Math.min(next, layout.max);
     setWidth(next);
     // The default width is no choice: nothing is kept for it.
     if (commit) writeStorage('local', widthKey, next === LIST_WIDTH.default ? null : String(next));
@@ -264,7 +333,16 @@ export const ConversationSidebar = ({
   // With the host's sections searched too, only the user's own conversations are known to match nothing.
   const noMatch = sectionsSearch ? t('None of your conversations matches') : t('No conversation matches');
   const matches = useMemo(() => (q ? (c: ChatConversationSummary) => conversationMatches(c, q) : undefined), [q]);
-  const filtered = useMemo(() => (matches ? conversations.filter(matches) : conversations), [conversations, matches]);
+  // A workspace that disappears (deleted, unshared) takes the filter back to every workspace.
+  const filter =
+    workspaces && (workspaceFilter === WORKSPACE_FILTER.none || workspaceFilter === WORKSPACE_FILTER.all || workspaces.list.some((w) => w.id === workspaceFilter))
+      ? workspaceFilter
+      : WORKSPACE_FILTER.all;
+  const filtering = filter !== WORKSPACE_FILTER.all;
+  const filtered = useMemo(
+    () => conversations.filter((c) => inWorkspaceFilter(c, filter) && (!matches || matches(c))),
+    [conversations, matches, filter],
+  );
   const grouped = useMemo(
     () => (workspaces ? groupConversations(conversations, workspaces.list, { matches }) : null),
     [conversations, workspaces, matches],
@@ -278,12 +356,29 @@ export const ConversationSidebar = ({
   // A conversation about to start in a workspace shows where it will be.
   const workspacesOpen = workspacesShown || creatingWorkspace || (!!workspaces?.pendingWorkspaceId && !activeConversationId);
   const workspaceNames = useMemo(() => new Map((workspaces?.list ?? []).map((w) => [w.id, w.name])), [workspaces]);
+  // One agent in the list (the default, filtered to one): no per-row agent icon.
+  const severalAgents = useMemo(() => showsSeveralAgents(conversations), [conversations]);
 
-  if (collapsed) {
+  // Collapsed, or no room beside a readable conversation: a 48 px rail of
+  // three icon buttons. Expand and Search are offered only where the list has
+  // room to open.
+  if (!overlay && (collapsed || layout.rail)) {
     return (
-      <div className="flex flex-col items-center gap-1 border-r chat-border-200/10 px-2 py-3 shrink-0">
-        <ChatIconButton label={t('Show conversations')} icon={<SidebarIcon size={20} />} aria-expanded={false} onClick={onToggleCollapsed} />
+      <div data-testid="filigran-chat-list-rail" className="flex w-12 shrink-0 flex-col items-center gap-1 border-r chat-border-200/10 py-3">
         <ChatIconButton label={t('New conversation')} icon={<EditIcon size={20} />} onClick={() => onNewChat()} />
+        {!layout.rail && (
+          <>
+            <ChatIconButton
+              label={t('Search conversations...')}
+              icon={<SearchIcon size={20} />}
+              onClick={() => {
+                setFocusSearch(true);
+                onToggleCollapsed();
+              }}
+            />
+            <ChatIconButton label={t('Show conversations')} icon={<SidebarIcon size={20} />} aria-expanded={false} onClick={onToggleCollapsed} />
+          </>
+        )}
       </div>
     );
   }
@@ -299,6 +394,8 @@ export const ConversationSidebar = ({
       onCommitRename={commitRename}
       onCancelRename={cancelRename}
       onStartRename={onRename ? startRename : undefined}
+      pinned={isPinned(c)}
+      onTogglePin={togglePin}
       onSelect={onSelect}
       onDelete={onDelete}
       fileable={workspaces ? fileable : undefined}
@@ -306,33 +403,86 @@ export const ConversationSidebar = ({
       actions={rowActions}
       channel={channelName(c.channel, channelLabel)}
       workspaceName={workspaces && c.workspaceId ? (workspaceNames.get(c.workspaceId) ?? t('Other workspaces')) : null}
+      showAgent={severalAgents}
+      generating={!!generatingConversationId && c.conversationId === generatingConversationId}
       t={t}
     />
   );
+  // Most recent first, cut by date under sticky 24 px headers (UX spec C).
+  const renderDated = (list: ChatConversationSummary[]) =>
+    groupByDate(list, new Date(), t, isPinned).map((group) => (
+      <div key={group.key} role="group" aria-label={group.label}>
+        <div className="sticky top-0 z-[1] flex h-6 items-center bg-elevation-default px-2 text-content-compact font-medium text-default-secondary">
+          {group.label}
+        </div>
+        {group.conversations.map(renderRow)}
+      </div>
+    ));
+
+  const workspaceFilterShown = !!workspaces && workspaces.list.length > 0;
 
   return (
-    <div className="relative shrink-0 flex flex-col border-r chat-border-200/10" style={{ width }}>
-      <ListResizeHandle width={width} onResize={resize} t={t} />
+    <div
+      className={`relative shrink-0 flex flex-col border-r chat-border-200/10 ${overlay ? 'h-full max-w-[85%] chat-surface-raised shadow-global-shadow' : ''}`}
+      style={{ width: overlay ? LIST_WIDTH.default : layout.width }}
+      data-testid={overlay ? 'filigran-chat-list-drawer-panel' : undefined}
+    >
+      {!overlay && <ListResizeHandle width={layout.width} max={layout.max} onResize={resize} t={t} />}
       <div className="flex items-center gap-1 px-3 py-3">
-        <Button priority="secondary" className="flex-1 justify-start" startIcon={<EditIcon size={16} />} onClick={() => onNewChat()}>
-          {t('New conversation')}
-        </Button>
+        {/* With the workspace filter beside it, the 260 px header has no room for the label
+            (it was cut to "New c"): the button is then the rail's icon button, named by its tooltip. */}
+        {workspaceFilterShown ? (
+          <ChatIconButton label={t('New conversation')} icon={<EditIcon size={20} />} priority="secondary" onClick={() => onNewChat()} />
+        ) : (
+          <Button priority="secondary" className="min-w-0 flex-1 justify-start" startIcon={<EditIcon size={16} />} onClick={() => onNewChat()}>
+            {t('New conversation')}
+          </Button>
+        )}
+        {workspaces && workspaceFilterShown && (
+          // The DS trigger sits in a wrapper span that keeps its content width in a
+          // flex row (Select.rfc.md 6.1): this box and its rule let it shrink, so the
+          // header fits the 220 px minimum list (UX round 1 B1, filigran-ui #523).
+          <div className="flex min-w-0 flex-1 [&>span]:min-w-0 [&>span]:flex-1" data-testid="filigran-chat-workspace-filter-box">
+          <Select value={filter} onValueChange={setWorkspaceFilter}>
+            <SelectTrigger aria-label={t('Filter by workspace')} data-testid="filigran-chat-workspace-filter" className="min-w-0 flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={WORKSPACE_FILTER.all}>{t('All workspaces')}</SelectItem>
+              <SelectItem value={WORKSPACE_FILTER.none}>{t('Not in a workspace')}</SelectItem>
+              {workspaces.list.map((w) => (
+                <SelectItem key={w.id} value={w.id}>
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          </div>
+        )}
         {headerActions}
         <ChatIconButton label={t('Hide conversations')} icon={<SidebarIcon size={20} />} aria-expanded onClick={onToggleCollapsed} />
       </div>
 
       {searchOffered && (
         <div className="px-3 pb-2">
+          {/* The design system's field (UX spec C): its clear cross and Escape both empty the query. */}
           <SearchField
+            size="sm"
             fullWidth
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              // An IME composing its text keeps its Escape.
-              if (e.key === 'Escape' && isComposing(e)) e.preventDefault();
+            ref={(el) => {
+              if (el && focusSearch) {
+                el.focus();
+                setFocusSearch(false);
+              }
             }}
+            onChange={(e) => setQuery(e.target.value)}
             onClear={() => setQuery('')}
             clearLabel={t('Clear search')}
+            onKeyDown={(e) => {
+              // Escape while an input method composes cancels the composition, not the search.
+              if (e.key === 'Escape' && isComposing(e)) e.preventDefault();
+            }}
             placeholder={t('Search conversations...')}
             aria-label={t('Search conversations...')}
           />
@@ -341,8 +491,12 @@ export const ConversationSidebar = ({
 
       <div className="flex-1 overflow-y-auto px-2 pb-3 filigran-chat-scrollable">
         {loading && conversations.length === 0 && (
-          <div className="px-3 py-2">
-            <Spinner size="sm" />
+          <div role="status" aria-busy="true" aria-label={t('Loading conversations')} data-testid="filigran-chat-list-loading">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex h-8 items-center px-2">
+                <Skeleton className={`h-3 ${i % 2 ? 'w-3/5' : 'w-4/5'}`} />
+              </div>
+            ))}
           </div>
         )}
 
@@ -350,14 +504,21 @@ export const ConversationSidebar = ({
           <ConversationListFailed onRetry={() => onRetry?.()} className="px-3 py-2" t={t} />
         ) : grouped && workspaces ? (
           <>
+            {/* Every conversation, most recent first; a drop here takes one out of its workspace. */}
+            <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
+              {renderDated(filtered)}
+              {noConversationYet && <p className="px-3 py-1.5 text-content-compact chat-text-muted-400/30">{t('No conversations yet')}</p>}
+            </DropZone>
+            {q && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
             {/*
-              Conversations first: the workspaces are one line above them,
-              opened on demand, the way a desktop assistant lists its
-              projects. Hidden while searching: the list below shows every
-              match, each naming its workspace.
+              The workspaces leave the top of the list (UX spec C): one folded
+              line under the conversations, opened on demand, where they are
+              created, renamed and started from; the header filter narrows the
+              list to one of them. Hidden while searching or filtering: the
+              list then shows every match, each naming its workspace.
             */}
-            {!q && (
-              <div className="mb-1">
+            {!q && !filtering && (
+              <div className="mt-2 border-t chat-border-200/10 pt-2">
                 <div className="group/wsh flex items-center gap-1 chat-radius-sm px-1.5 py-1 hover:chat-surface-hover-100/6">
                   <button
                     data-ds-exempt="disclosure-row"
@@ -425,22 +586,12 @@ export const ConversationSidebar = ({
                 )}
               </div>
             )}
-            {/* Every conversation, most recent first; a drop here takes one out of its workspace. */}
-            <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
-              <div className="flex items-center justify-between px-2 pb-1 pt-2">
-                <span className={sectionLabel}>{t('Conversations')}</span>
-                <ChatIconButton label={t('New conversation outside a workspace')} icon={<EditIcon size={16} />} size="sm" onClick={() => onNewChat()} />
-              </div>
-              {filtered.map(renderRow)}
-              {noConversationYet && <p className="px-3 py-1.5 text-content-compact chat-text-muted-400/30">{t('No conversations yet')}</p>}
-            </DropZone>
-            {q && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
           </>
         ) : (
           <>
             {!loading && conversations.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{t('No conversations yet')}</p>}
             {conversations.length > 0 && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
-            {filtered.map(renderRow)}
+            {renderDated(filtered)}
           </>
         )}
         {typeof sections === 'function' ? <HostSections draw={sections} query={search} /> : sections}
@@ -464,10 +615,13 @@ export const ConversationSidebar = ({
  */
 const ListResizeHandle = ({
   width,
+  max,
   onResize,
   t,
 }: {
   width: number;
+  /** The widest this panel lets the list be. */
+  max: number;
   /** `commit`: the gesture is over, the width is the one to keep. */
   onResize: (width: number, commit: boolean) => void;
   t: (key: string) => string;
@@ -489,7 +643,7 @@ const ListResizeHandle = ({
       aria-orientation="vertical"
       aria-label={t('Resize the conversation list')}
       aria-valuemin={LIST_WIDTH.min}
-      aria-valuemax={LIST_WIDTH.max}
+      aria-valuemax={max}
       aria-valuenow={width}
       tabIndex={0}
       onPointerDown={(e) => {
@@ -517,7 +671,7 @@ const ListResizeHandle = ({
               : e.key === 'Home'
                 ? LIST_WIDTH.min
                 : e.key === 'End'
-                  ? LIST_WIDTH.max
+                  ? max
                   : null;
         if (next === null) return;
         e.preventDefault();
@@ -793,6 +947,8 @@ const ConversationRow = ({
   onCommitRename,
   onCancelRename,
   onStartRename,
+  pinned = false,
+  onTogglePin,
   onSelect,
   onDelete,
   fileable,
@@ -800,6 +956,8 @@ const ConversationRow = ({
   actions,
   channel,
   workspaceName = null,
+  showAgent = false,
+  generating = false,
   t,
 }: {
   conversation: ChatConversationSummary;
@@ -810,6 +968,9 @@ const ConversationRow = ({
   onCommitRename: () => void;
   onCancelRename: () => void;
   onStartRename?: (id: string, current: string) => void;
+  /** Listed under Pinned: its menu offers Unpin instead of Pin. */
+  pinned?: boolean;
+  onTogglePin?: (id: string) => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   /** Workspaces the row can be moved into; omitted when there are no workspaces. */
@@ -820,15 +981,34 @@ const ConversationRow = ({
   channel: string | null;
   /** The workspace the conversation is filed in, said on its row; `null` for none. */
   workspaceName?: string | null;
+  /** Whether the row draws its agent's icon: only when the list mixes agents. */
+  showAgent?: boolean;
+  /** Its answer is being written: a small spinner ends the row (UX spec C). */
+  generating?: boolean;
   t: (key: string) => string;
 }) => {
-  const [moveOpen, setMoveOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const movable = !!fileable && !isEditing;
+  const shownTitle = rowTitle(c) || t('Untitled conversation');
+  // What the one-line row no longer spells out: the agent, the channel, the workspace, the time.
+  const hintExtra = [
+    c.agentName,
+    channel ? translate(t, 'Started in {channel}', { channel }) : null,
+    workspaceName,
+    c.updatedAt ? timeAgo(c.updatedAt, t) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const rowHint = hintExtra ? `${shownTitle}\n${hintExtra}` : shownTitle;
+  // Read out after the title: the last words and the details the tooltip shows.
+  const description = [c.title?.trim() ? c.lastMessagePreview?.trim() : null, hintExtra].filter(Boolean).join(' · ') || undefined;
   return (
     <div
       role="button"
       tabIndex={0}
       aria-current={isActive}
+      aria-description={description}
       draggable={movable}
       onDragStart={
         movable
@@ -848,17 +1028,18 @@ const ConversationRow = ({
           onSelect(c.conversationId);
         }
       }}
-      className={`group relative flex w-full items-start gap-2.5 chat-radius-sm px-2.5 py-2 text-left cursor-pointer transition-colors ${
-        isActive ? 'bg-[var(--chat-accent)]/10' : 'hover:chat-surface-hover-100/6'
+      // One 32 px line (UX spec C, 11 Nov 2026): the title, its agent's icon only
+      // when the list mixes agents; the agent, the channel and the workspace are
+      // said in the tooltip, never as a second line.
+      className={`group relative flex h-8 w-full items-center gap-2 chat-radius-sm px-2 text-left cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent)] ${
+        isActive ? 'bg-elevation-highlight text-default-primary font-medium' : 'text-default-secondary hover:bg-input-hover'
       }`}
     >
-      <span
-        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center chat-radius-sm ${
-          isActive ? 'bg-[var(--chat-accent)]/20 text-[var(--chat-accent)]' : 'chat-surface-subtle-100/6 chat-text-muted-400/30'
-        }`}
-      >
-        <RowAgentIcon icon={c.agentIcon} />
-      </span>
+      {showAgent && (
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">
+          <RowAgentIcon icon={c.agentIcon} />
+        </span>
+      )}
       <span className="min-w-0 flex-1">
         {isEditing ? (
           <Input
@@ -878,55 +1059,24 @@ const ConversationRow = ({
             aria-label={t('Conversation title')}
           />
         ) : (
-          // The whole title on hover when the row still cuts it.
-          <Tooltip title={c.title || t('Untitled conversation')} truncated>
-            <span className={`block min-w-0 truncate text-content-base ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
-              {c.title || t('Untitled conversation')}
-            </span>
+          // The whole title, and what the row no longer spells out, on hover.
+          <Tooltip title={rowHint} truncated={!hintExtra} className="flex min-w-0 max-w-full">
+            <span className="block min-w-0 truncate text-content-base">{shownTitle}</span>
           </Tooltip>
         )}
-        {/*
-          Agent before time, on one line: which agent a thread is with
-          is what tells two similarly-titled conversations apart, and
-          knowing it before opening one is the point. The agent is a pill
-          the eye finds without reading, the time stays whole beside it.
-          Omitted entirely when the backend does not report it, rather
-          than padded with a placeholder.
-        */}
-        {c.lastMessagePreview && !isEditing && (
-          <span className="block truncate text-content-compact chat-text-secondary-500/50">{c.lastMessagePreview}</span>
-        )}
-        {(c.agentName || c.updatedAt || channel || workspaceName) && !isEditing && (
-          <span className="flex min-w-0 items-center gap-1 text-content-compact chat-text-muted-400/30">
-            {channel && (
-              <Tooltip title={translate(t, 'Started in {channel}', { channel })}>
-                <span role="img" aria-label={translate(t, 'Started in {channel}', { channel })} className="flex shrink-0">
-                  <MessageSquareIcon size={10} />
-                </span>
-              </Tooltip>
-            )}
-            {workspaceName && (
-              // Never squeezed to an ellipsis alone (min-w), and the whole name on hover when cut.
-              <span className="flex min-w-[4.5rem] max-w-[50%] shrink items-center gap-0.5" data-testid="filigran-chat-row-workspace">
-                <FolderIcon size={10} className="shrink-0 text-[var(--chat-accent)]" />
-                <Tooltip title={workspaceName} truncated>
-                  <span className="min-w-0 truncate">{workspaceName}</span>
-                </Tooltip>
-              </span>
-            )}
-            {c.agentName && (
-              <Chip data-agent-pill="" label={c.agentName} className="min-w-0 max-w-full" />
-            )}
-            {c.updatedAt && <span className="shrink-0 whitespace-nowrap">{timeAgo(c.updatedAt, t)}</span>}
-          </span>
-        )}
       </span>
+      {generating && !isEditing && (
+        // Under the actions on hover: the More button takes the row's end then.
+        <Spinner size="sm" tone="inherit" label={t('Writing an answer')} className={`shrink-0 ${menuOpen ? 'hidden' : 'group-hover:hidden group-focus-within:hidden'}`} />
+      )}
       {!isEditing && (
-        // Over the row's end, not beside it: hidden, the actions keep no
-        // width, so the title and the agent pill take the whole row.
+        // At the row's end, in the flow: hidden, the actions keep no width, so the
+        // title takes the whole row; shown on hover or focus, they take their own
+        // room and the title truncates before them, never under them (UX round 1
+        // B2, filigran-ui #523). Focusing the row shows them, so Tab reaches them.
         <span
           data-row-actions=""
-          className="pointer-events-none absolute inset-y-0 right-1.5 my-auto flex h-fit chat-radius-sm border chat-border-200/10 chat-menu-surface opacity-0 shadow-global-shadow transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100"
+          className={`shrink-0 items-center gap-0.5 ${menuOpen ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'}`}
         >
           {actions && (
             // The row selects on click and on Enter/Space: the host's controls keep theirs.
@@ -934,70 +1084,80 @@ const ConversationRow = ({
               {actions(c)}
             </span>
           )}
-          {movable && (
-            // The design system's Menu, kept inside the panel's stacking context
-            // (portalled={false}) and non-modal, like the header's view switcher.
-            // The actions bar is centred without a transform, so the menu's
-            // fixed position is the viewport's, never clipped by the list.
-            <Menu open={moveOpen} onOpenChange={setMoveOpen} modal={false}>
-              <MenuTrigger asChild>
-                <ChatIconButton
-                  label={t('Move to workspace')}
-                  icon={<FolderInputIcon size={16} />}
-                  size="sm"
-                  tooltip={!moveOpen}
-                  active={moveOpen}
-                  // The row selects on click: the menu's trigger keeps its own.
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </MenuTrigger>
-              <MenuContent portalled={false} align="end" className="z-[10000]" onClick={(e) => e.stopPropagation()}>
-                <MenuLabel>{t('Move to workspace')}</MenuLabel>
-                {fileable.map((w) => (
-                  <MenuItem
-                    key={w.id}
-                    startIcon={<FolderIcon size={16} />}
-                    selected={w.id === c.workspaceId}
-                    disabled={w.id === c.workspaceId}
-                    onSelect={() => onMove(c.conversationId, w.id)}
-                  >
-                    {w.name}
-                  </MenuItem>
-                ))}
-                <MenuSeparator />
-                <MenuItem
-                  startIcon={<CloseIcon size={16} />}
-                  disabled={!c.workspaceId}
-                  onSelect={() => onMove(c.conversationId, null)}
-                >
-                  {t('Remove from workspace')}
+          {/* One 24 px More button (UX spec C, 11 Nov 2026): rename, move and
+              delete live in the design system's Menu, kept inside the panel's
+              stacking context (portalled={false}) and non-modal. */}
+          <Menu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
+            <MenuTrigger asChild>
+              <ChatIconButton
+                label={t('More actions')}
+                icon={<MoreIcon size={16} />}
+                size="sm"
+                tooltip={!menuOpen}
+                active={menuOpen}
+                // The row selects on click: the menu's trigger keeps its own.
+                onClick={(e) => e.stopPropagation()}
+              />
+            </MenuTrigger>
+            <MenuContent portalled={false} align="end" className="z-[10000]" onClick={(e) => e.stopPropagation()}>
+              {onStartRename && (
+                <MenuItem startIcon={<EditIcon size={16} />} onSelect={() => onStartRename(c.conversationId, c.title || '')}>
+                  {t('Rename conversation')}
                 </MenuItem>
-              </MenuContent>
-            </Menu>
-          )}
-          {onStartRename && (
-            <ChatIconButton
-              label={t('Rename conversation')}
-              icon={<EditIcon size={16} />}
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onStartRename(c.conversationId, c.title || '');
-              }}
-            />
-          )}
-          <ChatIconButton
-            label={t('Delete conversation')}
-            icon={<TrashIcon size={16} />}
-            variant="destructive"
-            size="sm"
-            onClick={(e) => {
-              // The row is the click target for selection, so deleting
-              // must not also open the conversation on its way out.
-              e.stopPropagation();
-              onDelete(c.conversationId);
-            }}
-          />
+              )}
+              {onTogglePin && (
+                <MenuItem startIcon={pinned ? <PinOffIcon size={16} /> : <PinIcon size={16} />} onSelect={() => onTogglePin(c.conversationId)}>
+                  {pinned ? t('Unpin conversation') : t('Pin conversation')}
+                </MenuItem>
+              )}
+              {movable && (
+                <>
+                  <MenuSeparator />
+                  <MenuLabel>{t('Move to workspace')}</MenuLabel>
+                  {fileable.map((w) => (
+                    <MenuItem
+                      key={w.id}
+                      startIcon={<FolderIcon size={16} />}
+                      selected={w.id === c.workspaceId}
+                      disabled={w.id === c.workspaceId}
+                      onSelect={() => onMove(c.conversationId, w.id)}
+                    >
+                      {w.name}
+                    </MenuItem>
+                  ))}
+                  <MenuItem startIcon={<CloseIcon size={16} />} disabled={!c.workspaceId} onSelect={() => onMove(c.conversationId, null)}>
+                    {t('Remove from workspace')}
+                  </MenuItem>
+                </>
+              )}
+              {(onStartRename || onTogglePin || movable) && <MenuSeparator />}
+              <MenuItem startIcon={<TrashIcon size={16} />} onSelect={() => setConfirmingDelete(true)}>
+                {t('Delete conversation')}
+              </MenuItem>
+            </MenuContent>
+          </Menu>
+          {/* Delete is confirmed in the design system's Dialog, never on one click. */}
+          <Dialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+            <DialogContent size="sm" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+              <DialogTitle>{t('Delete conversation?')}</DialogTitle>
+              <DialogDescription>{t('The conversation and its messages are deleted. This cannot be undone.')}</DialogDescription>
+              <DialogFooter>
+                <Button priority="secondary" size="sm" onClick={() => setConfirmingDelete(false)}>
+                  {t('Cancel')}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setConfirmingDelete(false);
+                    onDelete(c.conversationId);
+                  }}
+                >
+                  {t('Delete')}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </span>
       )}
     </div>

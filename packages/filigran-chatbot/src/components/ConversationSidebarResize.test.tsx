@@ -16,7 +16,7 @@ const { STORAGE_KEYS } = await import('../utils/storage.ts');
 
 const KEY = STORAGE_KEYS.conversationListWidth;
 
-async function mount(collapsed = false) {
+async function mount(collapsed = false, panelWidth: number | null = null) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -32,6 +32,7 @@ async function mount(collapsed = false) {
           onSelect={() => undefined}
           onDelete={() => undefined}
           onNewChat={() => undefined}
+          panelWidth={panelWidth}
           t={(key) => key}
         />,
       );
@@ -69,10 +70,10 @@ test('a drag on the edge resizes the list within its bounds and the width surviv
   const edge = first.handle()!;
   await act(async () => {
     fire(edge, 'pointerdown', { button: 0, clientX: 256, pointerId: 1 });
-    fire(edge, 'pointermove', { clientX: 356, pointerId: 1 });
+    fire(edge, 'pointermove', { clientX: 316, pointerId: 1 });
     await settle();
   });
-  assert.equal(first.list().style.width, '356px', 'follows the pointer');
+  assert.equal(first.list().style.width, `${LIST_WIDTH.default + 60}px`, 'follows the pointer');
   await act(async () => {
     fire(edge, 'pointermove', { clientX: 2000, pointerId: 1 });
     await settle();
@@ -93,9 +94,9 @@ test('a drag on the edge resizes the list within its bounds and the width surviv
 });
 
 test('a double-click on the edge puts the default width back and forgets the choice', async () => {
-  localStorage.setItem(KEY, '400');
+  localStorage.setItem(KEY, '300');
   const { list, handle, unmount } = await mount();
-  assert.equal(list().style.width, '400px');
+  assert.equal(list().style.width, '300px');
   await act(async () => {
     fire(handle()!, 'dblclick', {});
     await settle();
@@ -135,6 +136,25 @@ test('the list collapses and expands as before, at the width the user chose', as
   await draw(false);
   assert.equal(list().style.width, '320px');
   await unmount();
+});
+
+test('the panel bounds the list: a quarter of it at most, and the rail when the conversation would fall under 680 px', async () => {
+  localStorage.setItem(KEY, '360');
+  const narrow = await mount(false, 1280);
+  assert.equal(narrow.list().style.width, '320px', 'a quarter of 1280 px');
+  assert.equal(narrow.handle()!.getAttribute('aria-valuemax'), '320');
+  await narrow.unmount();
+  const tight = await mount(false, 880);
+  assert.equal(tight.handle(), null, 'no edge to drag on the rail');
+  assert.ok(tight.container.querySelector('[data-testid="filigran-chat-list-rail"]'));
+  assert.ok(tight.container.querySelector('[aria-label="New conversation"]'));
+  await tight.unmount();
+  const collapsed = await mount(true, 1920);
+  for (const label of ['New conversation', 'Search conversations...', 'Show conversations']) {
+    assert.ok(collapsed.container.querySelector(`[aria-label="${label}"]`), label);
+  }
+  await collapsed.unmount();
+  localStorage.removeItem(KEY);
 });
 
 test('a stored width out of bounds or unreadable is clamped or ignored', async () => {
