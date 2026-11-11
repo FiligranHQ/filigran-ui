@@ -1,3 +1,4 @@
+import { Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger } from '@filigran/design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, ChatPanelMode, Translate, XtmAgent } from '../types';
 import { groupAgents, timeAgo, translate } from '../utils';
@@ -563,39 +564,31 @@ export const ChatHeader = ({
       <ChatIconButton label={t('New chat')} icon={<EditIcon size={20} />} onClick={onNewChat} />
 
       {mode !== 'inline' && onModeChange && (
-        <>
-          <ChatIconButton
-            ref={modeAnchorRef}
-            label={t('Switch view')}
-            icon={<CurrentModeIcon size={20} />}
-            onClick={onModeMenuToggle}
-            aria-haspopup="menu"
-            aria-expanded={modeMenuOpen}
-            active={modeMenuOpen}
-          />
-
-          <Dropdown open={modeMenuOpen} onClose={onModeMenuClose} anchorRef={modeAnchorRef} placement="bottom-end" width={180}>
-            <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{t('Switch to')}</span>
-            <div className="pb-1">
-              {modeOptions.map((opt) => (
-                <button
-                  key={opt.mode}
-                  type="button"
-                  onClick={() => {
-                    onModeChange(opt.mode);
-                    onModeMenuClose();
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-1 text-left hover:chat-surface-hover-100/10 transition-colors ${
-                    mode === opt.mode ? 'bg-[var(--chat-accent)]/10' : ''
-                  }`}
-                >
-                  {opt.getIcon({ size: 18, className: 'chat-text-muted-400/40' })}
-                  <span className="text-[0.8125rem] chat-text-secondary-700/70">{opt.label(t)}</span>
-                </button>
-              ))}
-            </div>
-          </Dropdown>
-        </>
+        // The design system's Menu, kept inside the panel's stacking context
+        // (portalled={false}) and non-modal: the host page stays live beside the panel.
+        <Menu open={modeMenuOpen} onOpenChange={(open) => (open ? onModeMenuToggle() : onModeMenuClose())} modal={false}>
+          <MenuTrigger asChild>
+            <ChatIconButton
+              ref={modeAnchorRef}
+              label={t('Switch view')}
+              icon={<CurrentModeIcon size={20} />}
+              active={modeMenuOpen}
+            />
+          </MenuTrigger>
+          <MenuContent portalled={false} align="end" className="z-[10000]">
+            <MenuLabel>{t('Switch to')}</MenuLabel>
+            {modeOptions.map((opt) => (
+              <MenuItem
+                key={opt.mode}
+                startIcon={opt.getIcon({ size: 16, className: '' })}
+                selected={mode === opt.mode}
+                onSelect={() => onModeChange(opt.mode)}
+              >
+                {opt.label(t)}
+              </MenuItem>
+            ))}
+          </MenuContent>
+        </Menu>
       )}
       {mode !== 'inline' && onClose && (
         <>

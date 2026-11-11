@@ -41,6 +41,13 @@
 @source inline('no-underline whitespace-nowrap gap-2 text-content-button font-content-button font-semibold leading-content-button tracking-content-button data-[disabled]:pointer-events-none h-6 px-2 h-9 px-4 border disabled:bg-elevation-disabled disabled:text-default-primary disabled:border-transparent data-[disabled]:bg-elevation-disabled data-[disabled]:text-default-primary data-[disabled]:border-transparent disabled:text-default-disabled disabled:border-elevation-disabled data-[disabled]:text-default-disabled data-[disabled]:border-elevation-disabled aria-disabled:bg-elevation-disabled aria-disabled:text-default-primary aria-disabled:border-elevation-disabled bg-filigran-brand-primary text-negative-primary hover:bg-filigran-brand-tertiary active:bg-filigran-brand-tertiary border-filigran-brand-primary-transparency-55 text-filigran-brand-primary bg-feedback-error-primary hover:bg-feedback-error-tertiary active:bg-feedback-error-tertiary border-feedback-error-primary');
 
 /*
+ * The classes @filigran/design-system's <Menu> renders (MenuContent,
+ * MenuItem, MenuLabel): the panel surface, the 36 px row, its hover, selected
+ * and disabled states, the caption label.
+ */
+@source inline('group/menu-item relative flex min-h-9 w-full cursor-pointer select-none items-end items-center gap-2 px-2 px-4 py-1 pb-1 h-8 text-left outline-none font-content-base text-content-base leading-content-base tracking-content-base font-content-caption text-content-caption leading-content-caption tracking-content-caption text-input-value text-default-secondary data-[highlighted]:bg-input-hover data-[selected]:bg-input-hover data-[state=open]:bg-input-hover data-[disabled]:pointer-events-none data-[disabled]:text-input-disabled group-data-[highlighted]/menu-item:text-default-primary group-data-[disabled]/menu-item:text-default-disabled ring-focus focus-visible:z-10 rounded-sm bg-elevation-highlight min-w-50 max-w-75 shadow-global-shadow max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-x-hidden overflow-y-auto opacity-0 transition-opacity duration-150 motion-reduce:transition-none data-[state=open]:opacity-100 data-[state=closed]:opacity-0 z-[10000]');
+
+/*
  * The classes @filigran/design-system's <Chip> renders for the welcome screen's
  * suggestions (neutral, clickable, md, no delete): its fill and the stacked
  * hover and focus layer, its box, its label cut, its focus ring.
@@ -69,6 +76,21 @@
   --color-filigran-brand-primary-transparency-55: var(--color-filigran-brand-primary-transparency-55, color-mix(in srgb, var(--chat-accent) 55%, transparent));
   --color-feedback-error-tertiary: var(--color-feedback-error-tertiary, color-mix(in srgb, var(--chat-danger) 85%, black));
   --color-negative-primary: var(--text-negative-primary, var(--color-white));
+  /* The design system Menu (the view switcher): its panel, row hover, row text and label. */
+  --color-elevation-highlight: var(--bg-elevation-highlight, var(--filigran-chat-surface-raised, var(--chat-default-menu-surface)));
+  --color-input-hover: var(--bg-input-hover, var(--filigran-chat-surface-hover, var(--chat-default-icon-hover)));
+  --color-input-value: var(--text-input-value, currentColor);
+  --color-input-disabled: var(--text-input-disabled, color-mix(in oklab, currentColor 40%, transparent));
+  --color-default-secondary: var(--text-default-secondary, color-mix(in oklab, currentColor 70%, transparent));
+  --shadow-global-shadow: var(--shadow-global-shadow, 0px 2px 4px 0px #00000066);
+  --text-content-base: var(--text-content-base, 0.875rem);
+  --font-content-base: var(--font-content-base, inherit);
+  --leading-content-base: var(--leading-content-base, 1.5);
+  --tracking-content-base: var(--tracking-content-base, normal);
+  --text-content-caption: var(--text-content-caption, 0.75rem);
+  --font-content-caption: var(--font-content-caption, inherit);
+  --leading-content-caption: var(--leading-content-caption, 1.5);
+  --tracking-content-caption: var(--tracking-content-caption, normal);
   --color-default-primary: var(--text-default-primary, currentColor);
   --color-default-disabled: var(--text-default-disabled, color-mix(in oklab, currentColor 40%, transparent));
   /* One name for the DS's two disabled tokens: the fill (--bg-) and the border (--border-elevation-disabled) share it. */

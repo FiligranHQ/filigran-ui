@@ -173,6 +173,11 @@ test("the design system IconButton's classes compile inside the panel, reading t
     ['hover\\\\:bg-filigran-brand-tertiary', 'background-color', '--color-filigran-brand-tertiary'],
     ['border-filigran-brand-primary-transparency-55', 'border-color', '--color-filigran-brand-primary-transparency-55'],
     ['text-content-button', 'font-size', '--text-content-button'],
+    // The design system Menu of the view switcher (chatbot 3.23.0, slice 2).
+    ['bg-elevation-highlight', 'background-color', '--bg-elevation-highlight'],
+    ['data-\\\\\\[highlighted\\\\\\]\\\\:bg-input-hover', 'background-color', '--bg-input-hover'],
+    ['text-input-value', 'color', '--text-input-value'],
+    ['min-h-9', 'min-height', null],
   ]) {
     const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
     assert.ok(matching.length > 0, `.${name} is compiled`);
