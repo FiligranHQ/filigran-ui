@@ -114,6 +114,19 @@ for (const file of TEXT_BUTTONS) {
   });
 }
 
+// Files whose remaining raw <button>s are only audited exemptions: a combobox
+// trigger, listbox options and two-action rows the DS Menu cannot hold. Each
+// says why as its first attribute and has a row in the audit table.
+const EXEMPT_ONLY = ['ChatHeader.tsx'];
+
+for (const file of EXEMPT_ONLY) {
+  test(`${file} draws a raw <button> only as an audited data-ds-exempt row`, () => {
+    const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /<button(?!\s+data-ds-exempt="[^"]+")/, 'a raw <button> without data-ds-exempt is left');
+    assert.match(source, /from '@filigran\/design-system'/);
+  });
+}
+
 for (const file of MIGRATED) {
   test(`${file} draws no hand-styled icon button: every icon-only control goes through ChatIconButton`, () => {
     // A button that is not an icon-only control (the voice call's avatar) says so

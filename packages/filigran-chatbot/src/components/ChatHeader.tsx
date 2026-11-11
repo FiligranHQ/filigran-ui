@@ -1,4 +1,4 @@
-import { Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger } from '@filigran/design-system';
+import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger } from '@filigran/design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, ChatPanelMode, Translate, XtmAgent } from '../types';
 import { groupAgents, timeAgo, translate } from '../utils';
@@ -102,7 +102,10 @@ const modeOptions: { mode: ChatMode; label: (t: Translate) => string; getIcon: (
   { mode: 'fullscreen', label: (t) => t('Full screen'), getIcon: (p) => <FullscreenIcon {...p} /> },
 ];
 
-const menuItem = 'w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover-100/10 transition-colors';
+// The footer actions of the panel's own menus (the agent switcher, the history)
+// are the design system's tertiary Button, full width and start aligned: those
+// menus hold a search field and two-action rows, which the DS Menu cannot.
+const footerAction = 'w-full justify-start';
 
 /**
  * The switcher's "Open agent page" item: the address followed in place, unless
@@ -110,40 +113,38 @@ const menuItem = 'w-full flex items-center gap-2 px-4 py-1.5 text-left hover:cha
  * opens the address as the browser does. The menu closes either way.
  */
 const AgentPageItem = ({ link, onDone, t }: { link: { href?: string; onClick?: () => void }; onDone: () => void; t: Translate }) => {
-  const content = (
-    <>
-      <BotIcon size={18} className="chat-text-muted-400/40 shrink-0" />
-      <span className="text-[0.8125rem] chat-text-secondary-700/70">{t('Open agent page')}</span>
-    </>
-  );
   if (!link.href) {
     return (
-      <button
-        type="button"
+      <Button
+        priority="tertiary"
+        size="sm"
+        startIcon={<BotIcon size={16} />}
         onClick={() => {
           onDone();
           link.onClick?.();
         }}
-        className={menuItem}
+        className={footerAction}
       >
-        {content}
-      </button>
+        {t('Open agent page')}
+      </Button>
     );
   }
   return (
-    <a
-      href={link.href}
-      data-testid="filigran-chat-agent-page-link"
-      onClick={(e) => {
-        onDone();
-        if (!link.onClick || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-        e.preventDefault();
-        link.onClick();
-      }}
-      className={menuItem}
-    >
-      {content}
-    </a>
+    <Button asChild priority="tertiary" size="sm" className={footerAction}>
+      <a
+        href={link.href}
+        data-testid="filigran-chat-agent-page-link"
+        onClick={(e) => {
+          onDone();
+          if (!link.onClick || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          e.preventDefault();
+          link.onClick();
+        }}
+      >
+        <BotIcon size={16} className="shrink-0" />
+        {t('Open agent page')}
+      </a>
+    </Button>
   );
 };
 
@@ -277,6 +278,7 @@ export const ChatHeader = ({
               agent's page is an item of the menu, never this click. */}
           <Tooltip title={agentMenuOpen ? '' : t('Switch to another agent')} className="inline-flex min-w-0 max-w-full">
           <button
+            data-ds-exempt="agent-switcher-combobox-trigger"
             ref={agentAnchorRef}
             type="button"
             onClick={onAgentMenuToggle}
@@ -399,6 +401,7 @@ export const ChatHeader = ({
                 const isActive = index === activeAgentIndex;
                 return (
                 <button
+                  data-ds-exempt="agent-listbox-option"
                   key={agent.id}
                   id={`filigran-chat-agent-option-${agent.id}`}
                   type="button"
@@ -444,33 +447,35 @@ export const ChatHeader = ({
           ))}
         </div>
         <div className="h-px chat-border-fill-200/10 mx-2" />
-        <div>
+        <div className="flex flex-col p-1">
           {agentLink && <AgentPageItem link={agentLink} onDone={onAgentMenuClose} t={t} />}
           {agentDashboardUrl && (
-            <button
-              type="button"
+            <Button
+              priority="tertiary"
+              size="sm"
+              startIcon={<ExternalLinkIcon size={16} />}
               onClick={() => {
                 onAgentMenuClose();
                 window.open(`${agentDashboardUrl}/agents`, '_blank');
               }}
-              className="w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover-100/10 transition-colors"
+              className={footerAction}
             >
-              <ExternalLinkIcon size={18} className="chat-text-muted-400/40 shrink-0" />
-              <span className="text-[0.8125rem] chat-text-secondary-700/70">{t('Browse agents')}</span>
-            </button>
+              {t('Browse agents')}
+            </Button>
           )}
           {agentDashboardUrl && (
-            <button
-              type="button"
+            <Button
+              priority="tertiary"
+              size="sm"
+              startIcon={<UserPlusIcon size={16} />}
               onClick={() => {
                 onAgentMenuClose();
                 window.open(`${agentDashboardUrl}/agents/new`, '_blank');
               }}
-              className="w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover-100/10 transition-colors"
+              className={footerAction}
             >
-              <UserPlusIcon size={18} className="chat-text-muted-400/40 shrink-0" />
-              <span className="text-[0.8125rem] chat-text-secondary-700/70">{t('Create agent')}</span>
-            </button>
+              {t('Create agent')}
+            </Button>
           )}
         </div>
       </Dropdown>
@@ -514,7 +519,12 @@ export const ChatHeader = ({
                       isActive ? 'bg-[var(--chat-accent)]/10' : ''
                     }`}
                   >
-                    <button type="button" onClick={() => onSelectConversation?.(conv.conversationId)} className="flex-1 min-w-0 text-left">
+                    <button
+                      data-ds-exempt="history-two-action-row"
+                      type="button"
+                      onClick={() => onSelectConversation?.(conv.conversationId)}
+                      className="flex-1 min-w-0 text-left"
+                    >
                       <div className="text-[0.8125rem] font-medium chat-text-900/100 truncate">{conv.title || t('Untitled conversation')}</div>
                       {when && <div className="text-[0.7rem] chat-text-muted-500/40 truncate">{when}</div>}
                     </button>
@@ -533,17 +543,20 @@ export const ChatHeader = ({
               })}
             </div>
             <div className="h-px chat-border-fill-200/10 mx-2" />
-            <button
-              type="button"
-              onClick={() => {
-                onHistoryMenuClose?.();
-                onNewChat();
-              }}
-              className="w-full flex items-center gap-2 px-4 py-2 text-left hover:chat-surface-hover-100/10 transition-colors"
-            >
-              <EditIcon size={16} className="chat-text-muted-400/40 shrink-0" />
-              <span className="text-[0.8125rem] chat-text-secondary-700/70">{t('New conversation')}</span>
-            </button>
+            <div className="p-1">
+              <Button
+                priority="tertiary"
+                size="sm"
+                startIcon={<EditIcon size={16} />}
+                onClick={() => {
+                  onHistoryMenuClose?.();
+                  onNewChat();
+                }}
+                className={footerAction}
+              >
+                {t('New conversation')}
+              </Button>
+            </div>
             {onClearAll && conversations.length > 0 && (
               <ClearAllConversations
                 onClear={() => {
