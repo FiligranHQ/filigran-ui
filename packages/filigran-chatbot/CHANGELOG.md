@@ -8,6 +8,25 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## Unreleased
+
+### Added
+
+- `theme.menuSurface` (`--filigran-chat-menu-surface`): the menus' own fill, so a host pairs it with
+  `surfaceHover` and the keyboard-active row of the agent switcher reads in dark as in light
+  (XTM-One-Platform/xtm-one#10910).
+- `theme.menuActiveBorder` (`--filigran-chat-menu-active-border`): a 2px left track on the
+  keyboard-active row of the agent switcher, `--border-input-hover` by default, so the row reads at
+  3:1 or more against the menu whatever the hover fill (XTM-One-Platform/xtm-one#10910).
+
+### Fixed
+
+- With no agent list (`apiEndpoints.agents: null`) and no agent page or dashboard link, the header draws the
+  agent as a label: no chevron and no dead-end "Agent switching is not available here" popover.
+- The left track of the keyboard-active agent row now draws: the active rule sets the track colour as a
+  variable the row's border reads, so the row's own `border-left` shorthand no longer resets it to
+  transparent when the stylesheet emits it later (XTM-One-Platform/xtm-one#10910).
+
 ## 3.24.1 — 2026-11-11
 
 ### Fixed

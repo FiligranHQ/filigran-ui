@@ -431,6 +431,9 @@ test('the agent switcher filters as you type, walks with the arrow keys and swit
   await key('ArrowDown');
   const active = document.body.querySelector('[role="option"][data-active="true"]');
   assert.ok(active && !active.textContent?.startsWith('Hunter'), 'the arrow key moves off the current agent');
+  assert.ok(active.classList.contains('chat-menu-row-active'), 'the keyboard-active row draws its left track');
+  const rest = document.body.querySelector('[role="option"]:not([data-active])');
+  assert.ok(rest && rest.classList.contains('chat-menu-row') && !rest.classList.contains('chat-menu-row-active'), 'a row at rest keeps a transparent track');
   const target = active.textContent!;
   await key('Enter');
   assert.equal(changed.length, 1, 'Enter switches');

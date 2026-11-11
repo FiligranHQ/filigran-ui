@@ -328,3 +328,28 @@ test('no raw text input in a component: the design-system Input only', () => {
   });
   assert.deepEqual(offending, []);
 });
+
+// UX round 2 of filigran-ui#530 (B1): the keyboard-active agent row drew no left track, because
+// .chat-menu-row (border-left shorthand) and .chat-menu-row-active have the same specificity and the
+// base was emitted after the active rule. The active rule sets only the track variable the base
+// reads, so the track draws whatever the order of the two rules in the built stylesheet.
+test('the keyboard-active menu row draws its left track whatever the order of the two utilities', () => {
+  const declaring = (name) => rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
+  const base = declaring('chat-menu-row');
+  const active = declaring('chat-menu-row-active');
+  assert.ok(base.length > 0 && active.length > 0, 'both menu row utilities are compiled');
+  const decls = (list) => list.flatMap((rule) => rule.nodes.filter((node) => node.type === 'decl'));
+  assert.ok(
+    decls(base).some((decl) => decl.prop === 'border-left' && decl.value.includes('var(--chat-menu-row-track, transparent)')),
+    'the base row reads its track colour from --chat-menu-row-track, transparent at rest',
+  );
+  assert.ok(
+    decls(active).some((decl) => decl.prop === '--chat-menu-row-track' && decl.value.includes('var(--filigran-chat-menu-active-border,')),
+    'the active row sets the track variable from the menuActiveBorder theme entry',
+  );
+  assert.deepEqual(
+    decls(active).filter((decl) => decl.prop.startsWith('border')).map((decl) => decl.prop),
+    [],
+    'the active row declares no border property the base shorthand could reset',
+  );
+});
