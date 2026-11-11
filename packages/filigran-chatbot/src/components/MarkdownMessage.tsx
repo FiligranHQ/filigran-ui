@@ -184,16 +184,20 @@ const MARKDOWN_COMPONENTS: Components = {
   // without them every list renders as unmarked, indented prose.
   // A nested list sits tight under its item, and a bullet list one level down
   // takes a circle so the levels read apart. A GFM task list has no bullets:
-  // its checkboxes are the markers.
+  // its checkboxes are the markers. Nested under an item, it would inherit the
+  // circle of `[&_ul]` (a more specific rule than its own `list-none`) and sit
+  // 16 px left of its sibling lists: `[&_ul.contains-task-list]` wins over both,
+  // no marker and the 20 px indent of every nested list. The element keeps
+  // remark-gfm's `contains-task-list` class so that selector can match it.
   ul: ({ className, children }) => (
     <ul
-      className={`${className?.includes('contains-task-list') ? 'list-none pl-1' : 'list-disc pl-5'} mb-3 chat-answer-text [&_li]:mb-1 [&_ul]:list-[circle] [&_ul]:mt-1 [&_ul]:mb-1 [&_ol]:mt-1 [&_ol]:mb-1 marker:text-[var(--chat-accent)]/50`}
+      className={`${className?.includes('contains-task-list') ? 'contains-task-list list-none pl-1' : 'list-disc pl-5'} mb-3 chat-answer-text [&_li]:mb-1 [&_ul]:list-[circle] [&_ul.contains-task-list]:list-none [&_ul.contains-task-list]:pl-5 [&_ul]:mt-1 [&_ul]:mb-1 [&_ol]:mt-1 [&_ol]:mb-1 marker:text-[var(--chat-accent)]/50`}
     >
       {children}
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal pl-5 mb-3 chat-answer-text [&_li]:mb-1 [&_ul]:mt-1 [&_ul]:mb-1 [&_ol]:mt-1 [&_ol]:mb-1 marker:text-[var(--chat-accent)]/50">
+    <ol className="list-decimal pl-5 mb-3 chat-answer-text [&_li]:mb-1 [&_ul.contains-task-list]:list-none [&_ul.contains-task-list]:pl-5 [&_ul]:mt-1 [&_ul]:mb-1 [&_ol]:mt-1 [&_ol]:mb-1 marker:text-[var(--chat-accent)]/50">
       {children}
     </ol>
   ),

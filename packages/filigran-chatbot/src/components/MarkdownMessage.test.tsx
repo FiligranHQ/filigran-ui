@@ -94,6 +94,23 @@ test('nested lists, task lists, quotes and footnotes render', async () => {
   assert.ok(container.querySelector('section.footnotes, section [id*="fn"]') || container.querySelector('sup a'));
 });
 
+test('a task list under a list item has no bullet and the indent of its sibling nested lists', async () => {
+  const container = await render(['- Level one', '  - Level two', '- Task list:', '  - [x] Indicators reviewed', '  - [ ] Rule deployed'].join('\n'));
+  const outer = container.querySelector('ul')!;
+  const nested = [...outer.querySelectorAll<HTMLUListElement>(':scope > li > ul')];
+  assert.equal(nested.length, 2);
+  const [bullets, tasks] = nested;
+  assert.ok(!bullets.classList.contains('contains-task-list'));
+  // The class the parent's override selects on stays on the task list.
+  assert.ok(tasks.classList.contains('contains-task-list'));
+  assert.ok(tasks.querySelectorAll('input[type="checkbox"]').length === 2);
+  // The parent overrides its own circle for a task list, at the sibling indent.
+  const parent = outer.className.split(/\s+/);
+  assert.ok(parent.includes('[&_ul]:list-[circle]'));
+  assert.ok(parent.includes('[&_ul.contains-task-list]:list-none'));
+  assert.ok(parent.includes('[&_ul.contains-task-list]:pl-5'));
+});
+
 test('every fenced block is coloured, labelled by its language and has a copy button', async () => {
   const container = await render(MESSAGE);
   const blocks = [...container.querySelectorAll<HTMLElement>('code[data-language]')];
