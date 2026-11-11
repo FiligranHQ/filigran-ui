@@ -12,15 +12,15 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Fixed
 
-- The one footer line under the composer (the disclaimer or the turn's
-  status) no longer adds an opacity over the muted text token: in the light
-  theme it measured 3.7:1 against the panel, under the 4.5:1 floor.
-- A turn the backend ends with a system `error` frame (`reason` `interrupted`: a
-  platform restart cut it; `lost`: its runner vanished) no longer writes the
-  frame's notice ("The response was interrupted before it completed.") into the
-  answer bubble: what was streamed stays, an empty bubble goes, and the host's
-  interrupted-turn card says the rest once the stored reply is read back. The
-  parsed `error` action now carries `reason`. A real agent error is unchanged.
+- The remove button of a file waiting in the composer says "Remove <file>" in
+  the panel's tooltip on hover and on keyboard focus, as every other icon
+  button of the panel (#10910). `Tooltip` takes `forSelector` to name one
+  control drawn inside a design-system component.
+- A single picture in a message no longer moves the bubble when it arrives:
+  its placeholder and its frame share one box, the picture's own size fitted
+  in 280 x 240 px once seen in the page, else 280 x 158 (16:9), the picture
+  shown inside it with its aspect ratio (#10910; before, a 240 x 180
+  placeholder became 280 x 160 and the bubble jumped by 20 px).
 
 ## 3.23.1 — 2026-11-11
 
