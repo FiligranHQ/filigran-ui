@@ -551,7 +551,6 @@ export const ChatHeader = ({
                 }}
                 action={clearAllAction}
                 className="px-3 pb-2"
-                iconButtonClass="p-1 chat-radius-sm chat-text-muted-400/40 hover:chat-surface-hover-100/10 transition-colors"
                 t={t}
               />
             )}

@@ -27,6 +27,7 @@ import {
 } from './icons';
 import { Spinner } from './Spinner';
 import { ChatNotice } from './ChatNotice';
+import { ChatIconButton } from './ChatIconButton';
 import { Tooltip } from './Tooltip';
 
 /**
@@ -132,7 +133,6 @@ function readListWidth(key: string): number {
   return Number.isNaN(parsed) ? LIST_WIDTH.default : clampListWidth(parsed);
 }
 
-const iconButton = 'p-1 chat-radius-sm chat-text-muted-400/30 hover:chat-icon-hover transition-colors disabled:opacity-40 disabled:pointer-events-none';
 const sectionLabel = 'text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40';
 
 /**
@@ -284,27 +284,8 @@ export const ConversationSidebar = ({
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1 border-r chat-border-200/10 px-2 py-3 shrink-0">
-        <Tooltip title={t('Show conversations')}>
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label={t('Show conversations')}
-            aria-expanded={false}
-            className="w-8 h-8 flex items-center justify-center chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
-          >
-            <SidebarIcon size={17} />
-          </button>
-        </Tooltip>
-        <Tooltip title={t('New conversation')}>
-          <button
-            type="button"
-            onClick={() => onNewChat()}
-            aria-label={t('New conversation')}
-            className="w-8 h-8 flex items-center justify-center chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
-          >
-            <EditIcon size={17} />
-          </button>
-        </Tooltip>
+        <ChatIconButton label={t('Show conversations')} icon={<SidebarIcon size={20} />} aria-expanded={false} onClick={onToggleCollapsed} />
+        <ChatIconButton label={t('New conversation')} icon={<EditIcon size={20} />} onClick={() => onNewChat()} />
       </div>
     );
   }
@@ -344,17 +325,7 @@ export const ConversationSidebar = ({
           {t('New conversation')}
         </button>
         {headerActions}
-        <Tooltip title={t('Hide conversations')}>
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label={t('Hide conversations')}
-            aria-expanded
-            className="w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
-          >
-            <SidebarIcon size={17} />
-          </button>
-        </Tooltip>
+        <ChatIconButton label={t('Hide conversations')} icon={<SidebarIcon size={20} />} aria-expanded onClick={onToggleCollapsed} />
       </div>
 
       {searchOffered && (
@@ -407,19 +378,15 @@ export const ConversationSidebar = ({
                     <span className="truncate text-[0.8125rem] font-medium chat-text-800/80">{t('Workspaces')}</span>
                     <span className="ml-auto shrink-0 pr-1 text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.groups.length}</span>
                   </button>
-                  <Tooltip title={t('New workspace')}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        showWorkspaces(true);
-                        setCreatingWorkspace(true);
-                      }}
-                      aria-label={t('New workspace')}
-                      className={iconButton}
-                    >
-                      <FolderPlusIcon size={14} />
-                    </button>
-                  </Tooltip>
+                  <ChatIconButton
+                    label={t('New workspace')}
+                    icon={<FolderPlusIcon size={16} />}
+                    size="sm"
+                    onClick={() => {
+                      showWorkspaces(true);
+                      setCreatingWorkspace(true);
+                    }}
+                  />
                 </div>
                 {workspacesOpen && (
                   <div className="pl-2">
@@ -469,11 +436,7 @@ export const ConversationSidebar = ({
             <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
               <div className="flex items-center justify-between px-2 pb-1 pt-2">
                 <span className={sectionLabel}>{t('Conversations')}</span>
-                <Tooltip title={t('New conversation outside a workspace')}>
-                  <button type="button" onClick={() => onNewChat()} aria-label={t('New conversation outside a workspace')} className={iconButton}>
-                    <EditIcon size={13} />
-                  </button>
-                </Tooltip>
+                <ChatIconButton label={t('New conversation outside a workspace')} icon={<EditIcon size={16} />} size="sm" onClick={() => onNewChat()} />
               </div>
               {filtered.map(renderRow)}
               {noConversationYet && <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">{t('No conversations yet')}</p>}
@@ -489,7 +452,7 @@ export const ConversationSidebar = ({
         )}
         {typeof sections === 'function' ? <HostSections draw={sections} query={search} /> : sections}
         {onClearAll && conversations.length > 0 && !q && (
-          <ClearAllConversations onClear={onClearAll} action={clearAllAction} className="px-2 pt-3" iconButtonClass={iconButton} t={t} />
+          <ClearAllConversations onClear={onClearAll} action={clearAllAction} className="px-2 pt-3" t={t} />
         )}
       </div>
 
@@ -767,50 +730,31 @@ const WorkspaceGroupSection = ({
             {confirmingDelete ? (
               <>
                 <span className="px-1 text-[0.65rem] text-red-600 dark:text-red-400">{t('Delete?')}</span>
-                <button
-                  type="button"
+                <ChatIconButton
+                  label={t('Delete workspace')}
+                  icon={<CheckIcon size={16} />}
+                  variant="destructive"
+                  size="sm"
                   onClick={() => {
                     setConfirmingDelete(false);
                     onDelete(workspace.id);
                   }}
-                  aria-label={t('Delete workspace')}
-                  className={`${iconButton} hover:text-red-500`}
-                >
-                  <CheckIcon size={13} />
-                </button>
-                <button type="button" onClick={() => setConfirmingDelete(false)} aria-label={t('Cancel')} className={iconButton}>
-                  <CloseIcon size={13} />
-                </button>
+                />
+                <ChatIconButton label={t('Cancel')} icon={<CloseIcon size={16} />} size="sm" onClick={() => setConfirmingDelete(false)} />
               </>
             ) : (
               <>
-                <Tooltip title={t('New conversation in this workspace')}>
-                  <button
-                    type="button"
-                    onClick={() => onNewChat(workspace.id)}
-                    aria-label={t('New conversation in this workspace')}
-                    className={iconButton}
-                  >
-                    <EditIcon size={13} />
-                  </button>
-                </Tooltip>
-                <Tooltip title={t('Rename workspace')}>
-                  <button type="button" onClick={() => setRenaming(true)} aria-label={t('Rename workspace')} className={iconButton}>
-                    <PencilIcon size={13} />
-                  </button>
-                </Tooltip>
+                <ChatIconButton label={t('New conversation in this workspace')} icon={<EditIcon size={16} />} size="sm" onClick={() => onNewChat(workspace.id)} />
+                <ChatIconButton label={t('Rename workspace')} icon={<PencilIcon size={16} />} size="sm" onClick={() => setRenaming(true)} />
                 {/* The default cannot be deleted: every person keeps one. */}
                 {!workspace.isDefault && (
-                  <Tooltip title={t('Delete workspace')}>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingDelete(true)}
-                      aria-label={t('Delete workspace')}
-                      className={`${iconButton} hover:text-red-500`}
-                    >
-                      <TrashIcon size={13} />
-                    </button>
-                  </Tooltip>
+                  <ChatIconButton
+                    label={t('Delete workspace')}
+                    icon={<TrashIcon size={16} />}
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setConfirmingDelete(true)}
+                  />
                 )}
               </>
             )}
@@ -1007,21 +951,20 @@ const ConversationRow = ({
           )}
           {movable && (
             <>
-              <Tooltip title={moveOpen ? '' : t('Move to workspace')}>
-                <button
-                  ref={moveAnchor}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMoveOpen((v) => !v);
-                  }}
-                  aria-label={t('Move to workspace')}
-                  aria-expanded={moveOpen}
-                  className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
-                >
-                  <FolderInputIcon size={13} />
-                </button>
-              </Tooltip>
+              <ChatIconButton
+                ref={moveAnchor}
+                label={t('Move to workspace')}
+                icon={<FolderInputIcon size={16} />}
+                size="sm"
+                tooltip={!moveOpen}
+                active={moveOpen}
+                aria-haspopup="menu"
+                aria-expanded={moveOpen}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMoveOpen((v) => !v);
+                }}
+              />
               <Dropdown open={moveOpen} onClose={() => setMoveOpen(false)} anchorRef={moveAnchor} placement="bottom-end" width={220}>
                 <div className="py-1" onClick={(e) => e.stopPropagation()}>
                   <p className="px-3 pb-1 pt-1.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40">
@@ -1061,35 +1004,28 @@ const ConversationRow = ({
             </>
           )}
           {onStartRename && (
-            <Tooltip title={t('Rename conversation')}>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStartRename(c.conversationId, c.title || '');
-                }}
-                aria-label={t('Rename conversation')}
-                className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
-              >
-                <EditIcon size={13} />
-              </button>
-            </Tooltip>
-          )}
-          <Tooltip title={t('Delete conversation')}>
-            <button
-              type="button"
+            <ChatIconButton
+              label={t('Rename conversation')}
+              icon={<EditIcon size={16} />}
+              size="sm"
               onClick={(e) => {
-                // The row is the click target for selection, so deleting
-                // must not also open the conversation on its way out.
                 e.stopPropagation();
-                onDelete(c.conversationId);
+                onStartRename(c.conversationId, c.title || '');
               }}
-              aria-label={t('Delete conversation')}
-              className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-red-500 dark:hover:text-red-400"
-            >
-              <TrashIcon size={13} />
-            </button>
-          </Tooltip>
+            />
+          )}
+          <ChatIconButton
+            label={t('Delete conversation')}
+            icon={<TrashIcon size={16} />}
+            variant="destructive"
+            size="sm"
+            onClick={(e) => {
+              // The row is the click target for selection, so deleting
+              // must not also open the conversation on its way out.
+              e.stopPropagation();
+              onDelete(c.conversationId);
+            }}
+          />
         </span>
       )}
     </div>

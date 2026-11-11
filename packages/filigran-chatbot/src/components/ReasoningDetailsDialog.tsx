@@ -12,6 +12,7 @@ import {
   XCircleIcon,
 } from './icons';
 import { cleanReasoningText, hostToolLabel } from './ChatThinking';
+import { ChatIconButton } from './ChatIconButton';
 import { ChatNotice } from './ChatNotice';
 import { findChatbotRoot, translate } from '../utils';
 
@@ -199,15 +200,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
                 <div className="flex items-center gap-2">
                   <WrenchIcon size={15} className="text-[var(--chat-accent)]" />
                   <span className="flex-1 text-[0.875rem] font-semibold chat-text-900/100">{t('Reasoning details')}</span>
-                  <button
-                    ref={closeButtonRef}
-                    type="button"
-                    onClick={onClose}
-                    aria-label={t('Close')}
-                    className="w-7 h-7 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
-                  >
-                    <CloseIcon size={16} />
-                  </button>
+                  <ChatIconButton ref={closeButtonRef} label={t('Close')} icon={<CloseIcon size={16} />} size="sm" onClick={onClose} />
                 </div>
                 <p className="m-0 mt-0.5 text-[0.72rem] chat-text-muted-500/40">{summaryParts.join(' · ')}</p>
               </div>

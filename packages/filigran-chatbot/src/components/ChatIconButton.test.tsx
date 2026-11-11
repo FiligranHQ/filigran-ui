@@ -59,8 +59,14 @@ test('a delete in a row is the destructive small IconButton, and a menu toggle s
   assert.equal(toggle.getAttribute('aria-expanded'), 'true');
 });
 
-test('the header draws no hand-styled icon button: every icon-only control goes through ChatIconButton', () => {
-  const source = readFileSync(new URL('./ChatHeader.tsx', import.meta.url), 'utf8');
-  assert.doesNotMatch(source, /w-8 h-8 flex items-center justify-center/, 'a hand-styled 32 px icon button is left');
-  assert.doesNotMatch(source, /<button[^>]*aria-label=/, 'a raw <button> named only by aria-label is an icon-only control');
-});
+// The components migrated so far (chatbot 3.23.0, slice 2); the rest of the
+// panel joins this list as it moves to ChatIconButton.
+const MIGRATED = ['ChatHeader.tsx', 'ConversationSidebar.tsx', 'ClearAllConversations.tsx', 'ReasoningDetailsDialog.tsx'];
+
+for (const file of MIGRATED) {
+  test(`${file} draws no hand-styled icon button: every icon-only control goes through ChatIconButton`, () => {
+    const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /w-[78] h-[78] flex items-center justify-center/, 'a hand-styled icon button is left');
+    assert.doesNotMatch(source, /<button[^>]*\saria-label=/, 'a raw <button> named only by aria-label is an icon-only control');
+  });
+}

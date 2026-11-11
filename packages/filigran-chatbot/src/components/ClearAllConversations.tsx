@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Translate } from '../types';
+import { ChatIconButton } from './ChatIconButton';
 import { CheckIcon, CloseIcon, TrashIcon } from './icons';
 
 interface ClearAllConversationsProps {
@@ -9,8 +10,6 @@ interface ClearAllConversationsProps {
   action?: 'delete' | 'archive';
   /** The row's layout where it stands. */
   className: string;
-  /** The look of the confirm and cancel buttons where it stands. */
-  iconButtonClass: string;
   t: Translate;
 }
 
@@ -25,7 +24,7 @@ const wording = {
 };
 
 /** "Clear all conversations", asked again in place before anything is deleted or archived. */
-export function ClearAllConversations({ onClear, action = 'delete', className, iconButtonClass, t }: ClearAllConversationsProps) {
+export function ClearAllConversations({ onClear, action = 'delete', className, t }: ClearAllConversationsProps) {
   const [confirming, setConfirming] = useState(false);
   const words = wording[action](t);
   return (
@@ -33,20 +32,17 @@ export function ClearAllConversations({ onClear, action = 'delete', className, i
       {confirming ? (
         <>
           <span className="flex-1 text-[0.7rem] text-red-600 dark:text-red-400">{words.ask}</span>
-          <button
-            type="button"
+          <ChatIconButton
+            label={words.confirm}
+            icon={<CheckIcon size={16} />}
+            variant="destructive"
+            size="sm"
             onClick={() => {
               setConfirming(false);
               onClear();
             }}
-            aria-label={words.confirm}
-            className={`${iconButtonClass} hover:text-red-500`}
-          >
-            <CheckIcon size={13} />
-          </button>
-          <button type="button" onClick={() => setConfirming(false)} aria-label={t('Cancel')} className={iconButtonClass}>
-            <CloseIcon size={13} />
-          </button>
+          />
+          <ChatIconButton label={t('Cancel')} icon={<CloseIcon size={16} />} size="sm" onClick={() => setConfirming(false)} />
         </>
       ) : (
         <button
