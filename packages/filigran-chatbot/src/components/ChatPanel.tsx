@@ -35,6 +35,7 @@ import { useLatestCallback, useShallowStable } from '../hooks/useStableProps';
 import { useVoiceCall } from '../hooks/useVoiceCall';
 import { PanelRequestsProvider, usePanelRequests, type PanelRequests } from '../hooks/usePanelRequests';
 import { watchSessionEnd } from '../utils/sessionEnd';
+import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
 import { AgentIconRendererProvider } from './AgentIconGlyph';
 import { ChatNotice } from './ChatNotice';
@@ -145,6 +146,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     onAgentChange: onAgentChangeProp,
     readOnly = false,
     readOnlyNotice,
+    voiceCallNotice,
     getRequestExtras: getRequestExtrasProp,
     onStreamEvent: onStreamEventProp,
     markerRenderers: markerRenderersProp,
@@ -1410,6 +1412,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     headerContext.conversation?.channel ?? (restoredChannel?.conversationId === conversationId ? restoredChannel.channel : undefined),
     channelLabel,
   );
+  // The host's voice-call tip, closed for the rest of the browser session.
+  const voiceNoticeKey = storageKey(storageKeyPrefix, STORAGE_KEYS.voiceCallNoticeDismissed);
+  const [voiceNoticeDismissed, setVoiceNoticeDismissed] = useState(() => readStorage('session', voiceNoticeKey) === '1');
+  const dismissVoiceNotice = useCallback(() => {
+    setVoiceNoticeDismissed(true);
+    writeStorage('session', voiceNoticeKey, '1');
+  }, [voiceNoticeKey]);
   const voice = useVoiceCall({
     send: (text, hooks) =>
       handleSendMessageRef.current({ text, source: 'voice', onSent: hooks.onAccepted, onNotSent: hooks.onNotSent, onSteered: hooks.onSteered }),
@@ -1794,6 +1803,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           onInterrupt={voice.interrupt}
           onToggleMute={voice.toggleMute}
           onEnd={voice.end}
+          notice={voiceNoticeDismissed ? undefined : voiceCallNotice}
+          onDismissNotice={dismissVoiceNotice}
           t={t}
         />
       )}

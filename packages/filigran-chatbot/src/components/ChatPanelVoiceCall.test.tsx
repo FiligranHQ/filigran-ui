@@ -459,6 +459,54 @@ test('a host transform that throws on the answer neither hides its frame from th
   });
 });
 
+test("the host's voice-call tip shows at the top of the call and, once closed, stays closed for the session", async () => {
+  sessionStorage.clear();
+  fakeBackend([agentsRoute]);
+  const ref = createRef<Handle>();
+  const notice = () => overlay()?.querySelector('[data-testid="filigran-chat-voice-call-notice"]') ?? null;
+  const call = async () => {
+    await act(async () => {
+      ref.current!.startVoiceCall();
+      await settle();
+    });
+  };
+  const end = async () => {
+    await act(async () => {
+      (overlay()!.querySelector('button[aria-label="End voice call"]') as HTMLButtonElement).click();
+      await settle();
+    });
+  };
+  await render({ voiceCallNotice: 'Use a quick model for faster voice answers.' }, ref);
+  await call();
+  assert.ok(notice()?.textContent?.includes('Use a quick model for faster voice answers.'), 'the tip shows in the call');
+  await act(async () => {
+    (notice()!.querySelector('[data-testid="filigran-chat-notice-dismiss"]') as HTMLButtonElement).click();
+    await settle();
+  });
+  assert.equal(notice(), null, 'closed');
+  await end();
+  await call();
+  assert.equal(notice(), null, 'still closed on the next call of the session');
+  await end();
+  sessionStorage.clear();
+});
+
+test('a voice call without a host tip shows no notice', async () => {
+  sessionStorage.clear();
+  fakeBackend([agentsRoute]);
+  const ref = createRef<Handle>();
+  await render({}, ref);
+  await act(async () => {
+    ref.current!.startVoiceCall();
+    await settle();
+  });
+  assert.equal(overlay()!.querySelector('[data-testid="filigran-chat-voice-call-notice"]'), null);
+  await act(async () => {
+    (overlay()!.querySelector('button[aria-label="End voice call"]') as HTMLButtonElement).click();
+    await settle();
+  });
+});
+
 test("a voice call's status names the mentioned agent answering", async () => {
   const stream = sseStream();
   fakeBackend([agentsRoute, (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);

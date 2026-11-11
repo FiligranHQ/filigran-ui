@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Translate } from '../types';
 import type { VoiceCallSnapshot } from '../hooks/voiceCallController';
 import { MicIcon, MicOffIcon, PhoneOffIcon, VolumeOffIcon } from './icons';
+import { ChatNotice } from './ChatNotice';
 
 /** A transcript line longer than this is cut: the thread under the call holds it whole. */
 const LINE_MAX_LENGTH = 200;
@@ -15,6 +16,9 @@ interface ChatVoiceCallProps {
   onInterrupt: () => void;
   onToggleMute: () => void;
   onEnd: () => void;
+  /** The host's tip, shown under the call's header until the user closes it. */
+  notice?: React.ReactNode;
+  onDismissNotice?: () => void;
   t: Translate;
 }
 
@@ -29,7 +33,18 @@ function formatDuration(seconds: number): string {
  * was said, and the mute, end and skip controls. Tapping the call stops the
  * answer being said, or cancels the question awaited.
  */
-export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onInterrupt, onToggleMute, onEnd, t }: ChatVoiceCallProps) => {
+export const ChatVoiceCall = ({
+  call,
+  agentName,
+  logoIcon,
+  processingLabel,
+  onInterrupt,
+  onToggleMute,
+  onEnd,
+  notice,
+  onDismissNotice,
+  t,
+}: ChatVoiceCallProps) => {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
     const id = window.setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -68,6 +83,17 @@ export const ChatVoiceCall = ({ call, agentName, logoIcon, processingLabel, onIn
         <span>{t('Voice call')}</span>
         <span className="font-mono normal-case tracking-normal">{formatDuration(seconds)}</span>
       </div>
+      {notice && (
+        <ChatNotice
+          tone="info"
+          className="mx-4 shrink-0"
+          onDismiss={onDismissNotice}
+          dismissLabel={t('Close')}
+          data-testid="filigran-chat-voice-call-notice"
+        >
+          {notice}
+        </ChatNotice>
+      )}
 
       <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-1 px-4">
         <button
