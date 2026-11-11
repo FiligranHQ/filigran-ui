@@ -170,6 +170,7 @@ export const ko: Catalog = {
   'Saving response…': '응답 저장 중…',
   'Search agents...': '에이전트 검색...',
   'Search conversations...': '대화 검색...',
+  'Clear search': '검색 지우기',
   'Search prompts...': '프롬프트 검색...',
   Send: '보내기',
   'Send now': '지금 보내기',
@@ -302,4 +303,7 @@ export const ko: Catalog = {
   Older: '이전',
   'Loading conversations': '대화를 불러오는 중',
   'The conversation and its messages are deleted. This cannot be undone.': '대화와 메시지가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.',
+  'Filter by workspace': '워크스페이스로 필터링',
+  'All workspaces': '모든 워크스페이스',
+  'Not in a workspace': '워크스페이스 밖',
 };

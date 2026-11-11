@@ -170,6 +170,7 @@ export const fr: Catalog = {
   'Saving response…': 'Enregistrement de la réponse…',
   'Search agents...': 'Rechercher des agents...',
   'Search conversations...': 'Rechercher des conversations...',
+  'Clear search': 'Effacer la recherche',
   'Search prompts...': 'Rechercher des prompts...',
   Send: 'Envoyer',
   'Send now': 'Envoyer maintenant',
@@ -302,4 +303,7 @@ export const fr: Catalog = {
   Older: 'Plus ancien',
   'Loading conversations': 'Chargement des conversations',
   'The conversation and its messages are deleted. This cannot be undone.': 'La conversation et ses messages seront supprimés. Cette action est irréversible.',
+  'Filter by workspace': 'Filtrer par espace de travail',
+  'All workspaces': 'Tous les espaces de travail',
+  'Not in a workspace': 'Hors espace de travail',
 };

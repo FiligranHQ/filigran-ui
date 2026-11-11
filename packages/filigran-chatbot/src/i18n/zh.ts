@@ -169,6 +169,7 @@ export const zh: Catalog = {
   'Saving response…': '正在保存回复…',
   'Search agents...': '搜索智能体...',
   'Search conversations...': '搜索对话...',
+  'Clear search': '清除搜索',
   'Search prompts...': '搜索提示词...',
   Send: '发送',
   'Send now': '立即发送',
@@ -298,4 +299,7 @@ export const zh: Catalog = {
   Older: '更早',
   'Loading conversations': '正在加载对话',
   'The conversation and its messages are deleted. This cannot be undone.': '对话及其消息将被删除。此操作无法撤销。',
+  'Filter by workspace': '按工作区筛选',
+  'All workspaces': '所有工作区',
+  'Not in a workspace': '不在工作区中',
 };

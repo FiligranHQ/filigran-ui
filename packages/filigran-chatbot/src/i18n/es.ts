@@ -170,6 +170,7 @@ export const es: Catalog = {
   'Saving response…': 'Guardando la respuesta…',
   'Search agents...': 'Buscar agentes...',
   'Search conversations...': 'Buscar conversaciones...',
+  'Clear search': 'Borrar la búsqueda',
   'Search prompts...': 'Buscar prompts...',
   Send: 'Enviar',
   'Send now': 'Enviar ahora',
@@ -302,4 +303,7 @@ export const es: Catalog = {
   Older: 'Más antiguas',
   'Loading conversations': 'Cargando conversaciones',
   'The conversation and its messages are deleted. This cannot be undone.': 'Se eliminarán la conversación y sus mensajes. Esta acción no se puede deshacer.',
+  'Filter by workspace': 'Filtrar por espacio de trabajo',
+  'All workspaces': 'Todos los espacios de trabajo',
+  'Not in a workspace': 'Fuera de un espacio de trabajo',
 };

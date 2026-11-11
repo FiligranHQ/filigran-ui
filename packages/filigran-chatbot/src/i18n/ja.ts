@@ -170,6 +170,7 @@ export const ja: Catalog = {
   'Saving response…': '応答を保存中…',
   'Search agents...': 'エージェントを検索...',
   'Search conversations...': '会話を検索...',
+  'Clear search': '検索をクリア',
   'Search prompts...': 'プロンプトを検索...',
   Send: '送信',
   'Send now': '今すぐ送信',
@@ -303,4 +304,7 @@ export const ja: Catalog = {
   Older: 'それ以前',
   'Loading conversations': '会話を読み込んでいます',
   'The conversation and its messages are deleted. This cannot be undone.': '会話とそのメッセージが削除されます。この操作は元に戻せません。',
+  'Filter by workspace': 'ワークスペースで絞り込む',
+  'All workspaces': 'すべてのワークスペース',
+  'Not in a workspace': 'ワークスペース外',
 };

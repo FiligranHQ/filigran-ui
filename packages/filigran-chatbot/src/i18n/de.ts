@@ -171,6 +171,7 @@ export const de: Catalog = {
   'Saving response…': 'Antwort wird gespeichert…',
   'Search agents...': 'Agenten suchen...',
   'Search conversations...': 'Unterhaltungen suchen...',
+  'Clear search': 'Suche löschen',
   'Search prompts...': 'Prompts suchen...',
   Send: 'Senden',
   'Send now': 'Jetzt senden',
@@ -305,4 +306,7 @@ export const de: Catalog = {
   Older: 'Älter',
   'Loading conversations': 'Unterhaltungen werden geladen',
   'The conversation and its messages are deleted. This cannot be undone.': 'Die Unterhaltung und ihre Nachrichten werden gelöscht. Dies kann nicht rückgängig gemacht werden.',
+  'Filter by workspace': 'Nach Arbeitsbereich filtern',
+  'All workspaces': 'Alle Arbeitsbereiche',
+  'Not in a workspace': 'In keinem Arbeitsbereich',
 };

@@ -12,6 +12,12 @@ import {
   MenuLabel,
   MenuSeparator,
   MenuTrigger,
+  SearchField,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Skeleton,
 } from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
@@ -116,6 +122,16 @@ interface ConversationSidebarProps {
 /** Below this many conversations the list is quicker to scan than to filter. */
 const SEARCH_THRESHOLD = 7;
 
+/** The workspace filter's values beside the workspace ids: every conversation, or the unfiled ones. */
+export const WORKSPACE_FILTER = { all: '__all__', none: '__none__' } as const;
+
+/** Whether a conversation passes the header's workspace filter. */
+export function inWorkspaceFilter(conversation: ChatConversationSummary, filter: string): boolean {
+  if (filter === WORKSPACE_FILTER.all) return true;
+  if (filter === WORKSPACE_FILTER.none) return !conversation.workspaceId;
+  return conversation.workspaceId === filter;
+}
+
 /**
  * A host's sections drawn from the search, as a component of their own: drawn
  * again only when the search or the function changes, not on each of the
@@ -195,6 +211,8 @@ export const ConversationSidebar = ({
   t,
 }: ConversationSidebarProps) => {
   const [query, setQuery] = useState('');
+  // The header's workspace filter (UX spec C): every workspace by default.
+  const [workspaceFilter, setWorkspaceFilter] = useState<string>(WORKSPACE_FILTER.all);
   // Asked from the rail: once the list is open, its search box takes the focus.
   const [focusSearch, setFocusSearch] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -292,7 +310,16 @@ export const ConversationSidebar = ({
   // With the host's sections searched too, only the user's own conversations are known to match nothing.
   const noMatch = sectionsSearch ? t('None of your conversations matches') : t('No conversation matches');
   const matches = useMemo(() => (q ? (c: ChatConversationSummary) => conversationMatches(c, q) : undefined), [q]);
-  const filtered = useMemo(() => (matches ? conversations.filter(matches) : conversations), [conversations, matches]);
+  // A workspace that disappears (deleted, unshared) takes the filter back to every workspace.
+  const filter =
+    workspaces && (workspaceFilter === WORKSPACE_FILTER.none || workspaceFilter === WORKSPACE_FILTER.all || workspaces.list.some((w) => w.id === workspaceFilter))
+      ? workspaceFilter
+      : WORKSPACE_FILTER.all;
+  const filtering = filter !== WORKSPACE_FILTER.all;
+  const filtered = useMemo(
+    () => conversations.filter((c) => inWorkspaceFilter(c, filter) && (!matches || matches(c))),
+    [conversations, matches, filter],
+  );
   const grouped = useMemo(
     () => (workspaces ? groupConversations(conversations, workspaces.list, { matches }) : null),
     [conversations, workspaces, matches],
@@ -370,35 +397,52 @@ export const ConversationSidebar = ({
     <div className="relative shrink-0 flex flex-col border-r chat-border-200/10" style={{ width: layout.width }}>
       <ListResizeHandle width={layout.width} max={layout.max} onResize={resize} t={t} />
       <div className="flex items-center gap-1 px-3 py-3">
-        <Button priority="secondary" className="flex-1 justify-start" startIcon={<EditIcon size={16} />} onClick={() => onNewChat()}>
+        <Button priority="secondary" className="min-w-0 flex-1 justify-start" startIcon={<EditIcon size={16} />} onClick={() => onNewChat()}>
           {t('New conversation')}
         </Button>
+        {workspaces && workspaces.list.length > 0 && (
+          <Select value={filter} onValueChange={setWorkspaceFilter}>
+            <SelectTrigger aria-label={t('Filter by workspace')} data-testid="filigran-chat-workspace-filter" className="w-28 shrink-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={WORKSPACE_FILTER.all}>{t('All workspaces')}</SelectItem>
+              <SelectItem value={WORKSPACE_FILTER.none}>{t('Not in a workspace')}</SelectItem>
+              {workspaces.list.map((w) => (
+                <SelectItem key={w.id} value={w.id}>
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {headerActions}
         <ChatIconButton label={t('Hide conversations')} icon={<SidebarIcon size={20} />} aria-expanded onClick={onToggleCollapsed} />
       </div>
 
       {searchOffered && (
         <div className="px-3 pb-2">
-          <div className="relative">
-            <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 chat-text-muted-400/40" />
-            <input
-              type="text"
-              value={query}
-              ref={(el) => {
-                if (el && focusSearch) {
-                  el.focus();
-                  setFocusSearch(false);
-                }
-              }}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape' && !isComposing(e)) setQuery('');
-              }}
-              placeholder={t('Search conversations...')}
-              aria-label={t('Search conversations...')}
-              className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-content-compact chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
-            />
-          </div>
+          {/* The design system's field (UX spec C): its clear cross and Escape both empty the query. */}
+          <SearchField
+            size="sm"
+            fullWidth
+            value={query}
+            ref={(el) => {
+              if (el && focusSearch) {
+                el.focus();
+                setFocusSearch(false);
+              }
+            }}
+            onChange={(e) => setQuery(e.target.value)}
+            onClear={() => setQuery('')}
+            clearLabel={t('Clear search')}
+            onKeyDown={(e) => {
+              // Escape while an input method composes cancels the composition, not the search.
+              if (e.key === 'Escape' && isComposing(e)) e.preventDefault();
+            }}
+            placeholder={t('Search conversations...')}
+            aria-label={t('Search conversations...')}
+          />
         </div>
       )}
 
@@ -423,7 +467,7 @@ export const ConversationSidebar = ({
               projects. Hidden while searching: the list below shows every
               match, each naming its workspace.
             */}
-            {!q && (
+            {!q && !filtering && (
               <div className="mb-1">
                 <div className="group/wsh flex items-center gap-1 chat-radius-sm px-1.5 py-1 hover:chat-surface-hover-100/6">
                   <button

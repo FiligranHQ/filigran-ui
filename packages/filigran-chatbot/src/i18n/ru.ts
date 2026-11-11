@@ -170,6 +170,7 @@ export const ru: Catalog = {
   'Saving response…': 'Сохранение ответа…',
   'Search agents...': 'Поиск агентов...',
   'Search conversations...': 'Поиск диалогов...',
+  'Clear search': 'Очистить поиск',
   'Search prompts...': 'Поиск промптов...',
   Send: 'Отправить',
   'Send now': 'Отправить сейчас',
@@ -302,4 +303,7 @@ export const ru: Catalog = {
   Older: 'Ранее',
   'Loading conversations': 'Загрузка диалогов',
   'The conversation and its messages are deleted. This cannot be undone.': 'Диалог и его сообщения будут удалены. Это действие нельзя отменить.',
+  'Filter by workspace': 'Фильтр по рабочему пространству',
+  'All workspaces': 'Все рабочие пространства',
+  'Not in a workspace': 'Вне рабочего пространства',
 };

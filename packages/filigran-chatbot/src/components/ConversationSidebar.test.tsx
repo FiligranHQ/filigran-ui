@@ -11,7 +11,7 @@ installDom();
 // After the DOM: react-dom reads at load whether the page fires input events,
 // and the search box's typing reaches it only if it does.
 const { createRoot } = await import('react-dom/client');
-const { ConversationSidebar } = await import('./ConversationSidebar.tsx');
+const { ConversationSidebar, inWorkspaceFilter, WORKSPACE_FILTER } = await import('./ConversationSidebar.tsx');
 const { setValue } = await import('../utils/pageActions.ts');
 
 const WORKSPACE = { id: 'w1', name: 'Hunts', isOwn: true, isDefault: false, canManage: true };
@@ -631,4 +631,44 @@ test('a conversation about to start in a workspace shows that workspace, the lin
   assert.equal(workspacesLine()?.getAttribute('aria-expanded'), 'true');
   assert.ok(container.textContent?.includes('Hunts'));
   await unmount();
+});
+
+test('the header offers one workspace filter: every workspace, the unfiled conversations, or one workspace', async () => {
+  localStorage.clear();
+  const { container, unmount } = await renderTenWorkspaces();
+  const trigger = container.querySelector('[data-testid="filigran-chat-workspace-filter"]');
+  assert.ok(trigger, 'the filter sits in the header');
+  assert.equal(trigger?.getAttribute('aria-label'), 'Filter by workspace');
+  assert.ok(trigger?.textContent?.includes('All workspaces'), 'every workspace by default');
+  await unmount();
+  const filed = { conversationId: 'a', title: 'Filed', workspaceId: 'w1' };
+  const unfiled = { conversationId: 'b', title: 'Unfiled', workspaceId: null };
+  assert.ok(inWorkspaceFilter(filed, WORKSPACE_FILTER.all) && inWorkspaceFilter(unfiled, WORKSPACE_FILTER.all));
+  assert.ok(!inWorkspaceFilter(filed, WORKSPACE_FILTER.none) && inWorkspaceFilter(unfiled, WORKSPACE_FILTER.none));
+  assert.ok(inWorkspaceFilter(filed, 'w1') && !inWorkspaceFilter(filed, 'w2') && !inWorkspaceFilter(unfiled, 'w1'));
+});
+
+test('without workspaces the header has no workspace filter', async () => {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <ConversationSidebar
+        conversations={[{ conversationId: 'c1', title: 'One' }]}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onNewChat={() => undefined}
+        t={(key) => key}
+      />,
+    );
+    await settle();
+  });
+  assert.equal(container.querySelector('[data-testid="filigran-chat-workspace-filter"]'), null);
+  await act(async () => root.unmount());
+  container.remove();
 });

@@ -170,6 +170,7 @@ export const it: Catalog = {
   'Saving response…': 'Salvataggio della risposta…',
   'Search agents...': 'Cerca agenti...',
   'Search conversations...': 'Cerca conversazioni...',
+  'Clear search': 'Cancella la ricerca',
   'Search prompts...': 'Cerca prompt...',
   Send: 'Invia',
   'Send now': 'Invia ora',
@@ -303,4 +304,7 @@ export const it: Catalog = {
   Older: 'Meno recenti',
   'Loading conversations': 'Caricamento delle conversazioni',
   'The conversation and its messages are deleted. This cannot be undone.': 'La conversazione e i suoi messaggi verranno eliminati. L’operazione non può essere annullata.',
+  'Filter by workspace': 'Filtra per area di lavoro',
+  'All workspaces': 'Tutte le aree di lavoro',
+  'Not in a workspace': 'Fuori da un\'area di lavoro',
 };
