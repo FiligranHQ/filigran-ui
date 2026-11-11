@@ -68,9 +68,9 @@ const ToolCallRow = ({
           {index + 1}
         </span>
         {entry.success ? (
-          <CheckCircleIcon size={12} className="shrink-0 text-emerald-500 dark:text-emerald-400" />
+          <CheckCircleIcon size={12} className="shrink-0 text-[var(--chat-success)]" />
         ) : (
-          <XCircleIcon size={12} className="shrink-0 text-red-500 dark:text-red-400" />
+          <XCircleIcon size={12} className="shrink-0 text-[var(--chat-danger)]" />
         )}
         <span className="flex-1 min-w-0 text-content-base chat-text-secondary-700/80 truncate font-mono">
           {toolDisplayName(entry.name, toolLabels)}

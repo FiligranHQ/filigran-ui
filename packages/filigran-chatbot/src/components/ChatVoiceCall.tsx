@@ -104,7 +104,7 @@ export const ChatVoiceCall = ({
           disabled={!tappable}
           aria-label={phase === 'speaking' ? t('Skip response') : phase === 'processing' ? t('Cancel question') : agentName}
           className={`relative mb-4 flex h-28 w-28 items-center justify-center rounded-full border-2 transition-colors ${
-            phase === 'error' ? 'border-amber-400/50' : live ? 'border-[var(--chat-accent)]' : 'border-[var(--chat-accent-40)]'
+            phase === 'error' ? 'border-[var(--chat-warning)]/50' : live ? 'border-[var(--chat-accent)]' : 'border-[var(--chat-accent-40)]'
           } ${tappable ? 'cursor-pointer' : 'cursor-default'}`}
         >
           {live && <span className="absolute inset-0 rounded-full border border-[var(--chat-accent-40)] animate-ping" aria-hidden="true" />}

@@ -67,8 +67,8 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
   const pruning = ratio >= PRUNE_RATIO;
   const compacting = ratio >= COMPACTION_RATIO;
 
-  const ringColor = pruning ? 'text-red-500' : compacting ? 'text-amber-500' : 'text-[var(--chat-accent)]';
-  const textColor = pruning ? 'text-red-500 dark:text-red-400' : compacting ? 'text-amber-600 dark:text-amber-400' : 'chat-text-muted-400/30';
+  const ringColor = pruning ? 'text-[var(--chat-danger)]' : compacting ? 'text-[var(--chat-warning)]' : 'text-[var(--chat-accent)]';
+  const textColor = pruning ? 'text-[var(--chat-danger)]' : compacting ? 'text-[var(--chat-warning)]' : 'chat-text-muted-400/30';
 
   const percent = Math.round(ratio * 100);
   const counts = `${compactCount(used)}/${compactCount(limit)}`;
@@ -92,7 +92,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
   const gauge = (
     <span className="flex items-center gap-1.5">
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className={ringColor} aria-hidden="true">
-        <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} className="stroke-gray-200 dark:stroke-white/15" />
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} className="stroke-[var(--chat-ds-gray-200)] dark:stroke-white/15" />
         <circle
           cx={SIZE / 2}
           cy={SIZE / 2}

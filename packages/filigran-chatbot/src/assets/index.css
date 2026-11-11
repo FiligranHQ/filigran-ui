@@ -173,6 +173,8 @@
    */
   --chat-danger: var(--filigran-chat-danger, var(--color-red-700));
   --chat-warning: var(--filigran-chat-warning, var(--color-amber-800));
+  /* The success tone (an approved tool call, a successful trace step): green-700 on the light surfaces. */
+  --chat-success: var(--filigran-chat-success, var(--color-green-700));
   /* The design system's light elevation layers: page gray-50, card white, menu white. */
   --chat-default-surface: var(--chat-ds-gray-50);
   --chat-default-surface-raised: var(--chat-ds-white);
@@ -203,6 +205,7 @@
   --chat-dark: 1;
   --chat-danger: var(--filigran-chat-danger, var(--color-red-400));
   --chat-warning: var(--filigran-chat-warning, var(--color-amber-300));
+  --chat-success: var(--filigran-chat-success, var(--color-green-400));
   /* The design system's dark elevation layers (grayblue 850 / 700 / 600). */
   --chat-default-surface: var(--chat-ds-grayblue-850);
   --chat-default-surface-raised: var(--chat-ds-grayblue-700);

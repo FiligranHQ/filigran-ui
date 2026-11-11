@@ -348,7 +348,7 @@ export const ChatHeader = ({
         )}
         {agents.length === 0 && !agentsLoading && agentsError && (
           <div className="px-4 py-3 flex items-start gap-2">
-            <AlertTriangleIcon size={14} className="mt-0.5 shrink-0 text-amber-500 dark:text-amber-400" />
+            <AlertTriangleIcon size={14} className="mt-0.5 shrink-0 text-[var(--chat-warning)]" />
             <span className="text-content-compact leading-5 chat-text-secondary-600/60">
               {t('Could not reach the assistant service. Check the connection and try again.')}
             </span>
@@ -432,7 +432,7 @@ export const ChatHeader = ({
                         </span>
                       ))}
                       {agent.disableChat && (
-                        <span className="shrink-0 chat-radius-sm bg-amber-500/10 px-1 text-content-compact leading-4 text-amber-600 dark:text-amber-400">
+                        <span className="shrink-0 chat-radius-sm bg-[var(--chat-warning)]/10 px-1 text-content-compact leading-4 text-[var(--chat-warning)]">
                           {t('Not recommended for chat')}
                         </span>
                       )}

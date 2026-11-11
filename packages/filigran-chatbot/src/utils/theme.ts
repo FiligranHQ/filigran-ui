@@ -15,6 +15,7 @@ const THEME_VARIABLES: Readonly<Record<keyof ChatPanelTheme, string>> = {
   focusRing: '--filigran-chat-focus-ring',
   danger: '--filigran-chat-danger',
   warning: '--filigran-chat-warning',
+  success: '--filigran-chat-success',
   headerBackground: '--filigran-chat-header-background',
   text: '--filigran-chat-text',
   textMuted: '--filigran-chat-text-muted',

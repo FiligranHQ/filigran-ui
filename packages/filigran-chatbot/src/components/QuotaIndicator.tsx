@@ -39,8 +39,8 @@ export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
   const exhausted = limit > 0 ? used >= limit : true;
   const nearLimit = ratio >= 0.75;
 
-  const barColor = exhausted ? 'bg-red-500' : nearLimit ? 'bg-amber-500' : 'bg-[var(--chat-accent)]/60';
-  const textColor = exhausted ? 'text-red-500 dark:text-red-400' : nearLimit ? 'text-amber-600 dark:text-amber-400' : 'chat-text-muted-400/30';
+  const barColor = exhausted ? 'bg-[var(--chat-danger)]' : nearLimit ? 'bg-[var(--chat-warning)]' : 'bg-[var(--chat-accent)]/60';
+  const textColor = exhausted ? 'text-[var(--chat-danger)]' : nearLimit ? 'text-[var(--chat-warning)]' : 'chat-text-muted-400/30';
 
   const label = `${compact(used)}/${compact(limit)}`;
   const headline = exhausted ? t('Quota reached') : t('Quota');

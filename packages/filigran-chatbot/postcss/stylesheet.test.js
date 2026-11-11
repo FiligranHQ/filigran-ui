@@ -221,6 +221,20 @@ test('no hand-written shadow or rgb colour in a component: the design-system ele
   assert.deepEqual(offending, []);
 });
 
+// Feedback colours read the panel's tones (`--chat-danger`, `--chat-warning`, `--chat-success`), which a host
+// sets from its design system; a Tailwind palette shade (red-500, amber-600, emerald-400...) would ignore it.
+test('no Tailwind palette shade in a component: the feedback tones and the design-system tokens only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [
+      ...text.matchAll(
+        /\b(?:text|bg|border|stroke|fill|ring|outline|from|to|via|decoration|divide|placeholder|caret)-(?:red|amber|emerald|green|yellow|orange|blue|gray|slate|zinc|neutral|stone|rose|pink|purple|violet|indigo|sky|cyan|teal|lime|fuchsia)-\d{2,3}\b/g,
+      ),
+    ].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
 // A size relative to its text (the footnote <sup> at 0.7em) is not a size of the scale and stays.
 test('no arbitrary font size in a component: the design-system type scale only', () => {
   const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {

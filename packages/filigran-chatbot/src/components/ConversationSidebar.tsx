@@ -726,7 +726,7 @@ const WorkspaceGroupSection = ({
           <span className="flex shrink-0 items-center opacity-0 group-hover/ws:opacity-100 focus-within:opacity-100 transition-opacity">
             {confirmingDelete ? (
               <>
-                <span className="px-1 text-content-compact text-red-600 dark:text-red-400">{t('Delete?')}</span>
+                <span className="px-1 text-content-compact text-[var(--chat-danger)]">{t('Delete?')}</span>
                 <ChatIconButton
                   label={t('Delete workspace')}
                   icon={<CheckIcon size={16} />}

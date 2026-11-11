@@ -113,10 +113,10 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
   };
 
   return (
-    <div data-testid="filigran-chat-approval" className="chat-radius-md border border-amber-500/25 bg-amber-500/[0.04] p-3 flex flex-col gap-2">
+    <div data-testid="filigran-chat-approval" className="chat-radius-md border border-[var(--chat-warning)]/25 bg-[var(--chat-warning)]/[0.04] p-3 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex items-start gap-2">
-          <WrenchIcon size={13} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <WrenchIcon size={13} className="mt-0.5 shrink-0 text-[var(--chat-warning)]" />
           <div className="min-w-0">
             {/* An unnamed tool is a malformed proposal, not a tool called
                 "unknown tool": the placeholder is the package's own text and
@@ -130,7 +130,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
           <span
             className={
               'shrink-0 chat-radius-sm px-1.5 py-0.5 text-content-compact font-medium ' +
-              (verdict === 'reject' ? 'bg-red-500/15 text-red-600 dark:text-red-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300')
+              (verdict === 'reject' ? 'bg-[var(--chat-danger)]/15 text-[var(--chat-danger)]' : 'bg-[var(--chat-success)]/15 text-[var(--chat-success)]')
             }
           >
             {verdict === 'reject' ? t('Declined') : verdict === 'approve_always' ? t('Always allowed') : t('Approved')}
@@ -262,8 +262,8 @@ export const ChatApprovalPrompt = ({ proposals, onSubmit, isSubmitting, error, t
   const rootRef = useRevealIntoView<HTMLDivElement>(true);
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-2 chat-radius-md border border-amber-500/20 bg-amber-500/[0.02] p-3">
-      <p className="flex items-start gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+    <div ref={rootRef} className="flex flex-col gap-2 chat-radius-md border border-[var(--chat-warning)]/20 bg-[var(--chat-warning)]/[0.02] p-3">
+      <p className="flex items-start gap-1.5 text-xs font-medium text-[var(--chat-warning)]">
         <AlertTriangleIcon size={13} className="mt-0.5 shrink-0" />
         {proposals.length === 1 ? t('The agent needs your approval to run a tool:') : t('The agent needs your approval to run these tools:')}
       </p>

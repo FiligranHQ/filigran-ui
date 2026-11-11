@@ -30,6 +30,13 @@ This file starts at 3.10.0; earlier releases are on the
   `text-content-base` (14 px, was 13 px), the welcome emoji
   `text-title-jumbo`. Host tokens still win. A stylesheet test refuses any
   arbitrary `text-[..rem]` or `text-[..px]` in a component.
+- Every error, warning and success colour reads the panel's feedback tones
+  instead of a Tailwind red, amber or emerald: the approval card and its
+  verdict badge, the context and quota gauges, the trace steps, the agent
+  list warnings, the voice call error ring, the delete confirmation. New theme
+  entry `theme.success` (`--filigran-chat-success`, a green unset) beside
+  `danger` and `warning`. A stylesheet test refuses any Tailwind palette shade
+  in a component.
 
 ## 3.22.0 — 2026-11-11
 

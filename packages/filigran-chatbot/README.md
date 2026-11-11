@@ -1294,6 +1294,7 @@ both. The same variables may be set in CSS on an ancestor instead.
 | `focusRing`        | `--filigran-chat-focus-ring`        | The 2 px ring around the composer while it has the focus (the accent unset) |
 | `danger`           | `--filigran-chat-danger`            | The tone of every error state: error notices, a failed upload, dictation, stop (a red unset, e.g. `var(--color-error)`) |
 | `warning`          | `--filigran-chat-warning`           | The tone of every warning notice (an amber unset, e.g. `var(--color-warning)`) |
+| `success`          | `--filigran-chat-success`           | The tone of an approved tool call and a successful trace step (a green unset, e.g. `var(--color-success)`) |
 | `headerBackground` | `--filigran-chat-header-background` | The header's background, a colour or an image (`none` for the surface alone) |
 | `text`             | `--filigran-chat-text`              | Text |
 | `textMuted`        | `--filigran-chat-text-muted`        | Times, labels, hints and placeholders |

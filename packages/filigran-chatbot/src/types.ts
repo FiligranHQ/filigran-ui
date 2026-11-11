@@ -415,6 +415,8 @@ export interface ChatPanelTheme {
   danger?: string;
   /** The warning tone of every warning notice (`--filigran-chat-warning`, an amber unset). */
   warning?: string;
+  /** The success tone of an approved tool call and a successful trace step (`--filigran-chat-success`, a green unset). */
+  success?: string;
   /** The header's background, a colour or an image; `none` for the surface alone (`--filigran-chat-header-background`). */
   headerBackground?: string;
   /** Text (`--filigran-chat-text`). */
