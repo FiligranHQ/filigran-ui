@@ -544,6 +544,7 @@ const MessageRow = memo(
       return (
         <Tooltip key={key} title={t('Download')} className="inline-flex min-w-0 max-w-[90%]">
         <button
+          data-ds-exempt="download-card"
           type="button"
           onClick={() => onDownloadFile?.(att)}
           className={`group flex w-full min-w-0 items-center gap-2 text-left chat-radius-md border px-2.5 py-1.5 transition-colors cursor-pointer ${
@@ -763,6 +764,7 @@ const MessageRow = memo(
         return (
           <Tooltip key={`ref-${ref.conversationId}-${i}`} title={t('Open conversation')}>
             <button
+              data-ds-exempt="conversation-ref-chip"
               type="button"
               onClick={() => onOpenConversation(ref.conversationId)}
               className={`${chip} border-[var(--chat-accent-40)] text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]`}

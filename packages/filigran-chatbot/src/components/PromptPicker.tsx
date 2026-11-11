@@ -73,6 +73,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
           {filtered.length === 0 && <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('No prompt matches')}</div>}
           {filtered.map((p) => (
             <button
+              data-ds-exempt="prompt-option-row"
               key={p.id}
               type="button"
               onClick={() => {

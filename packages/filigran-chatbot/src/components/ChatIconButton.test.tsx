@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { act } from 'react';
 
 import { installDom, settle } from '../../test/dom.ts';
@@ -115,18 +115,38 @@ for (const file of TEXT_BUTTONS) {
 }
 
 // Files whose remaining raw <button>s are only audited exemptions: a combobox
-// trigger, listbox options and two-action rows the DS Menu cannot hold, and the
-// workspace disclosure rows (the design system has no disclosure). Each says why
-// as its first attribute and has a row in the audit table.
-const EXEMPT_ONLY = ['ChatHeader.tsx', 'ConversationSidebar.tsx'];
+// trigger, listbox options and two-action rows the DS Menu cannot hold, the
+// prompt picker rows (its panel holds a search field, which the DS Menu cannot),
+// the disclosure rows of the workspace list and of the tool-call trace (the
+// design system has no disclosure), the download card and the conversation-ref
+// chip (content cards, not actions of a DS Button variant). Each says why as
+// its first attribute and has a row in the audit table. `usesDs` names the
+// files that also draw design-system components.
+const EXEMPT_ONLY: { file: string; usesDs: boolean }[] = [
+  { file: 'ChatHeader.tsx', usesDs: true },
+  { file: 'ConversationSidebar.tsx', usesDs: true },
+  { file: 'ChatMessages.tsx', usesDs: true },
+  { file: 'PromptPicker.tsx', usesDs: false },
+  { file: 'ReasoningDetailsDialog.tsx', usesDs: false },
+];
 
-for (const file of EXEMPT_ONLY) {
+for (const { file, usesDs } of EXEMPT_ONLY) {
   test(`${file} draws a raw <button> only as an audited data-ds-exempt row`, () => {
     const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /<button(?!\s+data-ds-exempt="[^"]+")/, 'a raw <button> without data-ds-exempt is left');
-    assert.match(source, /from '@filigran\/design-system'/);
+    if (usesDs) assert.match(source, /from '@filigran\/design-system'/);
   });
 }
+
+// After slice 2 no component of the panel draws an unaudited raw <button>: every
+// raw one left carries data-ds-exempt="<why>" as its first attribute.
+test('no component draws a raw <button> without data-ds-exempt', () => {
+  const dir = new URL('./', import.meta.url);
+  const offenders = readdirSync(dir)
+    .filter((f) => f.endsWith('.tsx') && !f.includes('.test.'))
+    .filter((f) => /<button(?!\s+data-ds-exempt="[^"]+")/.test(readFileSync(new URL(`./${f}`, dir), 'utf8')));
+  assert.deepEqual(offenders, []);
+});
 
 for (const file of MIGRATED) {
   test(`${file} draws no hand-styled icon button: every icon-only control goes through ChatIconButton`, () => {

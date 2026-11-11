@@ -58,6 +58,7 @@ const ToolCallRow = ({
   return (
     <div className="border chat-border-200/6 chat-radius-md overflow-hidden">
       <button
+        data-ds-exempt="disclosure-row"
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
