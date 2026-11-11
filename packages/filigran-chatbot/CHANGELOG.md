@@ -8,6 +8,20 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## Unreleased
+
+### Fixed
+
+- The remove button of a file waiting in the composer says "Remove <file>" in
+  the panel's tooltip on hover and on keyboard focus, as every other icon
+  button of the panel (#10910). `Tooltip` takes `forSelector` to name one
+  control drawn inside a design-system component.
+- A single picture in a message no longer moves the bubble when it arrives:
+  its placeholder and its frame share one box, the picture's own size fitted
+  in 280 x 240 px once seen in the page, else 280 x 158 (16:9), the picture
+  shown inside it with its aspect ratio (#10910; before, a 240 x 180
+  placeholder became 280 x 160 and the bubble jumped by 20 px).
+
 ## 3.23.1 — 2026-11-11
 
 ### Changed

@@ -68,6 +68,31 @@ test('Escape closes an open tooltip', async () => {
   assert.equal(panel.querySelector('[role="tooltip"]'), null);
 });
 
+test('forSelector: the tooltip names the one control inside a component, on hover and on keyboard focus only', async () => {
+  const panel = await render(
+    <Tooltip title="Remove image.png" forSelector="button">
+      <span>
+        <span data-testid="label">image.png</span>
+        <button type="button" aria-label="Remove image.png" />
+      </span>
+    </Tooltip>,
+  );
+  await hover(panel.querySelector('[data-testid="label"]')!, TOOLTIP_OPEN_DELAY_MS + 50);
+  assert.equal(panel.querySelector('[role="tooltip"]'), null, 'not over the label');
+  const button = panel.querySelector('button')!;
+  await hover(button, TOOLTIP_OPEN_DELAY_MS + 50);
+  assert.equal(panel.querySelector('[role="tooltip"]')?.textContent, 'Remove image.png', 'over the control');
+  await hover(panel.querySelector('[data-testid="label"]')!, 10);
+  assert.equal(panel.querySelector('[role="tooltip"]'), null, 'back on the label, it closes');
+  const matches = button.matches.bind(button);
+  button.matches = (selector: string) => selector === ':focus-visible' || matches(selector);
+  await act(async () => {
+    button.focus();
+    await settle();
+  });
+  assert.equal(panel.querySelector('[role="tooltip"]')?.textContent, 'Remove image.png', 'on keyboard focus');
+});
+
 test('no control of the panel uses a native title tooltip', async () => {
   const { readFileSync, readdirSync } = await import('node:fs');
   const { fileURLToPath } = await import('node:url');

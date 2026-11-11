@@ -27,6 +27,30 @@ interface MessageAttachmentsProps {
 /** Tiles shown in the one row before the last becomes "+N". */
 export const MAX_TILES = 4;
 
+/** The box a single picture is shown in at most; it keeps its aspect ratio inside. */
+export const SINGLE_MAX = { width: 280, height: 240 } as const;
+
+interface PictureSize {
+  width: number;
+  height: number;
+}
+
+/** The pictures already drawn in this page, by URL: their box is known before the bytes come back. */
+const seenSizes = new Map<string, PictureSize>();
+
+/**
+ * The box a single picture takes, so the placeholder holds exactly the room
+ * the picture will take and nothing below it moves when it arrives: its own
+ * size fitted in {@link SINGLE_MAX} (never enlarged) when known, else a
+ * screenshot's 16:9 at the full 280 px width, the commonest upload.
+ */
+export const singlePictureBox = (size?: PictureSize): PictureSize => {
+  const { width, height } = size && size.width > 0 && size.height > 0 ? size : { width: 16, height: 9 };
+  const fit = Math.min(SINGLE_MAX.width / width, SINGLE_MAX.height / height);
+  const scale = size ? Math.min(1, fit) : fit;
+  return { width: Math.round(width * scale), height: Math.round(height * scale) };
+};
+
 const TEXT_TYPES = new Set(['TXT', 'MD', 'CSV', 'JSON', 'LOG', 'PDF', 'DOC', 'DOCX', 'XML', 'YAML', 'YML', 'HTML']);
 
 /**
@@ -101,13 +125,21 @@ const ImageTile = ({ item, single, more, requestHeaders, onOpen, t }: ImageTileP
   const fetched = useImageSrc(item.imageUrl ?? null, requestHeaders);
   const [undecodable, setUndecodable] = useState<string | null>(null);
   const failed = fetched.status === 'failed' || (fetched.src !== null && undecodable === fetched.src);
-  // The frame holds its size before the bytes arrive: nothing below it moves.
-  const frame = single ? 'h-[180px] w-[240px]' : 'size-[4.5rem]';
+  // The placeholder and the picture share one frame, its border included (a
+  // single picture: see singlePictureBox, fixed at mount; a tile: its square):
+  // nothing below it moves when the bytes arrive or the picture decodes.
+  const [box] = useState(() => (single ? singlePictureBox(item.imageUrl ? seenSizes.get(item.imageUrl) : undefined) : undefined));
+  const frame = single ? '' : 'size-[4.5rem]';
   const ground = 'chat-radius-sm border border-current/20 bg-current/10';
 
   if (failed || !fetched.src) {
     return (
-      <span className={`${frame} ${ground} inline-flex items-center justify-center`} aria-busy={!failed || undefined}>
+      <span
+        data-testid="filigran-chat-picture-placeholder"
+        className={`${frame} ${ground} inline-flex items-center justify-center`}
+        style={box}
+        aria-busy={!failed || undefined}
+      >
         <ImageIcon size={16} className={failed ? 'opacity-60' : 'animate-pulse opacity-60'} />
         <span className="sr-only">{failed ? t('Image could not be loaded') : t('Loading image…')}</span>
       </span>
@@ -124,8 +156,9 @@ const ImageTile = ({ item, single, more, requestHeaders, onOpen, t }: ImageTileP
         // pictures behind it ("+N" counts the tile's own picture, so N - 1 more), one key per plural branch.
         aria-label={more > 0 ? moreLabel(t, item.filename, more - 1) : undefined}
         className={`group/tile relative overflow-hidden ${ground} cursor-zoom-in outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)] ${
-          single ? 'inline-flex max-h-[240px] max-w-[280px]' : 'size-[4.5rem]'
+          single ? 'inline-flex' : 'size-[4.5rem]'
         }`}
+        style={box}
       >
         <img
           src={fetched.src}
@@ -133,7 +166,11 @@ const ImageTile = ({ item, single, more, requestHeaders, onOpen, t }: ImageTileP
           loading="lazy"
           decoding="async"
           onError={() => setUndecodable(fetched.src)}
-          className={single ? 'block max-h-[240px] max-w-[280px] object-contain' : 'size-full object-cover'}
+          onLoad={(event) => {
+            const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+            if (item.imageUrl && width > 0 && height > 0) seenSizes.set(item.imageUrl, { width, height });
+          }}
+          className={single ? 'block size-full object-contain' : 'size-full object-cover'}
         />
         {more > 0 && (
           <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center bg-black/55 text-content-base font-medium text-white">
