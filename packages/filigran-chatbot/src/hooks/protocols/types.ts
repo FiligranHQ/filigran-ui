@@ -122,9 +122,10 @@ export type ParsedAction =
     }
   /**
    * The turn failed: terminal. *provisional*: an end its backend follows with
-   * the stored one (see `cancelled`).
+   * the stored one (see `cancelled`). *reason*: a system end the backend names
+   * (`interrupted`, `lost`): its content is a notice, never the answer's text.
    */
-  | { action: 'error'; content: string; messageId?: string; provisional?: true; raw?: Record<string, unknown> }
+  | { action: 'error'; content: string; messageId?: string; provisional?: true; raw?: Record<string, unknown>; reason?: string }
   /**
    * The turn was stopped (`cancelled`): terminal. *provisional*: an end marked
    * `provisional: true`, which the backend follows with the

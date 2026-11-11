@@ -1386,7 +1386,65 @@ test('a turn whose stream dropped ends as soon as the event stream says it was c
   assert.deepEqual(heard, ['running', 'failed']);
   assert.ok(!stopShown());
   assert.ok(requests.filter((r) => r.url === '/api/chat/sessions').length > before, 'its stored reply is read back');
+  assert.ok(!text().includes('Interrupted'), 'the notice of a cut turn is no answer text');
+  assert.ok(!answers().some((a) => a.trim() === ''), 'and leaves no empty bubble');
   await finish(own, ...subscriptions);
+});
+
+for (const reason of ['interrupted', 'lost'] as const) {
+  test(`an own turn ended by a system end (${reason}) writes no notice in a bubble and keeps what it streamed`, async () => {
+    const stream = sseStream();
+    fakeBackend([agentsRoute, restoreRoute([]), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+    const ref = createRef<Handle>();
+    const { heard, onTurnRunningChange } = turnLog();
+    await render({ conversationId: 'c1', onTurnRunningChange }, ref);
+    await act(async () => {
+      void ref.current!.send('go');
+      await settle();
+      stream.send({ type: 'turn_started', turn_id: 't1' });
+      stream.send({ type: 'stream', turn_id: 't1', content: 'I was checking' });
+      stream.send({ type: 'error', turn_id: 't1', reason, content: 'The response was interrupted before it completed.' });
+      await settle(10);
+    });
+    assert.deepEqual(heard, ['running', 'failed']);
+    assert.ok(!text().includes('The response was interrupted before it completed.'), 'no notice text in a bubble');
+    assert.ok(!text().includes('Sorry, an error occurred'), 'nor the generic apology');
+    assert.deepEqual(answers().map((a) => a.includes('I was checking')), [true], 'what it streamed stays, in one bubble');
+    await finish(stream);
+  });
+
+  test(`an own turn cut (${reason}) before any text leaves no empty bubble`, async () => {
+    const stream = sseStream();
+    fakeBackend([agentsRoute, restoreRoute([]), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+    const ref = createRef<Handle>();
+    await render({ conversationId: 'c1' }, ref);
+    await act(async () => {
+      void ref.current!.send('go');
+      await settle();
+      stream.send({ type: 'turn_started', turn_id: 't1' });
+      stream.send({ type: 'error', turn_id: 't1', reason, content: 'The response was interrupted before it completed.' });
+      await settle(10);
+    });
+    assert.ok(!text().includes('The response was interrupted before it completed.'));
+    assert.deepEqual(answers(), [], 'no bubble, empty or not');
+    await finish(stream);
+  });
+}
+
+test('a real agent error with no reason still says so in its answer', async () => {
+  const stream = sseStream();
+  fakeBackend([agentsRoute, restoreRoute([]), (req) => (req.url === '/api/chat/messages' ? stream.response() : undefined)]);
+  const ref = createRef<Handle>();
+  await render({ conversationId: 'c1' }, ref);
+  await act(async () => {
+    void ref.current!.send('go');
+    await settle();
+    stream.send({ type: 'turn_started', turn_id: 't1' });
+    stream.send({ type: 'error', turn_id: 't1', content: 'I encountered an error: boom' });
+    await settle(10);
+  });
+  assert.ok(text().includes('I encountered an error: boom'));
+  await finish(stream);
 });
 
 test('a Stop still awaiting its answer when the turn is handed over ends with that turn, and stops no later one', async () => {
