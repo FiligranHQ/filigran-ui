@@ -93,6 +93,20 @@ test('history is restored without an agent list', async () => {
   assert.ok(container.textContent?.includes('from history'));
 });
 
+test('without an agent list or an agent link the agent is a label, never a dead-end menu', async () => {
+  fakeBackend([restoreRoute([{ id: 'm1', role: 'assistant', content: 'from history' }])]);
+  await render({ conversationId: 'c1', apiEndpoints: { agents: null } });
+  assert.equal(container.querySelector('[data-testid="filigran-chat-agent-switcher"]'), null, 'no switcher control');
+  assert.ok(container.querySelector('[data-testid="filigran-chat-agent-label"]'), 'the agent drawn as a label');
+  assert.ok(!container.textContent?.includes('Agent switching is not available here'));
+});
+
+test('with an agent dashboard but no agent list the switcher stays: it carries the dashboard links', async () => {
+  fakeBackend([restoreRoute()]);
+  await render({ conversationId: 'c1', apiEndpoints: { agents: null }, agentDashboardUrl: 'https://xtm.example' });
+  assert.ok(container.querySelector('[data-testid="filigran-chat-agent-switcher"]'));
+});
+
 test('read-only shows the notice in place of the composer', async () => {
   fakeBackend([agentsRoute]);
   await render({ readOnly: true, readOnlyNotice: 'Shared with you by Bob' });

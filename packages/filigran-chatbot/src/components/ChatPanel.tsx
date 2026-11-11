@@ -1630,6 +1630,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         agents={agents}
         agentsLoading={agentsLoading}
         agentsError={agentsError}
+        agentMenuAvailable={!agentsDisabled || !!agentLink || !!agentDashboardUrl}
         selectedAgent={selectedAgent}
         transferredFrom={transferredAgent ? selectedAgent?.name : undefined}
         agentMenuOpen={agentMenuOpen}

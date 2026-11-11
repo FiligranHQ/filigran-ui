@@ -32,6 +32,13 @@ interface ChatHeaderProps {
   agents: XtmAgent[];
   agentsLoading?: boolean;
   agentsError?: boolean;
+  /**
+   * False when the menu would hold nothing: no agent list to switch between
+   * (`apiEndpoints.agents: null`, a read-only transcript) and no agent page or
+   * dashboard link. The agent is then drawn as a static label, no chevron and
+   * no popover, never a dead-end menu (XTM-One-Platform/xtm-one#10910).
+   */
+  agentMenuAvailable?: boolean;
   selectedAgent: XtmAgent | null;
   transferredFrom?: string;
   agentMenuOpen: boolean;
@@ -186,6 +193,7 @@ export const ChatHeader = ({
   title,
   subtitle,
   agentLink,
+  agentMenuAvailable = true,
   t,
 }: ChatHeaderProps) => {
   const agentAnchorRef = useRef<HTMLButtonElement>(null);
@@ -280,6 +288,23 @@ export const ChatHeader = ({
               Combobox: its trigger is the input field, with no slot for this
               header trigger, the option avatars or the footer actions
               (fds-migration/LIBRARY-FEEDBACK.md, 1). */}
+          {!agentMenuAvailable ? (
+            <span
+              data-testid="filigran-chat-agent-label"
+              className="flex h-8 max-w-full min-w-0 items-center gap-1.5 text-content-base font-semibold chat-text-900/100 pl-2 pr-1.5"
+            >
+              <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:size-5">
+                <AgentIconGlyph
+                  icon={selectedAgent?.icon}
+                  size={20}
+                  fallback={logoIcon}
+                  imageClassName="size-5 chat-radius-sm object-cover"
+                  emojiClassName="text-title-sm leading-none"
+                />
+              </span>
+              <span className="min-w-0 truncate">{agentName}</span>
+            </span>
+          ) : (
           <Tooltip title={agentMenuOpen ? '' : t('Switch to another agent')} className="inline-flex min-w-0 max-w-full">
           <button
             data-ds-exempt="agent-switcher-combobox-trigger"
@@ -310,6 +335,7 @@ export const ChatHeader = ({
             />
           </button>
           </Tooltip>
+          )}
           {title && (
             <>
               <span aria-hidden className="shrink-0 chat-text-muted-400/30">
@@ -333,7 +359,7 @@ export const ChatHeader = ({
         )}
       </div>
 
-      <Dropdown open={agentMenuOpen} onClose={onAgentMenuClose} anchorRef={agentAnchorRef} width={280}>
+      <Dropdown open={agentMenuAvailable && agentMenuOpen} onClose={onAgentMenuClose} anchorRef={agentAnchorRef} width={280}>
         <span className="block px-4 pt-3 pb-1 text-content-compact tracking-[1px] uppercase chat-text-muted-400/40">{t('Switch to another agent')}</span>
         {/* Three distinct states, because an empty array alone cannot tell them
             apart — and treating "failed" as "still loading" is what left this

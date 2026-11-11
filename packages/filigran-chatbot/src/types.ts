@@ -397,6 +397,12 @@ export interface ChatPanelTheme {
   surfaceSubtle?: string;
   /** A row or a button under the pointer (`--filigran-chat-surface-hover`). */
   surfaceHover?: string;
+  /**
+   * The menus' panel (the agent switcher, the history, the prompt and mention lists): the design system's
+   * `--bg-elevation-highlight`, a step off `surfaceHover` so the keyboard-active row reads in both modes
+   * (`--filigran-chat-menu-surface`, `surfaceRaised` unset).
+   */
+  menuSurface?: string;
   /** A text field: the composer (no fill unless set), a rename field, the feedback and approval comments (`--filigran-chat-input-surface`). */
   inputSurface?: string;
   /** The composer's corners, as the host's text fields draw theirs (`--filigran-chat-input-radius`, `radiusMd` unset). */

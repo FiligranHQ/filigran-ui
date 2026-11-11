@@ -8,6 +8,19 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## Unreleased
+
+### Added
+
+- `theme.menuSurface` (`--filigran-chat-menu-surface`): the menus' own fill, so a host pairs it with
+  `surfaceHover` and the keyboard-active row of the agent switcher reads in dark as in light
+  (XTM-One-Platform/xtm-one#10910).
+
+### Fixed
+
+- With no agent list (`apiEndpoints.agents: null`) and no agent page or dashboard link, the header draws the
+  agent as a label: no chevron and no dead-end "Agent switching is not available here" popover.
+
 ## 3.24.1 — 2026-11-11
 
 ### Fixed
