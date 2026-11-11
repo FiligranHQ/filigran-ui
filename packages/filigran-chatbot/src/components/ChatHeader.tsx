@@ -19,6 +19,7 @@ import {
   TrashIcon,
   UserPlusIcon,
 } from './icons';
+import { ChatIconButton } from './ChatIconButton';
 import { ClearAllConversations } from './ClearAllConversations';
 import { ConversationListFailed } from './ConversationListFailed';
 import { Dropdown } from './Dropdown';
@@ -78,9 +79,6 @@ interface ChatHeaderProps {
   agentLink?: { href?: string; onClick?: () => void };
   t: Translate;
 }
-
-const headerButton =
-  'w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors';
 
 /** An agent's own icon when it has one the panel or the host can draw, the panel's logo otherwise. */
 const AgentIcon = ({ icon, fallback, size = 16 }: { icon: string | null | undefined; fallback: React.ReactNode; size?: number }) => (
@@ -480,19 +478,15 @@ export const ChatHeader = ({
 
       {historyEnabled && (
         <>
-          <Tooltip title={t('Conversation history')}>
-            <button
-              ref={historyAnchorRef}
-              type="button"
-              onClick={onHistoryMenuToggle}
-              aria-label={t('Conversation history')}
-              aria-haspopup="menu"
-              aria-expanded={historyMenuOpen}
-              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
-            >
-              <HistoryIcon size={18} />
-            </button>
-          </Tooltip>
+          <ChatIconButton
+            ref={historyAnchorRef}
+            label={t('Conversation history')}
+            icon={<HistoryIcon size={20} />}
+            onClick={onHistoryMenuToggle}
+            aria-haspopup="menu"
+            aria-expanded={historyMenuOpen}
+            active={historyMenuOpen}
+          />
 
           <Dropdown open={historyMenuOpen} onClose={() => onHistoryMenuClose?.()} anchorRef={historyAnchorRef} placement="bottom-end" width={300}>
             <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{t('Conversation history')}</span>
@@ -524,16 +518,14 @@ export const ChatHeader = ({
                       {when && <div className="text-[0.7rem] chat-text-muted-500/40 truncate">{when}</div>}
                     </button>
                     {onDeleteConversation && (
-                      <Tooltip title={t('Delete conversation')} className="inline-flex shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => onDeleteConversation(conv.conversationId)}
-                          aria-label={t('Delete conversation')}
-                          className="shrink-0 p-1 chat-radius-sm chat-text-muted-400/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
-                        >
-                          <TrashIcon size={14} />
-                        </button>
-                      </Tooltip>
+                      <ChatIconButton
+                        label={t('Delete conversation')}
+                        icon={<TrashIcon size={16} />}
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => onDeleteConversation(conv.conversationId)}
+                        className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                      />
                     )}
                   </div>
                 );
@@ -569,25 +561,19 @@ export const ChatHeader = ({
 
       {actions}
 
-      <Tooltip title={t('New chat')}>
-        <button type="button" onClick={onNewChat} aria-label={t('New chat')} className={headerButton}>
-          <EditIcon size={18} />
-        </button>
-      </Tooltip>
+      <ChatIconButton label={t('New chat')} icon={<EditIcon size={20} />} onClick={onNewChat} />
 
       {mode !== 'inline' && onModeChange && (
         <>
-          <Tooltip title={t('Switch view')}>
-            <button
-              ref={modeAnchorRef}
-              type="button"
-              aria-label={t('Switch view')}
-              onClick={onModeMenuToggle}
-              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
-            >
-              <CurrentModeIcon size={18} />
-            </button>
-          </Tooltip>
+          <ChatIconButton
+            ref={modeAnchorRef}
+            label={t('Switch view')}
+            icon={<CurrentModeIcon size={20} />}
+            onClick={onModeMenuToggle}
+            aria-haspopup="menu"
+            aria-expanded={modeMenuOpen}
+            active={modeMenuOpen}
+          />
 
           <Dropdown open={modeMenuOpen} onClose={onModeMenuClose} anchorRef={modeAnchorRef} placement="bottom-end" width={180}>
             <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{t('Switch to')}</span>
@@ -614,16 +600,7 @@ export const ChatHeader = ({
       )}
       {mode !== 'inline' && onClose && (
         <>
-          <Tooltip title={t('Close')}>
-            <button
-              type="button"
-              aria-label={t('Close')}
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
-            >
-              <CloseIcon size={18} />
-            </button>
-          </Tooltip>
+          <ChatIconButton label={t('Close')} icon={<CloseIcon size={20} />} onClick={onClose} />
         </>
       )}
     </div>

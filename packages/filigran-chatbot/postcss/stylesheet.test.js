@@ -156,3 +156,22 @@ test("every default of the panel's own look is declared for both modes on the pa
     assert.ok(dark.has(token), `${token} has no dark default`);
   }
 });
+
+test("the design system IconButton's classes compile inside the panel, reading the host's design-system tokens first", () => {
+  for (const [name, prop, token] of [
+    ['text-icon-highlight', 'color', '--icon-highlight'],
+    ['h-9', 'height', null],
+    ['rounded-sm', 'border-radius', null],
+    ['text-feedback-error-primary', 'color', '--color-feedback-error-primary'],
+    ['hover\\\\:bg-filigran-brand-primary-transparency-10', 'background-color', '--color-filigran-brand-primary-transparency-10'],
+  ]) {
+    const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
+    assert.ok(matching.length > 0, `.${name} is compiled`);
+    for (const rule of matching) {
+      for (const selector of rule.selectors) assert.ok(selector.includes(PANEL_SCOPE), `unscoped .${name}: ${selector}`);
+      const decl = rule.nodes.find((node) => node.type === 'decl' && node.prop === prop);
+      assert.ok(decl, `.${name} sets ${prop}`);
+      if (token) assert.match(decl.value, new RegExp(`var\\(${token},`), `.${name} reads ${token} with a fallback: ${decl.value}`);
+    }
+  }
+});
