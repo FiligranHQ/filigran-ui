@@ -70,6 +70,16 @@ const openMenu = (element: Element | undefined) =>
     await settle(10);
   });
 const menuItem = (label: string) => [...document.body.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent?.trim() === label);
+// A row's actions live in its More menu (UX spec C): open it, then pick the action.
+const rowAction = async (label: string) => {
+  await openMenu(button('More actions'));
+  await click(menuItem(label));
+};
+// Delete is confirmed in a dialog: open the menu, ask, confirm.
+const deleteFirstRow = async () => {
+  await rowAction('Delete conversation');
+  await click(buttons().find((b) => b.closest('[role="dialog"]') && b.textContent?.trim() === 'Delete'));
+};
 
 test('a workspace group the user opened stays open when the list is hidden and shown again', async () => {
   fakeBackend([
@@ -112,8 +122,7 @@ test('a move the host refuses leaves the conversation where it was; one it agree
       return answer;
     },
   });
-  await openMenu(button('Move to workspace'));
-  await click(menuItem('Shared hunts'));
+  await rowAction('Shared hunts');
   assert.equal(asked.length, 1);
   assert.equal(asked[0][0].conversationId, 'c1');
   assert.equal(asked[0][1]?.id, 'w1');
@@ -121,8 +130,7 @@ test('a move the host refuses leaves the conversation where it was; one it agree
   assert.equal(alertText(), null, 'a refusal is the host’s: nothing to say');
 
   answer = true;
-  await openMenu(button('Move to workspace'));
-  await click(menuItem('Shared hunts'));
+  await rowAction('Shared hunts');
   assert.deepEqual(requests.find((r) => r.method === 'PATCH')?.body, { workspace_id: 'w1' });
 });
 
@@ -134,7 +142,7 @@ test('a failed rename tells the user and the host, and keeps the old title', asy
   ]);
   const failures: unknown[][] = [];
   await render({ onConversationActionFailed: (...args) => void failures.push(args) });
-  await click(button('Rename conversation'));
+  await rowAction('Rename conversation');
   const input = container.querySelector<HTMLInputElement>('input[aria-label="Conversation title"]')!;
   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(input, 'New title');
   await act(async () => {
@@ -162,7 +170,7 @@ test('a failed delete says so, in its own words when the backend gives none, and
   failingDelete();
   const failures: unknown[][] = [];
   await render({ onConversationActionFailed: (...args) => void failures.push(args) });
-  await click(button('Delete conversation'));
+  await deleteFirstRow();
   assert.equal(alertText(), 'The conversation could not be deleted');
   assert.equal(failures.length, 1);
   assert.deepEqual([failures[0][0], (failures[0][1] as ChatConversationSummary).conversationId, failures[0][2]], ['delete', 'c1', null]);
@@ -172,7 +180,7 @@ test('a failed delete says so, in its own words when the backend gives none, and
 test('a failed delete the host told the user of is not said again', async () => {
   failingDelete();
   await render({ onConversationActionFailed: () => true });
-  await click(button('Delete conversation'));
+  await deleteFirstRow();
   assert.equal(alertText(), null);
 });
 
@@ -282,7 +290,7 @@ test('a failure said while the list is hidden shows under the header', async () 
   });
   fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'Keep me' }]), (req) => (req.method === 'DELETE' ? deleted : undefined)]);
   await render({});
-  await click(button('Delete conversation'));
+  await deleteFirstRow();
   await click(button('Hide conversations'));
   await act(async () => {
     fail();
@@ -529,13 +537,21 @@ test('the same failure said again stays for its own time', async () => {
     act(async () => {
       for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve));
     });
+  // The menu and the dialog step through I/O turns too: settle() waits on setTimeout, mocked here.
+  const deleteNow = async () => {
+    await act(async () => void button('More actions')?.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+    await flush();
+    await act(async () => (menuItem('Delete conversation') as HTMLElement).click());
+    await flush();
+    await act(async () => buttons().find((b) => b.closest('[role="dialog"]') && b.textContent?.trim() === 'Delete')!.click());
+  };
   mock.timers.enable({ apis: ['setTimeout'] });
   try {
-    await act(async () => button('Delete conversation')!.click());
+    await deleteNow();
     await flush();
     assert.equal(alertText(), 'The conversation could not be deleted');
     mock.timers.tick(4000);
-    await act(async () => button('Delete conversation')!.click());
+    await deleteNow();
     await flush();
     mock.timers.tick(4000);
     await flush();

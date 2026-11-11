@@ -64,6 +64,7 @@ export const MaximizeIcon = dsIcon('maximize-2');
 export const MessageSquareIcon = dsIcon('message-square');
 export const MicIcon = dsIcon('mic');
 export const MicOffIcon = dsIcon('mic-off');
+export const MoreIcon = dsIcon('ellipsis-vertical');
 export const PencilIcon = dsIcon('pencil');
 export const PhoneOffIcon = dsIcon('phone-off');
 export const PresentationIcon = dsIcon('presentation');

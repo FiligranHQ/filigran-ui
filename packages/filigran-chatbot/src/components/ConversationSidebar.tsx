@@ -1,5 +1,19 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Skeleton } from '@filigran/design-system';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuLabel,
+  MenuSeparator,
+  MenuTrigger,
+  Skeleton,
+} from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
@@ -19,8 +33,8 @@ import {
   CloseIcon,
   EditIcon,
   FolderIcon,
-  FolderInputIcon,
   FolderPlusIcon,
+  MoreIcon,
   PencilIcon,
   SearchIcon,
   SidebarIcon,
@@ -881,7 +895,8 @@ const ConversationRow = ({
   showAgent?: boolean;
   t: (key: string) => string;
 }) => {
-  const [moveOpen, setMoveOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const movable = !!fileable && !isEditing;
   const shownTitle = rowTitle(c) || t('Untitled conversation');
   // What the one-line row no longer spells out: the agent, the channel, the workspace, the time.
@@ -964,7 +979,9 @@ const ConversationRow = ({
         // width, so the title and the agent pill take the whole row.
         <span
           data-row-actions=""
-          className="pointer-events-none absolute inset-y-0 right-1.5 my-auto flex h-fit chat-radius-sm border chat-border-200/10 chat-menu-surface opacity-0 shadow-global-shadow transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100"
+          className={`absolute inset-y-0 right-1 my-auto flex h-fit items-center gap-0.5 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 ${
+            menuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+          }`}
         >
           {actions && (
             // The row selects on click and on Enter/Space: the host's controls keep theirs.
@@ -972,70 +989,75 @@ const ConversationRow = ({
               {actions(c)}
             </span>
           )}
-          {movable && (
-            // The design system's Menu, kept inside the panel's stacking context
-            // (portalled={false}) and non-modal, like the header's view switcher.
-            // The actions bar is centred without a transform, so the menu's
-            // fixed position is the viewport's, never clipped by the list.
-            <Menu open={moveOpen} onOpenChange={setMoveOpen} modal={false}>
-              <MenuTrigger asChild>
-                <ChatIconButton
-                  label={t('Move to workspace')}
-                  icon={<FolderInputIcon size={16} />}
-                  size="sm"
-                  tooltip={!moveOpen}
-                  active={moveOpen}
-                  // The row selects on click: the menu's trigger keeps its own.
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </MenuTrigger>
-              <MenuContent portalled={false} align="end" className="z-[10000]" onClick={(e) => e.stopPropagation()}>
-                <MenuLabel>{t('Move to workspace')}</MenuLabel>
-                {fileable.map((w) => (
-                  <MenuItem
-                    key={w.id}
-                    startIcon={<FolderIcon size={16} />}
-                    selected={w.id === c.workspaceId}
-                    disabled={w.id === c.workspaceId}
-                    onSelect={() => onMove(c.conversationId, w.id)}
-                  >
-                    {w.name}
-                  </MenuItem>
-                ))}
-                <MenuSeparator />
-                <MenuItem
-                  startIcon={<CloseIcon size={16} />}
-                  disabled={!c.workspaceId}
-                  onSelect={() => onMove(c.conversationId, null)}
-                >
-                  {t('Remove from workspace')}
+          {/* One 24 px More button (UX spec C, 11 Nov 2026): rename, move and
+              delete live in the design system's Menu, kept inside the panel's
+              stacking context (portalled={false}) and non-modal. */}
+          <Menu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
+            <MenuTrigger asChild>
+              <ChatIconButton
+                label={t('More actions')}
+                icon={<MoreIcon size={16} />}
+                size="sm"
+                tooltip={!menuOpen}
+                active={menuOpen}
+                // The row selects on click: the menu's trigger keeps its own.
+                onClick={(e) => e.stopPropagation()}
+              />
+            </MenuTrigger>
+            <MenuContent portalled={false} align="end" className="z-[10000]" onClick={(e) => e.stopPropagation()}>
+              {onStartRename && (
+                <MenuItem startIcon={<EditIcon size={16} />} onSelect={() => onStartRename(c.conversationId, c.title || '')}>
+                  {t('Rename conversation')}
                 </MenuItem>
-              </MenuContent>
-            </Menu>
-          )}
-          {onStartRename && (
-            <ChatIconButton
-              label={t('Rename conversation')}
-              icon={<EditIcon size={16} />}
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onStartRename(c.conversationId, c.title || '');
-              }}
-            />
-          )}
-          <ChatIconButton
-            label={t('Delete conversation')}
-            icon={<TrashIcon size={16} />}
-            variant="destructive"
-            size="sm"
-            onClick={(e) => {
-              // The row is the click target for selection, so deleting
-              // must not also open the conversation on its way out.
-              e.stopPropagation();
-              onDelete(c.conversationId);
-            }}
-          />
+              )}
+              {movable && (
+                <>
+                  <MenuSeparator />
+                  <MenuLabel>{t('Move to workspace')}</MenuLabel>
+                  {fileable.map((w) => (
+                    <MenuItem
+                      key={w.id}
+                      startIcon={<FolderIcon size={16} />}
+                      selected={w.id === c.workspaceId}
+                      disabled={w.id === c.workspaceId}
+                      onSelect={() => onMove(c.conversationId, w.id)}
+                    >
+                      {w.name}
+                    </MenuItem>
+                  ))}
+                  <MenuItem startIcon={<CloseIcon size={16} />} disabled={!c.workspaceId} onSelect={() => onMove(c.conversationId, null)}>
+                    {t('Remove from workspace')}
+                  </MenuItem>
+                </>
+              )}
+              {(onStartRename || movable) && <MenuSeparator />}
+              <MenuItem startIcon={<TrashIcon size={16} />} onSelect={() => setConfirmingDelete(true)}>
+                {t('Delete conversation')}
+              </MenuItem>
+            </MenuContent>
+          </Menu>
+          {/* Delete is confirmed in the design system's Dialog, never on one click. */}
+          <Dialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+            <DialogContent size="sm" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+              <DialogTitle>{t('Delete conversation?')}</DialogTitle>
+              <DialogDescription>{t('The conversation and its messages are deleted. This cannot be undone.')}</DialogDescription>
+              <DialogFooter>
+                <Button priority="secondary" size="sm" onClick={() => setConfirmingDelete(false)}>
+                  {t('Cancel')}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setConfirmingDelete(false);
+                    onDelete(c.conversationId);
+                  }}
+                >
+                  {t('Delete')}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </span>
       )}
     </div>

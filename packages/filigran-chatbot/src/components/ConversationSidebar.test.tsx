@@ -276,8 +276,15 @@ test('Enter while an input method composes does not commit a rename', async () =
     );
     await settle();
   });
+  // Rename lives in the row's More menu, which opens from the keyboard.
   await act(async () => {
-    container.querySelector<HTMLButtonElement>('button[aria-label="Rename conversation"]')!.click();
+    container
+      .querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!
+      .dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }) as unknown as Event);
+    await settle();
+  });
+  await act(async () => {
+    [...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) => item.textContent?.trim() === 'Rename conversation')!.click();
     await settle();
   });
   const field = () => container.querySelector<HTMLInputElement>('input[aria-label="Conversation title"]');
