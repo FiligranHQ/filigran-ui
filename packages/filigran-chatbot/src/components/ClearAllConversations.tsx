@@ -32,7 +32,7 @@ export function ClearAllConversations({ onClear, action = 'delete', className, t
     <div className={`flex items-center gap-1 ${className}`}>
       {confirming ? (
         <>
-          <span className="flex-1 text-[0.75rem] text-[var(--chat-danger)]">{words.ask}</span>
+          <span className="flex-1 text-content-compact text-[var(--chat-danger)]">{words.ask}</span>
           <ChatIconButton
             label={words.confirm}
             icon={<CheckIcon size={16} />}

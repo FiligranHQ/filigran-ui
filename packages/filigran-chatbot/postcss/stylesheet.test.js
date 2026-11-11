@@ -182,6 +182,10 @@ test("the design system IconButton's classes compile inside the panel, reading t
     ['border-elevation-subtle', 'border-color', '--border-elevation-subtle'],
     // The one elevation shadow of every floating surface (menus, the floating panel, the reasoning dialog; slice 3).
     ['shadow-global-shadow', '--tw-shadow', '--shadow-global-shadow'],
+    // The design-system type scale of every chat text (slice 3).
+    ['text-content-compact', 'font-size', '--text-content-compact'],
+    ['text-content-base', 'font-size', '--text-content-base'],
+    ['text-title-jumbo', 'font-size', '--text-title-jumbo'],
   ]) {
     const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
     assert.ok(matching.length > 0, `.${name} is compiled`);
@@ -213,6 +217,15 @@ test('no hand-written shadow or rgb colour in a component: the design-system ele
   const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
     const text = readFileSync(file, 'utf8');
     return [...text.matchAll(/shadow-\[[^\]]*\]|\bshadow-(?:sm|md|lg|xl|2xl)\b|\brgba?\(/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// A size relative to its text (the footnote <sup> at 0.7em) is not a size of the scale and stays.
+test('no arbitrary font size in a component: the design-system type scale only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/\btext-\[[0-9.]+(?:rem|px)\]/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
   });
   assert.deepEqual(offending, []);
 });

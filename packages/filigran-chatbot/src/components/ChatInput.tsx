@@ -303,7 +303,7 @@ export const ChatInput = ({
   // sidebar, fullscreen, floating): a status when there is one, else the
   // disclaimer. How to send is the Send button's tooltip, not a line of its
   // own. The line keeps its height, so the composer never jumps.
-  const footerLine = 'text-center text-[0.65rem] chat-text-muted-400/30 opacity-70 mt-1.5 min-h-[1lh] truncate';
+  const footerLine = 'text-center text-content-compact chat-text-muted-400/30 opacity-70 mt-1.5 min-h-[1lh] truncate';
   const sendTooltip = hasFilesUploading ? t('Files uploading...') : t('Enter to send · Shift+Enter for new line');
 
   return (
@@ -343,7 +343,7 @@ export const ChatInput = ({
         </ChatNotice>
       )}
       {heldMessage && (
-        <div className="mb-2 flex items-center gap-2 chat-radius-md border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
+        <div className="mb-2 flex items-center gap-2 chat-radius-md border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-content-compact">
           <span className="shrink-0 chat-text-secondary-500/50">{t('Sends when the answer ends:')}</span>
           <span className="min-w-0 flex-1 truncate chat-text-800/80">{heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}</span>
           {onCancelHeld && (
@@ -367,7 +367,7 @@ export const ChatInput = ({
           {attachedFiles.map((f, i) => (
             <span
               key={i}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[0.7rem] ${
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-content-compact ${
                 f.uploadStatus === 'error'
                   ? 'border-[var(--chat-danger)]/25 bg-[var(--chat-danger)]/[0.06] text-[var(--chat-danger)]'
                   : f.uploadStatus === 'pending'
@@ -432,7 +432,7 @@ export const ChatInput = ({
           {...mentionMenu.textareaAria}
           onPaste={handlePaste}
           rows={1}
-          className="filigran-chat-composer-field w-full bg-transparent border-none outline-hidden resize-none text-[0.8125rem] px-1 py-1.5 chat-text-900/100 placeholder:chat-text-muted-400/30 filigran-chat-scrollable"
+          className="filigran-chat-composer-field w-full bg-transparent border-none outline-hidden resize-none text-content-base px-1 py-1.5 chat-text-900/100 placeholder:chat-text-muted-400/30 filigran-chat-scrollable"
           style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}
         />
         <MentionMenu
@@ -511,7 +511,7 @@ export const ChatInput = ({
       {/* The footer's one line: words heard but not yet final, else a status,
           else the disclaimer. */}
       {dictation.interim ? (
-        <p className="flex items-center justify-center gap-1.5 text-[0.65rem] italic text-[var(--chat-danger)] mt-1.5 min-h-[1lh]">
+        <p className="flex items-center justify-center gap-1.5 text-content-compact italic text-[var(--chat-danger)] mt-1.5 min-h-[1lh]">
           <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-[var(--chat-danger)] motion-safe:animate-pulse" />
           <span className="truncate">{dictation.interim}</span>
         </p>

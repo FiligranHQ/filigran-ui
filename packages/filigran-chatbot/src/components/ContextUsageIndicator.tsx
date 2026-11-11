@@ -109,7 +109,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
           className="transition-[stroke-dashoffset] duration-500"
         />
       </svg>
-      <span className={`text-[0.68rem] tabular-nums ${textColor}`}>{percent}%</span>
+      <span className={`text-content-compact tabular-nums ${textColor}`}>{percent}%</span>
     </span>
   );
 
@@ -142,10 +142,10 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
 
       <Dropdown open={open} onClose={() => setOpen(false)} anchorRef={anchorRef} placement="bottom-end" width={296}>
         <div className="px-3.5 pt-3 pb-1 flex items-baseline justify-between gap-3">
-          <span className={`text-[0.8125rem] tabular-nums ${textColor}`}>{translate(t, '{percent}% full', { percent })}</span>
+          <span className={`text-content-base tabular-nums ${textColor}`}>{translate(t, '{percent}% full', { percent })}</span>
           {/* The tilde is load-bearing: these are char-derived estimates, and a
               bare "168k/200k" would read as a measured count. */}
-          <span className="text-[0.7rem] tabular-nums chat-text-muted-400/40 shrink-0">~{tokens}</span>
+          <span className="text-content-compact tabular-nums chat-text-muted-400/40 shrink-0">~{tokens}</span>
         </div>
 
         {/* One stacked bar over the whole window: the segments are the legend's
@@ -177,8 +177,8 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
                   dot: a round swatch reads as a bullet rather than as the key
                   to the bar's segment. */}
               <span className="h-2 w-2 shrink-0 chat-radius-sm" style={{ backgroundColor: row.color }} aria-hidden="true" />
-              <span className="text-[0.75rem] chat-text-secondary-700/70 truncate">{row.label(t)}</span>
-              <span className="ml-auto text-[0.7rem] tabular-nums chat-text-muted-500/40 shrink-0">{compactCount(breakdown?.[row.field] ?? 0)}</span>
+              <span className="text-content-compact chat-text-secondary-700/70 truncate">{row.label(t)}</span>
+              <span className="ml-auto text-content-compact tabular-nums chat-text-muted-500/40 shrink-0">{compactCount(breakdown?.[row.field] ?? 0)}</span>
             </div>
           ))}
         </div>
@@ -186,7 +186,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
         {compacting && (
           // The one line that turns a readout into something actionable: at this
           // point the backend is already dropping detail from older turns.
-          <p className={`px-3.5 pt-1 pb-3 text-[0.68rem] leading-snug ${textColor}`}>{headline}</p>
+          <p className={`px-3.5 pt-1 pb-3 text-content-compact leading-snug ${textColor}`}>{headline}</p>
         )}
       </Dropdown>
     </>

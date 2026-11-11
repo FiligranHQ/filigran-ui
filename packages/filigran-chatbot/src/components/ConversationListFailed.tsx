@@ -14,7 +14,7 @@ interface ConversationListFailedProps {
 export function ConversationListFailed({ onRetry, className, t }: ConversationListFailedProps) {
   return (
     <div role="alert" data-testid="filigran-chat-conversation-list-error" className={`flex flex-col items-start gap-2 ${className}`}>
-      <p className="m-0 text-[0.75rem] chat-text-secondary-600/60">{t('Could not load your conversations.')}</p>
+      <p className="m-0 text-content-compact chat-text-secondary-600/60">{t('Could not load your conversations.')}</p>
       <Button priority="secondary" size="sm" onClick={onRetry}>
         {t('Retry')}
       </Button>

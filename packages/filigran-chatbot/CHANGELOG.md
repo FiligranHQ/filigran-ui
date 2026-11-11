@@ -24,6 +24,12 @@ This file starts at 3.10.0; earlier releases are on the
   tokens still win. The code colours stay GitHub's (the design system has no
   syntax palette). A stylesheet test refuses any other colour literal and any
   hand-written shadow in a component.
+- Every chat text uses the design system's type scale: meta lines, labels,
+  chips and counts are `text-content-compact` (12 px, was 9.6 to 12 px in
+  seven ad-hoc sizes), titles, rows, the composer and the message text
+  `text-content-base` (14 px, was 13 px), the welcome emoji
+  `text-title-jumbo`. Host tokens still win. A stylesheet test refuses any
+  arbitrary `text-[..rem]` or `text-[..px]` in a component.
 
 ## 3.22.0 — 2026-11-11
 

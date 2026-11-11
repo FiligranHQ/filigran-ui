@@ -227,7 +227,7 @@ const MessageTime = ({ timestamp, locale }: { timestamp: Date; locale?: string }
   if (!time) return null;
   return (
     <Tooltip title={time.full}>
-      <time dateTime={time.iso} className="px-1 text-[0.65rem] tabular-nums chat-text-muted-400/40 select-none">
+      <time dateTime={time.iso} className="px-1 text-content-compact tabular-nums chat-text-muted-400/40 select-none">
         <span aria-hidden="true">{time.label}</span>
         <span className="sr-only">{time.full}</span>
       </time>
@@ -341,7 +341,7 @@ const FeedbackComment = ({
 
   return (
     <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 chat-radius-md border chat-border-200/10 chat-surface-subtle-50/4 p-2">
-      <label htmlFor={id} className="text-[0.7rem] chat-text-secondary-600/60">
+      <label htmlFor={id} className="text-content-compact chat-text-secondary-600/60">
         {t('Tell us what went wrong (optional)')}
       </label>
       <textarea
@@ -366,7 +366,7 @@ const FeedbackComment = ({
           }
         }}
         placeholder={t('What could be improved?')}
-        className="w-full resize-y chat-radius-sm border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-[0.75rem] leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+        className="w-full resize-y chat-radius-sm border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-content-compact leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
         <Button
@@ -557,9 +557,9 @@ const MessageRow = memo(
             <FileIcon size={16} />
           </span>
           <span className="flex flex-col min-w-0 flex-1">
-            <span className="truncate text-[0.75rem] chat-text-900/100">{att.filename}</span>
+            <span className="truncate text-content-compact chat-text-900/100">{att.filename}</span>
             {(att.type || sizeLabel) && (
-              <span className="text-[0.65rem] chat-text-muted-400/40 uppercase">{[att.type, sizeLabel].filter(Boolean).join(' · ')}</span>
+              <span className="text-content-compact chat-text-muted-400/40 uppercase">{[att.type, sizeLabel].filter(Boolean).join(' · ')}</span>
             )}
           </span>
           <span className="shrink-0 chat-text-muted-400/30 group-hover:text-[var(--chat-accent)]">
@@ -576,7 +576,7 @@ const MessageRow = memo(
     const renderFileChip = (name: string, key: string) => (
       <span
         key={key}
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border-200/10 text-[0.7rem] chat-text-secondary-600/60"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border-200/10 text-content-compact chat-text-secondary-600/60"
       >
         <FileIcon size={14} />
         {name}
@@ -633,7 +633,7 @@ const MessageRow = memo(
         if (part.type === 'text') {
           if (part.value.trim()) {
             blocks.push(
-              <div key={`t-${i}`} className="max-w-[90%] pl-1 py-1 text-[0.8125rem] leading-7">
+              <div key={`t-${i}`} className="max-w-[90%] pl-1 py-1 text-content-base leading-7">
                 <MarkdownMessage
                   content={part.value}
                   streaming={isStreaming}
@@ -704,7 +704,7 @@ const MessageRow = memo(
       if (blocks.length === 0 && !isStreaming && !msg.stopped) {
         const generatedNothing = !content.trim() && !msg.attachments?.length && !msg.artifacts?.length;
         blocks.push(
-          <span key="empty" className="pl-1 text-[0.8125rem] chat-text-muted-400/40 italic">
+          <span key="empty" className="pl-1 text-content-base chat-text-muted-400/40 italic">
             {generatedNothing ? t('No response was generated. Please try again.') : '...'}
           </span>,
         );
@@ -753,7 +753,7 @@ const MessageRow = memo(
     // when the panel can open it, and otherwise just says what was referenced.
     const renderConversationRef = (ref: ChatConversationRef, i: number) => {
       const label = ref.title || (ref.key ? `@${ref.key}` : t('Untitled conversation'));
-      const chip = 'inline-flex items-center gap-1 max-w-[240px] px-2 py-0.5 rounded-full border text-[0.7rem]';
+      const chip = 'inline-flex items-center gap-1 max-w-[240px] px-2 py-0.5 rounded-full border text-content-compact';
       const content = (
         <>
           <MessageSquareIcon size={13} className="shrink-0" />
@@ -849,7 +849,7 @@ const MessageRow = memo(
         {isAssistant ? (
           <div data-testid="filigran-chat-assistant-message" className="flex flex-col gap-1.5 w-full items-start">
             {buildAssistantBlocks()}
-            {msg.stopped && !isStreaming && <p className="pl-1 text-[0.75rem] italic chat-text-muted-400/40">{t('Stopped')}</p>}
+            {msg.stopped && !isStreaming && <p className="pl-1 text-content-compact italic chat-text-muted-400/40">{t('Stopped')}</p>}
             {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-full ml-1 animate-pulse" />}
           </div>
         ) : (

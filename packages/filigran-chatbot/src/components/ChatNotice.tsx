@@ -54,7 +54,7 @@ export const ChatNotice = ({
       role={role}
       data-tone={tone}
       data-testid={rest['data-testid']}
-      className={`filigran-chat-notice flex items-start gap-2 chat-radius-md border px-2.5 py-1.5 text-[0.75rem] leading-5 ${TONE_CLASS[tone]} ${className}`}
+      className={`filigran-chat-notice flex items-start gap-2 chat-radius-md border px-2.5 py-1.5 text-content-compact leading-5 ${TONE_CLASS[tone]} ${className}`}
     >
       <Icon size={14} className="mt-[3px] shrink-0" />
       <div className="min-w-0 flex-1 break-words">{children}</div>

@@ -133,7 +133,7 @@ function readListWidth(key: string): number {
   return Number.isNaN(parsed) ? LIST_WIDTH.default : clampListWidth(parsed);
 }
 
-const sectionLabel = 'text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40';
+const sectionLabel = 'text-content-compact font-medium uppercase tracking-wide chat-text-muted-400/40';
 
 /**
  * Persistent conversation list for fullscreen mode, mirroring the XTM One web
@@ -336,7 +336,7 @@ export const ConversationSidebar = ({
               }}
               placeholder={t('Search conversations...')}
               aria-label={t('Search conversations...')}
-              className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+              className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-content-compact chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
             />
           </div>
         </div>
@@ -371,8 +371,8 @@ export const ConversationSidebar = ({
                   >
                     <ChevronRightIcon size={12} className={`shrink-0 chat-text-muted-400/30 transition-transform ${workspacesOpen ? 'rotate-90' : ''}`} />
                     <FolderIcon size={14} className="shrink-0 text-[var(--chat-accent)]" />
-                    <span className="truncate text-[0.8125rem] font-medium chat-text-800/80">{t('Workspaces')}</span>
-                    <span className="ml-auto shrink-0 pr-1 text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.groups.length}</span>
+                    <span className="truncate text-content-base font-medium chat-text-800/80">{t('Workspaces')}</span>
+                    <span className="ml-auto shrink-0 pr-1 text-content-compact tabular-nums chat-text-muted-400/30">{grouped.groups.length}</span>
                   </button>
                   <ChatIconButton
                     label={t('New workspace')}
@@ -435,14 +435,14 @@ export const ConversationSidebar = ({
                 <ChatIconButton label={t('New conversation outside a workspace')} icon={<EditIcon size={16} />} size="sm" onClick={() => onNewChat()} />
               </div>
               {filtered.map(renderRow)}
-              {noConversationYet && <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">{t('No conversations yet')}</p>}
+              {noConversationYet && <p className="px-3 py-1.5 text-content-compact chat-text-muted-400/30">{t('No conversations yet')}</p>}
             </DropZone>
-            {q && filtered.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>}
+            {q && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
           </>
         ) : (
           <>
-            {!loading && conversations.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{t('No conversations yet')}</p>}
-            {conversations.length > 0 && filtered.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>}
+            {!loading && conversations.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{t('No conversations yet')}</p>}
+            {conversations.length > 0 && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
             {filtered.map(renderRow)}
           </>
         )}
@@ -596,7 +596,7 @@ const DropZone = ({
 const EmptyWorkspaceHint = ({ t }: { t: (key: string) => string }) => {
   const { before, after, hasSlot } = translateAround(t, 'Drop a conversation here, or start one with {icon}.', 'icon');
   return (
-    <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">
+    <p className="px-3 py-1.5 text-content-compact chat-text-muted-400/30">
       {before}
       {hasSlot && (
         <span role="img" aria-label={t('New conversation in this workspace')} className="inline-block align-[-1px]">
@@ -651,7 +651,7 @@ const NameField = ({
       onBlur={commit}
       placeholder={placeholder}
       aria-label={placeholder}
-      className="mx-2 mb-1 w-[calc(100%-1rem)] chat-radius-sm chat-input-surface-white/10 px-2 py-1 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
+      className="mx-2 mb-1 w-[calc(100%-1rem)] chat-radius-sm chat-input-surface-white/10 px-2 py-1 text-content-base chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
     />
   );
 };
@@ -715,18 +715,18 @@ const WorkspaceGroupSection = ({
           >
             <ChevronRightIcon size={12} className={`shrink-0 chat-text-muted-400/30 transition-transform ${open ? 'rotate-90' : ''}`} />
             <FolderIcon size={14} className="shrink-0 text-[var(--chat-accent)]" />
-            <span className="truncate text-[0.8125rem] font-medium chat-text-800/80">{workspace ? workspace.name : t('Other workspaces')}</span>
+            <span className="truncate text-content-base font-medium chat-text-800/80">{workspace ? workspace.name : t('Other workspaces')}</span>
             {isMyDefault && (
-              <span className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] text-[var(--chat-accent)]">{t('default')}</span>
+              <span className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-content-compact text-[var(--chat-accent)]">{t('default')}</span>
             )}
-            <span className="ml-auto shrink-0 pr-1 text-[0.625rem] tabular-nums chat-text-muted-400/30">{count}</span>
+            <span className="ml-auto shrink-0 pr-1 text-content-compact tabular-nums chat-text-muted-400/30">{count}</span>
           </button>
         )}
         {workspace && manageable && !renaming && (
           <span className="flex shrink-0 items-center opacity-0 group-hover/ws:opacity-100 focus-within:opacity-100 transition-opacity">
             {confirmingDelete ? (
               <>
-                <span className="px-1 text-[0.65rem] text-red-600 dark:text-red-400">{t('Delete?')}</span>
+                <span className="px-1 text-content-compact text-red-600 dark:text-red-400">{t('Delete?')}</span>
                 <ChatIconButton
                   label={t('Delete workspace')}
                   icon={<CheckIcon size={16} />}
@@ -761,7 +761,7 @@ const WorkspaceGroupSection = ({
       {open && (
         <div className="space-y-0.5 pb-1 pl-3">
           {pending && (
-            <div className="flex items-center gap-2 chat-radius-sm bg-[var(--chat-accent)]/10 px-2.5 py-1.5 text-[0.75rem] text-[var(--chat-accent)]">
+            <div className="flex items-center gap-2 chat-radius-sm bg-[var(--chat-accent)]/10 px-2.5 py-1.5 text-content-compact text-[var(--chat-accent)]">
               <EditIcon size={12} />
               {t('New conversation — send a message to start it')}
             </div>
@@ -783,7 +783,7 @@ const RowAgentIcon = ({ icon }: { icon: string | undefined }) => (
     size={14}
     fallback={<BotIcon size={13} />}
     imageClassName="h-4 w-4 chat-radius-sm object-cover"
-    emojiClassName="text-[0.8125rem] leading-none"
+    emojiClassName="text-content-base leading-none"
   />
 );
 
@@ -879,12 +879,12 @@ const ConversationRow = ({
             }}
             onBlur={onCommitRename}
             aria-label={t('Conversation title')}
-            className="w-full chat-radius-sm chat-input-surface-white/10 px-1.5 py-0.5 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
+            className="w-full chat-radius-sm chat-input-surface-white/10 px-1.5 py-0.5 text-content-base chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
           />
         ) : (
           // The whole title on hover when the row still cuts it.
           <Tooltip title={c.title || t('Untitled conversation')} truncated>
-            <span className={`block min-w-0 truncate text-[0.8125rem] ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
+            <span className={`block min-w-0 truncate text-content-base ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
               {c.title || t('Untitled conversation')}
             </span>
           </Tooltip>
@@ -898,10 +898,10 @@ const ConversationRow = ({
           than padded with a placeholder.
         */}
         {c.lastMessagePreview && !isEditing && (
-          <span className="block truncate text-[0.7rem] chat-text-secondary-500/50">{c.lastMessagePreview}</span>
+          <span className="block truncate text-content-compact chat-text-secondary-500/50">{c.lastMessagePreview}</span>
         )}
         {(c.agentName || c.updatedAt || channel || workspaceName) && !isEditing && (
-          <span className="flex min-w-0 items-center gap-1 text-[0.65rem] chat-text-muted-400/30">
+          <span className="flex min-w-0 items-center gap-1 text-content-compact chat-text-muted-400/30">
             {channel && (
               <Tooltip title={translate(t, 'Started in {channel}', { channel })}>
                 <span role="img" aria-label={translate(t, 'Started in {channel}', { channel })} className="flex shrink-0">

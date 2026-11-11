@@ -110,7 +110,7 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
     const block = (
       <div className="my-3 chat-radius-md border chat-border-200/10 overflow-hidden chat-code-block">
         <div className="flex items-center justify-between px-3 py-1.5 border-b chat-border-200/10 chat-surface-subtle-100/3 select-none">
-          <span className="text-[0.7rem] chat-text-muted-500/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
+          <span className="text-content-compact chat-text-muted-500/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
           <ChatIconButton
             label={copiedBlock === codeStr ? t('Copied') : t('Copy code')}
             icon={copiedBlock === codeStr ? <CheckIcon size={16} /> : <CopyIcon size={16} />}

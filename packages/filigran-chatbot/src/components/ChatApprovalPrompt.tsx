@@ -122,14 +122,14 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
                 "unknown tool": the placeholder is the package's own text and
                 therefore translated here, not in the parser. */}
             <p className="truncate font-mono text-xs chat-text-800/85">{proposal.toolName || t('unknown tool')}</p>
-            {proposal.toolDescription && <p className="mt-0.5 text-[0.7rem] chat-text-secondary-600/60">{proposal.toolDescription}</p>}
-            {proposal.source && <p className="mt-0.5 text-[0.65rem] chat-text-muted-400/35">{proposal.source}</p>}
+            {proposal.toolDescription && <p className="mt-0.5 text-content-compact chat-text-secondary-600/60">{proposal.toolDescription}</p>}
+            {proposal.source && <p className="mt-0.5 text-content-compact chat-text-muted-400/35">{proposal.source}</p>}
           </div>
         </div>
         {verdict && (
           <span
             className={
-              'shrink-0 chat-radius-sm px-1.5 py-0.5 text-[0.65rem] font-medium ' +
+              'shrink-0 chat-radius-sm px-1.5 py-0.5 text-content-compact font-medium ' +
               (verdict === 'reject' ? 'bg-red-500/15 text-red-600 dark:text-red-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300')
             }
           >
@@ -143,7 +143,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
           {argumentNames.map((name) => {
             const schema = argumentSchema(proposal.inputSchema, name);
             return (
-              <div key={name} className="text-[0.7rem]">
+              <div key={name} className="text-content-compact">
                 <div className="flex flex-wrap items-baseline gap-1.5">
                   <span className="font-mono chat-text-secondary-700/75">{name}</span>
                   {schema.description && <span className="chat-text-secondary-500/45">— {schema.description}</span>}
@@ -159,7 +159,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
 
       {!verdict && rejecting && (
         <div ref={rejectPanelRef} className="flex flex-col gap-1.5">
-          <label htmlFor={reasonId} className="text-[0.7rem] chat-text-secondary-500/45">
+          <label htmlFor={reasonId} className="text-content-compact chat-text-secondary-500/45">
             {t('Why not? The agent sees this and can adapt (optional)')}
           </label>
           <textarea
@@ -169,7 +169,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t('e.g. wrong environment — use staging instead')}
-            className="w-full resize-none chat-radius-sm border chat-border-200/10 chat-input-surface-white/3 px-2 py-1 text-[0.7rem] chat-text-800/85 outline-none focus:border-[var(--chat-accent)]/50"
+            className="w-full resize-none chat-radius-sm border chat-border-200/10 chat-input-surface-white/3 px-2 py-1 text-content-compact chat-text-800/85 outline-none focus:border-[var(--chat-accent)]/50"
           />
           <div className="flex items-center gap-1.5">
             <Button variant="destructive" size="sm" disabled={disabled} startIcon={<XCircleIcon size={16} />} onClick={() => decide('reject')}>
@@ -303,7 +303,7 @@ export const ChatApprovalPrompt = ({ proposals, onSubmit, isSubmitting, error, t
         {/* The counter earns its place only when there is more than one thing
             to count; on a single proposal it reads as a progress bar for a
             one-step process. */}
-        <span className="text-[0.7rem] chat-text-muted-500/40">
+        <span className="text-content-compact chat-text-muted-500/40">
           {proposals.length > 1 ? translate(t, '{decided}/{total} decided', { decided: decidedCount, total: proposals.length }) : ''}
         </span>
         <Button size="sm" disabled={!allDecided || busy} onClick={() => submit(proposals.map((p) => decisions[p.toolCallId]))}>

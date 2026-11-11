@@ -194,14 +194,14 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
   const displaySrc = fetched.src;
 
   if (fetched.status === 'failed' || (displaySrc !== null && undecodable === displaySrc)) {
-    return <p className="my-2 text-[0.75rem] italic chat-text-muted-400/40">{t('Image could not be loaded')}</p>;
+    return <p className="my-2 text-content-compact italic chat-text-muted-400/40">{t('Image could not be loaded')}</p>;
   }
 
   if (!displaySrc) {
     return (
       <span className="my-3 inline-flex items-center gap-2 chat-radius-md border chat-border-200/10 px-3 py-2">
         <ImageIcon size={14} className="shrink-0 animate-pulse text-[var(--chat-accent)]" />
-        <span className="text-[0.7rem] chat-text-muted-500/40">{t('Loading image…')}</span>
+        <span className="text-content-compact chat-text-muted-500/40">{t('Loading image…')}</span>
       </span>
     );
   }

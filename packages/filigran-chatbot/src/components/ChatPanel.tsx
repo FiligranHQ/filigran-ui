@@ -1676,7 +1676,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               className="flex-1 flex flex-col items-center justify-center gap-3 px-6 py-6 text-center"
             >
               <AlertTriangleIcon size={18} className="text-amber-500 dark:text-amber-400" />
-              <p className="max-w-sm text-[0.8125rem] leading-6 chat-text-secondary-600/60">
+              <p className="max-w-sm text-content-base leading-6 chat-text-secondary-600/60">
                 {refusedRestore.detail ?? t('This conversation could not be loaded.')}
               </p>
               <Button priority="secondary" size="sm" onClick={retryRefusedRestore}>

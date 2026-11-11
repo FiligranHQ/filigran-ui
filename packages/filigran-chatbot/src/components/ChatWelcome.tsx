@@ -65,7 +65,7 @@ export const ChatWelcome = ({ firstName, logoIcon, agentIcon, promptSuggestions,
         size={40}
         fallback={logoIcon}
         imageClassName="w-10 h-10 chat-radius-sm object-cover"
-        emojiClassName="text-[2.5rem] leading-none"
+        emojiClassName="text-title-jumbo leading-none"
       />
     </span>
 

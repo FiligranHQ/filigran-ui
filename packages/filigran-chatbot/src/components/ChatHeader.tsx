@@ -311,26 +311,26 @@ export const ChatHeader = ({
               <span aria-hidden className="shrink-0 chat-text-muted-400/30">
                 /
               </span>
-              <span data-testid="filigran-chat-header-title" className="min-w-0 truncate px-1 text-[0.8125rem] chat-text-secondary-700/70">
+              <span data-testid="filigran-chat-header-title" className="min-w-0 truncate px-1 text-content-base chat-text-secondary-700/70">
                 {title}
               </span>
             </>
           )}
         </div>
         {transferredFrom && (
-          <div className="pl-10 pr-2 text-[0.6rem] font-normal chat-text-muted-400/30">
+          <div className="pl-10 pr-2 text-content-compact font-normal chat-text-muted-400/30">
             {translate(t, 'Transferred from {agent}', { agent: transferredFrom })}
           </div>
         )}
         {subtitle && (
-          <div data-testid="filigran-chat-header-subtitle" className="truncate pl-10 pr-2 text-[0.6rem] font-normal chat-text-muted-400/40">
+          <div data-testid="filigran-chat-header-subtitle" className="truncate pl-10 pr-2 text-content-compact font-normal chat-text-muted-400/40">
             {subtitle}
           </div>
         )}
       </div>
 
       <Dropdown open={agentMenuOpen} onClose={onAgentMenuClose} anchorRef={agentAnchorRef} width={280}>
-        <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{t('Switch to another agent')}</span>
+        <span className="block px-4 pt-3 pb-1 text-content-compact tracking-[1px] uppercase chat-text-muted-400/40">{t('Switch to another agent')}</span>
         {/* Three distinct states, because an empty array alone cannot tell them
             apart — and treating "failed" as "still loading" is what left this
             menu spinning forever against an unreachable backend.
@@ -349,13 +349,13 @@ export const ChatHeader = ({
         {agents.length === 0 && !agentsLoading && agentsError && (
           <div className="px-4 py-3 flex items-start gap-2">
             <AlertTriangleIcon size={14} className="mt-0.5 shrink-0 text-amber-500 dark:text-amber-400" />
-            <span className="text-[0.75rem] leading-5 chat-text-secondary-600/60">
+            <span className="text-content-compact leading-5 chat-text-secondary-600/60">
               {t('Could not reach the assistant service. Check the connection and try again.')}
             </span>
           </div>
         )}
         {agents.length === 0 && !agentsLoading && !agentsError && (
-          <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('Agent switching is not available here')}</div>
+          <div className="px-4 py-3 text-content-compact chat-text-muted-400/40">{t('Agent switching is not available here')}</div>
         )}
         {showAgentSearch && (
           <div className="px-3 pb-2 pt-1">
@@ -375,7 +375,7 @@ export const ChatHeader = ({
                 onKeyDown={onAgentSearchKeyDown}
                 placeholder={t('Search agents...')}
                 aria-label={t('Search agents...')}
-                className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+                className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-content-compact chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
               />
             </div>
           </div>
@@ -388,12 +388,12 @@ export const ChatHeader = ({
           className="max-h-[320px] overflow-y-auto filigran-chat-scrollable"
         >
           {agents.length > 0 && filteredAgents.length === 0 && (
-            <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('No agent matches')}</div>
+            <div className="px-4 py-3 text-content-compact chat-text-muted-400/40">{t('No agent matches')}</div>
           )}
           {agentGroups.map(({ group, agents: groupMembers }) => (
             <div key={group ?? ''} role="group" aria-label={group ?? undefined}>
               {group && (
-                <span className="block px-4 pt-2 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40">{group}</span>
+                <span className="block px-4 pt-2 pb-0.5 text-content-compact font-medium uppercase tracking-wide chat-text-muted-400/40">{group}</span>
               )}
               {groupMembers.map((agent) => {
                 const index = orderedAgents.indexOf(agent);
@@ -422,22 +422,22 @@ export const ChatHeader = ({
                   </div>
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-1">
-                      <span className="text-[0.8125rem] font-medium chat-text-900/100 truncate">{agent.name}</span>
+                      <span className="text-content-base font-medium chat-text-900/100 truncate">{agent.name}</span>
                       {agent.badges?.map((badge) => (
                         <span
                           key={badge}
-                          className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] leading-4 text-[var(--chat-accent)]"
+                          className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-content-compact leading-4 text-[var(--chat-accent)]"
                         >
                           {badge}
                         </span>
                       ))}
                       {agent.disableChat && (
-                        <span className="shrink-0 chat-radius-sm bg-amber-500/10 px-1 text-[0.6rem] leading-4 text-amber-600 dark:text-amber-400">
+                        <span className="shrink-0 chat-radius-sm bg-amber-500/10 px-1 text-content-compact leading-4 text-amber-600 dark:text-amber-400">
                           {t('Not recommended for chat')}
                         </span>
                       )}
                     </div>
-                    {agent.description && <div className="text-[0.7rem] chat-text-secondary-500/40 truncate">{agent.description}</div>}
+                    {agent.description && <div className="text-content-compact chat-text-secondary-500/40 truncate">{agent.description}</div>}
                   </div>
                   {isCurrent && <CheckIcon size={14} className="ml-auto shrink-0 text-[var(--chat-accent)]" />}
                 </button>
@@ -495,7 +495,7 @@ export const ChatHeader = ({
           />
 
           <Dropdown open={historyMenuOpen} onClose={() => onHistoryMenuClose?.()} anchorRef={historyAnchorRef} placement="bottom-end" width={300}>
-            <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{t('Conversation history')}</span>
+            <span className="block px-4 pt-3 pb-1 text-content-compact tracking-[1px] uppercase chat-text-muted-400/40">{t('Conversation history')}</span>
             <div className="max-h-72 overflow-y-auto filigran-chat-scrollable">
               {conversationsLoading && conversations.length === 0 && (
                 <div className="px-4 py-2">
@@ -507,7 +507,7 @@ export const ChatHeader = ({
                 (conversationsFailed ? (
                   <ConversationListFailed onRetry={() => onRetryConversations?.()} className="px-4 py-3" t={t} />
                 ) : (
-                  <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('No conversations yet')}</div>
+                  <div className="px-4 py-3 text-content-compact chat-text-muted-400/40">{t('No conversations yet')}</div>
                 ))}
               {conversations.map((conv) => {
                 const isActive = conv.conversationId === activeConversationId;
@@ -525,8 +525,8 @@ export const ChatHeader = ({
                       onClick={() => onSelectConversation?.(conv.conversationId)}
                       className="flex-1 min-w-0 text-left"
                     >
-                      <div className="text-[0.8125rem] font-medium chat-text-900/100 truncate">{conv.title || t('Untitled conversation')}</div>
-                      {when && <div className="text-[0.7rem] chat-text-muted-500/40 truncate">{when}</div>}
+                      <div className="text-content-base font-medium chat-text-900/100 truncate">{conv.title || t('Untitled conversation')}</div>
+                      {when && <div className="text-content-compact chat-text-muted-500/40 truncate">{when}</div>}
                     </button>
                     {onDeleteConversation && (
                       <ChatIconButton

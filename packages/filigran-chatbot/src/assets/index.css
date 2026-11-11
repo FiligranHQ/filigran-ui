@@ -92,6 +92,10 @@
   --font-content-caption: var(--font-content-caption, inherit);
   --leading-content-caption: var(--leading-content-caption, 1.5);
   --tracking-content-caption: var(--tracking-content-caption, normal);
+  /* The type scale of every chat text (chatbot 3.23.0, slice 3): compact (12px) for meta lines, labels and chips,
+     base (14px) for titles, rows and the message text, title-jumbo for the welcome emoji. No arbitrary text-[..rem]. */
+  --text-content-compact: var(--text-content-compact, var(--text-2, 0.75rem));
+  --text-title-jumbo: var(--text-title-jumbo, var(--text-10, 2.625rem));
   --color-default-primary: var(--text-default-primary, currentColor);
   --color-default-disabled: var(--text-default-disabled, color-mix(in oklab, currentColor 40%, transparent));
   /* One name for the DS's two disabled tokens: the fill (--bg-) and the border (--border-elevation-disabled) share it. */

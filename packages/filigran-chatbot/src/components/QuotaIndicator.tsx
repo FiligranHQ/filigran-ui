@@ -27,7 +27,7 @@ export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
     const title = withScope(period ? translate(t, 'Usage · {period}', { period }) : t('Usage'));
     return (
       <Tooltip title={title}>
-        <span className="text-[0.68rem] tabular-nums chat-text-muted-400/30" role="img" aria-label={`${title} ${compact(used)}`}>
+        <span className="text-content-compact tabular-nums chat-text-muted-400/30" role="img" aria-label={`${title} ${compact(used)}`}>
           {compact(used)}
         </span>
       </Tooltip>
@@ -52,7 +52,7 @@ export const QuotaIndicator = ({ quota, t }: QuotaIndicatorProps) => {
         <span className="h-1 w-10 rounded-full chat-border-fill-200/10 overflow-hidden">
           <span className={`block h-full rounded-full transition-[width] duration-300 ${barColor}`} style={{ width: `${ratio * 100}%` }} />
         </span>
-        <span className={`text-[0.68rem] tabular-nums ${textColor}`}>{label}</span>
+        <span className={`text-content-compact tabular-nums ${textColor}`}>{label}</span>
       </span>
     </Tooltip>
   );

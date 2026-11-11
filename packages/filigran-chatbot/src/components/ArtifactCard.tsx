@@ -84,10 +84,10 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh, onOpen }: Art
           <Icon size={18} />
         </span>
         <span className="flex flex-col min-w-0 flex-1 gap-0.5">
-          <span className="truncate text-[0.8125rem] font-medium chat-text-900/100">{title}</span>
-          {facts && <span className="text-[0.7rem] chat-text-secondary-500/50">{facts}</span>}
+          <span className="truncate text-content-base font-medium chat-text-900/100">{title}</span>
+          {facts && <span className="text-content-compact chat-text-secondary-500/50">{facts}</span>}
           {renderLabel && (
-            <span className="flex items-center gap-1.5 text-[0.7rem] chat-text-secondary-500/50" aria-live="polite">
+            <span className="flex items-center gap-1.5 text-content-compact chat-text-secondary-500/50" aria-live="polite">
               {following && <Spinner size={10} />}
               {renderLabel}
             </span>

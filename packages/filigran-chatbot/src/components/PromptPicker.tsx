@@ -50,7 +50,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
       />
 
       <Dropdown open={open} onClose={close} anchorRef={anchorRef} width={280}>
-        <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{t('Insert prompt template')}</span>
+        <span className="block px-4 pt-3 pb-1 text-content-compact tracking-[1px] uppercase chat-text-muted-400/40">{t('Insert prompt template')}</span>
 
         {prompts.length > SEARCH_THRESHOLD && (
           <div className="px-3 pb-2 pt-1">
@@ -64,13 +64,13 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
               }}
               placeholder={t('Search prompts...')}
               aria-label={t('Search prompts...')}
-              className="w-full h-7 px-2 chat-radius-sm chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+              className="w-full h-7 px-2 chat-radius-sm chat-surface-subtle-100/6 text-content-compact chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
             />
           </div>
         )}
 
         <div className="max-h-[240px] overflow-y-auto filigran-chat-scrollable">
-          {filtered.length === 0 && <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('No prompt matches')}</div>}
+          {filtered.length === 0 && <div className="px-4 py-3 text-content-compact chat-text-muted-400/40">{t('No prompt matches')}</div>}
           {filtered.map((p) => (
             <button
               data-ds-exempt="prompt-option-row"
@@ -82,8 +82,8 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
               }}
               className="w-full px-4 py-1.5 text-left hover:chat-surface-hover-100/10 transition-colors"
             >
-              <div className="text-[0.8125rem] chat-text-900/100 truncate">{p.title}</div>
-              {p.description && <div className="text-[0.7rem] chat-text-secondary-500/40 truncate">{p.description}</div>}
+              <div className="text-content-base chat-text-900/100 truncate">{p.title}</div>
+              {p.description && <div className="text-content-compact chat-text-secondary-500/40 truncate">{p.description}</div>}
             </button>
           ))}
         </div>

@@ -106,7 +106,7 @@ export function WorkingFiles({ files, requestHeaders, t }: { files: WorkingFile[
           <li key={file.key} className="flex items-center gap-1.5">
             {opened && file.isImage && <WorkingFileThumbnail url={file.imageUrl} requestHeaders={requestHeaders} />}
             {file.card}
-            {file.superseded && <span className="shrink-0 text-[0.7rem] chat-text-muted-400/40">{t('Superseded')}</span>}
+            {file.superseded && <span className="shrink-0 text-content-compact chat-text-muted-400/40">{t('Superseded')}</span>}
           </li>
         ))}
       </ul>
