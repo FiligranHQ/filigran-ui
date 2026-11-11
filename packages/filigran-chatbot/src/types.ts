@@ -669,6 +669,13 @@ export interface ChatPanelProps {
   /** Shown in place of the composer while `readOnly`. */
   readOnlyNotice?: React.ReactNode;
   /**
+   * A tip shown at the top of a voice call (for example which models answer
+   * fast enough to talk to), in an info notice the user can close. Once
+   * closed it stays closed for the browser session (`sessionStorage`, under
+   * `storageKeyPrefix`). Without it the call shows no tip.
+   */
+  voiceCallNotice?: React.ReactNode;
+  /**
    * Fields merged into every REST message body, read at send time: the host's
    * own per-message options (tool selection, run mode). They never override
    * the panel's fields (`content`, `conversation_id`, …).

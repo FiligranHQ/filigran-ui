@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   workspacesOpen: 'filigran-chat-workspaces-open',
   draft: 'filigranChatDraft:',
   draftRefs: 'filigranChatDraftRefs:',
+  voiceCallNoticeDismissed: 'filigranChatVoiceCallNoticeDismissed',
 } as const;
 
 export function storageKey(prefix: string | undefined, key: string): string {
