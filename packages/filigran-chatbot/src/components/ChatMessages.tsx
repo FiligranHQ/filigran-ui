@@ -50,7 +50,9 @@ import {
   VolumeIcon,
   VolumeOffIcon,
 } from './icons';
+import { Button } from '@filigran/design-system';
 import { ArtifactCard } from './ArtifactCard';
+import { ChatIconButton } from './ChatIconButton';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
 import { ChatNotice } from './ChatNotice';
@@ -208,16 +210,16 @@ function isImageAttachment(att: ChatAttachment): boolean {
  * tabbing onto one sees it through `focus-visible` / `focus-within`.
  */
 const SHOWN_ON_HOVER = 'group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
-const FOOTER_BUTTON = 'p-1 chat-radius-sm transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
-const ACCENT_ON_HOVER = 'hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]';
-const REVEALED_BUTTON = `opacity-0 ${SHOWN_ON_HOVER} ${ACCENT_ON_HOVER}`;
+// The footer's controls are the design system's small tertiary icon buttons
+// (ChatIconButton); these classes only reveal them, the DS draws every state.
+const REVEALED_BUTTON = `opacity-0 transition-opacity ${SHOWN_ON_HOVER}`;
 /**
  * The reasoning details button stays dimly in view, so a turn that reasoned is
  * noticed, and reads like its neighbours once they show.
  */
-const DIMMED_BUTTON = `opacity-50 ${SHOWN_ON_HOVER} ${ACCENT_ON_HOVER}`;
+const DIMMED_BUTTON = `opacity-50 transition-opacity ${SHOWN_ON_HOVER}`;
 /** A control in its "on" state (the given rating, the message being read) stays in view. */
-const ACTIVE_BUTTON = 'opacity-100 text-[var(--chat-accent)]';
+const ACTIVE_BUTTON = 'opacity-100';
 
 /** When the message was sent; the tooltip spells the date out. */
 const MessageTime = ({ timestamp, locale }: { timestamp: Date; locale?: string }) => {
@@ -250,16 +252,14 @@ const MessageCopyButton = ({ text, label, t }: { text: string; label: string; t:
 
   const name = copied ? t('Copied!') : label;
   return (
-    <Tooltip title={name}>
-      <button
-        type="button"
-        onClick={handleCopy}
-        aria-label={name}
-        className={`${FOOTER_BUTTON} ${copied ? 'opacity-100 text-green-500 dark:text-green-400' : REVEALED_BUTTON}`}
-      >
-        {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-      </button>
-    </Tooltip>
+    <ChatIconButton
+      label={name}
+      icon={copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+      size="sm"
+      active={copied}
+      onClick={handleCopy}
+      className={copied ? ACTIVE_BUTTON : REVEALED_BUTTON}
+    />
   );
 };
 
@@ -290,24 +290,23 @@ const MessageFeedbackButtons = ({
     if (locked && !active) return null;
     const Icon = target === 'up' ? ThumbsUpIcon : ThumbsDownIcon;
     return (
-      <Tooltip title={locked ? t('Feedback already submitted') : label}>
-        <button
-          ref={target === 'down' ? downRef : undefined}
-          type="button"
-          onClick={() => {
-            if (!inert) onChange(active ? null : target);
-          }}
-          aria-label={label}
-          aria-pressed={active}
-          // Not `disabled`: a disabled button takes no focus and no hover, so
-          // it could not say why it does not answer.
-          aria-disabled={inert || undefined}
-          aria-describedby={locked ? lockedId : undefined}
-          className={`${FOOTER_BUTTON} ${active ? ACTIVE_BUTTON : REVEALED_BUTTON} ${inert ? 'cursor-default' : ''}`}
-        >
-          <Icon size={14} filled={active} />
-        </button>
-      </Tooltip>
+      <ChatIconButton
+        ref={target === 'down' ? downRef : undefined}
+        label={label}
+        tooltip={locked ? t('Feedback already submitted') : true}
+        icon={<Icon size={16} filled={active} />}
+        size="sm"
+        active={active}
+        onClick={() => {
+          if (!inert) onChange(active ? null : target);
+        }}
+        aria-pressed={active}
+        // Not `disabled`: a disabled button takes no focus and no hover, so
+        // it could not say why it does not answer.
+        aria-disabled={inert || undefined}
+        aria-describedby={locked ? lockedId : undefined}
+        className={`${active ? ACTIVE_BUTTON : REVEALED_BUTTON} ${inert ? 'cursor-default' : ''}`}
+      />
     );
   };
 
@@ -370,26 +369,28 @@ const FeedbackComment = ({
         className="w-full resize-y chat-radius-sm border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-[0.75rem] leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
-        <button
-          type="button"
+        <Button
+          priority="tertiary"
+          size="sm"
           onClick={() => {
             if (!pending) onSkip();
           }}
           aria-disabled={pending || undefined}
-          className="chat-radius-sm px-2 py-0.5 text-[0.7rem] chat-text-secondary-500/50 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
         >
           {t('Skip')}
-        </button>
-        <button
-          type="button"
+        </Button>
+        {/* aria-disabled, not disabled: the focus stays on the form while it saves. */}
+        <Button
+          priority="primary"
+          size="sm"
           onClick={() => {
             if (canSave) onSave(text);
           }}
           aria-disabled={!canSave || undefined}
-          className={`chat-radius-sm px-2 py-0.5 text-[0.7rem] text-white bg-[var(--chat-accent)] transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)] ${canSave ? 'hover:opacity-90' : 'opacity-50 cursor-default'}`}
+          className={canSave ? undefined : 'opacity-50 cursor-default'}
         >
           {t('Save')}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -399,11 +400,14 @@ const FeedbackComment = ({
 const ReadAloudButton = ({ speaking, onToggle, t }: { speaking: boolean; onToggle: () => void; t: (key: string) => string }) => {
   const name = speaking ? t('Stop reading') : t('Read aloud');
   return (
-    <Tooltip title={name}>
-      <button type="button" onClick={onToggle} aria-label={name} className={`${FOOTER_BUTTON} ${speaking ? ACTIVE_BUTTON : REVEALED_BUTTON}`}>
-        {speaking ? <VolumeOffIcon size={14} /> : <VolumeIcon size={14} />}
-      </button>
-    </Tooltip>
+    <ChatIconButton
+      label={name}
+      icon={speaking ? <VolumeOffIcon size={16} /> : <VolumeIcon size={16} />}
+      size="sm"
+      active={speaking}
+      onClick={onToggle}
+      className={speaking ? ACTIVE_BUTTON : REVEALED_BUTTON}
+    />
   );
 };
 
@@ -869,20 +873,16 @@ const MessageRow = memo(
           <div className="mt-0.5 flex flex-wrap items-center gap-0.5 chat-text-muted-400/40 select-none">
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
             {hasReasoningDetails && (
-              <Tooltip title={reasoningLabel}>
-                <button
-                  type="button"
-                  onClick={() => setShowReasoning((v) => !v)}
-                  className={`${FOOTER_BUTTON} ${
-                    cutShort ? 'opacity-100 text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300' : DIMMED_BUTTON
-                  }`}
-                  aria-label={reasoningLabel}
-                  aria-haspopup="dialog"
-                  aria-expanded={showReasoning}
-                >
-                  {cutShort ? <AlertTriangleIcon size={14} /> : <InfoIcon size={14} />}
-                </button>
-              </Tooltip>
+              <ChatIconButton
+                label={reasoningLabel}
+                // A reply cut short shows its warning glyph in the panel's warning tone.
+                icon={cutShort ? <AlertTriangleIcon size={16} className="text-[var(--chat-warning)]" /> : <InfoIcon size={16} />}
+                size="sm"
+                onClick={() => setShowReasoning((v) => !v)}
+                className={cutShort ? 'opacity-100' : DIMMED_BUTTON}
+                aria-haspopup="dialog"
+                aria-expanded={showReasoning}
+              />
             )}
             {showActions && (
               <>
@@ -1327,15 +1327,16 @@ export const ChatMessages = ({
     >
       {(hasEarlierMessages || onLoadEarlier) && (
         <div className="flex justify-center">
-          <button
-            type="button"
+          <Button
+            priority="secondary"
+            size="sm"
+            // disabled, not loading: the label itself says it loads, which the DS spinner would hide.
             disabled={loadingEarlier}
+            startIcon={<ChevronDownIcon size={16} className="rotate-180" />}
             onClick={() => void showEarlier()}
-            className="flex items-center gap-1.5 rounded-full border chat-border-200/10 px-3 py-1 text-[0.7rem] chat-text-secondary-500/50 transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)]"
           >
-            <ChevronDownIcon size={13} className="rotate-180" />
             {loadingEarlier ? t('Loading earlier messages…') : t('Load earlier messages')}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -1392,20 +1393,19 @@ export const ChatMessages = ({
           of the view to hold the way back to the end. */}
       <div className="sticky bottom-0 z-10 h-0">
         {!following && (
-          <Tooltip title={t('Scroll to bottom')} className="absolute bottom-1 left-1/2 inline-flex -translate-x-1/2">
-          <button
-            type="button"
+          // Over the thread's text: the outlined (secondary) DS icon button on the menu surface.
+          <ChatIconButton
+            label={t('Scroll to bottom')}
+            icon={<ChevronDownIcon size={20} />}
+            priority="secondary"
+            anchorClassName="absolute bottom-1 left-1/2 inline-flex -translate-x-1/2"
+            className="chat-menu-surface"
             onClick={() => {
               // The button goes once the view follows: the focus moves to the thread, not to the page.
               scrollRef.current?.focus({ preventScroll: true });
               follower.reveal();
             }}
-            aria-label={t('Scroll to bottom')}
-            className="rounded-full border chat-border-200/10 chat-menu-surface p-1.5 chat-text-secondary-500/50 shadow-md transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
-          >
-            <ChevronDownIcon size={16} />
-          </button>
-          </Tooltip>
+          />
         )}
       </div>
     </div>

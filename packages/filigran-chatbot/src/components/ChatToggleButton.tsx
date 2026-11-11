@@ -1,43 +1,31 @@
+import { Button } from '@filigran/design-system';
 import type { FunctionComponent } from 'react';
 import type { ChatToggleButtonProps } from '../types';
 import { useMemo } from 'react';
-import { hexAlpha } from '../utils';
 import { createTranslate } from '../i18n';
 import { DefaultLogoIcon } from './icons';
 
-export const ChatToggleButton: FunctionComponent<ChatToggleButtonProps> = ({
-  isOpen,
-  onToggle,
-  label,
-  accentColor = '#7b5cff',
-  icon,
-  t: hostT,
-  locale,
-}) => {
+/**
+ * The host's button that opens and closes the panel: the design system's
+ * secondary Button (its border, hover, focus ring and pressed state come from
+ * the host's design-system tokens). `accentColor` is no longer painted on it
+ * (chatbot 3.23.0): the button follows the design system like every other
+ * control of the panel.
+ */
+export const ChatToggleButton: FunctionComponent<ChatToggleButtonProps> = ({ isOpen, onToggle, label, icon, t: hostT, locale }) => {
   const t = useMemo(() => createTranslate(hostT, locale), [hostT, locale]);
   const resolvedIcon = icon ?? <DefaultLogoIcon size={16} />;
 
   return (
-    <button
-      type="button"
+    <Button
+      priority="secondary"
+      size="sm"
+      aria-pressed={isOpen}
       onClick={onToggle}
-      className="filigran-chatbot inline-flex items-center gap-1.5 px-3 py-[3px] text-[0.8125rem] font-medium whitespace-nowrap chat-radius-sm border transition-colors"
-      style={{
-        borderColor: isOpen ? accentColor : hexAlpha(accentColor, 0.5),
-        color: accentColor,
-        backgroundColor: isOpen ? hexAlpha(accentColor, 0.1) : 'transparent',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = accentColor;
-        e.currentTarget.style.backgroundColor = hexAlpha(accentColor, 0.1);
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = isOpen ? accentColor : hexAlpha(accentColor, 0.5);
-        e.currentTarget.style.backgroundColor = isOpen ? hexAlpha(accentColor, 0.1) : 'transparent';
-      }}
+      className="filigran-chatbot"
+      startIcon={<span className="inline-flex [&>svg]:w-4 [&>svg]:h-4">{resolvedIcon}</span>}
     >
-      <span className="[&>svg]:w-4 [&>svg]:h-4">{resolvedIcon}</span>
       {label ?? t('Ask Assistant')}
-    </button>
+    </Button>
   );
 };

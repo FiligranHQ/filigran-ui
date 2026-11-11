@@ -1,3 +1,4 @@
+import { Button } from '@filigran/design-system';
 import { createContext, useContext, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { ChatAttachment, Translate } from '../types';
 import { translate } from '../utils';
@@ -41,9 +42,6 @@ export const KeepViewContext = createContext<() => void>(() => undefined);
 
 /** From this many files, the opened list repeats its toggle at its end. */
 const FOOTER_TOGGLE_AT = 8;
-
-const TOGGLE =
-  'inline-flex items-center gap-1 chat-radius-sm text-[0.7rem] chat-text-muted-400/40 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
 
 /**
  * A picture's thumbnail, in one fixed box whatever the picture's shape or
@@ -89,20 +87,20 @@ export function WorkingFiles({ files, requestHeaders, t }: { files: WorkingFile[
 
   return (
     <div className="pl-1">
-      <button
+      <Button
         ref={toggleRef}
-        type="button"
+        priority="tertiary"
+        size="sm"
         aria-expanded={open}
         aria-controls={listId}
+        startIcon={<ChevronDownIcon size={16} className={`transition-transform${open ? ' rotate-180' : ''}`} />}
         onClick={() => {
           setOpen(!open);
           setOpened(true);
         }}
-        className={TOGGLE}
       >
-        <ChevronDownIcon size={13} className={`transition-transform${open ? ' rotate-180' : ''}`} />
         {translate(t, 'Working files ({count})', { count: files.length })}
-      </button>
+      </Button>
       <ul id={listId} hidden={!open} className="mt-1.5 flex flex-col gap-1.5">
         {files.map((file) => (
           <li key={file.key} className="flex items-center gap-1.5">
@@ -113,19 +111,20 @@ export function WorkingFiles({ files, requestHeaders, t }: { files: WorkingFile[
         ))}
       </ul>
       {open && files.length >= FOOTER_TOGGLE_AT && (
-        <button
-          type="button"
+        <Button
+          priority="tertiary"
+          size="sm"
+          className="mt-1.5"
           aria-controls={listId}
+          startIcon={<ChevronDownIcon size={16} className="rotate-180" />}
           onClick={() => {
             setOpen(false);
             toggleRef.current?.focus({ preventScroll: true });
             toggleRef.current?.scrollIntoView({ block: 'nearest' });
           }}
-          className={`mt-1.5 ${TOGGLE}`}
         >
-          <ChevronDownIcon size={13} className="rotate-180" />
           {t('Show less')}
-        </button>
+        </Button>
       )}
     </div>
   );

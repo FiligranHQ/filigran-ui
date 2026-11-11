@@ -1,3 +1,4 @@
+import { Button } from '@filigran/design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AgentStatusState, ChatToolLabels, ConsultStatus, IconProps, Translate } from '../types';
 import { askHost } from '../utils/askHost';
@@ -534,13 +535,9 @@ export const ChatThinking = ({
               showElapsed && <span className="text-xs chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(elapsedS)}</span>
             )}
             {agentStatus?.status === 'wait_start' && onSkipWait && (
-              <button
-                type="button"
-                onClick={onSkipWait}
-                className="ml-1 shrink-0 chat-radius-sm border border-[var(--chat-accent)]/40 px-2 py-0.5 text-xs text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors"
-              >
+              <Button priority="secondary" size="sm" className="ml-1 shrink-0" onClick={onSkipWait}>
                 {t('Continue now')}
-              </button>
+              </Button>
             )}
           </div>
         </div>

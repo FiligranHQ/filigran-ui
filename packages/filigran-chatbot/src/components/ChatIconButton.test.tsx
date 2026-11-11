@@ -88,10 +88,21 @@ const MIGRATED = [
   'ArtifactCard.tsx',
   'ChatApprovalPrompt.tsx',
   'ConversationListFailed.tsx',
+  'ChatMessages.tsx',
+  'MarkdownMessage.tsx',
 ];
 
 // The text buttons migrated to the design system's Button (chatbot 3.23.0, slice 2).
-const TEXT_BUTTONS = ['ArtifactCard.tsx', 'ChatApprovalPrompt.tsx', 'ConversationListFailed.tsx'];
+const TEXT_BUTTONS = [
+  'ArtifactCard.tsx',
+  'ChatApprovalPrompt.tsx',
+  'ConversationListFailed.tsx',
+  'ChatThinking.tsx',
+  'ChatWaitingPanel.tsx',
+  'WorkingFiles.tsx',
+  'ContextUsageIndicator.tsx',
+  'ChatToggleButton.tsx',
+];
 
 for (const file of TEXT_BUTTONS) {
   test(`${file} draws no raw <button>: every text action is the design system's Button`, () => {

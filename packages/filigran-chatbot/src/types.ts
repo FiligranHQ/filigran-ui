@@ -1141,6 +1141,11 @@ export interface ChatToggleButtonProps {
   t?: Translate;
   /** BCP 47 tag of the label's language when the host does not translate it (see `ChatPanelProps.locale`). */
   locale?: string;
+  /**
+   * @deprecated since 3.23.0: the toggle is the design system's secondary
+   * Button and takes its colours from the host's design-system tokens; the
+   * value is ignored. Kept so a host that passes it still compiles.
+   */
   accentColor?: string;
   icon?: React.ReactNode;
 }

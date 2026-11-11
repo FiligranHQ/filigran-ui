@@ -1,3 +1,4 @@
+import { Button } from '@filigran/design-system';
 import { useRef, useState } from 'react';
 import type { ChatContextBreakdown, ChatContextUsage, Translate } from '../types';
 import { compactCount, translate } from '../utils';
@@ -124,17 +125,18 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
   return (
     <>
       <Tooltip title={open ? '' : translate(t, '{summary} — click for details', { summary })}>
-        <button
+        {/* The design system's small tertiary Button around the gauge (its hover, focus ring and active states). */}
+        <Button
           ref={anchorRef}
-          type="button"
+          priority="tertiary"
+          size="sm"
           onClick={() => setOpen((prev) => !prev)}
           aria-label={`${summary} (${percent}%)`}
           aria-haspopup="dialog"
           aria-expanded={open}
-          className="flex items-center chat-radius-sm px-1 -mx-1 py-0.5 transition-colors hover:chat-surface-hover-100/10"
         >
           {gauge}
-        </button>
+        </Button>
       </Tooltip>
 
       <Dropdown open={open} onClose={() => setOpen(false)} anchorRef={anchorRef} placement="bottom-end" width={296}>

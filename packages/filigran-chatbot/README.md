@@ -445,7 +445,7 @@ import { ChatToggleButton } from '@filigran/chatbot';
 | `label`       | `string`                  | built-in     | Button text, already translated by the host; omit for `t('Ask Assistant')` |
 | `t`           | `(key: string) => string` | —            | The host's translations; the panel's catalog in `locale` answers the rest  |
 | `locale`      | `string`                  | browser's    | The default label's language, by the panel's rule (see Internationalization) |
-| `accentColor` | `string`                  | `'#7b5cff'`  | Button background color                                                    |
+| `accentColor` | `string`                  | ignored      | Deprecated since 3.23.0: the toggle is the design system's secondary Button |
 | `icon`        | `React.ReactNode`         | default icon | Custom icon                                                                |
 
 ## API Contract
