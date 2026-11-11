@@ -8,6 +8,14 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## Unreleased
+
+### Fixed
+
+- A GFM task list nested under a list item no longer shows the circle bullet
+  of nested lists beside its checkboxes, and sits at the 20 px indent of its
+  sibling nested lists instead of 16 px to their left (#10910).
+
 ## 3.23.1 — 2026-11-11
 
 ### Changed
