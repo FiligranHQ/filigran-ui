@@ -30,6 +30,7 @@ export const fr: Catalog = {
   Cancel: 'Annuler',
   'Cancel question': 'Annuler la question',
   'Clear all conversations': 'Effacer toutes les conversations',
+  'Clear search': 'Effacer la recherche',
   Close: 'Fermer',
   'Collecting results from one task…': 'Collecte des résultats d’une tâche…',
   'Collecting results from {count} tasks…': 'Collecte des résultats de {count} tâches…',

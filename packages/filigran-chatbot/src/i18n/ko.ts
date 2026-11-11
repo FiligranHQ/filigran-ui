@@ -30,6 +30,7 @@ export const ko: Catalog = {
   Cancel: '취소',
   'Cancel question': '질문 취소',
   'Clear all conversations': '모든 대화 지우기',
+  'Clear search': '검색 지우기',
   Close: '닫기',
   'Collecting results from one task…': '작업 1개의 결과 수집 중…',
   'Collecting results from {count} tasks…': '작업 {count}개의 결과 수집 중…',

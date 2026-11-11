@@ -50,7 +50,7 @@ import {
   VolumeIcon,
   VolumeOffIcon,
 } from './icons';
-import { Button } from '@filigran/design-system';
+import { Button, Chip, Textarea } from '@filigran/design-system';
 import { ArtifactCard } from './ArtifactCard';
 import { ChatIconButton } from './ChatIconButton';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
@@ -342,11 +342,10 @@ const FeedbackComment = ({
 
   return (
     <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 chat-radius-md border chat-border-200/10 chat-surface-subtle-50/4 p-2">
-      <label htmlFor={id} className="text-content-compact chat-text-secondary-600/60">
-        {t('Tell us what went wrong (optional)')}
-      </label>
-      <textarea
+      <Textarea
         id={id}
+        label={t('Tell us what went wrong (optional)')}
+        resize="vertical"
         // Opened by the user's own thumbs down, to be typed into.
         autoFocus
         rows={2}
@@ -367,7 +366,6 @@ const FeedbackComment = ({
           }
         }}
         placeholder={t('What could be improved?')}
-        className="w-full resize-y chat-radius-sm border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-content-compact leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
         <Button
@@ -748,30 +746,17 @@ const MessageRow = memo(
     // when the panel can open it, and otherwise just says what was referenced.
     const renderConversationRef = (ref: ChatConversationRef, i: number) => {
       const label = ref.title || (ref.key ? `@${ref.key}` : t('Untitled conversation'));
-      const chip = 'inline-flex items-center gap-1 max-w-[240px] px-2 py-0.5 rounded-full border text-content-compact';
-      const content = (
-        <>
-          <MessageSquareIcon size={13} className="shrink-0" />
-          <span className="truncate">{label}</span>
-        </>
-      );
+      const icon = <MessageSquareIcon size={16} />;
       if (onOpenConversation && openableConversationIds?.has(ref.conversationId)) {
         return (
           <Tooltip key={`ref-${ref.conversationId}-${i}`} title={t('Open conversation')}>
-            <button
-              data-ds-exempt="conversation-ref-chip"
-              type="button"
-              onClick={() => onOpenConversation(ref.conversationId)}
-              className={`${chip} border-[var(--chat-accent-40)] text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]`}
-            >
-              {content}
-            </button>
+            <Chip label={label} severity="info" startIcon={icon} onClick={() => onOpenConversation(ref.conversationId)} />
           </Tooltip>
         );
       }
       return (
         <Tooltip key={`ref-${ref.conversationId}-${i}`} title={ref.key ? `@${ref.key}` : ''}>
-          <span className={`${chip} chat-border-200/10 chat-text-secondary-600/60`}>{content}</span>
+          <Chip label={label} startIcon={icon} />
         </Tooltip>
       );
     };
@@ -829,7 +814,7 @@ const MessageRow = memo(
               a thread that changed hands mid-way must keep each answer under
               the agent that wrote it.
             */}
-            <span className="font-semibold text-xs chat-text-900/100">{msg.agentName ?? agentName}</span>
+            <span className="font-semibold text-content-compact chat-text-900/100">{msg.agentName ?? agentName}</span>
           </div>
         )}
 
