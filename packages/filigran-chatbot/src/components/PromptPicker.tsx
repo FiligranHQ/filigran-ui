@@ -3,7 +3,7 @@ import type { ChatPromptTemplate } from '../types';
 import { isComposing } from '../utils/keyboard';
 import { SparklesIcon } from './icons';
 import { Dropdown } from './Dropdown';
-import { Tooltip } from './Tooltip';
+import { ChatIconButton } from './ChatIconButton';
 
 interface PromptPickerProps {
   prompts: ChatPromptTemplate[];
@@ -36,23 +36,18 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
 
   return (
     <>
-      <Tooltip title={t('Insert prompt template')}>
-        <button
-          ref={anchorRef}
-          type="button"
-          onClick={() => (open ? close() : setOpen(true))}
-          aria-label={t('Insert prompt template')}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          // Same box and glyph as every other composer action (attach, dictate,
-          // send): one 32 px control height and one 18 px icon per row.
-          className={`w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm transition-colors ${
-            open ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10' : 'chat-text-muted-400/30 hover:chat-surface-hover-100/10'
-          }`}
-        >
-          <SparklesIcon size={18} />
-        </button>
-      </Tooltip>
+      {/* Same control as every other composer action (attach, dictate, send):
+          the design system's 36 px IconButton with a 20 px glyph. */}
+      <ChatIconButton
+        ref={anchorRef}
+        label={t('Insert prompt template')}
+        icon={<SparklesIcon size={20} />}
+        tooltip={!open}
+        active={open}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => (open ? close() : setOpen(true))}
+      />
 
       <Dropdown open={open} onClose={close} anchorRef={anchorRef} width={280}>
         <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{t('Insert prompt template')}</span>

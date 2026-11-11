@@ -21,8 +21,11 @@ interface ChatIconButtonProps extends Omit<DsIconButtonProps, 'aria-label' | 'ic
   priority?: 'primary' | 'secondary' | 'tertiary';
   /** `md` (36 px) in the header and the composer, `sm` (24 px) inside a row or a chip. */
   size?: 'sm' | 'md';
-  /** The tooltip says nothing while a menu the button opens is open. */
-  tooltip?: boolean;
+  /**
+   * `false`: the tooltip says nothing (while a menu the button opens is open).
+   * A string: the tooltip says more than the name (the send button's shortcut).
+   */
+  tooltip?: boolean | string;
   /** Layout of the tooltip's anchor (`inline-flex shrink-0` unless the row needs more). */
   anchorClassName?: string;
 }
@@ -36,7 +39,7 @@ interface ChatIconButtonProps extends Omit<DsIconButtonProps, 'aria-label' | 'ic
  */
 export const ChatIconButton = forwardRef<HTMLButtonElement, ChatIconButtonProps>(
   ({ label, icon, variant = 'default', priority = 'tertiary', size = 'md', tooltip = true, anchorClassName, ...props }, ref) => (
-    <Tooltip title={tooltip ? label : ''} className={anchorClassName ?? 'inline-flex shrink-0'}>
+    <Tooltip title={typeof tooltip === 'string' ? tooltip : tooltip ? label : ''} className={anchorClassName ?? 'inline-flex shrink-0'}>
       <IconButton ref={ref} aria-label={label} icon={icon} variant={variant} priority={priority} size={size} {...props} />
     </Tooltip>
   ),

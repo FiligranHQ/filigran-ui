@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
 import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon, XCircleIcon } from './icons';
+import { ChatIconButton } from './ChatIconButton';
 import { ChatNotice } from './ChatNotice';
 import { useMentionMenu } from '../hooks/useMentionMenu';
 import { useDictation } from '../hooks/useDictation';
@@ -450,14 +451,7 @@ export const ChatInput = ({
                   e.target.value = '';
                 }}
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                aria-label={t('Attach files')}
-                className="w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 mr-0.5 transition-colors"
-              >
-                <AttachFileIcon size={18} />
-              </button>
+              <ChatIconButton label={t('Attach files')} icon={<AttachFileIcon size={20} />} onClick={() => fileInputRef.current?.click()} />
             </>
           )}
           {prompts && prompts.length > 0 && <PromptPicker prompts={prompts} onPick={handlePromptPick} t={t} />}
@@ -472,64 +466,37 @@ export const ChatInput = ({
             {quota && <QuotaIndicator quota={quota} t={t} />}
           </span>
           {dictation.supported && (
-            <Tooltip title={dictation.listening ? t('Stop dictation') : t('Dictate a message')}>
-              <button
-                type="button"
-                onClick={dictation.toggle}
-                aria-label={t('Dictate a message')}
-                aria-pressed={dictation.listening}
-                className={`relative w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm mr-0.5 transition-colors ${
-                  dictation.listening
-                    ? 'text-[var(--chat-danger)] bg-[var(--chat-danger)]/10 hover:bg-[var(--chat-danger)]/20'
-                    : 'chat-text-muted-400/30 hover:chat-surface-hover-100/10'
-                }`}
-              >
-                {dictation.listening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
-                {dictation.listening && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--chat-danger)] motion-safe:animate-pulse" />}
-              </button>
-            </Tooltip>
+            // A toggle: the design system's pressed look, in the error tone while it listens.
+            <ChatIconButton
+              label={t('Dictate a message')}
+              tooltip={dictation.listening ? t('Stop dictation') : t('Dictate a message')}
+              icon={
+                <span className="relative inline-flex">
+                  {dictation.listening ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
+                  {dictation.listening && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[var(--chat-danger)] motion-safe:animate-pulse" />}
+                </span>
+              }
+              variant={dictation.listening ? 'destructive' : 'default'}
+              active={dictation.listening}
+              onClick={dictation.toggle}
+            />
           )}
           {showHoldSend && (
-            <Tooltip title={t('Send when the answer ends')}>
-              <button
-                type="button"
-                onClick={send}
-                aria-label={t('Send when the answer ends')}
-                className="p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
-              >
-                <SendIcon size={18} />
-              </button>
-            </Tooltip>
+            <ChatIconButton label={t('Send when the answer ends')} icon={<SendIcon size={20} />} priority="secondary" onClick={send} />
           )}
           {showSteerSend && (
-            <Tooltip title={t('Send now')}>
-              <button
-                type="button"
-                onClick={send}
-                aria-label={t('Send now')}
-                className="p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
-              >
-                <SendIcon size={18} />
-              </button>
-            </Tooltip>
+            <ChatIconButton label={t('Send now')} icon={<SendIcon size={20} />} priority="secondary" onClick={send} />
           )}
-          <Tooltip title={isLoading ? t('Stop generating') : sendTooltip}>
-            <button
-              type="button"
-              onClick={isLoading ? onStop : send}
-              aria-label={isLoading ? t('Stop generating') : t('Send')}
-              disabled={!isLoading && !canSend}
-              className={`p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 ${
-                isLoading
-                  ? 'text-[var(--chat-danger)] bg-[var(--chat-danger)]/10 hover:bg-[var(--chat-danger)]/20 ml-0.5'
-                  : canSend
-                    ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20'
-                    : 'chat-text-muted-300/20 cursor-not-allowed'
-              }`}
-            >
-              {isLoading ? <StopCircleIcon size={18} /> : <SendIcon size={18} />}
-            </button>
-          </Tooltip>
+          {/* The main action of the row: the design system's primary IconButton (its own disabled look), the error tone to stop. */}
+          <ChatIconButton
+            label={isLoading ? t('Stop generating') : t('Send')}
+            tooltip={isLoading ? t('Stop generating') : sendTooltip}
+            icon={isLoading ? <StopCircleIcon size={20} /> : <SendIcon size={20} />}
+            priority={isLoading ? 'secondary' : 'primary'}
+            variant={isLoading ? 'destructive' : 'default'}
+            disabled={!isLoading && !canSend}
+            onClick={isLoading ? onStop : send}
+          />
         </div>
       </div>
 

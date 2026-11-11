@@ -83,6 +83,8 @@ const MIGRATED = [
   'ChatNotice.tsx',
   'ChatImage.tsx',
   'ChatVoiceCall.tsx',
+  'ChatInput.tsx',
+  'PromptPicker.tsx',
 ];
 
 for (const file of MIGRATED) {
