@@ -8,8 +8,11 @@
  * inside, and it opens below its anchor when there is no room above.
  */
 
-/** Space between a tooltip and its anchor. */
-export const ANCHOR_GAP = 4;
+/** Space between a tooltip and its anchor: the design system's `sideOffset` (8px). */
+export const ANCHOR_GAP = 8;
+
+/** How long a pointer rests on a control before its tooltip opens: the design system's delay (300ms). */
+export const TOOLTIP_OPEN_DELAY_MS = 300;
 
 /** Space kept between a tooltip and the side of the panel it would cross. */
 export const EDGE_MARGIN = 4;

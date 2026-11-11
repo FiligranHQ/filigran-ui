@@ -3,6 +3,7 @@ import type { ToolApprovalDecision, ToolApprovalProposal, ToolApprovalVerdict } 
 import { translate } from '../utils';
 import { AlertTriangleIcon, CheckIcon, WrenchIcon, XCircleIcon } from './icons';
 import { ChatNotice } from './ChatNotice';
+import { Tooltip } from './Tooltip';
 
 interface ChatApprovalPromptProps {
   proposals: ToolApprovalProposal[];
@@ -217,17 +218,17 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
             <CheckIcon size={13} />
             {t('Yes')}
           </button>
+          {/* This is the one verdict whose effect outlives the turn: its tooltip says so. */}
+          <Tooltip title={t('Also applies to your scheduled runs, until you revoke it')}>
           <button
             type="button"
             disabled={disabled}
             onClick={() => decide('approve_always')}
-            /* Disclosed on the control itself rather than buried in a tooltip:
-               this is the one verdict whose effect outlives the turn. */
-            title={t('Also applies to your scheduled runs, until you revoke it')}
             className={`${BUTTON_BASE} border chat-border-200/15 chat-text-secondary-700/70 hover:chat-surface-hover-100/5`}
           >
             {t('Yes, always')}
           </button>
+          </Tooltip>
         </div>
       )}
     </div>

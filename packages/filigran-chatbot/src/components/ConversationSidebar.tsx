@@ -1007,20 +1007,21 @@ const ConversationRow = ({
           )}
           {movable && (
             <>
-              <button
-                ref={moveAnchor}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMoveOpen((v) => !v);
-                }}
-                aria-label={t('Move to workspace')}
-                title={t('Move to workspace')}
-                aria-expanded={moveOpen}
-                className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
-              >
-                <FolderInputIcon size={13} />
-              </button>
+              <Tooltip title={moveOpen ? '' : t('Move to workspace')}>
+                <button
+                  ref={moveAnchor}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMoveOpen((v) => !v);
+                  }}
+                  aria-label={t('Move to workspace')}
+                  aria-expanded={moveOpen}
+                  className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
+                >
+                  <FolderInputIcon size={13} />
+                </button>
+              </Tooltip>
               <Dropdown open={moveOpen} onClose={() => setMoveOpen(false)} anchorRef={moveAnchor} placement="bottom-end" width={220}>
                 <div className="py-1" onClick={(e) => e.stopPropagation()}>
                   <p className="px-3 pb-1 pt-1.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40">
@@ -1060,33 +1061,35 @@ const ConversationRow = ({
             </>
           )}
           {onStartRename && (
+            <Tooltip title={t('Rename conversation')}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartRename(c.conversationId, c.title || '');
+                }}
+                aria-label={t('Rename conversation')}
+                className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
+              >
+                <EditIcon size={13} />
+              </button>
+            </Tooltip>
+          )}
+          <Tooltip title={t('Delete conversation')}>
             <button
               type="button"
               onClick={(e) => {
+                // The row is the click target for selection, so deleting
+                // must not also open the conversation on its way out.
                 e.stopPropagation();
-                onStartRename(c.conversationId, c.title || '');
+                onDelete(c.conversationId);
               }}
-              aria-label={t('Rename conversation')}
-              title={t('Rename conversation')}
-              className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
+              aria-label={t('Delete conversation')}
+              className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-red-500 dark:hover:text-red-400"
             >
-              <EditIcon size={13} />
+              <TrashIcon size={13} />
             </button>
-          )}
-          <button
-            type="button"
-            onClick={(e) => {
-              // The row is the click target for selection, so deleting
-              // must not also open the conversation on its way out.
-              e.stopPropagation();
-              onDelete(c.conversationId);
-            }}
-            aria-label={t('Delete conversation')}
-            title={t('Delete conversation')}
-            className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-red-500 dark:hover:text-red-400"
-          >
-            <TrashIcon size={13} />
-          </button>
+          </Tooltip>
         </span>
       )}
     </div>

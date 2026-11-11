@@ -12,6 +12,10 @@ installDom();
 // After the page: react-dom reads at load whether it fires input events.
 const { createRoot } = await import('react-dom/client');
 const { ConversationSidebar } = await import('./ConversationSidebar.tsx');
+const { TOOLTIP_OPEN_DELAY_MS } = await import('../utils/tooltipPlacement.ts');
+
+// A hover opens the tooltip after the design system's delay.
+const pastTheDelay = () => new Promise((resolve) => setTimeout(resolve, TOOLTIP_OPEN_DELAY_MS + 50));
 
 type SidebarProps = Parameters<typeof ConversationSidebar>[0];
 
@@ -163,6 +167,7 @@ test('a cut workspace marker says the whole workspace name on hover', async () =
   const hover = async () => {
     await act(async () => {
       label.parentElement!.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+      await pastTheDelay();
       await settle();
     });
   };
@@ -189,6 +194,7 @@ test('a cut title or agent pill says its whole text on hover, a title shown whol
   const hover = async (el: HTMLElement) => {
     await act(async () => {
       el.parentElement!.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+      await pastTheDelay();
       await settle();
     });
   };

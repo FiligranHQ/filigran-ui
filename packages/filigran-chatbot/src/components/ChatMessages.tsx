@@ -538,12 +538,11 @@ const MessageRow = memo(
       const isWorking = att.fileTag === 'working_file';
       const sizeLabel = formatFileSize(att.size);
       return (
+        <Tooltip key={key} title={t('Download')} className="inline-flex min-w-0 max-w-[90%]">
         <button
-          key={key}
           type="button"
           onClick={() => onDownloadFile?.(att)}
-          title={t('Download')}
-          className={`group flex items-center gap-2 text-left chat-radius-md border px-2.5 py-1.5 transition-colors cursor-pointer max-w-[90%] ${
+          className={`group flex w-full min-w-0 items-center gap-2 text-left chat-radius-md border px-2.5 py-1.5 transition-colors cursor-pointer ${
             isWorking
               ? 'chat-border-200/10 bg-transparent'
               : 'chat-border-200/10 chat-surface-subtle-50/4 hover:border-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/5'
@@ -562,6 +561,7 @@ const MessageRow = memo(
             <DownloadIcon size={15} />
           </span>
         </button>
+        </Tooltip>
       );
     };
 
@@ -1392,6 +1392,7 @@ export const ChatMessages = ({
           of the view to hold the way back to the end. */}
       <div className="sticky bottom-0 z-10 h-0">
         {!following && (
+          <Tooltip title={t('Scroll to bottom')} className="absolute bottom-1 left-1/2 inline-flex -translate-x-1/2">
           <button
             type="button"
             onClick={() => {
@@ -1400,11 +1401,11 @@ export const ChatMessages = ({
               follower.reveal();
             }}
             aria-label={t('Scroll to bottom')}
-            title={t('Scroll to bottom')}
-            className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full border chat-border-200/10 chat-menu-surface p-1.5 chat-text-secondary-500/50 shadow-md transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+            className="rounded-full border chat-border-200/10 chat-menu-surface p-1.5 chat-text-secondary-500/50 shadow-md transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
           >
             <ChevronDownIcon size={16} />
           </button>
+          </Tooltip>
         )}
       </div>
     </div>

@@ -230,6 +230,33 @@
   padding: var(--filigran-chat-user-padding, 0.5rem 0.875rem);
   font-size: var(--filigran-chat-user-text-size, var(--filigran-chat-text-size, 0.8125rem));
 }
+/*
+ * The tooltip, as the Filigran design system draws it (TooltipContent): its
+ * tokens when the host loads them, its values otherwise (light: gray-200 on
+ * gray-900 text; dark: grayblue-500 on gray-100), 4px radius, 8px padding,
+ * the global shadow, IBM Plex Sans 12px / 150%, 300px at most.
+ */
+.filigran-chatbot {
+  --chat-default-tooltip-surface: #cacbce;
+  --chat-default-tooltip-text: #18191b;
+}
+.dark .filigran-chatbot {
+  --chat-default-tooltip-surface: #1f3965;
+  --chat-default-tooltip-text: #f2f2f3;
+}
+@utility chat-tooltip {
+  box-sizing: border-box;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm, 4px);
+  background-color: var(--filigran-chat-tooltip-surface, var(--border-elevation-subtle, var(--chat-default-tooltip-surface)));
+  color: var(--filigran-chat-tooltip-text, var(--text-default-primary, var(--chat-default-tooltip-text)));
+  box-shadow: var(--shadow-global-shadow, 0px 2px 4px 0px #00000066);
+  font-family: var(--font-content-compact, 'IBM Plex Sans', var(--font-sans));
+  font-size: var(--text-content-compact, 12px);
+  font-weight: var(--font-weight-content-compact, 400);
+  line-height: var(--leading-content-compact, 150%);
+  letter-spacing: var(--tracking-content-compact, normal);
+}
 /* Code, in a block or inline. */
 @utility chat-code {
   font-family: var(--filigran-chat-font-mono, var(--font-mono));
