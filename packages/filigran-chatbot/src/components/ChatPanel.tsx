@@ -8,7 +8,6 @@ import type {
   ChatPanelHandle,
   ChatPanelProps,
   ChatSendOutcome,
-  Translate,
 } from '../types';
 import { answerMarkdownSources, artifactFileExtension, filenameFromContentDisposition, hexAlpha, markerKinds, translate } from '../utils';
 import { channelName } from '../utils/conversationList';
@@ -37,6 +36,8 @@ import { useVoiceCall } from '../hooks/useVoiceCall';
 import { PanelRequestsProvider, usePanelRequests, type PanelRequests } from '../hooks/usePanelRequests';
 import { watchSessionEnd } from '../utils/sessionEnd';
 import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
+import { AgentIconRendererProvider } from './AgentIconGlyph';
+import { ChatNotice } from './ChatNotice';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
@@ -68,18 +69,6 @@ const RESTORE_RETRY_BASE_MS = 5000;
 const RESTORE_RETRY_MAX_MS = 60000;
 
 /**
- * Fallback suggestions, translated where they are written so extraction sees
- * the keys — the host's own list and the backend's are translated too (they may
- * be keys), but only these belong to the package.
- */
-const defaultSuggestions = (t: Translate) => [
-  t('Help me create a new simulation scenario'),
-  t('What are the latest attack patterns?'),
-  t('How do I configure detection rules?'),
-  t('Summarize my recent findings'),
-];
-
-/**
  * The panel, its requests reporting the end of the user's session
  * (`onSessionEnded`): once per set of `requestHeaders`, whichever request or
  * stream said it first.
@@ -100,7 +89,9 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function Ch
   }, []);
   return (
     <PanelRequestsProvider value={requests}>
-      <ChatPanelBody {...props} ref={ref} />
+      <AgentIconRendererProvider value={props.renderAgentIcon}>
+        <ChatPanelBody {...props} ref={ref} />
+      </AgentIconRendererProvider>
     </PanelRequestsProvider>
   );
 });
@@ -381,8 +372,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     skipWait,
     readPendingApprovals,
     heldMessage,
+    heldReason,
     notice,
     fileNotice,
+    dismissNotice,
+    dismissFileNotice,
     composerFocusRequest,
     cancelHeldMessage,
     agentMentions,
@@ -456,12 +450,12 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
 
   /**
    * Suggestions shown on the welcome screen, resolved to final text here rather
-   * than in `ChatWelcome`: the backend's and the host's lists still go through
-   * `t` (a host may well pass keys), while the package's own fallback is
-   * translated at its definition so the keys stay extractable.
+   * than in `ChatWelcome`: the backend's and the host's lists go through `t` (a
+   * host may well pass keys). The package has no list of its own: an agent with
+   * no suggestions shows none, never generic prompts that are not the agent's.
    */
   const suggestions = useMemo(
-    () => (agentSuggestions ?? promptSuggestions)?.map((s) => t(s)) ?? defaultSuggestions(t),
+    () => (agentSuggestions ?? promptSuggestions)?.map((s) => t(s)) ?? [],
     [agentSuggestions, promptSuggestions, t],
   );
 
@@ -1512,7 +1506,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       case 'sidebar':
         return `${base} fixed right-0 bottom-0 flex flex-col chat-surface-raised border-l chat-border-200/10 z-[1200]`;
       case 'floating':
-        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border chat-border-200/10`;
+        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised chat-radius-md shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border chat-border-200/10`;
       case 'fullscreen':
         return `${base} fixed right-0 bottom-0 left-0 flex flex-col chat-surface z-[1400]`;
       case 'inline':
@@ -1537,7 +1531,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     <div ref={rootRef} className={containerClasses} style={containerStyle} data-testid="filigran-chat-panel" {...noDropHandlers}>
       {mode === 'sidebar' && resizable && (
         <div onMouseDown={handleResizeStart} className="absolute top-0 -left-1 bottom-0 w-2 cursor-col-resize z-10 group">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 bottom-0 w-0.5 rounded-sm bg-[var(--chat-accent)] opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 bottom-0 w-0.5 chat-radius-sm bg-[var(--chat-accent)] opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100" />
         </div>
       )}
       <ChatHeader
@@ -1586,9 +1580,9 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         t={t}
       />
       {listNotice && (!showConversationSidebar || sidebarCollapsed) && (
-        <p role="alert" className="mx-3 mt-2 shrink-0 rounded-md bg-red-500/10 px-2.5 py-1.5 text-[0.7rem] text-red-600 dark:text-red-400">
+        <ChatNotice tone="error" className="mx-3 mt-2 shrink-0" onDismiss={() => setListNotice(null)} dismissLabel={t('Close')}>
           {listNotice.text}
-        </p>
+        </ChatNotice>
       )}
       {/* Fullscreen puts the conversation list beside the thread. The header
           stays full width above both: it carries the agent picker, the mode
@@ -1652,7 +1646,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         )}
         <div className={showConversationSidebar ? 'relative flex flex-1 flex-col min-w-0' : 'contents'} {...dropHandlers}>
           {dropping && (
-            <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center rounded-xl border-2 border-dashed border-[var(--chat-accent)] bg-[var(--chat-accent)]/10 text-sm font-medium text-[var(--chat-accent)]">
+            <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center chat-radius-md border-2 border-dashed border-[var(--chat-accent)] bg-[var(--chat-accent)]/10 text-sm font-medium text-[var(--chat-accent)]">
               {t('Drop files to attach them')}
             </div>
           )}
@@ -1661,7 +1655,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             <div data-testid="filigran-chat-loading" className="flex-1 flex flex-col gap-4 px-4 py-6" aria-busy="true">
               {[0, 1, 2].map((i) => (
                 <div key={i} className={`flex ${i % 2 ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`h-10 rounded-xl chat-skeleton-fill animate-pulse ${i % 2 ? 'w-1/3' : 'w-2/3'}`} />
+                  <div className={`h-10 chat-radius-md chat-skeleton-fill animate-pulse ${i % 2 ? 'w-1/3' : 'w-2/3'}`} />
                 </div>
               ))}
             </div>
@@ -1678,7 +1672,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               <button
                 type="button"
                 onClick={retryRefusedRestore}
-                className="rounded-md border chat-border-200/10 px-3 py-1 text-[0.75rem] font-medium chat-text-secondary-700/80 transition-colors hover:chat-surface-hover-100/6"
+                className="chat-radius-sm border chat-border-200/10 px-3 py-1 text-[0.75rem] font-medium chat-text-secondary-700/80 transition-colors hover:chat-surface-hover-100/6"
               >
                 {t('Retry')}
               </button>
@@ -1691,12 +1685,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
                 firstName={firstName}
                 logoIcon={resolvedLogo}
                 // The agent's own suggestions when the backend serves them, the
-                // host's list otherwise, this package's list when there is neither —
-                // never an empty section.
+                // host's list otherwise, none when there is neither. The agent's
+                // description is not passed: it is picker and agent-page prose.
                 promptSuggestions={suggestions}
                 suggestionsLoading={suggestionsLoading}
                 agentName={selectedAgent?.name}
-                agentDescription={selectedAgent?.description}
                 onPromptClick={readOnly ? undefined : setInputValue}
                 t={t}
               />
@@ -1753,8 +1746,11 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               steerAttachments={steerAttachments}
               canHold={holdSendsDuringTurn}
               heldMessage={heldMessage}
+              heldReason={heldReason}
               notice={notice}
               fileNotice={fileNotice}
+              onDismissNotice={dismissNotice}
+              onDismissFileNotice={dismissFileNotice}
               agentNotForChat={!!headerAgent?.disableChat}
               onCancelHeld={cancelHeldMessage}
               agentMentions={agentMentionsEnabled && agents.length > 0 ? { agents, mentions: agentMentions, onPick: addAgentMention } : undefined}

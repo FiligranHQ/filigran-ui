@@ -15,6 +15,28 @@ test('a theme sets the variables of the entries it gives a value, and only those
   });
 });
 
+test('the composer entries set its corners, resting height and focus ring', () => {
+  assert.deepEqual(themeVariables({ inputRadius: 'var(--radius-sm)', inputMinHeight: '4rem', focusRing: 'var(--color-focus)' }), {
+    '--filigran-chat-input-radius': 'var(--radius-sm)',
+    '--filigran-chat-input-min-height': '4rem',
+    '--filigran-chat-focus-ring': 'var(--color-focus)',
+  });
+});
+
+test('the radius entries pass the design-system corners to every card and control', () => {
+  assert.deepEqual(themeVariables({ radiusSm: 'var(--radius-sm)', radiusMd: 'var(--radius-md)' }), {
+    '--filigran-chat-radius-sm': 'var(--radius-sm)',
+    '--filigran-chat-radius-md': 'var(--radius-md)',
+  });
+});
+
+test('the feedback entries pass the design-system danger and warning tones', () => {
+  assert.deepEqual(themeVariables({ danger: 'var(--color-error)', warning: 'var(--color-warning)' }), {
+    '--filigran-chat-danger': 'var(--color-error)',
+    '--filigran-chat-warning': 'var(--color-warning)',
+  });
+});
+
 test('no theme sets nothing', () => {
   assert.deepEqual(themeVariables(undefined), {});
   assert.deepEqual(themeVariables({}), {});

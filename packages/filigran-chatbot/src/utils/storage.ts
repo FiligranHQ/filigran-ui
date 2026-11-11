@@ -8,7 +8,9 @@ export const STORAGE_KEYS = {
   legacyChatId: 'filigranChatLegacyChatId',
   agentSlug: 'filigranChatAgentSlug',
   sidebarWidth: 'filigranChatSidebarWidth',
+  conversationListWidth: 'filigranChatConversationListWidth',
   collapsedWorkspaces: 'filigran-chat-collapsed-workspaces',
+  workspacesOpen: 'filigran-chat-workspaces-open',
   draft: 'filigranChatDraft:',
   draftRefs: 'filigranChatDraftRefs:',
 } as const;

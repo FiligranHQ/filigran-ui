@@ -2,10 +2,11 @@ import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactN
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
+import { AgentIconGlyph } from './AgentIconGlyph';
 import { channelName, conversationMatches } from '../utils/conversationList';
 import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
-import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove, unfiledEmptyNote } from '../utils/workspaces';
+import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
 import { ConversationListFailed } from './ConversationListFailed';
 import { Dropdown } from './Dropdown';
@@ -25,6 +26,7 @@ import {
   TrashIcon,
 } from './icons';
 import { Spinner } from './Spinner';
+import { ChatNotice } from './ChatNotice';
 import { Tooltip } from './Tooltip';
 
 /**
@@ -112,7 +114,25 @@ function readCollapsed(key: string): Set<string> {
   }
 }
 
-const iconButton = 'p-1 rounded-md chat-text-muted-400/30 hover:chat-icon-hover transition-colors disabled:opacity-40 disabled:pointer-events-none';
+/**
+ * The list's width in fullscreen, in px: dragged from its right edge between
+ * `min` and `max`, back to `default` (the width it always had) on a
+ * double-click, remembered per browser.
+ */
+export const LIST_WIDTH = { min: 224, default: 256, max: 480 } as const;
+/** What an arrow key moves the list's edge by. */
+const LIST_WIDTH_STEP = 16;
+
+export function clampListWidth(width: number): number {
+  return Math.round(Math.min(Math.max(width, LIST_WIDTH.min), LIST_WIDTH.max));
+}
+
+function readListWidth(key: string): number {
+  const parsed = Number.parseInt(readStorage('local', key) ?? '', 10);
+  return Number.isNaN(parsed) ? LIST_WIDTH.default : clampListWidth(parsed);
+}
+
+const iconButton = 'p-1 chat-radius-sm chat-text-muted-400/30 hover:chat-icon-hover transition-colors disabled:opacity-40 disabled:pointer-events-none';
 const sectionLabel = 'text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40';
 
 /**
@@ -165,6 +185,22 @@ export const ConversationSidebar = ({
   // Or, where the host keeps them per user, the groups the user has opened.
   const openedGroups = useMemo(() => (expandedGroups ? new Set(expandedGroups) : null), [expandedGroups]);
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
+  // Conversations come first: the workspaces fold into one line above them,
+  // opened on demand and remembered per browser.
+  const workspacesOpenKey = storageKey(storageKeyPrefix, STORAGE_KEYS.workspacesOpen);
+  const [workspacesShown, setWorkspacesShown] = useState(() => readStorage('local', workspacesOpenKey) === '1');
+  const showWorkspaces = (open: boolean) => {
+    setWorkspacesShown(open);
+    writeStorage('local', workspacesOpenKey, open ? '1' : null);
+  };
+  // The list's width, kept while it is collapsed and across reloads.
+  const widthKey = storageKey(storageKeyPrefix, STORAGE_KEYS.conversationListWidth);
+  const [width, setWidth] = useState(() => readListWidth(widthKey));
+  const resize = (next: number, commit: boolean) => {
+    setWidth(next);
+    // The default width is no choice: nothing is kept for it.
+    if (commit) writeStorage('local', widthKey, next === LIST_WIDTH.default ? null : String(next));
+  };
 
   const startRename = (id: string, current: string) => {
     settledRef.current = false;
@@ -240,7 +276,10 @@ export const ConversationSidebar = ({
     ? new Set((grouped?.groups ?? []).map((group) => group.key).filter((key) => !openedGroups.has(key)))
     : collapsedGroups;
   const fileable = workspaces ? fileableWorkspaces(workspaces.list) : [];
-  const unfiledNote = grouped ? unfiledEmptyNote({ total: conversations.length, unfiled: grouped.unfiled.length, loading, searching: !!q }) : null;
+  const noConversationYet = !loading && !q && conversations.length === 0;
+  // A conversation about to start in a workspace shows where it will be.
+  const workspacesOpen = workspacesShown || creatingWorkspace || (!!workspaces?.pendingWorkspaceId && !activeConversationId);
+  const workspaceNames = useMemo(() => new Map((workspaces?.list ?? []).map((w) => [w.id, w.name])), [workspaces]);
 
   if (collapsed) {
     return (
@@ -251,7 +290,7 @@ export const ConversationSidebar = ({
             onClick={onToggleCollapsed}
             aria-label={t('Show conversations')}
             aria-expanded={false}
-            className="w-8 h-8 flex items-center justify-center rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
           >
             <SidebarIcon size={17} />
           </button>
@@ -261,7 +300,7 @@ export const ConversationSidebar = ({
             type="button"
             onClick={() => onNewChat()}
             aria-label={t('New conversation')}
-            className="w-8 h-8 flex items-center justify-center rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
           >
             <EditIcon size={17} />
           </button>
@@ -287,17 +326,19 @@ export const ConversationSidebar = ({
       onMove={move}
       actions={rowActions}
       channel={channelName(c.channel, channelLabel)}
+      workspaceName={workspaces && c.workspaceId ? (workspaceNames.get(c.workspaceId) ?? t('Other workspaces')) : null}
       t={t}
     />
   );
 
   return (
-    <div className="w-64 shrink-0 flex flex-col border-r chat-border-200/10">
+    <div className="relative shrink-0 flex flex-col border-r chat-border-200/10" style={{ width }}>
+      <ListResizeHandle width={width} onResize={resize} t={t} />
       <div className="flex items-center gap-1 px-3 py-3">
         <button
           type="button"
           onClick={() => onNewChat()}
-          className="flex-1 flex items-center gap-2 rounded-lg border chat-border-200/10 px-3 py-1.5 text-[0.8125rem] chat-text-secondary-700/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
+          className="flex-1 flex items-center gap-2 chat-radius-sm border chat-border-200/10 px-3 py-1.5 text-[0.8125rem] chat-text-secondary-700/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
         >
           <EditIcon size={15} />
           {t('New conversation')}
@@ -309,7 +350,7 @@ export const ConversationSidebar = ({
             onClick={onToggleCollapsed}
             aria-label={t('Hide conversations')}
             aria-expanded
-            className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
           >
             <SidebarIcon size={17} />
           </button>
@@ -329,7 +370,7 @@ export const ConversationSidebar = ({
               }}
               placeholder={t('Search conversations...')}
               aria-label={t('Search conversations...')}
-              className="w-full h-7 pl-7 pr-2 rounded-md chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+              className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
             />
           </div>
         </div>
@@ -346,76 +387,98 @@ export const ConversationSidebar = ({
           <ConversationListFailed onRetry={() => onRetry?.()} className="px-3 py-2" t={t} />
         ) : grouped && workspaces ? (
           <>
+            {/*
+              Conversations first: the workspaces are one line above them,
+              opened on demand, the way a desktop assistant lists its
+              projects. Hidden while searching: the list below shows every
+              match, each naming its workspace.
+            */}
             {!q && (
-              <div className="flex items-center justify-between px-2 pb-1 pt-1">
-                <span className={sectionLabel}>{t('Workspaces')}</span>
-                <Tooltip title={t('New workspace')}>
-                  <button type="button" onClick={() => setCreatingWorkspace(true)} aria-label={t('New workspace')} className={iconButton}>
-                    <FolderPlusIcon size={14} />
+              <div className="mb-1">
+                <div className="group/wsh flex items-center gap-1 chat-radius-sm px-1.5 py-1 hover:chat-surface-hover-100/6">
+                  <button
+                    type="button"
+                    onClick={() => showWorkspaces(!workspacesOpen)}
+                    aria-expanded={workspacesOpen}
+                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                  >
+                    <ChevronRightIcon size={12} className={`shrink-0 chat-text-muted-400/30 transition-transform ${workspacesOpen ? 'rotate-90' : ''}`} />
+                    <FolderIcon size={14} className="shrink-0 text-[var(--chat-accent)]" />
+                    <span className="truncate text-[0.8125rem] font-medium chat-text-800/80">{t('Workspaces')}</span>
+                    <span className="ml-auto shrink-0 pr-1 text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.groups.length}</span>
+                  </button>
+                  <Tooltip title={t('New workspace')}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        showWorkspaces(true);
+                        setCreatingWorkspace(true);
+                      }}
+                      aria-label={t('New workspace')}
+                      className={iconButton}
+                    >
+                      <FolderPlusIcon size={14} />
+                    </button>
+                  </Tooltip>
+                </div>
+                {workspacesOpen && (
+                  <div className="pl-2">
+                    {creatingWorkspace && (
+                      <NameField
+                        placeholder={t('Workspace name')}
+                        onSubmit={async (name) => {
+                          setCreatingWorkspace(false);
+                          if (!name) return;
+                          const result = await workspaces.onCreate(name);
+                          if (!result.ok) say(result.error, 'The workspace could not be created');
+                          // It opens: it is where the user is about to drop things.
+                          else if (result.workspace) setGroupOpened(result.workspace.id, true);
+                        }}
+                        onCancel={() => setCreatingWorkspace(false)}
+                      />
+                    )}
+                    {grouped.groups.map((group) => (
+                      <WorkspaceGroupSection
+                        key={group.key}
+                        workspace={group.workspace}
+                        count={group.conversations.length}
+                        open={groupIsOpen(group.key, collapsedGroupKeys, group, activeConversationId, false)}
+                        toggleable={groupCanToggle(group, activeConversationId, false)}
+                        pending={!!group.workspace && workspaces.pendingWorkspaceId === group.workspace.id && !activeConversationId}
+                        onToggle={() => toggleGroup(group.key)}
+                        onNewChat={workspaces.onNewChat}
+                        onRename={async (id, name) => {
+                          const result = await workspaces.onRename(id, name);
+                          if (!result.ok) say(result.error, 'The workspace could not be renamed');
+                        }}
+                        onDelete={async (id) => {
+                          const result = await workspaces.onDelete(id);
+                          if (!result.ok) say(result.error, 'The workspace could not be deleted');
+                        }}
+                        onDropConversation={(conversationId) => group.workspace && void move(conversationId, group.workspace.id)}
+                        t={t}
+                      >
+                        {group.conversations.length > 0 ? group.conversations.map(renderRow) : <EmptyWorkspaceHint t={t} />}
+                      </WorkspaceGroupSection>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Every conversation, most recent first; a drop here takes one out of its workspace. */}
+            <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
+              <div className="flex items-center justify-between px-2 pb-1 pt-2">
+                <span className={sectionLabel}>{t('Conversations')}</span>
+                <Tooltip title={t('New conversation outside a workspace')}>
+                  <button type="button" onClick={() => onNewChat()} aria-label={t('New conversation outside a workspace')} className={iconButton}>
+                    <EditIcon size={13} />
                   </button>
                 </Tooltip>
               </div>
-            )}
-            {creatingWorkspace && (
-              <NameField
-                placeholder={t('Workspace name')}
-                onSubmit={async (name) => {
-                  setCreatingWorkspace(false);
-                  if (!name) return;
-                  const result = await workspaces.onCreate(name);
-                  if (!result.ok) say(result.error, 'The workspace could not be created');
-                  // It opens: it is where the user is about to drop things.
-                  else if (result.workspace) setGroupOpened(result.workspace.id, true);
-                }}
-                onCancel={() => setCreatingWorkspace(false)}
-              />
-            )}
-            {grouped.groups.map((group) => (
-              <WorkspaceGroupSection
-                key={group.key}
-                workspace={group.workspace}
-                count={group.conversations.length}
-                open={groupIsOpen(group.key, collapsedGroupKeys, group, activeConversationId, !!q)}
-                toggleable={groupCanToggle(group, activeConversationId, !!q)}
-                pending={!!group.workspace && workspaces.pendingWorkspaceId === group.workspace.id && !activeConversationId}
-                onToggle={() => toggleGroup(group.key)}
-                onNewChat={workspaces.onNewChat}
-                onRename={async (id, name) => {
-                  const result = await workspaces.onRename(id, name);
-                  if (!result.ok) say(result.error, 'The workspace could not be renamed');
-                }}
-                onDelete={async (id) => {
-                  const result = await workspaces.onDelete(id);
-                  if (!result.ok) say(result.error, 'The workspace could not be deleted');
-                }}
-                onDropConversation={(conversationId) => group.workspace && void move(conversationId, group.workspace.id)}
-                t={t}
-              >
-                {group.conversations.length > 0 ? group.conversations.map(renderRow) : <EmptyWorkspaceHint t={t} />}
-              </WorkspaceGroupSection>
-            ))}
-            <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
-              <div className="flex items-center justify-between px-2 pb-1 pt-3">
-                <span className={sectionLabel}>{t('Not in a workspace')}</span>
-                <span className="flex items-center gap-1">
-                  <span className="text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.unfiled.length}</span>
-                  <Tooltip title={t('New conversation outside a workspace')}>
-                    <button type="button" onClick={() => onNewChat()} aria-label={t('New conversation outside a workspace')} className={iconButton}>
-                      <EditIcon size={13} />
-                    </button>
-                  </Tooltip>
-                </span>
-              </div>
-              {grouped.unfiled.map(renderRow)}
-              {unfiledNote && (
-                <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">
-                  {unfiledNote === 'none' ? t('No conversations yet') : t('Every conversation is in a workspace.')}
-                </p>
-              )}
+              {filtered.map(renderRow)}
+              {noConversationYet && <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">{t('No conversations yet')}</p>}
             </DropZone>
-            {q && grouped.groups.length === 0 && grouped.unfiled.length === 0 && (
-              <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>
-            )}
+            {q && filtered.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>}
           </>
         ) : (
           <>
@@ -431,10 +494,86 @@ export const ConversationSidebar = ({
       </div>
 
       {notice && (
-        <p role="alert" className="mx-3 mb-3 rounded-md bg-red-500/10 px-2.5 py-1.5 text-[0.7rem] text-red-600 dark:text-red-400">
+        <ChatNotice tone="error" className="mx-3 mb-3">
           {notice}
-        </p>
+        </ChatNotice>
       )}
+    </div>
+  );
+};
+
+/**
+ * The list's right edge, dragged to resize it: arrow keys move it by a step,
+ * Home and End to its bounds, a double-click puts the default width back.
+ */
+const ListResizeHandle = ({
+  width,
+  onResize,
+  t,
+}: {
+  width: number;
+  /** `commit`: the gesture is over, the width is the one to keep. */
+  onResize: (width: number, commit: boolean) => void;
+  t: (key: string) => string;
+}) => {
+  // `last`: the width the pointer reached, which a release before the next
+  // render must keep rather than the one this render was drawn at.
+  const drag = useRef<{ x: number; width: number; last: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const end = () => {
+    if (!drag.current) return;
+    const { last } = drag.current;
+    drag.current = null;
+    setDragging(false);
+    onResize(last, true);
+  };
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={t('Resize the conversation list')}
+      aria-valuemin={LIST_WIDTH.min}
+      aria-valuemax={LIST_WIDTH.max}
+      aria-valuenow={width}
+      tabIndex={0}
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        // No text selected along the way.
+        e.preventDefault();
+        drag.current = { x: e.clientX, width, last: width };
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        setDragging(true);
+      }}
+      onPointerMove={(e) => {
+        if (!drag.current) return;
+        drag.current.last = clampListWidth(drag.current.width + e.clientX - drag.current.x);
+        onResize(drag.current.last, false);
+      }}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onDoubleClick={() => onResize(LIST_WIDTH.default, true)}
+      onKeyDown={(e) => {
+        const next =
+          e.key === 'ArrowLeft'
+            ? width - LIST_WIDTH_STEP
+            : e.key === 'ArrowRight'
+              ? width + LIST_WIDTH_STEP
+              : e.key === 'Home'
+                ? LIST_WIDTH.min
+                : e.key === 'End'
+                  ? LIST_WIDTH.max
+                  : null;
+        if (next === null) return;
+        e.preventDefault();
+        onResize(clampListWidth(next), true);
+      }}
+      className="group absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize touch-none outline-hidden"
+    >
+      <span
+        className={`absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 transition-colors ${
+          dragging ? 'bg-[var(--chat-accent)]' : 'group-hover:bg-[var(--chat-accent)]/40 group-focus-visible:bg-[var(--chat-accent)]'
+        }`}
+      />
     </div>
   );
 };
@@ -456,7 +595,7 @@ const DropZone = ({
   const carries = (e: DragEvent) => e.dataTransfer.types.includes(DRAG_TYPE);
   return (
     <div
-      className={`rounded-lg transition-colors ${over ? 'bg-[var(--chat-accent)]/10 ring-1 ring-[var(--chat-accent)]/40' : ''} ${className}`}
+      className={`chat-radius-sm transition-colors ${over ? 'bg-[var(--chat-accent)]/10 ring-1 ring-[var(--chat-accent)]/40' : ''} ${className}`}
       {...(accepts
         ? {
             onDragEnter: (e: DragEvent) => {
@@ -553,7 +692,7 @@ const NameField = ({
       onBlur={commit}
       placeholder={placeholder}
       aria-label={placeholder}
-      className="mx-2 mb-1 w-[calc(100%-1rem)] rounded-md chat-input-surface-white/10 px-2 py-1 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
+      className="mx-2 mb-1 w-[calc(100%-1rem)] chat-radius-sm chat-input-surface-white/10 px-2 py-1 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
     />
   );
 };
@@ -595,7 +734,7 @@ const WorkspaceGroupSection = ({
 
   return (
     <DropZone onDropConversation={onDropConversation} accepts={manageable} className="mb-0.5">
-      <div className="group/ws flex items-center gap-1 rounded-lg px-1.5 py-1 hover:chat-surface-hover-100/6">
+      <div className="group/ws flex items-center gap-1 chat-radius-sm px-1.5 py-1 hover:chat-surface-hover-100/6">
         {renaming && workspace ? (
           <NameField
             initial={workspace.name}
@@ -618,7 +757,7 @@ const WorkspaceGroupSection = ({
             <FolderIcon size={14} className="shrink-0 text-[var(--chat-accent)]" />
             <span className="truncate text-[0.8125rem] font-medium chat-text-800/80">{workspace ? workspace.name : t('Other workspaces')}</span>
             {isMyDefault && (
-              <span className="shrink-0 rounded bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] text-[var(--chat-accent)]">{t('default')}</span>
+              <span className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] text-[var(--chat-accent)]">{t('default')}</span>
             )}
             <span className="ml-auto shrink-0 pr-1 text-[0.625rem] tabular-nums chat-text-muted-400/30">{count}</span>
           </button>
@@ -681,7 +820,7 @@ const WorkspaceGroupSection = ({
       {open && (
         <div className="space-y-0.5 pb-1 pl-3">
           {pending && (
-            <div className="flex items-center gap-2 rounded-lg bg-[var(--chat-accent)]/10 px-2.5 py-1.5 text-[0.75rem] text-[var(--chat-accent)]">
+            <div className="flex items-center gap-2 chat-radius-sm bg-[var(--chat-accent)]/10 px-2.5 py-1.5 text-[0.75rem] text-[var(--chat-accent)]">
               <EditIcon size={12} />
               {t('New conversation — send a message to start it')}
             </div>
@@ -692,6 +831,20 @@ const WorkspaceGroupSection = ({
     </DropZone>
   );
 };
+
+/**
+ * A row's leading icon: the conversation agent's own (an image, an emoji or a
+ * name the host draws, as the header does), the panel's bot glyph otherwise.
+ */
+const RowAgentIcon = ({ icon }: { icon: string | undefined }) => (
+  <AgentIconGlyph
+    icon={icon}
+    size={14}
+    fallback={<BotIcon size={13} />}
+    imageClassName="h-4 w-4 chat-radius-sm object-cover"
+    emojiClassName="text-[0.8125rem] leading-none"
+  />
+);
 
 const ConversationRow = ({
   conversation: c,
@@ -708,6 +861,7 @@ const ConversationRow = ({
   onMove,
   actions,
   channel,
+  workspaceName = null,
   t,
 }: {
   conversation: ChatConversationSummary;
@@ -726,6 +880,8 @@ const ConversationRow = ({
   actions?: (conversation: ChatConversationSummary) => ReactNode;
   /** The channel the conversation was started in, when the row names it. */
   channel: string | null;
+  /** The workspace the conversation is filed in, said on its row; `null` for none. */
+  workspaceName?: string | null;
   t: (key: string) => string;
 }) => {
   const [moveOpen, setMoveOpen] = useState(false);
@@ -755,16 +911,16 @@ const ConversationRow = ({
           onSelect(c.conversationId);
         }
       }}
-      className={`group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left cursor-pointer transition-colors ${
+      className={`group relative flex w-full items-start gap-2.5 chat-radius-sm px-2.5 py-2 text-left cursor-pointer transition-colors ${
         isActive ? 'bg-[var(--chat-accent)]/10' : 'hover:chat-surface-hover-100/6'
       }`}
     >
       <span
-        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${
+        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center chat-radius-sm ${
           isActive ? 'bg-[var(--chat-accent)]/20 text-[var(--chat-accent)]' : 'chat-surface-subtle-100/6 chat-text-muted-400/30'
         }`}
       >
-        <BotIcon size={13} />
+        <RowAgentIcon icon={c.agentIcon} />
       </span>
       <span className="min-w-0 flex-1">
         {isEditing ? (
@@ -783,24 +939,28 @@ const ConversationRow = ({
             }}
             onBlur={onCommitRename}
             aria-label={t('Conversation title')}
-            className="w-full rounded-md chat-input-surface-white/10 px-1.5 py-0.5 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
+            className="w-full chat-radius-sm chat-input-surface-white/10 px-1.5 py-0.5 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
           />
         ) : (
-          <span className={`block truncate text-[0.8125rem] ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
-            {c.title || t('Untitled conversation')}
-          </span>
+          // The whole title on hover when the row still cuts it.
+          <Tooltip title={c.title || t('Untitled conversation')} truncated>
+            <span className={`block min-w-0 truncate text-[0.8125rem] ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
+              {c.title || t('Untitled conversation')}
+            </span>
+          </Tooltip>
         )}
         {/*
           Agent before time, on one line: which agent a thread is with
           is what tells two similarly-titled conversations apart, and
-          knowing it before opening one is the point. Omitted entirely
-          when the backend does not report it, rather than padded with
-          a placeholder.
+          knowing it before opening one is the point. The agent is a pill
+          the eye finds without reading, the time stays whole beside it.
+          Omitted entirely when the backend does not report it, rather
+          than padded with a placeholder.
         */}
         {c.lastMessagePreview && !isEditing && (
           <span className="block truncate text-[0.7rem] chat-text-secondary-500/50">{c.lastMessagePreview}</span>
         )}
-        {(c.agentName || c.updatedAt || channel) && !isEditing && (
+        {(c.agentName || c.updatedAt || channel || workspaceName) && !isEditing && (
           <span className="flex min-w-0 items-center gap-1 text-[0.65rem] chat-text-muted-400/30">
             {channel && (
               <Tooltip title={translate(t, 'Started in {channel}', { channel })}>
@@ -809,16 +969,36 @@ const ConversationRow = ({
                 </span>
               </Tooltip>
             )}
-            <span className="truncate">
-              {c.agentName}
-              {c.agentName && c.updatedAt ? ' · ' : ''}
-              {c.updatedAt ? timeAgo(c.updatedAt, t) : ''}
-            </span>
+            {workspaceName && (
+              // Never squeezed to an ellipsis alone (min-w), and the whole name on hover when cut.
+              <span className="flex min-w-[4.5rem] max-w-[50%] shrink items-center gap-0.5" data-testid="filigran-chat-row-workspace">
+                <FolderIcon size={10} className="shrink-0 text-[var(--chat-accent)]" />
+                <Tooltip title={workspaceName} truncated>
+                  <span className="min-w-0 truncate">{workspaceName}</span>
+                </Tooltip>
+              </span>
+            )}
+            {c.agentName && (
+              <Tooltip title={c.agentName} truncated>
+                <span
+                  data-agent-pill=""
+                  className="min-w-0 truncate rounded-full border chat-border-200/10 chat-surface-subtle-100/6 px-1.5 leading-4 chat-text-secondary-500/50"
+                >
+                  {c.agentName}
+                </span>
+              </Tooltip>
+            )}
+            {c.updatedAt && <span className="shrink-0 whitespace-nowrap">{timeAgo(c.updatedAt, t)}</span>}
           </span>
         )}
       </span>
       {!isEditing && (
-        <span className="flex shrink-0 self-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        // Over the row's end, not beside it: hidden, the actions keep no
+        // width, so the title and the agent pill take the whole row.
+        <span
+          data-row-actions=""
+          className="pointer-events-none absolute right-1.5 top-1/2 flex -translate-y-1/2 chat-radius-sm border chat-border-200/10 chat-menu-surface opacity-0 shadow-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100"
+        >
           {actions && (
             // The row selects on click and on Enter/Space: the host's controls keep theirs.
             <span className="flex" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
@@ -827,20 +1007,21 @@ const ConversationRow = ({
           )}
           {movable && (
             <>
-              <button
-                ref={moveAnchor}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMoveOpen((v) => !v);
-                }}
-                aria-label={t('Move to workspace')}
-                title={t('Move to workspace')}
-                aria-expanded={moveOpen}
-                className="p-1 rounded-md chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
-              >
-                <FolderInputIcon size={13} />
-              </button>
+              <Tooltip title={moveOpen ? '' : t('Move to workspace')}>
+                <button
+                  ref={moveAnchor}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMoveOpen((v) => !v);
+                  }}
+                  aria-label={t('Move to workspace')}
+                  aria-expanded={moveOpen}
+                  className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
+                >
+                  <FolderInputIcon size={13} />
+                </button>
+              </Tooltip>
               <Dropdown open={moveOpen} onClose={() => setMoveOpen(false)} anchorRef={moveAnchor} placement="bottom-end" width={220}>
                 <div className="py-1" onClick={(e) => e.stopPropagation()}>
                   <p className="px-3 pb-1 pt-1.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40">
@@ -880,33 +1061,35 @@ const ConversationRow = ({
             </>
           )}
           {onStartRename && (
+            <Tooltip title={t('Rename conversation')}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartRename(c.conversationId, c.title || '');
+                }}
+                aria-label={t('Rename conversation')}
+                className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
+              >
+                <EditIcon size={13} />
+              </button>
+            </Tooltip>
+          )}
+          <Tooltip title={t('Delete conversation')}>
             <button
               type="button"
               onClick={(e) => {
+                // The row is the click target for selection, so deleting
+                // must not also open the conversation on its way out.
                 e.stopPropagation();
-                onStartRename(c.conversationId, c.title || '');
+                onDelete(c.conversationId);
               }}
-              aria-label={t('Rename conversation')}
-              title={t('Rename conversation')}
-              className="p-1 rounded-md chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
+              aria-label={t('Delete conversation')}
+              className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-red-500 dark:hover:text-red-400"
             >
-              <EditIcon size={13} />
+              <TrashIcon size={13} />
             </button>
-          )}
-          <button
-            type="button"
-            onClick={(e) => {
-              // The row is the click target for selection, so deleting
-              // must not also open the conversation on its way out.
-              e.stopPropagation();
-              onDelete(c.conversationId);
-            }}
-            aria-label={t('Delete conversation')}
-            title={t('Delete conversation')}
-            className="p-1 rounded-md chat-text-muted-400/30 hover:text-red-500 dark:hover:text-red-400"
-          >
-            <TrashIcon size={13} />
-          </button>
+          </Tooltip>
         </span>
       )}
     </div>

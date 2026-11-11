@@ -33,6 +33,29 @@
  */
 .filigran-chatbot {
   --chat-dark: 0;
+  /*
+   * Corners: the two radii of @filigran/design-system (`--radius-sm` 4px for a
+   * control, a chip, an avatar tile; `--radius-md` 12px for a card, a bubble, a
+   * menu, a dialog, the composer). A host passes its own design-system tokens
+   * through the theme (`radiusSm` / `radiusMd`, e.g. `var(--radius-sm)`); unset,
+   * the design system's values. Every corner of the panel reads one of these
+   * through `chat-radius-sm` / `chat-radius-md` (or `rounded-full` for a dot or
+   * a pill), never a Tailwind size.
+   */
+  --chat-radius-sm: var(--filigran-chat-radius-sm, 4px);
+  --chat-radius-md: var(--filigran-chat-radius-md, 12px);
+  /*
+   * Feedback tones: the design system's danger and warning colours, passed by
+   * the host through the theme (`danger` / `warning`, e.g. `var(--color-error)`);
+   * unset, a red and an amber that read at 4.5:1 or more on the panel's own
+   * surfaces under a notice's 6 % wash (light: red-700 5.1:1, amber-800 5.8:1
+   * on gray-100; red-600 and amber-700 fell to 3.8:1 and 4.1:1,
+   * XTM-One-Platform/xtm-one#10911 UX round 1, B2). Every error and warning state of the panel (notices, a failed
+   * upload, dictation, stop) reads these, with an opacity modifier for a wash
+   * or a border (`bg-[var(--chat-danger)]/10`), never a Tailwind red or amber.
+   */
+  --chat-danger: var(--filigran-chat-danger, var(--color-red-700));
+  --chat-warning: var(--filigran-chat-warning, var(--color-amber-800));
   --chat-default-surface: var(--color-gray-50);
   --chat-default-surface-raised: var(--color-white);
   --chat-default-menu-surface: var(--color-white);
@@ -43,9 +66,23 @@
   --chat-default-skeleton-card: color-mix(in oklab, var(--color-gray-100) 50%, transparent);
   --chat-default-icon-hover: color-mix(in oklab, var(--color-gray-200) 60%, transparent);
   --chat-default-detail-surface: color-mix(in oklab, var(--color-gray-50) 50%, transparent);
+  --chat-default-table-head: var(--color-gray-100);
+  --chat-default-table-stripe: color-mix(in oklab, var(--color-gray-50) 70%, transparent);
+  /* Code colours: GitHub light, contrast 4.5:1 or more on the block. */
+  --chat-default-hl-comment: #6e7781;
+  --chat-default-hl-string: #0a3069;
+  --chat-default-hl-number: #0550ae;
+  --chat-default-hl-keyword: #cf222e;
+  --chat-default-hl-literal: #0550ae;
+  --chat-default-hl-builtin: #953800;
+  --chat-default-hl-function: #8250df;
+  --chat-default-hl-property: #116329;
+  --chat-default-hl-variable: #953800;
 }
 .dark .filigran-chatbot {
   --chat-dark: 1;
+  --chat-danger: var(--filigran-chat-danger, var(--color-red-400));
+  --chat-warning: var(--filigran-chat-warning, var(--color-amber-300));
   --chat-default-surface: #161622;
   --chat-default-surface-raised: #1e1e2e;
   --chat-default-menu-surface: #2a2a3e;
@@ -56,6 +93,36 @@
   --chat-default-skeleton-card: color-mix(in oklab, var(--color-white) 3%, transparent);
   --chat-default-icon-hover: color-mix(in oklab, var(--color-white) 10%, transparent);
   --chat-default-detail-surface: color-mix(in oklab, var(--color-white) 1%, transparent);
+  --chat-default-table-head: color-mix(in oklab, var(--color-white) 8%, transparent);
+  --chat-default-table-stripe: color-mix(in oklab, var(--color-white) 2.5%, transparent);
+  /* Code colours: GitHub dark. */
+  --chat-default-hl-comment: #8b949e;
+  --chat-default-hl-string: #a5d6ff;
+  --chat-default-hl-number: #79c0ff;
+  --chat-default-hl-keyword: #ff7b72;
+  --chat-default-hl-literal: #79c0ff;
+  --chat-default-hl-builtin: #ffa657;
+  --chat-default-hl-function: #d2a8ff;
+  --chat-default-hl-property: #7ee787;
+  --chat-default-hl-variable: #ffa657;
+}
+@utility chat-radius-sm {
+  border-radius: var(--chat-radius-sm);
+}
+@utility chat-radius-md {
+  border-radius: var(--chat-radius-md);
+}
+@utility chat-radius-r-sm {
+  border-top-right-radius: var(--chat-radius-sm);
+  border-bottom-right-radius: var(--chat-radius-sm);
+}
+@utility chat-radius-t-md {
+  border-top-left-radius: var(--chat-radius-md);
+  border-top-right-radius: var(--chat-radius-md);
+}
+@utility chat-radius-b-md {
+  border-bottom-left-radius: var(--chat-radius-md);
+  border-bottom-right-radius: var(--chat-radius-md);
 }
 @utility chat-text-* {
   color: var(--filigran-chat-text, color-mix(in oklab, --value(--color-gray-*), --alpha(var(--color-white) / calc(--modifier(integer) * 1%)) calc(var(--chat-dark) * 100%)));
@@ -86,6 +153,26 @@
 /* The composer's box: no fill of its own, the host's field fill when it sets one. */
 @utility chat-composer-surface {
   background-color: var(--filigran-chat-input-surface, transparent);
+}
+/*
+ * The composer's box takes the host's field corners, and its focus as a 2 px ring
+ * around it (a design system's text-field focus) while the field has the focus:
+ * the border keeps its colour, so dictation's red border still reads.
+ * While the agent works (`data-working`), the working glow wins: the field keeps
+ * the focus but draws no ring, so the turning comet and its halo read whether the
+ * field is focused or not (Sam, 10 Nov 2026, as on the previous chat page). The
+ * ring comes back as soon as the turn ends or is stopped.
+ */
+.filigran-chat-composer-box {
+  border-radius: var(--filigran-chat-input-radius, var(--chat-radius-md));
+}
+.filigran-chat-composer-box:not([data-working]):has(textarea:focus) {
+  outline: 2px solid var(--filigran-chat-focus-ring, var(--chat-accent));
+  outline-offset: 2px;
+}
+/* Two lines at rest, so the field reads as the place to write; it grows from there. */
+.filigran-chat-composer-field {
+  min-height: var(--filigran-chat-input-min-height, calc(2lh + 0.75rem));
 }
 @utility chat-skeleton-fill {
   background-color: var(--filigran-chat-border, var(--chat-default-skeleton-fill));
@@ -139,9 +226,36 @@
 @utility chat-user-bubble {
   background-color: var(--filigran-chat-user-background, var(--chat-accent-dark));
   color: var(--filigran-chat-user-text, var(--color-white));
-  border-radius: var(--filigran-chat-user-radius, 14px 14px 4px 14px);
+  border-radius: var(--filigran-chat-user-radius, var(--chat-radius-md) var(--chat-radius-md) var(--chat-radius-sm) var(--chat-radius-md));
   padding: var(--filigran-chat-user-padding, 0.5rem 0.875rem);
   font-size: var(--filigran-chat-user-text-size, var(--filigran-chat-text-size, 0.8125rem));
+}
+/*
+ * The tooltip, as the Filigran design system draws it (TooltipContent): its
+ * tokens when the host loads them, its values otherwise (light: gray-200 on
+ * gray-900 text; dark: grayblue-500 on gray-100), 4px radius, 8px padding,
+ * the global shadow, IBM Plex Sans 12px / 150%, 300px at most.
+ */
+.filigran-chatbot {
+  --chat-default-tooltip-surface: #cacbce;
+  --chat-default-tooltip-text: #18191b;
+}
+.dark .filigran-chatbot {
+  --chat-default-tooltip-surface: #1f3965;
+  --chat-default-tooltip-text: #f2f2f3;
+}
+@utility chat-tooltip {
+  box-sizing: border-box;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm, 4px);
+  background-color: var(--filigran-chat-tooltip-surface, var(--border-elevation-subtle, var(--chat-default-tooltip-surface)));
+  color: var(--filigran-chat-tooltip-text, var(--text-default-primary, var(--chat-default-tooltip-text)));
+  box-shadow: var(--shadow-global-shadow, 0px 2px 4px 0px #00000066);
+  font-family: var(--font-content-compact, 'IBM Plex Sans', var(--font-sans));
+  font-size: var(--text-content-compact, 12px);
+  font-weight: var(--font-weight-content-compact, 400);
+  line-height: var(--leading-content-compact, 150%);
+  letter-spacing: var(--tracking-content-compact, normal);
 }
 /* Code, in a block or inline. */
 @utility chat-code {
@@ -154,6 +268,42 @@
 }
 @utility chat-code-inline {
   background-color: var(--filigran-chat-code-surface, var(--chat-default-code-inline));
+}
+/* A table in an answer: its header row and every other body row. */
+@utility chat-table-head {
+  background-color: var(--filigran-chat-surface-subtle, var(--chat-default-table-head));
+}
+@utility chat-table-stripe {
+  background-color: var(--chat-default-table-stripe);
+}
+/* A code block's tokens, by kind. */
+@utility chat-hl-comment {
+  color: var(--chat-default-hl-comment);
+  font-style: italic;
+}
+@utility chat-hl-string {
+  color: var(--chat-default-hl-string);
+}
+@utility chat-hl-number {
+  color: var(--chat-default-hl-number);
+}
+@utility chat-hl-keyword {
+  color: var(--chat-default-hl-keyword);
+}
+@utility chat-hl-literal {
+  color: var(--chat-default-hl-literal);
+}
+@utility chat-hl-builtin {
+  color: var(--chat-default-hl-builtin);
+}
+@utility chat-hl-function {
+  color: var(--chat-default-hl-function);
+}
+@utility chat-hl-property {
+  color: var(--chat-default-hl-property);
+}
+@utility chat-hl-variable {
+  color: var(--chat-default-hl-variable);
 }
 
 /*
@@ -209,7 +359,7 @@
 }
 .filigran-chat-scrollable::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
-  border-radius: 3px;
+  border-radius: 9999px;
 }
 .dark .filigran-chat-scrollable::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
@@ -240,19 +390,15 @@
 @keyframes chat-reasoning-glow {
   0%,
   100% {
-    border-color: var(--chat-accent, hsl(197 100% 53%));
     border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 15%, transparent);
-    box-shadow: inset 2px 0 8px -4px color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 8%, transparent);
   }
   50% {
-    border-color: var(--chat-accent, hsl(197 100% 53%));
     border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 35%, transparent);
-    box-shadow: inset 2px 0 12px -4px color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 18%, transparent);
   }
 }
 
-/* The reasoning window's breathing glow; under reduced motion it stands still
-   on a static accent border. */
+/* The reasoning window's breathing accent edge (its left border only, no shadow);
+   under reduced motion it stands still on a static accent border. */
 .filigran-chat-reasoning {
   border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 25%, transparent);
   animation:
@@ -325,7 +471,7 @@
 
 /* A message the host jumped to (`scrollToMessage`): a short accent wash. */
 .filigran-chat-highlight {
-  border-radius: 12px;
+  border-radius: var(--chat-radius-md);
   background: color-mix(in srgb, var(--chat-accent) 12%, transparent);
   transition: background-color 600ms ease-out;
 }

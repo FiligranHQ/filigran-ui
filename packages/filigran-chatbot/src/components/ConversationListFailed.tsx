@@ -16,7 +16,7 @@ export function ConversationListFailed({ onRetry, className, t }: ConversationLi
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-md border chat-border-200/10 px-2.5 py-0.5 text-[0.72rem] font-medium chat-text-secondary-700/80 transition-colors hover:chat-surface-hover-100/6"
+        className="chat-radius-sm border chat-border-200/10 px-2.5 py-0.5 text-[0.72rem] font-medium chat-text-secondary-700/80 transition-colors hover:chat-surface-hover-100/6"
       >
         {t('Retry')}
       </button>

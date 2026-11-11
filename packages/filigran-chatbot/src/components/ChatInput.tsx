@@ -1,12 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
-import { AlertTriangleIcon, AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon } from './icons';
+import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon, XCircleIcon } from './icons';
+import { ChatNotice } from './ChatNotice';
 import { useMentionMenu } from '../hooks/useMentionMenu';
 import { useDictation } from '../hooks/useDictation';
+import type { ChatHeldReason } from '../hooks/useChat';
 import { referencedConversations } from '../utils/conversationRefs';
 import { hasFailedUpload } from '../utils/failedUpload';
 import { isComposing } from '../utils/keyboard';
+import { pastedText, spliceText } from '../utils/copy';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
 import { MentionMenu } from './MentionMenu';
 import { PromptPicker } from './PromptPicker';
@@ -22,10 +25,16 @@ interface ChatInputProps {
   canHold?: boolean;
   /** The message held, shown (in the words its bubble will show) with a way to take it back. */
   heldMessage?: { text: string; displayText?: string } | null;
+  /** Why the held message waits beyond the running answer: said under it. */
+  heldReason?: ChatHeldReason | null;
   /** What the backend said when it refused a steer or a Stop. */
   notice?: string | null;
   /** Which files the last attach refused, and why. */
   fileNotice?: string | null;
+  /** Closes `notice`; without it the notice has no close button. */
+  onDismissNotice?: () => void;
+  /** Closes `fileNotice`; without it the notice has no close button. */
+  onDismissFileNotice?: () => void;
   /** The conversation's agent is meant for assignments rather than chat (`XtmAgent.disableChat`); an agent the draft mentions is warned of too. */
   agentNotForChat?: boolean;
   onCancelHeld?: () => void;
@@ -106,8 +115,11 @@ export const ChatInput = ({
   steerAttachments = false,
   canHold = false,
   heldMessage,
+  heldReason,
   notice,
   fileNotice,
+  onDismissNotice,
+  onDismissFileNotice,
   agentNotForChat = false,
   onCancelHeld,
   inputValue,
@@ -198,10 +210,28 @@ export const ChatInput = ({
     textareaRef.current?.focus();
   };
 
-  // The toolbar row costs vertical space, so it only exists when something
-  // actually occupies it. Dictation is not among them: it acts on the text
-  // field, so it lives inside it, next to Send.
-  const hasToolbar = Boolean((prompts && prompts.length > 0) || quota || contextUsage || composerToolbar);
+  // A paste of text inserts it without the blank lines that open or close it
+  // (a selection copied from a page that ended on a block): never a phantom
+  // line. What the user typed is kept; a paste of files is the host's.
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    onPaste?.(e);
+    if (e.defaultPrevented) return;
+    let text: string;
+    try {
+      text = e.clipboardData?.getData('text/plain') ?? '';
+    } catch {
+      return;
+    }
+    const inserted = pastedText(text);
+    if (inserted === null) return;
+    e.preventDefault();
+    const el = e.currentTarget;
+    const next = spliceText(inputValue, el.selectionStart ?? inputValue.length, el.selectionEnd ?? inputValue.length, inserted);
+    onInputChange(next.value);
+    requestAnimationFrame(() => {
+      if (textareaRef.current) textareaRef.current.selectionStart = textareaRef.current.selectionEnd = next.caret;
+    });
+  };
 
   // Attaching may be off while files attached before stay, shown and removable.
   const isFileManagementEnabled = Boolean(onFileAdd && onFileRemove && onPaste);
@@ -266,54 +296,68 @@ export const ChatInput = ({
           : isLoading && waitsForTurn
             ? t('This message waits for the current response')
             : null;
-  // Wider than the floating window, the footer has a line of its own for what
-  // the keys do, above the disclaimer; an idle composer says how to send.
-  // The floating window has one line: a status takes the disclaimer's place.
-  const hintLine = mode !== 'floating';
-  const hint = status ?? (hintLine && !isLoading && !hasFilesUploading ? t('Enter to send · Shift+Enter for new line') : null);
-  const footerLine = 'text-center text-[0.65rem] chat-text-muted-400/30 opacity-70';
-  const disclaimer = (
-    <p data-testid="filigran-chat-disclaimer" className={`${footerLine} ${hintLine ? 'mt-0.5' : 'mt-1.5'}`}>
-      {t('Uses AI. Verify results.')}
-    </p>
-  );
+  // One footer line under the composer, the same on every surface (inline,
+  // sidebar, fullscreen, floating): a status when there is one, else the
+  // disclaimer. How to send is the Send button's tooltip, not a line of its
+  // own. The line keeps its height, so the composer never jumps.
+  const footerLine = 'text-center text-[0.65rem] chat-text-muted-400/30 opacity-70 mt-1.5 min-h-[1lh] truncate';
+  const sendTooltip = hasFilesUploading ? t('Files uploading...') : t('Enter to send · Shift+Enter for new line');
 
   return (
     <div
-      className={`px-4 py-3 border-t chat-border-200/10 ${mode === 'floating' ? 'rounded-b-xl' : ''}`}
+      className={`px-4 py-3 border-t chat-border-200/10 ${mode === 'floating' ? 'chat-radius-b-md' : ''}`}
       style={separatorColor ? { borderTopColor: separatorColor, borderTopWidth: 1 } : undefined}
       data-testid="filigran-chat-composer"
     >
       {header && <div className="mb-2">{header}</div>}
       {notice && (
-        <div role="alert" data-testid="filigran-chat-composer-notice" className="mb-2 text-[0.75rem] text-red-500 dark:text-red-400">
+        <ChatNotice
+          tone="warning"
+          role="alert"
+          data-testid="filigran-chat-composer-notice"
+          className="mb-2"
+          onDismiss={onDismissNotice}
+          dismissLabel={t('Close')}
+        >
           {notice}
-        </div>
+        </ChatNotice>
       )}
       {fileNotice && (
-        <div role="alert" data-testid="filigran-chat-file-notice" className="mb-2 text-[0.75rem] text-red-500 dark:text-red-400">
+        <ChatNotice
+          tone="warning"
+          role="alert"
+          data-testid="filigran-chat-file-notice"
+          className="mb-2"
+          onDismiss={onDismissFileNotice}
+          dismissLabel={t('Close')}
+        >
           {fileNotice}
-        </div>
+        </ChatNotice>
       )}
       {warnsNotForChat && (
-        <div
-          data-testid="filigran-chat-agent-not-for-chat"
-          className="mb-2 flex items-start gap-1.5 text-[0.7rem] text-amber-600 dark:text-amber-400"
-        >
-          <AlertTriangleIcon size={12} className="mt-0.5 shrink-0" />
-          <span>{t('This agent is designed for assignments, not direct chat. It may not respond well to conversational interactions.')}</span>
-        </div>
+        <ChatNotice tone="warning" data-testid="filigran-chat-agent-not-for-chat" className="mb-2">
+          {t('This agent is designed for assignments, not direct chat. It may not respond well to conversational interactions.')}
+        </ChatNotice>
       )}
       {heldMessage && (
-        <div className="mb-2 flex items-center gap-2 rounded-lg border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
+        <div className="mb-2 flex items-center gap-2 chat-radius-md border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
           <span className="shrink-0 chat-text-secondary-500/50">{t('Sends when the answer ends:')}</span>
           <span className="min-w-0 flex-1 truncate chat-text-800/80">{heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}</span>
           {onCancelHeld && (
-            <button type="button" onClick={onCancelHeld} className="shrink-0 chat-text-muted-400/40 hover:text-red-500">
+            <button type="button" onClick={onCancelHeld} className="shrink-0 chat-text-muted-400/40 hover:text-[var(--chat-danger)]">
               {t('Cancel')}
             </button>
           )}
         </div>
+      )}
+      {heldMessage && heldReason && (
+        <ChatNotice tone="info" data-testid="filigran-chat-held-reason" className="mb-2">
+          {heldReason === 'mentions'
+            ? t('The agents you mentioned are asked as soon as the current answer ends.')
+            : heldReason === 'references'
+              ? t('The conversations you referenced are read with your message once the current answer ends.')
+              : t('Several agents are answering: your message is sent once they are done.')}
+        </ChatNotice>
       )}
       {hasAttachments && (
         <div className="flex gap-1.5 flex-wrap mb-2">
@@ -322,7 +366,7 @@ export const ChatInput = ({
               key={i}
               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[0.7rem] ${
                 f.uploadStatus === 'error'
-                  ? 'border-red-300 dark:border-red-500/30 text-red-500 dark:text-red-400'
+                  ? 'border-[var(--chat-danger)]/25 bg-[var(--chat-danger)]/[0.06] text-[var(--chat-danger)]'
                   : f.uploadStatus === 'pending'
                     ? 'chat-border-200/10 chat-text-muted-400/40'
                     : 'chat-border-200/10 chat-text-secondary-600/60'
@@ -335,13 +379,11 @@ export const ChatInput = ({
               )}
               {f.name}
               {f.uploadStatus === 'error' && (
-                <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1 text-red-400">
-                  <span aria-hidden="true" className="text-[0.6rem]">
-                    ✕
-                  </span>
-                  <span className="max-w-[16rem] truncate" title={f.uploadError ?? t('Upload failed')}>
-                    {f.uploadError ?? t('Upload failed')}
-                  </span>
+                <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1">
+                  <XCircleIcon size={12} className="shrink-0" />
+                  <Tooltip title={f.uploadError ?? t('Upload failed')} className="inline-flex min-w-0">
+                    <span className="max-w-[16rem] truncate">{f.uploadError ?? t('Upload failed')}</span>
+                  </Tooltip>
                 </span>
               )}
               <button type="button" onClick={() => onFileRemove?.(i)} className="ml-0.5 chat-text-muted-400/30 hover:chat-text-secondary-600/60">
@@ -352,36 +394,21 @@ export const ChatInput = ({
         </div>
       )}
 
-      {/* items-end keeps the buttons on the last line once the field grows.
+      {/* The field is a column: the text area grows on top, the action row
+          sits at the bottom of the field and never moves (Sam, 10 Nov 2026:
+          icons stay put as the text grows, as on the previous chat page).
+          Left: what adds to the message (attach, templates, host controls).
+          Right: readouts, then dictation and send, always last.
           `relative` anchors the @ menu, which opens above the field. */}
       <div
-        className={`relative flex items-end border rounded-xl chat-composer-surface px-2 py-1 transition-colors ${
-          dictation.listening ? 'border-red-500/50' : 'chat-border-200/10 focus-within:border-[var(--chat-accent)]'
+        data-testid="filigran-chat-composer-box"
+        // The agent is working: the working glow plays, focused or not, and
+        // the focus ring stands aside until the turn ends (index.css).
+        data-working={isLoading ? '' : undefined}
+        className={`filigran-chat-composer-box relative flex flex-col border chat-composer-surface px-2 pt-1 pb-1.5 transition-colors ${
+          dictation.listening ? 'border-[var(--chat-danger)]/50' : 'chat-border-200/10'
         } ${isLoading ? 'filigran-chat-active-border' : ''}`}
       >
-        {isFileManagementEnabled && (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              hidden
-              accept={accept || undefined}
-              onChange={(e) => {
-                onFileAdd?.(e.target.files);
-                e.target.value = '';
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label={t('Attach files')}
-              className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 mr-0.5 transition-colors"
-            >
-              <AttachFileIcon size={18} />
-            </button>
-          </>
-        )}
         <textarea
           ref={textareaRef}
           placeholder={dictation.listening ? t('Listening...') : (placeholder ?? t('Ask a question...'))}
@@ -394,9 +421,9 @@ export const ChatInput = ({
           onFocus={mentionMenu.sync}
           onBlur={mentionMenu.close}
           {...mentionMenu.textareaAria}
-          onPaste={onPaste}
+          onPaste={handlePaste}
           rows={1}
-          className="flex-1 bg-transparent border-none outline-hidden resize-none text-[0.8125rem] py-1.5 chat-text-900/100 placeholder:chat-text-muted-400/30 filigran-chat-scrollable"
+          className="filigran-chat-composer-field w-full bg-transparent border-none outline-hidden resize-none text-[0.8125rem] px-1 py-1.5 chat-text-900/100 placeholder:chat-text-muted-400/30 filigran-chat-scrollable"
           style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}
         />
         <MentionMenu
@@ -409,96 +436,119 @@ export const ChatInput = ({
           onPick={mentionMenu.pick}
           t={t}
         />
-        {dictation.supported && (
-          <Tooltip title={dictation.listening ? t('Stop dictation') : t('Dictate a message')}>
-            <button
-              type="button"
-              onClick={dictation.toggle}
-              aria-label={t('Dictate a message')}
-              aria-pressed={dictation.listening}
-              className={`relative w-8 h-8 flex items-center justify-center shrink-0 rounded-lg mr-0.5 transition-colors ${
-                dictation.listening ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'chat-text-muted-400/30 hover:chat-surface-hover-100/10'
-              }`}
-            >
-              {dictation.listening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
-              {dictation.listening && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500 motion-safe:animate-pulse" />}
-            </button>
-          </Tooltip>
-        )}
-        {showHoldSend && (
-          <Tooltip title={t('Send when the answer ends')}>
-            <button
-              type="button"
-              onClick={send}
-              aria-label={t('Send when the answer ends')}
-              className="p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
-            >
-              <SendIcon size={18} />
-            </button>
-          </Tooltip>
-        )}
-        {showSteerSend && (
-          <Tooltip title={t('Send now')}>
-            <button
-              type="button"
-              onClick={send}
-              aria-label={t('Send now')}
-              className="p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
-            >
-              <SendIcon size={18} />
-            </button>
-          </Tooltip>
-        )}
-        <Tooltip title={isLoading ? t('Stop generating') : hasFilesUploading ? t('Files uploading...') : ''}>
-          <button
-            type="button"
-            onClick={isLoading ? onStop : send}
-            aria-label={isLoading ? t('Stop generating') : t('Send')}
-            disabled={!isLoading && !canSend}
-            className={`p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-150 ${
-              isLoading
-                ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20 ml-0.5'
-                : canSend
-                  ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20'
-                  : 'chat-text-muted-300/20 cursor-not-allowed'
-            }`}
-          >
-            {isLoading ? <StopCircleIcon size={18} /> : <SendIcon size={18} />}
-          </button>
-        </Tooltip>
-      </div>
-
-      {hasToolbar && (
-        <div className="flex items-center gap-1.5 mt-1.5 px-0.5">
+        <div data-testid="filigran-chat-composer-actions" className="flex shrink-0 items-center gap-1 pt-1">
+          {isFileManagementEnabled && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                hidden
+                accept={accept || undefined}
+                onChange={(e) => {
+                  onFileAdd?.(e.target.files);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label={t('Attach files')}
+                className="w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 mr-0.5 transition-colors"
+              >
+                <AttachFileIcon size={18} />
+              </button>
+            </>
+          )}
           {prompts && prompts.length > 0 && <PromptPicker prompts={prompts} onPick={handlePromptPick} t={t} />}
           {composerToolbar}
-          {/* Status readouts sit last and pushed right, together: they are not
-              controls, so neither should ever land between two clickable
-              things. Context before quota — "how full is this chat" is the one
-              the user can still act on by starting a new one. */}
-          {(contextUsage || quota) && (
-            <span className="ml-auto flex items-center gap-2.5">
-              {contextUsage && <ContextUsageIndicator usage={contextUsage} t={t} />}
-              {quota && <QuotaIndicator quota={quota} t={t} />}
-            </span>
+          {/* Status readouts are not controls: pushed right, together, before
+              dictation and send, so neither lands between two clickable things.
+              Context before quota: "how full is this chat" is the one the user
+              can still act on by starting a new one. The spacer stays when
+              neither shows, so the send group is always at the right edge. */}
+          <span className="ml-auto flex items-center gap-2.5 pr-1">
+            {contextUsage && <ContextUsageIndicator usage={contextUsage} t={t} />}
+            {quota && <QuotaIndicator quota={quota} t={t} />}
+          </span>
+          {dictation.supported && (
+            <Tooltip title={dictation.listening ? t('Stop dictation') : t('Dictate a message')}>
+              <button
+                type="button"
+                onClick={dictation.toggle}
+                aria-label={t('Dictate a message')}
+                aria-pressed={dictation.listening}
+                className={`relative w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm mr-0.5 transition-colors ${
+                  dictation.listening
+                    ? 'text-[var(--chat-danger)] bg-[var(--chat-danger)]/10 hover:bg-[var(--chat-danger)]/20'
+                    : 'chat-text-muted-400/30 hover:chat-surface-hover-100/10'
+                }`}
+              >
+                {dictation.listening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
+                {dictation.listening && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--chat-danger)] motion-safe:animate-pulse" />}
+              </button>
+            </Tooltip>
           )}
+          {showHoldSend && (
+            <Tooltip title={t('Send when the answer ends')}>
+              <button
+                type="button"
+                onClick={send}
+                aria-label={t('Send when the answer ends')}
+                className="p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
+              >
+                <SendIcon size={18} />
+              </button>
+            </Tooltip>
+          )}
+          {showSteerSend && (
+            <Tooltip title={t('Send now')}>
+              <button
+                type="button"
+                onClick={send}
+                aria-label={t('Send now')}
+                className="p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
+              >
+                <SendIcon size={18} />
+              </button>
+            </Tooltip>
+          )}
+          <Tooltip title={isLoading ? t('Stop generating') : sendTooltip}>
+            <button
+              type="button"
+              onClick={isLoading ? onStop : send}
+              aria-label={isLoading ? t('Stop generating') : t('Send')}
+              disabled={!isLoading && !canSend}
+              className={`p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 ${
+                isLoading
+                  ? 'text-[var(--chat-danger)] bg-[var(--chat-danger)]/10 hover:bg-[var(--chat-danger)]/20 ml-0.5'
+                  : canSend
+                    ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20'
+                    : 'chat-text-muted-300/20 cursor-not-allowed'
+              }`}
+            >
+              {isLoading ? <StopCircleIcon size={18} /> : <SendIcon size={18} />}
+            </button>
+          </Tooltip>
         </div>
-      )}
+      </div>
 
-      {/* Words heard but not yet final take the place of the hint (of the
-          footer's one line in the floating window), so the preview never
-          shifts the composer's height; the hint line keeps its height empty. */}
+      {/* The footer's one line: words heard but not yet final, else a status,
+          else the disclaimer. */}
       {dictation.interim ? (
-        <p className="flex items-center justify-center gap-1.5 text-[0.65rem] italic text-red-500 dark:text-red-400 mt-1.5">
-          <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-red-500 motion-safe:animate-pulse" />
+        <p className="flex items-center justify-center gap-1.5 text-[0.65rem] italic text-[var(--chat-danger)] mt-1.5 min-h-[1lh]">
+          <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-[var(--chat-danger)] motion-safe:animate-pulse" />
           <span className="truncate">{dictation.interim}</span>
         </p>
-      ) : hint || hintLine ? (
-        <p data-testid="filigran-chat-composer-hint" className={`${footerLine} mt-1.5 min-h-[1lh]`}>
-          {hint}
+      ) : status ? (
+        <p data-testid="filigran-chat-composer-hint" className={footerLine}>
+          {status}
         </p>
-      ) : null}
-      {(hintLine || (!dictation.interim && !hint)) && disclaimer}
+      ) : (
+        <p data-testid="filigran-chat-disclaimer" className={footerLine}>
+          {t('Uses AI. Verify results.')}
+        </p>
+      )}
     </div>
   );
 };

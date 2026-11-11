@@ -1,5 +1,6 @@
 import type { Translate } from '../types';
 import { translate, translateAround } from '../utils';
+import { Tooltip } from './Tooltip';
 
 /**
  * The greeting, as one sentence the locale owns end to end. The agent's name is
@@ -21,30 +22,35 @@ const Greeting = ({ firstName, agentName, t }: { firstName: string; agentName?: 
 interface ChatWelcomeProps {
   firstName: string;
   logoIcon: React.ReactNode;
-  /** Already translated by the caller — see `ChatPanel`. */
+  /**
+   * Already translated by the caller — see `ChatPanel`. Only the agent's own
+   * suggestions (or the host's list): an empty list shows no suggestion at all,
+   * the package hard-codes none.
+   */
   promptSuggestions: string[];
   /** Left out when nothing can be sent: the suggestions are not offered then. */
   onPromptClick?: (prompt: string) => void;
   /** Selected agent, so the screen says who is about to answer. */
   agentName?: string;
+  /**
+   * @deprecated Ignored since the empty state was made short: the agent's
+   * description is prose written for the agent picker and the agent page (it can
+   * run to twenty lines), never a greeting. Kept so existing callers still type.
+   */
   agentDescription?: string | null;
   /** True while agent-specific suggestions are being fetched. */
   suggestionsLoading?: boolean;
   t: Translate;
 }
 
-export const ChatWelcome = ({
-  firstName,
-  logoIcon,
-  promptSuggestions,
-  onPromptClick,
-  agentName,
-  agentDescription,
-  suggestionsLoading = false,
-  t,
-}: ChatWelcomeProps) => (
+/**
+ * The new-conversation screen: the agent's mark, one greeting line naming the
+ * agent, and the agent's own suggestions as compact chips. Deliberately short —
+ * the composer below is what the screen is for.
+ */
+export const ChatWelcome = ({ firstName, logoIcon, promptSuggestions, onPromptClick, agentName, suggestionsLoading = false, t }: ChatWelcomeProps) => (
   <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
-    <span className="text-[var(--chat-accent)] mb-4 [&>svg]:w-12 [&>svg]:h-12 drop-shadow-[0_0_12px_var(--chat-accent-40)]">{logoIcon}</span>
+    <span className="text-[var(--chat-accent)] mb-3 [&>svg]:w-10 [&>svg]:h-10">{logoIcon}</span>
 
     {/*
       Naming the agent here is the only confirmation that switching in the
@@ -55,42 +61,31 @@ export const ChatWelcome = ({
     */}
     <h2
       key={agentName ?? 'default'}
-      className="text-xl font-medium mb-1 text-center chat-text-900/100"
+      className="text-xl font-medium text-center chat-text-900/100"
       style={{ fontFamily: '"Geologica", sans-serif', animation: 'chat-fade-in 0.35s ease-out' }}
     >
       <Greeting firstName={firstName} agentName={agentName} t={t} />
     </h2>
 
-    {agentDescription && <p className="mb-5 max-w-[320px] text-center text-[0.75rem] leading-5 chat-text-secondary-500/40">{agentDescription}</p>}
-    {!agentDescription && <span className="mb-5" />}
-
-    {/* No section without suggestions to click: none passed, or nothing can be
-        sent (a read-only panel) - the heading alone sat above an empty gap. */}
+    {/* No suggestions without something to click: none served by the agent or
+        the host, or nothing can be sent (a read-only panel). */}
     {onPromptClick && (suggestionsLoading || promptSuggestions.length > 0) && (
-      <div className="w-full max-w-[320px]">
-        <span className="block text-center mb-2 text-[0.65rem] tracking-[1.5px] uppercase text-[var(--chat-accent)] font-semibold">
-          {t('Suggestions')}
-        </span>
-        {suggestionsLoading ? (
-          // Placeholder rows rather than an empty gap: the list is about to be
-          // replaced by the new agent's own suggestions.
-          <div aria-hidden className="space-y-1">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-8 rounded-lg border chat-border-200/10 chat-skeleton-card animate-pulse" />
+      <div role="group" aria-label={t('Suggestions')} aria-busy={suggestionsLoading || undefined} className="mt-5 flex w-full max-w-[480px] flex-wrap justify-center gap-2">
+        {suggestionsLoading
+          ? // Placeholder chips rather than an empty gap: the row is about to be
+            // replaced by the new agent's own suggestions.
+            [0, 1, 2].map((i) => <div key={i} aria-hidden className="h-8 w-32 rounded-full border chat-border-200/10 chat-skeleton-card animate-pulse" />)
+          : promptSuggestions.map((prompt) => (
+              <Tooltip key={prompt} title={prompt} className="inline-flex min-w-0 max-w-full">
+              <button
+                type="button"
+                onClick={() => onPromptClick(prompt)}
+                className="h-8 max-w-full truncate rounded-full border chat-border-200/10 bg-transparent px-3 text-[0.8125rem] chat-text-800/100 transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent)]"
+              >
+                {prompt}
+              </button>
+              </Tooltip>
             ))}
-          </div>
-        ) : (
-          promptSuggestions.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              onClick={() => onPromptClick(prompt)}
-              className="w-full text-left text-[0.8125rem] chat-text-800/100 py-1.5 px-3 mb-1 rounded-lg border chat-border-200/10 bg-transparent transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)]"
-            >
-              {prompt}
-            </button>
-          ))
-        )}
       </div>
     )}
   </div>

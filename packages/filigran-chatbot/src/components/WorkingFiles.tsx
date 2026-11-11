@@ -43,7 +43,7 @@ export const KeepViewContext = createContext<() => void>(() => undefined);
 const FOOTER_TOGGLE_AT = 8;
 
 const TOGGLE =
-  'inline-flex items-center gap-1 rounded-md text-[0.7rem] chat-text-muted-400/40 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
+  'inline-flex items-center gap-1 chat-radius-sm text-[0.7rem] chat-text-muted-400/40 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
 
 /**
  * A picture's thumbnail, in one fixed box whatever the picture's shape or
@@ -58,7 +58,7 @@ function WorkingFileThumbnail({ url, requestHeaders }: { url?: string; requestHe
   const [undecodable, setUndecodable] = useState<string | null>(null);
   const showPicture = status === 'ready' && src !== null && undecodable !== src;
   return (
-    <span className="flex h-12 w-24 shrink-0 items-center justify-center overflow-hidden rounded-md border chat-border-200/10">
+    <span className="flex h-12 w-24 shrink-0 items-center justify-center overflow-hidden chat-radius-sm border chat-border-200/10">
       {showPicture ? (
         <img src={src} alt="" loading="lazy" onError={() => setUndecodable(src)} className="h-full w-full object-contain" />
       ) : status === 'loading' ? (

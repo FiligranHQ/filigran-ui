@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ChatMessage, ChatToolLabels, ToolCallTraceEntry } from '../types';
 import {
-  AlertTriangleIcon,
   ArrowRightLeftIcon,
   BotIcon,
   BrainIcon,
@@ -13,6 +12,7 @@ import {
   XCircleIcon,
 } from './icons';
 import { cleanReasoningText, hostToolLabel } from './ChatThinking';
+import { ChatNotice } from './ChatNotice';
 import { findChatbotRoot, translate } from '../utils';
 
 /** Trace values longer than this are shown raw instead of pretty-printed JSON. */
@@ -55,14 +55,14 @@ const ToolCallRow = ({
   const hasInput = !!inputDisplay && inputDisplay !== '{}';
 
   return (
-    <div className="border chat-border-200/6 rounded-md overflow-hidden">
+    <div className="border chat-border-200/6 chat-radius-md overflow-hidden">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
         className="w-full flex items-center gap-2.5 px-3 py-2 hover:chat-surface-hover-50/3 transition-colors text-left"
       >
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[var(--chat-accent)]/10 text-[0.65rem] font-medium text-[var(--chat-accent)]">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center chat-radius-sm bg-[var(--chat-accent)]/10 text-[0.65rem] font-medium text-[var(--chat-accent)]">
           {index + 1}
         </span>
         {entry.success ? (
@@ -193,7 +193,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
               aria-modal="true"
               aria-label={t('Reasoning details')}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md max-h-full flex flex-col rounded-xl border chat-border-200/10 chat-surface-raised shadow-[0_8px_32px_rgba(0,0,0,0.25)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+              className="w-full max-w-md max-h-full flex flex-col chat-radius-md border chat-border-200/10 chat-surface-raised shadow-[0_8px_32px_rgba(0,0,0,0.25)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
             >
               <div className="px-4 pt-3.5 pb-2.5 border-b chat-border-200/10">
                 <div className="flex items-center gap-2">
@@ -204,7 +204,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
                     type="button"
                     onClick={onClose}
                     aria-label={t('Close')}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
+                    className="w-7 h-7 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
                   >
                     <CloseIcon size={16} />
                   </button>
@@ -214,25 +214,23 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
 
               <div className="px-4 py-3 overflow-y-auto filigran-chat-scrollable flex flex-col gap-3">
                 {msg.isTruncated && (
-                  <div className="flex items-start gap-2.5 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 text-[0.72rem] text-amber-600 dark:text-amber-300/90">
-                    <AlertTriangleIcon size={14} className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" />
+                  <ChatNotice tone="warning">
                     <span>
                       <span className="font-semibold">{t('Turn limit reached.')}</span>{' '}
                       {t(
                         "The agent's iteration budget was exhausted - execution stopped before completing all planned steps. The final response is a best-effort summary of work done so far.",
                       )}
                     </span>
-                  </div>
+                  </ChatNotice>
                 )}
 
                 {msg.interrupted && (
-                  <div className="flex items-start gap-2.5 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 text-[0.72rem] text-amber-600 dark:text-amber-300/90">
-                    <AlertTriangleIcon size={14} className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" />
+                  <ChatNotice tone="warning">
                     <span>
                       <span className="font-semibold">{t('Interrupted by a server restart.')}</span>{' '}
                       {t('The server restarted while this turn was running, so it stopped before it could finish.')}
                     </span>
-                  </div>
+                  </ChatNotice>
                 )}
 
                 {reasoning && (
@@ -241,7 +239,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
                       <BrainIcon size={13} className="text-[var(--chat-accent)]/70" />
                       <span className="text-[0.72rem] font-medium chat-text-secondary-500/50">{t('Model reasoning')}</span>
                     </div>
-                    <div className="rounded-md border chat-border-200/6 chat-detail-surface px-2.5 py-2 max-h-44 overflow-y-auto filigran-chat-scrollable">
+                    <div className="chat-radius-md border chat-border-200/6 chat-detail-surface px-2.5 py-2 max-h-44 overflow-y-auto filigran-chat-scrollable">
                       <p className="m-0 whitespace-pre-wrap break-words text-[0.72rem] leading-5 chat-text-secondary-500/45">
                         {cleanReasoningText(reasoning)}
                       </p>
@@ -262,7 +260,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
                     <div>
                       {tools.map((tn, i) => (
                         <div key={`${tn}-${i}`} className="flex items-center gap-3 py-2 border-b chat-border-100/4 last:border-0">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[var(--chat-accent)]/10 text-[0.65rem] font-medium text-[var(--chat-accent)]">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center chat-radius-sm bg-[var(--chat-accent)]/10 text-[0.65rem] font-medium text-[var(--chat-accent)]">
                             {i + 1}
                           </span>
                           <WrenchIcon size={12} className="shrink-0 chat-text-muted-400/50" />
@@ -285,7 +283,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
                         // chain (A -> B -> A) and older payloads have no id.
                         <div key={`${tr.agentId}-${i}`} className="flex items-center gap-1.5">
                           {i > 0 && <span className="chat-text-muted-300/30 text-[0.72rem]">→</span>}
-                          <span className="inline-flex items-center gap-1 rounded-md bg-[var(--chat-accent)]/10 px-2 py-0.5 text-[0.72rem] font-medium text-[var(--chat-accent)]">
+                          <span className="inline-flex items-center gap-1 chat-radius-sm bg-[var(--chat-accent)]/10 px-2 py-0.5 text-[0.72rem] font-medium text-[var(--chat-accent)]">
                             <BotIcon size={12} />
                             {tr.agentName}
                           </span>

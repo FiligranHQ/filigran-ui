@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, ChatPanelMode, Translate, XtmAgent } from '../types';
-import { agentIconKind, groupAgents, timeAgo, translate } from '../utils';
+import { groupAgents, timeAgo, translate } from '../utils';
+import { AgentIconGlyph } from './AgentIconGlyph';
 import {
   AlertTriangleIcon,
+  BotIcon,
+  CheckIcon,
   ChevronDownIcon,
   CloseIcon,
   EditIcon,
@@ -68,23 +71,27 @@ interface ChatHeaderProps {
   /** Under the agent's name. */
   subtitle?: React.ReactNode;
   /**
-   * Where the agent's name leads (`href`, already checked) and what its click
-   * does instead (`onClick`); the chevron beside it opens the picker then.
+   * Where the agent's page is (`href`, already checked) and what opening it
+   * does instead (`onClick`): the switcher's "Open agent page" item. The
+   * header's agent control itself always opens the switcher.
    */
   agentLink?: { href?: string; onClick?: () => void };
   t: Translate;
 }
 
 const headerButton =
-  'w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors';
+  'w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors';
 
-/** An agent's own icon when it has one the panel can draw, the panel's logo otherwise. */
-const AgentIcon = ({ icon, fallback }: { icon: string | null | undefined; fallback: React.ReactNode }) => {
-  const kind = agentIconKind(icon);
-  if (kind === 'image') return <img src={icon!.trim()} alt="" className="w-4 h-4 rounded-sm object-cover" />;
-  if (kind === 'emoji') return <span className="text-sm leading-none">{icon!.trim()}</span>;
-  return <span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{fallback}</span>;
-};
+/** An agent's own icon when it has one the panel or the host can draw, the panel's logo otherwise. */
+const AgentIcon = ({ icon, fallback, size = 16 }: { icon: string | null | undefined; fallback: React.ReactNode; size?: number }) => (
+  <AgentIconGlyph
+    icon={icon}
+    size={size}
+    fallback={<span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{fallback}</span>}
+    imageClassName="w-4 h-4 chat-radius-sm object-cover"
+    emojiClassName="text-sm leading-none"
+  />
+);
 
 // Labels are thunks rather than bare strings so each key stays a literal call
 // on the host's translator in the source: a table of plain keys resolved later
@@ -96,31 +103,30 @@ const modeOptions: { mode: ChatMode; label: (t: Translate) => string; getIcon: (
   { mode: 'fullscreen', label: (t) => t('Full screen'), getIcon: (p) => <FullscreenIcon {...p} /> },
 ];
 
+const menuItem = 'w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover-100/10 transition-colors';
+
 /**
- * The header's agent name as a link: followed in place, unless the host takes
- * a plain click itself (`onClick`); a click with a modifier key opens the
- * address as the browser does.
+ * The switcher's "Open agent page" item: the address followed in place, unless
+ * the host takes a plain click itself (`onClick`); a click with a modifier key
+ * opens the address as the browser does. The menu closes either way.
  */
-const AgentNameLink = ({
-  link,
-  logoIcon,
-  agentName,
-}: {
-  link: { href?: string; onClick?: () => void };
-  logoIcon: React.ReactNode;
-  agentName: string;
-}) => {
-  const className =
-    'flex min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1 py-1 rounded-lg hover:chat-surface-hover-100/10 hover:underline transition-colors';
+const AgentPageItem = ({ link, onDone, t }: { link: { href?: string; onClick?: () => void }; onDone: () => void; t: Translate }) => {
   const content = (
     <>
-      <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
-      <span className="min-w-0 truncate">{agentName}</span>
+      <BotIcon size={18} className="chat-text-muted-400/40 shrink-0" />
+      <span className="text-[0.8125rem] chat-text-secondary-700/70">{t('Open agent page')}</span>
     </>
   );
   if (!link.href) {
     return (
-      <button type="button" onClick={link.onClick} className={className}>
+      <button
+        type="button"
+        onClick={() => {
+          onDone();
+          link.onClick?.();
+        }}
+        className={menuItem}
+      >
         {content}
       </button>
     );
@@ -128,12 +134,14 @@ const AgentNameLink = ({
   return (
     <a
       href={link.href}
+      data-testid="filigran-chat-agent-page-link"
       onClick={(e) => {
+        onDone();
         if (!link.onClick || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
         link.onClick();
       }}
-      className={className}
+      className={menuItem}
     >
       {content}
     </a>
@@ -199,44 +207,104 @@ export const ChatHeader = ({
     return agents.filter((a) => a.name.toLowerCase().includes(q) || (a.description ?? '').toLowerCase().includes(q));
   }, [agents, agentQuery]);
 
-  // Only worth the vertical space once the list is long enough to scan for.
-  const showAgentSearch = agents.length > 5;
+  // The rows in the order they are drawn, so the arrow keys walk them as seen.
+  const agentGroups = useMemo(() => groupAgents(filteredAgents), [filteredAgents]);
+  const orderedAgents = useMemo(() => agentGroups.flatMap((g) => g.agents), [agentGroups]);
+
+  // The row the keyboard is on: the current agent on opening, the first match
+  // once the query changes.
+  const [activeAgentIndex, setActiveAgentIndex] = useState(0);
+  useEffect(() => {
+    if (!agentMenuOpen) return;
+    const current = orderedAgents.findIndex((a) => a.id === selectedAgent?.id);
+    setActiveAgentIndex(agentQuery.trim() || current < 0 ? 0 : current);
+    // Only on opening and on a new query: a list re-read keeps the row.
+  }, [agentMenuOpen, agentQuery]);
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView?.({ block: 'nearest' });
+  }, [activeAgentIndex]);
+
+  // Closing the menu from inside it (Escape, an agent chosen) hands the focus
+  // back to the trigger, so a keyboard user carries on from where they opened
+  // it instead of landing on the page body. A click outside leaves the focus
+  // where that click put it. The focus moves once the key's own dispatch and
+  // the re-render it starts are over, never from inside the handler: moving it
+  // there blurs the search field while React is still handling its keydown.
+  const focusTriggerLater = () => {
+    setTimeout(() => agentAnchorRef.current?.focus(), 0);
+  };
+  const closeAgentMenuToTrigger = () => {
+    onAgentMenuClose();
+    focusTriggerLater();
+  };
+  const switchAgentFromMenu = (agent: XtmAgent) => {
+    onSwitchAgent(agent);
+    focusTriggerLater();
+  };
+
+  const onAgentSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Escape closes the whole menu rather than only clearing the query, the
+    // same key the rest of the panel uses to dismiss.
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeAgentMenuToTrigger();
+      return;
+    }
+    if (orderedAgents.length === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      setActiveAgentIndex((i) => (i + step + orderedAgents.length) % orderedAgents.length);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const agent = orderedAgents[Math.min(activeAgentIndex, orderedAgents.length - 1)];
+      if (agent) switchAgentFromMenu(agent);
+    }
+  };
+
+  // Searchable as soon as there is a list: typing is the quickest way to an agent.
+  const showAgentSearch = agents.length > 0;
 
   const CurrentModeIcon = mode === 'sidebar' ? SidebarIcon : mode === 'fullscreen' ? FullscreenExitIcon : FloatingIcon;
 
   return (
     <div
-      className={`flex items-center px-3 py-2 min-h-[48px] border-b chat-border-200/10 chat-header-surface ${mode === 'floating' ? 'rounded-t-xl' : ''}`}
+      className={`flex items-center px-3 py-2 min-h-[48px] border-b chat-border-200/10 chat-header-surface ${mode === 'floating' ? 'chat-radius-t-md' : ''}`}
     >
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1">
-          {agentLink ? (
-            // The name leads to the agent; the chevron alone opens the picker.
-            <>
-              <AgentNameLink link={agentLink} logoIcon={logoIcon} agentName={agentName} />
-              <button
-                ref={agentAnchorRef}
-                type="button"
-                onClick={onAgentMenuToggle}
-                aria-label={t('Switch to another agent')}
-                aria-expanded={agentMenuOpen}
-                className="shrink-0 p-1 rounded-lg chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
-              >
-                <ChevronDownIcon size={16} />
-              </button>
-            </>
-          ) : (
-            <button
-              ref={agentAnchorRef}
-              type="button"
-              onClick={onAgentMenuToggle}
-              className="flex max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 px-2 py-1 rounded-lg hover:chat-surface-hover-100/10 transition-colors"
-            >
-              <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{logoIcon}</span>
-              <span className="min-w-0 truncate">{agentName}</span>
-              <ChevronDownIcon size={16} className="shrink-0 chat-text-muted-400/30" />
-            </button>
-          )}
+          {/* One control: icon, name and chevron all open the switcher. The
+              agent's page is an item of the menu, never this click. */}
+          <Tooltip title={agentMenuOpen ? '' : t('Switch to another agent')} className="inline-flex min-w-0 max-w-full">
+          <button
+            ref={agentAnchorRef}
+            type="button"
+            onClick={onAgentMenuToggle}
+            aria-haspopup="listbox"
+            aria-expanded={agentMenuOpen}
+            data-testid="filigran-chat-agent-switcher"
+            className={`flex h-8 max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1.5 chat-radius-sm border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
+              agentMenuOpen ? 'chat-surface-hover-100/10 chat-border-200/10' : ''
+            }`}
+          >
+            <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">
+              {/* The current agent's own icon when it has one drawable, the panel's logo otherwise. */}
+              <AgentIconGlyph
+                icon={selectedAgent?.icon}
+                size={18}
+                fallback={logoIcon}
+                imageClassName="w-[18px] h-[18px] chat-radius-sm object-cover"
+                emojiClassName="text-base leading-none"
+              />
+            </span>
+            <span className="min-w-0 truncate">{agentName}</span>
+            <ChevronDownIcon
+              size={16}
+              className={`shrink-0 chat-text-muted-400/40 transition-transform ${agentMenuOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          </Tooltip>
           {title && (
             <>
               <span aria-hidden className="shrink-0 chat-text-muted-400/30">
@@ -295,37 +363,57 @@ export const ChatHeader = ({
               <input
                 autoFocus
                 type="text"
+                role="combobox"
+                aria-expanded
+                aria-controls="filigran-chat-agent-options"
+                aria-activedescendant={
+                  orderedAgents[activeAgentIndex] ? `filigran-chat-agent-option-${orderedAgents[activeAgentIndex].id}` : undefined
+                }
                 value={agentQuery}
                 onChange={(e) => setAgentQuery(e.target.value)}
-                // Escape closes the whole menu rather than only clearing the
-                // query — the same key the rest of the panel uses to dismiss.
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') onAgentMenuClose();
-                }}
+                onKeyDown={onAgentSearchKeyDown}
                 placeholder={t('Search agents...')}
                 aria-label={t('Search agents...')}
-                className="w-full h-7 pl-7 pr-2 rounded-md chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+                className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
               />
             </div>
           </div>
         )}
-        <div className="max-h-[240px] overflow-y-auto filigran-chat-scrollable">
+        <div
+          ref={listRef}
+          id="filigran-chat-agent-options"
+          role="listbox"
+          aria-label={t('Switch to another agent')}
+          className="max-h-[320px] overflow-y-auto filigran-chat-scrollable"
+        >
           {agents.length > 0 && filteredAgents.length === 0 && (
             <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('No agent matches')}</div>
           )}
-          {groupAgents(filteredAgents).map(({ group, agents: groupMembers }) => (
+          {agentGroups.map(({ group, agents: groupMembers }) => (
             <div key={group ?? ''} role="group" aria-label={group ?? undefined}>
               {group && (
                 <span className="block px-4 pt-2 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40">{group}</span>
               )}
-              {groupMembers.map((agent) => (
+              {groupMembers.map((agent) => {
+                const index = orderedAgents.indexOf(agent);
+                const isCurrent = agent.id === selectedAgent?.id;
+                const isActive = index === activeAgentIndex;
+                return (
                 <button
                   key={agent.id}
+                  id={`filigran-chat-agent-option-${agent.id}`}
                   type="button"
-                  onClick={() => onSwitchAgent(agent)}
-                  className={`w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover-100/10 transition-colors ${
-                    agent.id === selectedAgent?.id ? 'bg-[var(--chat-accent)]/10' : ''
-                  }`}
+                  role="option"
+                  aria-selected={isCurrent}
+                  data-active={isActive ? 'true' : undefined}
+                  tabIndex={-1}
+                  onClick={() => switchAgentFromMenu(agent)}
+                  onMouseMove={() => {
+                    if (!isActive) setActiveAgentIndex(index);
+                  }}
+                  className={`w-full flex items-center gap-2 px-4 py-1.5 text-left transition-colors ${
+                    isActive ? 'chat-surface-hover-100/10' : ''
+                  } ${isCurrent ? 'bg-[var(--chat-accent)]/10' : ''}`}
                 >
                   <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
                     <AgentIcon icon={agent.icon} fallback={logoIcon} />
@@ -336,26 +424,29 @@ export const ChatHeader = ({
                       {agent.badges?.map((badge) => (
                         <span
                           key={badge}
-                          className="shrink-0 rounded bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] leading-4 text-[var(--chat-accent)]"
+                          className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] leading-4 text-[var(--chat-accent)]"
                         >
                           {badge}
                         </span>
                       ))}
                       {agent.disableChat && (
-                        <span className="shrink-0 rounded bg-amber-500/10 px-1 text-[0.6rem] leading-4 text-amber-600 dark:text-amber-400">
+                        <span className="shrink-0 chat-radius-sm bg-amber-500/10 px-1 text-[0.6rem] leading-4 text-amber-600 dark:text-amber-400">
                           {t('Not recommended for chat')}
                         </span>
                       )}
                     </div>
                     {agent.description && <div className="text-[0.7rem] chat-text-secondary-500/40 truncate">{agent.description}</div>}
                   </div>
+                  {isCurrent && <CheckIcon size={14} className="ml-auto shrink-0 text-[var(--chat-accent)]" />}
                 </button>
-              ))}
+                );
+              })}
             </div>
           ))}
         </div>
         <div className="h-px chat-border-fill-200/10 mx-2" />
         <div>
+          {agentLink && <AgentPageItem link={agentLink} onDone={onAgentMenuClose} t={t} />}
           {agentDashboardUrl && (
             <button
               type="button"
@@ -397,7 +488,7 @@ export const ChatHeader = ({
               aria-label={t('Conversation history')}
               aria-haspopup="menu"
               aria-expanded={historyMenuOpen}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
+              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
             >
               <HistoryIcon size={18} />
             </button>
@@ -433,15 +524,16 @@ export const ChatHeader = ({
                       {when && <div className="text-[0.7rem] chat-text-muted-500/40 truncate">{when}</div>}
                     </button>
                     {onDeleteConversation && (
-                      <button
-                        type="button"
-                        onClick={() => onDeleteConversation(conv.conversationId)}
-                        title={t('Delete conversation')}
-                        aria-label={t('Delete conversation')}
-                        className="shrink-0 p-1 rounded-md chat-text-muted-400/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
-                      >
-                        <TrashIcon size={14} />
-                      </button>
+                      <Tooltip title={t('Delete conversation')} className="inline-flex shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => onDeleteConversation(conv.conversationId)}
+                          aria-label={t('Delete conversation')}
+                          className="shrink-0 p-1 chat-radius-sm chat-text-muted-400/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
+                        >
+                          <TrashIcon size={14} />
+                        </button>
+                      </Tooltip>
                     )}
                   </div>
                 );
@@ -467,7 +559,7 @@ export const ChatHeader = ({
                 }}
                 action={clearAllAction}
                 className="px-3 pb-2"
-                iconButtonClass="p-1 rounded-md chat-text-muted-400/40 hover:chat-surface-hover-100/10 transition-colors"
+                iconButtonClass="p-1 chat-radius-sm chat-text-muted-400/40 hover:chat-surface-hover-100/10 transition-colors"
                 t={t}
               />
             )}
@@ -491,7 +583,7 @@ export const ChatHeader = ({
               type="button"
               aria-label={t('Switch view')}
               onClick={onModeMenuToggle}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
+              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
             >
               <CurrentModeIcon size={18} />
             </button>
@@ -527,7 +619,7 @@ export const ChatHeader = ({
               type="button"
               aria-label={t('Close')}
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
+              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
             >
               <CloseIcon size={18} />
             </button>

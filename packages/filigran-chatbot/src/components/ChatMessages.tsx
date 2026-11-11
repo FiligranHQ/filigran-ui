@@ -23,6 +23,7 @@ import { FEEDBACK_COMMENT_MAX_LENGTH, feedbackModeOf, shownFeedback, type Feedba
 import { isComposing } from '../utils/keyboard';
 import { formatMessageTime } from '../utils/messageTime';
 import { userMessageText } from '../utils/userMessage';
+import { copyTranscriptSelection, trimBlankLines } from '../utils/copy';
 import {
   createScrollFollower,
   watchContentGrowth,
@@ -52,6 +53,7 @@ import {
 import { ArtifactCard } from './ArtifactCard';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
+import { ChatNotice } from './ChatNotice';
 import { ChatThinking, type ThinkingOverrides } from './ChatThinking';
 import { HostRenderBoundary, HostRenderFallback, HostRendered } from './HostRenderBoundary';
 import { MarkdownMessage } from './MarkdownMessage';
@@ -206,7 +208,7 @@ function isImageAttachment(att: ChatAttachment): boolean {
  * tabbing onto one sees it through `focus-visible` / `focus-within`.
  */
 const SHOWN_ON_HOVER = 'group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
-const FOOTER_BUTTON = 'p-1 rounded-lg transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
+const FOOTER_BUTTON = 'p-1 chat-radius-sm transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
 const ACCENT_ON_HOVER = 'hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]';
 const REVEALED_BUTTON = `opacity-0 ${SHOWN_ON_HOVER} ${ACCENT_ON_HOVER}`;
 /**
@@ -237,7 +239,7 @@ const MessageCopyButton = ({ text, label, t }: { text: string; label: string; t:
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(text || '');
+      await navigator.clipboard.writeText(trimBlankLines(text || ''));
       setCopied(true);
       setTimeout(() => setCopied(false), COPY_FEEDBACK_DELAY);
     } catch {
@@ -339,7 +341,7 @@ const FeedbackComment = ({
   const canSave = !pending && !!text.trim();
 
   return (
-    <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 rounded-lg border chat-border-200/10 chat-surface-subtle-50/4 p-2">
+    <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 chat-radius-md border chat-border-200/10 chat-surface-subtle-50/4 p-2">
       <label htmlFor={id} className="text-[0.7rem] chat-text-secondary-600/60">
         {t('Tell us what went wrong (optional)')}
       </label>
@@ -365,7 +367,7 @@ const FeedbackComment = ({
           }
         }}
         placeholder={t('What could be improved?')}
-        className="w-full resize-y rounded-md border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-[0.75rem] leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+        className="w-full resize-y chat-radius-sm border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-[0.75rem] leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
         <button
@@ -374,7 +376,7 @@ const FeedbackComment = ({
             if (!pending) onSkip();
           }}
           aria-disabled={pending || undefined}
-          className="rounded-md px-2 py-0.5 text-[0.7rem] chat-text-secondary-500/50 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+          className="chat-radius-sm px-2 py-0.5 text-[0.7rem] chat-text-secondary-500/50 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
         >
           {t('Skip')}
         </button>
@@ -384,7 +386,7 @@ const FeedbackComment = ({
             if (canSave) onSave(text);
           }}
           aria-disabled={!canSave || undefined}
-          className={`rounded-md px-2 py-0.5 text-[0.7rem] text-white bg-[var(--chat-accent)] transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)] ${canSave ? 'hover:opacity-90' : 'opacity-50 cursor-default'}`}
+          className={`chat-radius-sm px-2 py-0.5 text-[0.7rem] text-white bg-[var(--chat-accent)] transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)] ${canSave ? 'hover:opacity-90' : 'opacity-50 cursor-default'}`}
         >
           {t('Save')}
         </button>
@@ -536,12 +538,11 @@ const MessageRow = memo(
       const isWorking = att.fileTag === 'working_file';
       const sizeLabel = formatFileSize(att.size);
       return (
+        <Tooltip key={key} title={t('Download')} className="inline-flex min-w-0 max-w-[90%]">
         <button
-          key={key}
           type="button"
           onClick={() => onDownloadFile?.(att)}
-          title={t('Download')}
-          className={`group flex items-center gap-2 text-left rounded-lg border px-2.5 py-1.5 transition-colors cursor-pointer max-w-[90%] ${
+          className={`group flex w-full min-w-0 items-center gap-2 text-left chat-radius-md border px-2.5 py-1.5 transition-colors cursor-pointer ${
             isWorking
               ? 'chat-border-200/10 bg-transparent'
               : 'chat-border-200/10 chat-surface-subtle-50/4 hover:border-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/5'
@@ -560,6 +561,7 @@ const MessageRow = memo(
             <DownloadIcon size={15} />
           </span>
         </button>
+        </Tooltip>
       );
     };
 
@@ -816,8 +818,8 @@ const MessageRow = memo(
     return (
       <div data-message-id={msg.serverId ?? msg.id} className={`group/msg flex flex-col ${isAssistant ? 'items-start' : 'items-end'}`}>
         {isAssistant && (
-          <div className="flex items-center gap-1.5 mb-1">
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
+          <div className="flex items-center gap-1.5 mb-1 select-none">
+            <div className="w-6 h-6 chat-radius-sm flex items-center justify-center bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">
               <span className="text-[var(--chat-accent)] [&>svg]:w-3 [&>svg]:h-3">{logoIcon}</span>
             </div>
             {/*
@@ -842,7 +844,7 @@ const MessageRow = memo(
           <div data-testid="filigran-chat-assistant-message" className="flex flex-col gap-1.5 w-full items-start">
             {buildAssistantBlocks()}
             {msg.stopped && !isStreaming && <p className="pl-1 text-[0.75rem] italic chat-text-muted-400/40">{t('Stopped')}</p>}
-            {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-xs ml-1 animate-pulse" />}
+            {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-full ml-1 animate-pulse" />}
           </div>
         ) : (
           <div data-testid="filigran-chat-user-message" className="max-w-[90%] chat-user-bubble leading-6 whitespace-pre-wrap break-words">
@@ -856,7 +858,7 @@ const MessageRow = memo(
 
         {/* The user's side mirrors the answer's: the time hugs the bubble's edge. */}
         {!isAssistant && (
-          <div className="mt-0.5 flex items-center justify-end gap-0.5 chat-text-muted-400/40">
+          <div className="mt-0.5 flex items-center justify-end gap-0.5 chat-text-muted-400/40 select-none">
             {!!userText && <MessageCopyButton text={userText} label={t('Copy message')} t={t} />}
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
           </div>
@@ -864,7 +866,7 @@ const MessageRow = memo(
 
         {/* A reply cut short keeps its warning even with no text to act on. */}
         {(showActions || (isAssistant && !isStreaming && cutShort)) && (
-          <div className="mt-0.5 flex flex-wrap items-center gap-0.5 chat-text-muted-400/40">
+          <div className="mt-0.5 flex flex-wrap items-center gap-0.5 chat-text-muted-400/40 select-none">
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
             {hasReasoningDetails && (
               <Tooltip title={reasoningLabel}>
@@ -912,9 +914,9 @@ const MessageRow = memo(
           />
         )}
         {showActions && feedback?.error && (
-          <p role="alert" className="mt-0.5 pl-1 text-[0.7rem] text-red-600 dark:text-red-400">
+          <ChatNotice tone="error" className="mt-1">
             {feedback.error}
-          </p>
+          </ChatNotice>
         )}
         {showReasoning && <ReasoningDetailsDialog msg={msg} onClose={() => setShowReasoning(false)} toolLabels={toolLabels} t={t} />}
       </div>
@@ -1317,6 +1319,7 @@ export const ChatMessages = ({
       onPointerDown={handlePointerDown}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
+      onCopy={copyTranscriptSelection}
       data-testid="filigran-chat-transcript"
       // `relative`: what a message positions absolutely (its screen-reader time)
       // is clipped by this scroll, not laid out down the page, which would scroll.
@@ -1389,6 +1392,7 @@ export const ChatMessages = ({
           of the view to hold the way back to the end. */}
       <div className="sticky bottom-0 z-10 h-0">
         {!following && (
+          <Tooltip title={t('Scroll to bottom')} className="absolute bottom-1 left-1/2 inline-flex -translate-x-1/2">
           <button
             type="button"
             onClick={() => {
@@ -1397,11 +1401,11 @@ export const ChatMessages = ({
               follower.reveal();
             }}
             aria-label={t('Scroll to bottom')}
-            title={t('Scroll to bottom')}
-            className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full border chat-border-200/10 chat-menu-surface p-1.5 chat-text-secondary-500/50 shadow-md transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
+            className="rounded-full border chat-border-200/10 chat-menu-surface p-1.5 chat-text-secondary-500/50 shadow-md transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
           >
             <ChevronDownIcon size={16} />
           </button>
+          </Tooltip>
         )}
       </div>
     </div>

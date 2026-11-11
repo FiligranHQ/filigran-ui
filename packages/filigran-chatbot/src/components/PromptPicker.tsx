@@ -44,11 +44,13 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
           aria-label={t('Insert prompt template')}
           aria-haspopup="menu"
           aria-expanded={open}
-          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+          // Same box and glyph as every other composer action (attach, dictate,
+          // send): one 32 px control height and one 18 px icon per row.
+          className={`w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm transition-colors ${
             open ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10' : 'chat-text-muted-400/30 hover:chat-surface-hover-100/10'
           }`}
         >
-          <SparklesIcon size={15} />
+          <SparklesIcon size={18} />
         </button>
       </Tooltip>
 
@@ -67,7 +69,7 @@ export const PromptPicker = ({ prompts, onPick, t }: PromptPickerProps) => {
               }}
               placeholder={t('Search prompts...')}
               aria-label={t('Search prompts...')}
-              className="w-full h-7 px-2 rounded-md chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+              className="w-full h-7 px-2 chat-radius-sm chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
             />
           </div>
         )}

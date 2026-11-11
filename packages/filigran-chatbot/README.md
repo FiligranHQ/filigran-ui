@@ -80,6 +80,7 @@ import { ChatPanel } from '@filigran/chatbot';
 | `t`                 | `(key: string) => string`                 | —            | The host's translations; a key it returns unchanged falls back to the panel's catalog in `locale` (none without `locale`) — see [Internationalization](#internationalization) |
 | `accentColor`       | `string`                                  | `'#7b5cff'`  | Primary accent color (hex)                                       |
 | `logoIcon`          | `React.ReactNode`                         | default icon | Custom logo/icon for the assistant                               |
+| `renderAgentIcon`   | `(name: string, { size }) => ReactNode`   | —            | Draws an agent icon given by name (`brain-circuit`) in the conversation rows, the switcher and its trigger; `null` keeps the panel's glyph. Image URLs and emoji are drawn by the panel |
 | `promptSuggestions` | `string[]`                                | default list | Prompt suggestions shown on welcome screen                       |
 | `draftBorderColor`  | `string`                                  | —            | Color of the line above the composer (e.g. a draft context)      |
 | `draftLabel`        | `string`                                  | —            | Accepted, and not shown                                          |
@@ -146,8 +147,8 @@ import { ChatPanel } from '@filigran/chatbot';
 | `sidebarSearchThreshold` | `number`                             | `7`          | The conversation list's search box shows above this many conversations; `0` shows it from the first |
 | `channelLabel`      | `(channel: string) => string \| null \| undefined` | — | Names the channel a conversation was started in, on its row (`Started in {channel}`) and in the header (`Agent · {channel}`); `null` shows nothing, `undefined` keeps the panel's names (Slack, Teams, WhatsApp, Telegram, Discord, Google Chat) |
 | `headerTitle` / `headerSubtitle` | `React.ReactNode \| ((context: ChatHeaderContext) => React.ReactNode)` | — | A title beside the header's agent name and a line under it, or functions of the conversation on screen (as the list holds it) and the agent. Without `headerSubtitle`, the line reads `Agent · {channel}` for a conversation started in a channel its row names |
-| `agentHref`         | `(agent: XtmAgent) => string \| undefined` | —          | Links the header's agent name to this address (http(s) or a path of the host's origin), in place; the chevron beside it opens the picker |
-| `onAgentNameClick`  | `(agent: XtmAgent) => void`               | —            | Takes a plain click on the header's agent name (over `agentHref`); the chevron beside it opens the picker |
+| `agentHref`         | `(agent: XtmAgent) => string \| undefined` | —          | The agent's page (http(s) or a path of the host's origin), followed in place from the "Open agent page" item of the agent switcher; the header's agent control itself always opens the switcher |
+| `onAgentNameClick`  | `(agent: XtmAgent) => void`               | —            | Takes a plain click on the switcher's "Open agent page" item (over `agentHref`) |
 | `clearAllAction`    | `'delete' \| 'archive'`                   | `'delete'`   | What Clear all does, for its wording (`Archive all conversations`) |
 
 Plain-data props (`requestHeaders`, `apiEndpoints`, `pageContext`, `promptSuggestions`) are compared by content and callback props are called
@@ -1287,6 +1288,11 @@ both. The same variables may be set in CSS on an ancestor instead.
 | `surfaceSubtle`    | `--filigran-chat-surface-subtle`    | Cards, search boxes, a table's or a code block's header |
 | `surfaceHover`     | `--filigran-chat-surface-hover`     | A row or a button under the pointer |
 | `inputSurface`     | `--filigran-chat-input-surface`     | A text field: the composer (no fill unless set), a rename field, the feedback and approval comments |
+| `inputRadius`      | `--filigran-chat-input-radius`      | The composer's corners (0.75rem unset) |
+| `inputMinHeight`   | `--filigran-chat-input-min-height`  | The composer field's height at rest, before it grows with the text (two lines unset) |
+| `focusRing`        | `--filigran-chat-focus-ring`        | The 2 px ring around the composer while it has the focus (the accent unset) |
+| `danger`           | `--filigran-chat-danger`            | The tone of every error state: error notices, a failed upload, dictation, stop (a red unset, e.g. `var(--color-error)`) |
+| `warning`          | `--filigran-chat-warning`           | The tone of every warning notice (an amber unset, e.g. `var(--color-warning)`) |
 | `headerBackground` | `--filigran-chat-header-background` | The header's background, a colour or an image (`none` for the surface alone) |
 | `text`             | `--filigran-chat-text`              | Text |
 | `textMuted`        | `--filigran-chat-text-muted`        | Times, labels, hints and placeholders |
@@ -1440,11 +1446,14 @@ A host behind its own proxy points the routes at it, relative to its
 `{ prompts: '/prompts', quota: '/quota', feedback: '/conversations' }`
 (`feedback`: see [Message feedback](#message-feedback)).
 
-The welcome screen names the selected agent and shows its own suggestions —
-which is also how switching agent is confirmed: the thread resets to that
-screen, so without it nothing tells you who the next message will reach. When
-the suggestions route is unavailable the host's `promptSuggestions` prop is used
-instead, so the section is never empty.
+The welcome screen is short: the agent's mark, one greeting line naming the
+selected agent (which is also how switching agent is confirmed: the thread
+resets to that screen, so without it nothing tells you who the next message
+will reach), and the agent's own suggestions as compact chips. The agent's
+description is never shown there (it is picker and agent-page prose). When the
+suggestions route is unavailable the host's `promptSuggestions` prop is used
+instead; with neither, no suggestion is shown: the package carries no generic
+list of its own.
 
 Dictation needs no configuration at all: it uses the browser's own Web Speech
 API, so the mic button appears inside the text field, next to Send, wherever

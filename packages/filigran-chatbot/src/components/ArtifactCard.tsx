@@ -16,7 +16,7 @@ const KIND_ICONS: Record<ChatArtifactKind, typeof PresentationIcon> = {
 };
 
 const ACTION =
-  'inline-flex items-center gap-1 rounded-md border chat-border-200/10 px-2 py-1 text-[0.7rem] chat-text-secondary-700/70 transition-colors hover:border-[var(--chat-accent)] hover:text-[var(--chat-accent)] disabled:opacity-50 disabled:cursor-default outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
+  'inline-flex items-center gap-1 chat-radius-sm border chat-border-200/10 px-2 py-1 text-[0.7rem] chat-text-secondary-700/70 transition-colors hover:border-[var(--chat-accent)] hover:text-[var(--chat-accent)] disabled:opacity-50 disabled:cursor-default outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
 
 interface ArtifactCardProps {
   artifact: ChatArtifact;
@@ -79,7 +79,7 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh, onOpen }: Art
     <div
       role="group"
       aria-label={`${kindLabel}: ${title}`}
-      className="flex flex-col gap-2 w-full max-w-[90%] rounded-lg border chat-border-200/10 chat-surface-subtle-50/4 px-3 py-2.5"
+      className="flex flex-col gap-2 w-full max-w-[90%] chat-radius-md border chat-border-200/10 chat-surface-subtle-50/4 px-3 py-2.5"
     >
       <div className="flex items-start gap-2.5 min-w-0">
         <span className="shrink-0 mt-0.5 text-[var(--chat-accent)]">

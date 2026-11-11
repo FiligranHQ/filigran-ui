@@ -40,7 +40,7 @@ const status = (name: string, fields: Record<string, unknown> = {}) => ({ type: 
 
 /** The status line as a screen reader reads it: what is hidden from it left out. */
 function spokenLine(): string {
-  const shown = container.querySelector('.filigran-chat-active-border');
+  const shown = container.querySelector('[data-testid="filigran-chat-status"]');
   if (!shown) return '';
   const copy = shown.cloneNode(true) as HTMLElement;
   copy.querySelectorAll('[aria-hidden="true"]').forEach((e) => e.remove());
@@ -84,6 +84,22 @@ test("a host's status label sees the setup step and names it, the panel's names 
   await send(status('preparing', { phase: 'tools' }));
   assert.ok(text().includes('Preparing tools…'), text());
   await finish(stream);
+});
+
+test('the composer shows the working glow for the whole turn, focused or not, and its focus ring once the turn ends', async () => {
+  const { stream, send } = await running();
+  const box = () => container.querySelector('[data-testid="filigran-chat-composer-box"]')!;
+  const field = container.querySelector('textarea')!;
+  field.focus();
+  await send(status('thinking'));
+  assert.equal(document.activeElement, field, 'the field keeps the focus while the agent works');
+  assert.ok(box().hasAttribute('data-working'), 'the box is marked working while focused, so the ring stands aside');
+  assert.ok(box().matches('.filigran-chat-active-border'), 'the working glow plays on the focused box');
+  field.blur();
+  assert.ok(box().hasAttribute('data-working'), 'the box stays marked working once the focus leaves');
+  await finish(stream);
+  assert.ok(!box().hasAttribute('data-working'), 'the turn ended: the focus ring is back');
+  assert.ok(!box().matches('.filigran-chat-active-border'), 'the turn ended: the glow stops');
 });
 
 test('a transfer names the agent the conversation goes to', async () => {
@@ -159,7 +175,11 @@ test('while mentioned agents answer, a send is held for the next turn, not steer
   });
   assert.equal(steers().length, 1, 'not steered');
   assert.ok(text().includes('Sends when the answer ends:'), text());
+  // Why it waits is said under it, as the previous chat page said it.
+  const reason = document.querySelector('[data-testid="filigran-chat-held-reason"]');
+  assert.equal(reason?.textContent, 'Several agents are answering: your message is sent once they are done.');
   await finish(stream);
+  assert.equal(document.querySelector('[data-testid="filigran-chat-held-reason"]'), null, 'gone once the held message leaves');
 });
 
 test('a turn ending in the same tick as the next one starts leaves no mention phase to the next', async () => {

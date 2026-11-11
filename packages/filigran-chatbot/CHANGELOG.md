@@ -12,12 +12,101 @@ This file starts at 3.10.0; earlier releases are on the
 
 ### Added
 
+- `renderAgentIcon(name, { size })`: the host draws an agent icon given by
+  name (an icon library's, such as `brain-circuit`) in the conversation rows,
+  the agent switcher and its trigger; `null` keeps the panel's glyph. Image
+  URLs and emoji are still drawn by the panel.
+
+### Changed
+
+- A row's workspace marker keeps a readable minimum width and shows the whole
+  workspace name in the panel's tooltip when it is cut.
+- Error and warning states take the host's design-system tones: `theme.danger`
+  and `theme.warning` (`--filigran-chat-danger`, `--filigran-chat-warning`)
+  colour the notices, a failed upload, dictation and the stop button; unset, a
+  red and an amber per mode (red-700 and amber-800 in the light mode, which
+  read at 4.5:1 under a notice's wash). No Tailwind red or amber is left in the
+  notice or the composer.
+- A notice's close button shows the panel's tooltip instead of a native title,
+  with a 24 px hit area.
+- The agent switcher hands the focus back to its trigger on Escape and when an
+  agent is chosen, and the trigger is 32 px high like the other header controls.
+
+- Answers render their Markdown at the old chat page's quality and past it.
+  Fenced code is coloured by language (Python, TypeScript and JavaScript, JSON,
+  shell, SQL, YAML and their usual aliases) in light and dark, with no new
+  dependency; an unknown language stays plain. Tables read at the prose's size
+  with a filled header row, ruled and striped rows, cells that keep a readable
+  width and a frame that scrolls sideways when the table is wider than the
+  answer. Nested lists tighten and change bullet by level, task lists show
+  read-only boxes, h4 to h6, strikethrough and footnotes are styled.
+- Conversations come first in the list. The workspaces fold into one
+  "Workspaces" line above the conversations (with their count and the New
+  workspace button), opened on demand and remembered per browser
+  (`filigran-chat-workspaces-open`). Below it, every conversation is listed most
+  recent first, a filed one naming its workspace on its row. The "Not in a
+  workspace" heading becomes "Conversations"; dropping a row there still takes
+  it out of its workspace. Creating, opening, renaming and deleting a workspace,
+  filing a conversation, the default marker and the counts all work as before
+  inside the open line.
+
+### Changed
+
+- The new-conversation screen is short: the agent's mark, one greeting line
+  naming the agent, and the agent's own suggestions as compact chips. The
+  agent's description is no longer shown there (`ChatWelcome`'s
+  `agentDescription` is deprecated and ignored), the "Suggestions" heading is
+  gone, and the package's four generic fallback suggestions are removed: an
+  agent the suggestions route answers nothing for, with no host
+  `promptSuggestions`, shows no suggestion.
+- The header's agent control is one switcher: a click anywhere on the icon,
+  the name or the chevron opens a searchable list of the agents (always
+  searchable, ArrowUp / ArrowDown move, Enter switches, Escape closes, the
+  current agent checked). With `agentHref` or `onAgentNameClick`, the agent's
+  page moves to an "Open agent page" item of that menu, with the same rules
+  (in place, a modifier key left to the browser); the name is no longer a link.
+- Every error, warning and notice of the panel renders through one notice
+  block (`ChatNotice`): a tone (error, warning, info) with its icon, a tinted
+  container at the panel's radius, and a close button where the notice is not
+  tied to a live state. The composer's refused attachment and refused steer
+  or Stop notices close on a click; no notice is raw coloured text any more.
+  `useChat` returns `dismissNotice` and `dismissFileNotice`, and `ChatInput`
+  takes `onDismissNotice` and `onDismissFileNotice`.
+- While the agent thinks or acts, the composer's working glow plays whether the
+  field has the focus or not: the focus ring stands aside for the turn (the box
+  carries `data-working`) and comes back when the turn ends or is stopped. The
+  field keeps the focus after Enter, as before.
+
+### Added
+
+- A conversation row shows its agent's own icon (`agent_icon` of the list,
+  `ChatConversationSummary.agentIcon`: an image URL or an emoji, as
+  `XtmAgent.icon`) in place of the bot glyph, and its last line is the agent as
+  a small pill followed by the relative time, the time never cut. A backend
+  without `agent_icon`, or one the panel cannot draw, keeps the bot glyph.
 - `onConversationChange` says why the conversation changed: its second argument
   is `{ created }`, true for a conversation the panel has just created from a
   new chat (its first message or file), false for one opened from the list, on
   a reload or in place of a deleted one, and when it is left for a new chat. A
   host could not tell an opened conversation from a created one, as both came
   after a new chat.
+- The composer takes the host's field tokens: `theme.inputRadius`,
+  `theme.inputMinHeight` and `theme.focusRing` set its corners, its height at
+  rest and its focus ring, so a host draws it with its design system and no
+  local override.
+- The conversation list of fullscreen and inline modes is resizable: drag its
+  right edge between 224 and 480 px, or move it with the arrow keys, Home and
+  End once focused; a double-click puts back the 256 px it always had. The
+  width is remembered per browser (`filigranChatConversationListWidth`,
+  namespaced by `storageKeyPrefix`) and kept while the list is collapsed.
+
+### Changed
+
+- The composer opens at two lines instead of one, and still grows with the
+  text up to its maximum: at one line it did not read as the place to write.
+- The composer's focus is a 2 px ring around its box instead of an accent
+  border, the text-field focus of a design system; the border keeps its colour,
+  so dictation's red border still reads.
 
 ## 3.20.0 — 2026-11-10
 

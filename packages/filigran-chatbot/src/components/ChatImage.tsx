@@ -96,7 +96,7 @@ const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps)
                 <CloseIcon size={20} />
               </button>
             </div>
-            <img src={src} alt={alt} className="max-h-[90%] max-w-[90%] rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+            <img src={src} alt={alt} className="max-h-[90%] max-w-[90%] chat-radius-md object-contain" onClick={(e) => e.stopPropagation()} />
           </div>,
           root,
         )}
@@ -198,7 +198,7 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
 
   if (!displaySrc) {
     return (
-      <span className="my-3 inline-flex items-center gap-2 rounded-lg border chat-border-200/10 px-3 py-2">
+      <span className="my-3 inline-flex items-center gap-2 chat-radius-md border chat-border-200/10 px-3 py-2">
         <ImageIcon size={14} className="shrink-0 animate-pulse text-[var(--chat-accent)]" />
         <span className="text-[0.7rem] chat-text-muted-500/40">{t('Loading image…')}</span>
       </span>
@@ -207,20 +207,20 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
 
   return (
     <>
-      <span className="group/img relative my-3 inline-block max-w-full rounded-lg border chat-border-200/10 p-1 transition-colors hover:border-[var(--chat-accent)]/40">
+      <span className="group/img relative my-3 inline-block max-w-full chat-radius-md border chat-border-200/10 p-1 transition-colors hover:border-[var(--chat-accent)]/40">
         <img
           src={displaySrc}
           alt={alt}
           loading="lazy"
           onClick={() => setExpanded(true)}
           onError={() => setUndecodable(displaySrc)}
-          className={`max-w-full cursor-zoom-in rounded-md object-contain ${maxHeightClass}`}
+          className={`max-w-full cursor-zoom-in chat-radius-sm object-contain ${maxHeightClass}`}
         />
         <button
           type="button"
           onClick={() => setExpanded(true)}
           aria-label={t('Expand image')}
-          className="absolute top-2 right-2 rounded-md bg-black/50 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover/img:opacity-100 focus-visible:opacity-100"
+          className="absolute top-2 right-2 chat-radius-sm bg-black/50 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover/img:opacity-100 focus-visible:opacity-100"
         >
           <MaximizeIcon size={14} />
         </button>

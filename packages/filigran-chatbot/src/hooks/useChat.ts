@@ -630,6 +630,12 @@ interface HeldMessage extends Omit<HeldPart, 'asked' | 'onSent' | 'onNotSent'> {
   parts: HeldPart[];
 }
 
+/**
+ * Why a held message waits beyond the running answer: it mentions agents, it
+ * references conversations, or several agents are answering.
+ */
+export type ChatHeldReason = 'mentions' | 'references' | 'agents';
+
 /** A relayed turn let go of with the event stream (see `withdrawRelayedTurn`). */
 interface WithdrawnTurn {
   turnId: string;
@@ -756,10 +762,16 @@ interface UseChatReturn {
   handleSendMessage: (override?: SendOverride) => Promise<ChatSendOutcome>;
   /** A message held until the running turn ends (`holdSends`), if any. */
   heldMessage: HeldMessage | null;
+  /** Why the held message waits beyond the running answer, else `null`. */
+  heldReason: ChatHeldReason | null;
   /** What the backend said when it refused a steer or a Stop, shown by the composer; `null` when nothing. */
   notice: string | null;
   /** Which files the last attach refused, and why, shown by the composer; `null` when none. */
   fileNotice: string | null;
+  /** Close `notice` (its close button). */
+  dismissNotice: () => void;
+  /** Close `fileNotice` (its close button). */
+  dismissFileNotice: () => void;
   /** Bumped on each switch to another conversation or a new one: the composer takes the focus, unless it is elsewhere. */
   composerFocusRequest: number;
   cancelHeldMessage: () => void;
@@ -1037,6 +1049,11 @@ export function useChat({
   const [fileNotice, setFileNotice] = useState<string | null>(null);
   // The notice says what becomes of the next send: it outlives the turn's end.
   const noticeUntilSendRef = useRef(false);
+  const dismissNotice = useCallback(() => {
+    noticeUntilSendRef.current = false;
+    setNotice(null);
+  }, []);
+  const dismissFileNotice = useCallback(() => setFileNotice(null), []);
   // Relayed turns ended by a provisional end, by turn id, with the answer each
   // left on screen: their stored end only gives that answer its id.
   const provisionalEndsRef = useRef(new Map<string, string>());
@@ -3699,6 +3716,18 @@ export function useChat({
   // conversation already has a server id (the very first turn of a fresh
   // conversation only receives its id on `done`).
   const canSteer = isLoading && !sendAwaitingAgent && !mentionsAnswering && getSteerUrl() !== null && conversationId !== null;
+  // Why the held message waits, when it is not only the answer running: the
+  // agents it mentions, the conversations it references, or several agents
+  // answering. The composer says it under the held message.
+  const heldReason: ChatHeldReason | null = !heldMessage
+    ? null
+    : mentionedAgentIds(heldMessage.mentions, heldMessage.text).length > 0
+      ? 'mentions'
+      : heldMessage.refs.length > 0
+        ? 'references'
+        : mentionsAnswering
+          ? 'agents'
+          : null;
 
   return {
     messages,
@@ -3728,8 +3757,11 @@ export function useChat({
     skipWait: skipWaitUrl ? skipWait : null,
     readPendingApprovals: pendingApprovalsBase ? readPendingApprovals : null,
     heldMessage,
+    heldReason,
     notice,
     fileNotice,
+    dismissNotice,
+    dismissFileNotice,
     composerFocusRequest,
     cancelHeldMessage: cancelHeld,
     reloadHistory,

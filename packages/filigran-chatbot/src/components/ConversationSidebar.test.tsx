@@ -1,7 +1,7 @@
 /**
  * Rendering tests of the conversation list's workspaces - `yarn test`.
  */
-import { test } from 'node:test';
+import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 
@@ -15,6 +15,13 @@ const { ConversationSidebar } = await import('./ConversationSidebar.tsx');
 const { setValue } = await import('../utils/pageActions.ts');
 
 const WORKSPACE = { id: 'w1', name: 'Hunts', isOwn: true, isDefault: false, canManage: true };
+
+// These tests read the workspace groups: the Workspaces line starts open, as
+// for a user who opened it once. Its default, folded, has its own tests.
+beforeEach(() => {
+  localStorage.clear();
+  localStorage.setItem('filigran-chat-workspaces-open', '1');
+});
 
 type SidebarProps = ComponentProps<typeof ConversationSidebar>;
 
@@ -523,4 +530,98 @@ test('the groups a user opened, given once the list has mounted, apply then', as
   assert.equal(header('Reports')?.getAttribute('aria-expanded'), 'true');
   await act(async () => root.unmount());
   container.remove();
+});
+
+async function renderTenWorkspaces(props: Partial<SidebarProps> = {}) {
+  const list = Array.from({ length: 10 }, (_, i) => ({ id: `w${i}`, name: `Workspace ${i}`, isOwn: true, isDefault: i === 0, canManage: true }));
+  const conversations = Array.from({ length: 12 }, (_, i) => ({
+    conversationId: `c${i}`,
+    title: `Chat ${i}`,
+    updatedAt: `2026-11-${String(20 - i).padStart(2, '0')}T00:00:00Z`,
+    workspaceId: i % 3 === 0 ? `w${i % 10}` : null,
+  }));
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <ConversationSidebar
+        conversations={conversations}
+        loading={false}
+        activeConversationId={null}
+        collapsed={false}
+        onToggleCollapsed={() => undefined}
+        onSelect={() => undefined}
+        onDelete={() => undefined}
+        onNewChat={() => undefined}
+        workspaces={{
+          list,
+          pendingWorkspaceId: null,
+          onCreate: async () => ({ ok: true }),
+          onRename: async () => ({ ok: true }),
+          onDelete: async () => ({ ok: true }),
+          onMove: async () => undefined,
+          onNewChat: () => undefined,
+        }}
+        t={(key) => key}
+        {...props}
+      />,
+    );
+    await settle();
+  });
+  const workspacesLine = () =>
+    [...container.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')].find((b) => b.textContent?.startsWith('Workspaces'));
+  const rowTitles = () => [...container.querySelectorAll<HTMLElement>('[role="button"][aria-current]')].map((r) => r.textContent ?? '');
+  return { container, workspacesLine, rowTitles, unmount: () => act(() => root.unmount()) };
+}
+
+test('conversations come first: ten workspaces fold into one line, and every conversation is listed, most recent first', async () => {
+  localStorage.clear();
+  const { container, workspacesLine, rowTitles, unmount } = await renderTenWorkspaces();
+  assert.equal(workspacesLine()?.getAttribute('aria-expanded'), 'false', 'folded by default');
+  assert.ok(workspacesLine()?.textContent?.endsWith('10'), 'the line counts the workspaces');
+  const groupHeaders = [...container.querySelectorAll('button[aria-expanded]')].filter((b) => /^Workspace \d/.test(b.textContent ?? ''));
+  assert.equal(groupHeaders.length, 0, 'no workspace row takes the list over');
+  const rows = rowTitles();
+  assert.equal(rows.length, 12, 'filed conversations are listed too');
+  assert.ok(rows[0].startsWith('Chat 0'), 'the most recent first');
+  assert.ok(rows[1].startsWith('Chat 1'));
+  const marker = container.querySelector('[data-testid="filigran-chat-row-workspace"]');
+  assert.equal(marker?.textContent, 'Workspace 0', 'a filed conversation names its workspace on its row');
+  assert.equal(container.querySelectorAll('[data-testid="filigran-chat-row-workspace"]').length, 4, 'an unfiled one names none');
+  assert.ok(container.querySelector('button[aria-label="New workspace"]'), 'a workspace can still be created from the folded line');
+  await unmount();
+});
+
+test('the Workspaces line opens on demand, shows every workspace with its actions, and stays open on the next visit', async () => {
+  localStorage.clear();
+  const first = await renderTenWorkspaces();
+  await act(async () => first.workspacesLine()!.click());
+  assert.equal(first.workspacesLine()?.getAttribute('aria-expanded'), 'true');
+  for (let i = 0; i < 10; i += 1) assert.ok(first.container.textContent?.includes(`Workspace ${i}`), `Workspace ${i}`);
+  assert.ok(first.container.querySelector('button[aria-label="New conversation in this workspace"]'), 'a workspace still starts its own conversation');
+  await first.unmount();
+  const again = await renderTenWorkspaces();
+  assert.equal(again.workspacesLine()?.getAttribute('aria-expanded'), 'true', 'remembered in the browser');
+  await act(async () => again.workspacesLine()!.click());
+  assert.equal(localStorage.getItem('filigran-chat-workspaces-open'), null, 'folded again: nothing kept');
+  await again.unmount();
+});
+
+test('a conversation about to start in a workspace shows that workspace, the line folded or not', async () => {
+  localStorage.clear();
+  const { workspacesLine, container, unmount } = await renderTenWorkspaces({
+    workspaces: {
+      list: [WORKSPACE],
+      pendingWorkspaceId: 'w1',
+      onCreate: async () => ({ ok: true }),
+      onRename: async () => ({ ok: true }),
+      onDelete: async () => ({ ok: true }),
+      onMove: async () => undefined,
+      onNewChat: () => undefined,
+    },
+  });
+  assert.equal(workspacesLine()?.getAttribute('aria-expanded'), 'true');
+  assert.ok(container.textContent?.includes('Hunts'));
+  await unmount();
 });

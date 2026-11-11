@@ -399,6 +399,20 @@ export interface ChatPanelTheme {
   surfaceHover?: string;
   /** A text field: the composer (no fill unless set), a rename field, the feedback and approval comments (`--filigran-chat-input-surface`). */
   inputSurface?: string;
+  /** The composer's corners, as the host's text fields draw theirs (`--filigran-chat-input-radius`, `radiusMd` unset). */
+  inputRadius?: string;
+  /** The small corner of every control, chip and avatar tile, the design system's `--radius-sm` (`--filigran-chat-radius-sm`, 4px unset). */
+  radiusSm?: string;
+  /** The card corner of every card, bubble, status indicator, menu and dialog, the design system's `--radius-md` (`--filigran-chat-radius-md`, 12px unset). */
+  radiusMd?: string;
+  /** The composer field's height at rest, before it grows with the text (`--filigran-chat-input-min-height`, two lines unset). */
+  inputMinHeight?: string;
+  /** The 2 px ring drawn around the composer while it has the focus (`--filigran-chat-focus-ring`, the accent unset). */
+  focusRing?: string;
+  /** The danger tone of every error state: notices, a failed upload, dictation, stop (`--filigran-chat-danger`, a red unset). */
+  danger?: string;
+  /** The warning tone of every warning notice (`--filigran-chat-warning`, an amber unset). */
+  warning?: string;
   /** The header's background, a colour or an image; `none` for the surface alone (`--filigran-chat-header-background`). */
   headerBackground?: string;
   /** Text (`--filigran-chat-text`). */
@@ -422,6 +436,9 @@ export interface ChatPanelTheme {
   codeSize?: string;
   codeSurface?: string;
 }
+
+/** Draws an agent icon given by name at `size` pixels; `null` when the host has no such icon. */
+export type ChatAgentIconRenderer = (name: string, options: { size: number }) => React.ReactNode;
 
 export interface ChatPanelProps {
   mode: ChatPanelMode;
@@ -455,6 +472,13 @@ export interface ChatPanelProps {
   t?: Translate;
   accentColor?: string;
   logoIcon?: React.ReactNode;
+  /**
+   * Draws an agent icon given by name (`XtmAgent.icon`,
+   * `ChatConversationSummary.agentIcon`, e.g. `brain-circuit`), which the
+   * panel cannot draw itself: in the conversation rows and the agent switcher.
+   * `null` keeps the panel's glyph. Image URLs and emoji are drawn by the panel.
+   */
+  renderAgentIcon?: ChatAgentIconRenderer;
   promptSuggestions?: string[];
   /** Accepted, and not shown. */
   draftLabel?: string;
@@ -1395,6 +1419,12 @@ export interface ChatConversationSummary {
    */
   agentName?: string;
   /**
+   * The conversation agent's icon (`agent_icon`), an image URL or an emoji as
+   * `XtmAgent.icon`, when the backend reports one: the row draws it in place of
+   * the panel's generic glyph.
+   */
+  agentIcon?: string;
+  /**
    * The workspace the conversation is filed in (`null`: none), when the
    * backend reports it. Undefined on backends that do not.
    */
@@ -1443,7 +1473,7 @@ export interface XtmAgent {
   id: string;
   name: string;
   slug: string | null;
-  /** An image URL or an emoji; anything else shows the panel's logo. */
+  /** An image URL, an emoji, or a name drawn by `ChatPanelProps.renderAgentIcon`; else the panel's logo. */
   icon: string | null;
   description: string | null;
   /** The heading the agent picker lists it under; ungrouped agents come first. */

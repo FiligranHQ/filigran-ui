@@ -63,13 +63,49 @@ test('a paste of office cells reaches the text box; a screenshot is attached', a
   await render({});
   const cells = pasteCase('cells copied in Excel on Windows');
   const paste = () => new window.Event('paste', { bubbles: true, cancelable: true }) as unknown as Event;
-  assert.equal(await fire(textarea(), paste(), { clipboardData: clipboardOf(cells) }), false, 'the text is pasted');
+  // Excel ends the cells with a line break: the composer inserts their text without it.
+  await fire(textarea(), paste(), { clipboardData: clipboardOf(cells) });
+  assert.equal(textarea().value, 'Region\tQ3\nEMEA\t1.2M', 'the text is pasted, no blank line after it');
   assert.equal(requests.filter((r) => r.method === 'POST').length, 0, 'no picture of the cells is uploaded');
   assert.equal(await fire(textarea(), paste(), { clipboardData: clipboardOf(pasteCase('a screenshot')) }), true, 'the screenshot is taken');
   assert.ok(
     requests.some((r) => r.method === 'POST'),
     'the screenshot is uploaded',
   );
+});
+
+test('a paste ending in blank lines inserts the text alone, where the caret is; a clean one is left to the browser', async () => {
+  fakeBackend([agentsRoute]);
+  await render({});
+  const paste = () => new window.Event('paste', { bubbles: true, cancelable: true }) as unknown as Event;
+  const text = (plain: string) => ({ files: [], types: ['text/plain'], getData: (f: string) => (f === 'text/plain' ? plain : '') });
+  await act(async () => {
+    const el = textarea();
+    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')!.set!;
+    setter.call(el, 'Typed: ');
+    el.dispatchEvent(new window.Event('input', { bubbles: true }) as unknown as Event);
+  });
+  textarea().setSelectionRange(7, 7);
+  assert.equal(await fire(textarea(), paste(), { clipboardData: text('The last sentence.\n\n\n\n\n') }), true, 'the composer inserts it');
+  assert.equal(textarea().value, 'Typed: The last sentence.', 'what was typed is kept, no phantom line');
+  assert.equal(await fire(textarea(), paste(), { clipboardData: text('clean') }), false, 'a clean paste is the browser\'s');
+});
+
+test('every composer control sits in one action row below the text area, so none moves as the text grows', async () => {
+  fakeBackend([agentsRoute]);
+  await render({ composerToolbar: <button type="button">Host control</button> });
+  const field = container.querySelector('[data-testid="filigran-chat-composer-box"]')!;
+  const row = container.querySelector('[data-testid="filigran-chat-composer-actions"]')!;
+  assert.ok(field && row, 'the field and its action row render');
+  assert.equal(row.parentElement, field, 'the action row is inside the field');
+  assert.equal(textarea().parentElement, field, 'the text area is inside the field');
+  assert.ok(textarea().compareDocumentPosition(row) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'the text area comes first, the row under it');
+  assert.ok(!row.contains(textarea()), 'the text area grows on its own, never in the row');
+  for (const name of ['Attach files', 'Send']) {
+    assert.ok(row.querySelector(`button[aria-label="${name}"]`), `${name} is in the action row`);
+  }
+  const host = [...container.querySelectorAll('button')].find((b) => b.textContent === 'Host control')!;
+  assert.ok(row.contains(host), 'host controls join the same row, never a second row outside the field');
 });
 
 test('Enter while an input method composes does not send', async () => {
