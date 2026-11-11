@@ -63,6 +63,7 @@ function parseConversation(raw: unknown): ChatConversationSummary | null {
   // Left off when absent, so a backend without them renders its rows as before.
   if (typeof c.last_message_preview === 'string' && c.last_message_preview.trim()) summary.lastMessagePreview = c.last_message_preview.trim();
   if (typeof c.channel === 'string' && c.channel) summary.channel = c.channel;
+  if (c.pinned === true || c.is_pinned === true) summary.pinned = true;
   if (typeof c.agent_icon === 'string' && c.agent_icon.trim()) summary.agentIcon = c.agent_icon.trim();
   return summary;
 }

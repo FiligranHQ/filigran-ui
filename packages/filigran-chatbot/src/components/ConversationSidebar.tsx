@@ -43,6 +43,8 @@ import {
   FolderPlusIcon,
   MoreIcon,
   PencilIcon,
+  PinIcon,
+  PinOffIcon,
   SearchIcon,
   SidebarIcon,
   TrashIcon,
@@ -238,6 +240,18 @@ export const ConversationSidebar = ({
   // opened on demand and remembered per browser.
   const workspacesOpenKey = storageKey(storageKeyPrefix, STORAGE_KEYS.workspacesOpen);
   const [workspacesShown, setWorkspacesShown] = useState(() => readStorage('local', workspacesOpenKey) === '1');
+  // The conversations pinned in this browser, listed first under Pinned (UX spec C).
+  const pinnedKey = storageKey(storageKeyPrefix, STORAGE_KEYS.pinnedConversations);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => readCollapsed(pinnedKey));
+  const togglePin = (id: string) =>
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      writeStorage('local', pinnedKey, next.size > 0 ? JSON.stringify([...next]) : null);
+      return next;
+    });
+  const isPinned = (c: ChatConversationSummary) => c.pinned === true || pinnedIds.has(c.conversationId);
   const showWorkspaces = (open: boolean) => {
     setWorkspacesShown(open);
     writeStorage('local', workspacesOpenKey, open ? '1' : null);
@@ -379,6 +393,8 @@ export const ConversationSidebar = ({
       onCommitRename={commitRename}
       onCancelRename={cancelRename}
       onStartRename={onRename ? startRename : undefined}
+      pinned={isPinned(c)}
+      onTogglePin={togglePin}
       onSelect={onSelect}
       onDelete={onDelete}
       fileable={workspaces ? fileable : undefined}
@@ -393,7 +409,7 @@ export const ConversationSidebar = ({
   );
   // Most recent first, cut by date under sticky 24 px headers (UX spec C).
   const renderDated = (list: ChatConversationSummary[]) =>
-    groupByDate(list, new Date(), t).map((group) => (
+    groupByDate(list, new Date(), t, isPinned).map((group) => (
       <div key={group.key} role="group" aria-label={group.label}>
         <div className="sticky top-0 z-[1] flex h-6 items-center bg-elevation-default px-2 text-content-compact font-medium text-default-secondary">
           {group.label}
@@ -917,6 +933,8 @@ const ConversationRow = ({
   onCommitRename,
   onCancelRename,
   onStartRename,
+  pinned = false,
+  onTogglePin,
   onSelect,
   onDelete,
   fileable,
@@ -936,6 +954,9 @@ const ConversationRow = ({
   onCommitRename: () => void;
   onCancelRename: () => void;
   onStartRename?: (id: string, current: string) => void;
+  /** Listed under Pinned: its menu offers Unpin instead of Pin. */
+  pinned?: boolean;
+  onTogglePin?: (id: string) => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   /** Workspaces the row can be moved into; omitted when there are no workspaces. */
@@ -1071,6 +1092,11 @@ const ConversationRow = ({
                   {t('Rename conversation')}
                 </MenuItem>
               )}
+              {onTogglePin && (
+                <MenuItem startIcon={pinned ? <PinOffIcon size={16} /> : <PinIcon size={16} />} onSelect={() => onTogglePin(c.conversationId)}>
+                  {pinned ? t('Unpin conversation') : t('Pin conversation')}
+                </MenuItem>
+              )}
               {movable && (
                 <>
                   <MenuSeparator />
@@ -1091,7 +1117,7 @@ const ConversationRow = ({
                   </MenuItem>
                 </>
               )}
-              {(onStartRename || movable) && <MenuSeparator />}
+              {(onStartRename || onTogglePin || movable) && <MenuSeparator />}
               <MenuItem startIcon={<TrashIcon size={16} />} onSelect={() => setConfirmingDelete(true)}>
                 {t('Delete conversation')}
               </MenuItem>

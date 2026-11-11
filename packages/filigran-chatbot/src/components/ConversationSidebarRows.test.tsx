@@ -142,6 +142,48 @@ test('the list is cut into date groups under sticky headers, most recent first',
   await unmount();
 });
 
+test('Pin in the More menu lists the row first under Pinned, kept per browser, and Unpin takes it back', async () => {
+  const { container, rows, unmount } = await renderSidebar([
+    { conversationId: 'c1', title: 'Now', updatedAt: new Date().toISOString() },
+    { conversationId: 'c2', title: 'Old', updatedAt: '2020-03-05T09:00:00Z' },
+  ]);
+  const groups = () => [...container.querySelectorAll<HTMLElement>('[role="group"]')].map((g) => g.getAttribute('aria-label'));
+  const pick = async (row: HTMLElement, label: string) => {
+    await act(async () => {
+      row.querySelector('button[aria-label="More actions"]')!.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await settle();
+    });
+    const item = [...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent?.trim() === label);
+    assert.ok(item, `menu item ${label}`);
+    await act(async () => {
+      item.click();
+      await settle();
+    });
+  };
+  await pick(rows()[1], 'Pin conversation');
+  assert.equal(groups()[0], 'Pinned');
+  assert.deepEqual(
+    rows().map((r) => r.textContent),
+    ['Old', 'Now'],
+  );
+  assert.equal(localStorage.getItem('filigran-chat-pinned-conversations'), '["c2"]');
+  await pick(rows()[0], 'Unpin conversation');
+  assert.equal(groups()[0], 'Today');
+  assert.equal(localStorage.getItem('filigran-chat-pinned-conversations'), null);
+  await unmount();
+});
+
+test('a conversation the backend reports pinned is listed under Pinned', async () => {
+  const { container, unmount } = await renderSidebar([
+    { conversationId: 'c1', title: 'Now', updatedAt: new Date().toISOString() },
+    { conversationId: 'c2', title: 'Kept', updatedAt: '2020-03-05T09:00:00Z', pinned: true },
+  ]);
+  const first = container.querySelector<HTMLElement>('[role="group"]')!;
+  assert.equal(first.getAttribute('aria-label'), 'Pinned');
+  assert.equal(first.querySelector('[role="button"][aria-current]')?.textContent, 'Kept');
+  await unmount();
+});
+
 test('a loading list shows 32 px skeleton rows, marked busy', async () => {
   const { container, unmount } = await renderSidebar([], { loading: true });
   const loading = container.querySelector<HTMLElement>('[data-testid="filigran-chat-list-loading"]');

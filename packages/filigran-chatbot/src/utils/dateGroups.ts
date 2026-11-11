@@ -1,7 +1,7 @@
 /**
- * The date groups of the conversation list: Today, Yesterday, Previous 7 days,
- * Previous 30 days, then one group per month, most recent first, as the
- * desktop assistants list their history.
+ * The date groups of the conversation list: Pinned, Today, Yesterday, Previous
+ * 7 days, Previous 30 days, then one group per month, most recent first, as
+ * the desktop assistants list their history.
  */
 import type { Translate } from '../types';
 
@@ -39,6 +39,8 @@ export function dateGroupKey(iso: string | undefined, now: Date): string {
 /** The header of group *key*: a month in the user's language, with its year when not the current one. */
 function dateGroupLabel(key: string, now: Date, t: Translate): string {
   switch (key) {
+    case 'pinned':
+      return t('Pinned');
     case 'today':
       return t('Today');
     case 'yesterday':
@@ -61,11 +63,20 @@ function dateGroupLabel(key: string, now: Date, t: Translate): string {
 /**
  * *conversations* (most recent first, as the backend lists them) cut into
  * date groups, in the order they come; a group holds at least one conversation.
+ * The ones *isPinned* says are pinned come first, in their own Pinned group.
  */
-export function groupByDate<C extends { updatedAt?: string }>(conversations: C[], now: Date, t: Translate): DateGroup<C>[] {
+export function groupByDate<C extends { updatedAt?: string }>(
+  conversations: C[],
+  now: Date,
+  t: Translate,
+  isPinned?: (conversation: C) => boolean,
+): DateGroup<C>[] {
   const groups: DateGroup<C>[] = [];
   const byKey = new Map<string, DateGroup<C>>();
+  const pinned = isPinned ? conversations.filter(isPinned) : [];
+  if (pinned.length > 0) groups.push({ key: 'pinned', label: dateGroupLabel('pinned', now, t), conversations: pinned });
   for (const c of conversations) {
+    if (isPinned?.(c)) continue;
     const key = dateGroupKey(c.updatedAt, now);
     let group = byKey.get(key);
     if (!group) {

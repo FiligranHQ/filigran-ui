@@ -46,6 +46,28 @@ test('the list is cut into groups in its own order, each holding at least one ro
   assert.ok(groups[2].label.length > 0 && groups[2].label[0] === groups[2].label[0].toLocaleUpperCase(), 'a month in sentence case');
 });
 
+test('pinned conversations come first under Pinned, out of their date group', () => {
+  const rows = [
+    { id: 'a', updatedAt: at(2026, 10, 11) },
+    { id: 'b', updatedAt: at(2026, 10, 10), pinned: true },
+    { id: 'c', updatedAt: at(2026, 7, 1), pinned: true },
+  ];
+  const groups = groupByDate(rows, now, t, (c) => c.pinned === true);
+  assert.deepEqual(
+    groups.map((g) => [g.key, g.conversations.map((c) => c.id)]),
+    [
+      ['pinned', ['b', 'c']],
+      ['today', ['a']],
+    ],
+  );
+  assert.equal(groups[0].label, 'Pinned');
+  assert.deepEqual(
+    groupByDate(rows, now, t, () => false).map((g) => g.key),
+    ['today', 'yesterday', '2026-08'],
+    'nothing pinned: no Pinned group',
+  );
+});
+
 test('rows show their agent only when the list mixes agents', () => {
   assert.equal(showsSeveralAgents([{ agentName: 'Hunter' }, { agentName: 'Hunter' }, {}]), false);
   assert.equal(showsSeveralAgents([{ agentName: 'Hunter' }, { agentName: 'Scout' }]), true);
