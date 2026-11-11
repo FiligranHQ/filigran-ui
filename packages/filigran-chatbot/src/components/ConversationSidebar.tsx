@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, SearchField, Spinner } from '@filigran/design-system';
+import { Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Input, SearchField, Spinner } from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
@@ -630,7 +630,7 @@ const NameField = ({
     onSubmit(value.trim());
   };
   return (
-    <input
+    <Input
       ref={inputRef}
       value={value}
       maxLength={200}
@@ -648,7 +648,7 @@ const NameField = ({
       onBlur={commit}
       placeholder={placeholder}
       aria-label={placeholder}
-      className="mx-2 mb-1 w-[calc(100%-1rem)] chat-radius-sm chat-input-surface-white/10 px-2 py-1 text-content-base chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
+      className="mx-2 mb-1 w-[calc(100%-1rem)]"
     />
   );
 };
@@ -861,7 +861,7 @@ const ConversationRow = ({
       </span>
       <span className="min-w-0 flex-1">
         {isEditing ? (
-          <input
+          <Input
             autoFocus
             value={draftTitle}
             onChange={(e) => onDraftTitleChange(e.target.value)}
@@ -876,7 +876,6 @@ const ConversationRow = ({
             }}
             onBlur={onCommitRename}
             aria-label={t('Conversation title')}
-            className="w-full chat-radius-sm chat-input-surface-white/10 px-1.5 py-0.5 text-content-base chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
           />
         ) : (
           // The whole title on hover when the row still cuts it.
