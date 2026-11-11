@@ -98,6 +98,25 @@ test('no variable is declared on the host document, and the theme is declared on
   }
 });
 
+test("the design system's corners are never redeclared on the panel, so the host's --radius-sm / --radius-md reach it", () => {
+  const shadowing = rules.flatMap((rule) =>
+    rule.nodes.filter((node) => node.type === 'decl' && ['--radius-sm', '--radius-md'].includes(node.prop)).map((node) => `${rule.selector} { ${node.prop}: ${node.value} }`),
+  );
+  assert.deepEqual(shadowing, []);
+  for (const [name, variable] of [
+    ['rounded-sm', '--chat-radius-sm'],
+    ['rounded-md', '--chat-radius-md'],
+  ]) {
+    const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
+    for (const rule of matching) {
+      assert.ok(
+        rule.nodes.some((node) => node.type === 'decl' && node.prop === 'border-radius' && node.value === `var(${variable})`),
+        `.${name} reads ${variable}: ${rule.toString()}`,
+      );
+    }
+  }
+});
+
 test('every overlay the panel portals is mounted inside the panel root, where the theme is declared', () => {
   const srcDir = fileURLToPath(new URL('../src/', import.meta.url));
   const files = readdirSync(srcDir, { recursive: true }).filter((path) => /\.tsx?$/.test(path) && !/\.test\.tsx?$/.test(path));
