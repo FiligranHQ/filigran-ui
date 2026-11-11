@@ -292,4 +292,10 @@ export const ru: Catalog = {
     'Бюджет итераций агента исчерпан: выполнение остановлено до завершения всех запланированных шагов. Итоговый ответ — максимально полная сводка проделанной на данный момент работы.',
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '«Да, всегда» сохраняет ваш выбор. После этого инструмент будет запускаться без запроса — в том числе в запланированных запусках, за которыми никто не следит, — пока вы не отзовёте разрешение.',
+  Today: 'Сегодня',
+  Yesterday: 'Вчера',
+  'Previous 7 days': 'Последние 7 дней',
+  'Previous 30 days': 'Последние 30 дней',
+  Older: 'Ранее',
+  'Loading conversations': 'Загрузка диалогов',
 };

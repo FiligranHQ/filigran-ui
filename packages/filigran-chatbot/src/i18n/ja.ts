@@ -293,4 +293,10 @@ export const ja: Catalog = {
     'エージェントの反復回数の上限に達したため、予定されたすべてのステップを完了する前に実行が停止しました。最終的な回答は、これまでに行った作業をできる限りまとめたものです。',
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '「はい、常に」を選ぶと、あなたの設定として保存されます。以後、そのツールは確認なしで実行されます（誰も見ていない定期実行を含む）。取り消すまでこの設定は有効です。',
+  Today: '今日',
+  Yesterday: '昨日',
+  'Previous 7 days': '過去 7 日間',
+  'Previous 30 days': '過去 30 日間',
+  Older: 'それ以前',
+  'Loading conversations': '会話を読み込んでいます',
 };

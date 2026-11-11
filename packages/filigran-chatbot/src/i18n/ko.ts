@@ -292,4 +292,10 @@ export const ko: Catalog = {
     '에이전트의 반복 한도를 모두 사용했습니다. 계획된 모든 단계를 완료하기 전에 실행이 중지되었습니다. 최종 응답은 지금까지 수행한 작업을 최대한 요약한 것입니다.',
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '“예, 항상”을 선택하면 내 기본 설정으로 저장됩니다. 이후 해당 도구는 취소할 때까지 확인 없이 실행되며, 아무도 지켜보지 않는 예약 실행에서도 마찬가지입니다.',
+  Today: '오늘',
+  Yesterday: '어제',
+  'Previous 7 days': '지난 7일',
+  'Previous 30 days': '지난 30일',
+  Older: '이전',
+  'Loading conversations': '대화를 불러오는 중',
 };

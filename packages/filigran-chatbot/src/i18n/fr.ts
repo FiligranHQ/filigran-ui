@@ -292,4 +292,10 @@ export const fr: Catalog = {
     'Le budget d’itérations de l’agent est épuisé : l’exécution s’est arrêtée avant la fin de toutes les étapes prévues. La réponse finale résume au mieux le travail accompli jusqu’ici.',
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '« Oui, toujours » enregistre une préférence pour vous. Cet outil s’exécutera alors sans demander, y compris lors des exécutions planifiées que personne ne surveille, jusqu’à ce que vous la révoquiez.',
+  Today: 'Aujourd’hui',
+  Yesterday: 'Hier',
+  'Previous 7 days': '7 derniers jours',
+  'Previous 30 days': '30 derniers jours',
+  Older: 'Plus ancien',
+  'Loading conversations': 'Chargement des conversations',
 };

@@ -1,10 +1,11 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Spinner } from '@filigran/design-system';
+import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Skeleton } from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
 import { AgentIconGlyph } from './AgentIconGlyph';
 import { channelName, conversationMatches } from '../utils/conversationList';
+import { groupByDate, rowTitle, showsSeveralAgents } from '../utils/dateGroups';
 import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { LIST_WIDTH, listLayout } from '../utils/layout';
@@ -292,6 +293,8 @@ export const ConversationSidebar = ({
   // A conversation about to start in a workspace shows where it will be.
   const workspacesOpen = workspacesShown || creatingWorkspace || (!!workspaces?.pendingWorkspaceId && !activeConversationId);
   const workspaceNames = useMemo(() => new Map((workspaces?.list ?? []).map((w) => [w.id, w.name])), [workspaces]);
+  // One agent in the list (the default, filtered to one): no per-row agent icon.
+  const severalAgents = useMemo(() => showsSeveralAgents(conversations), [conversations]);
 
   // Collapsed, or no room beside a readable conversation: a 48 px rail of
   // three icon buttons. Expand and Search are offered only where the list has
@@ -335,9 +338,20 @@ export const ConversationSidebar = ({
       actions={rowActions}
       channel={channelName(c.channel, channelLabel)}
       workspaceName={workspaces && c.workspaceId ? (workspaceNames.get(c.workspaceId) ?? t('Other workspaces')) : null}
+      showAgent={severalAgents}
       t={t}
     />
   );
+  // Most recent first, cut by date under sticky 24 px headers (UX spec C).
+  const renderDated = (list: ChatConversationSummary[]) =>
+    groupByDate(list, new Date(), t).map((group) => (
+      <div key={group.key} role="group" aria-label={group.label}>
+        <div className="sticky top-0 z-[1] flex h-6 items-center bg-elevation-default px-2 text-content-compact font-medium text-default-secondary">
+          {group.label}
+        </div>
+        {group.conversations.map(renderRow)}
+      </div>
+    ));
 
   return (
     <div className="relative shrink-0 flex flex-col border-r chat-border-200/10" style={{ width: layout.width }}>
@@ -377,8 +391,12 @@ export const ConversationSidebar = ({
 
       <div className="flex-1 overflow-y-auto px-2 pb-3 filigran-chat-scrollable">
         {loading && conversations.length === 0 && (
-          <div className="px-3 py-2">
-            <Spinner size="sm" />
+          <div role="status" aria-busy="true" aria-label={t('Loading conversations')} data-testid="filigran-chat-list-loading">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex h-8 items-center px-2">
+                <Skeleton className={`h-3 ${i % 2 ? 'w-3/5' : 'w-4/5'}`} />
+              </div>
+            ))}
           </div>
         )}
 
@@ -467,7 +485,7 @@ export const ConversationSidebar = ({
                 <span className={sectionLabel}>{t('Conversations')}</span>
                 <ChatIconButton label={t('New conversation outside a workspace')} icon={<EditIcon size={16} />} size="sm" onClick={() => onNewChat()} />
               </div>
-              {filtered.map(renderRow)}
+              {renderDated(filtered)}
               {noConversationYet && <p className="px-3 py-1.5 text-content-compact chat-text-muted-400/30">{t('No conversations yet')}</p>}
             </DropZone>
             {q && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
@@ -476,7 +494,7 @@ export const ConversationSidebar = ({
           <>
             {!loading && conversations.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{t('No conversations yet')}</p>}
             {conversations.length > 0 && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
-            {filtered.map(renderRow)}
+            {renderDated(filtered)}
           </>
         )}
         {typeof sections === 'function' ? <HostSections draw={sections} query={search} /> : sections}
@@ -839,6 +857,7 @@ const ConversationRow = ({
   actions,
   channel,
   workspaceName = null,
+  showAgent = false,
   t,
 }: {
   conversation: ChatConversationSummary;
@@ -859,10 +878,23 @@ const ConversationRow = ({
   channel: string | null;
   /** The workspace the conversation is filed in, said on its row; `null` for none. */
   workspaceName?: string | null;
+  /** Whether the row draws its agent's icon: only when the list mixes agents. */
+  showAgent?: boolean;
   t: (key: string) => string;
 }) => {
   const [moveOpen, setMoveOpen] = useState(false);
   const movable = !!fileable && !isEditing;
+  const shownTitle = rowTitle(c) || t('Untitled conversation');
+  // What the one-line row no longer spells out: the agent, the channel, the workspace, the time.
+  const hintExtra = [
+    c.agentName,
+    channel ? translate(t, 'Started in {channel}', { channel }) : null,
+    workspaceName,
+    c.updatedAt ? timeAgo(c.updatedAt, t) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const rowHint = hintExtra ? `${shownTitle}\n${hintExtra}` : shownTitle;
   return (
     <div
       role="button"
@@ -887,17 +919,18 @@ const ConversationRow = ({
           onSelect(c.conversationId);
         }
       }}
-      className={`group relative flex w-full items-start gap-2.5 chat-radius-sm px-2.5 py-2 text-left cursor-pointer transition-colors ${
-        isActive ? 'bg-[var(--chat-accent)]/10' : 'hover:chat-surface-hover-100/6'
+      // One 32 px line (UX spec C, 11 Nov 2026): the title, its agent's icon only
+      // when the list mixes agents; the agent, the channel and the workspace are
+      // said in the tooltip, never as a second line.
+      className={`group relative flex h-8 w-full items-center gap-2 chat-radius-sm px-2 text-left cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chat-accent)] ${
+        isActive ? 'bg-elevation-highlight text-default-primary font-medium' : 'text-default-secondary hover:bg-input-hover'
       }`}
     >
-      <span
-        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center chat-radius-sm ${
-          isActive ? 'bg-[var(--chat-accent)]/20 text-[var(--chat-accent)]' : 'chat-surface-subtle-100/6 chat-text-muted-400/30'
-        }`}
-      >
-        <RowAgentIcon icon={c.agentIcon} />
-      </span>
+      {showAgent && (
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">
+          <RowAgentIcon icon={c.agentIcon} />
+        </span>
+      )}
       <span className="min-w-0 flex-1">
         {isEditing ? (
           <input
@@ -918,54 +951,10 @@ const ConversationRow = ({
             className="w-full chat-radius-sm chat-input-surface-white/10 px-1.5 py-0.5 text-content-base chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
           />
         ) : (
-          // The whole title on hover when the row still cuts it.
-          <Tooltip title={c.title || t('Untitled conversation')} truncated>
-            <span className={`block min-w-0 truncate text-content-base ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
-              {c.title || t('Untitled conversation')}
-            </span>
+          // The whole title, and what the row no longer spells out, on hover.
+          <Tooltip title={rowHint} truncated={!hintExtra} className="flex min-w-0 max-w-full">
+            <span className="block min-w-0 truncate text-content-base">{shownTitle}</span>
           </Tooltip>
-        )}
-        {/*
-          Agent before time, on one line: which agent a thread is with
-          is what tells two similarly-titled conversations apart, and
-          knowing it before opening one is the point. The agent is a pill
-          the eye finds without reading, the time stays whole beside it.
-          Omitted entirely when the backend does not report it, rather
-          than padded with a placeholder.
-        */}
-        {c.lastMessagePreview && !isEditing && (
-          <span className="block truncate text-content-compact chat-text-secondary-500/50">{c.lastMessagePreview}</span>
-        )}
-        {(c.agentName || c.updatedAt || channel || workspaceName) && !isEditing && (
-          <span className="flex min-w-0 items-center gap-1 text-content-compact chat-text-muted-400/30">
-            {channel && (
-              <Tooltip title={translate(t, 'Started in {channel}', { channel })}>
-                <span role="img" aria-label={translate(t, 'Started in {channel}', { channel })} className="flex shrink-0">
-                  <MessageSquareIcon size={10} />
-                </span>
-              </Tooltip>
-            )}
-            {workspaceName && (
-              // Never squeezed to an ellipsis alone (min-w), and the whole name on hover when cut.
-              <span className="flex min-w-[4.5rem] max-w-[50%] shrink items-center gap-0.5" data-testid="filigran-chat-row-workspace">
-                <FolderIcon size={10} className="shrink-0 text-[var(--chat-accent)]" />
-                <Tooltip title={workspaceName} truncated>
-                  <span className="min-w-0 truncate">{workspaceName}</span>
-                </Tooltip>
-              </span>
-            )}
-            {c.agentName && (
-              <Tooltip title={c.agentName} truncated>
-                <span
-                  data-agent-pill=""
-                  className="min-w-0 truncate rounded-full border chat-border-200/10 chat-surface-subtle-100/6 px-1.5 leading-4 chat-text-secondary-500/50"
-                >
-                  {c.agentName}
-                </span>
-              </Tooltip>
-            )}
-            {c.updatedAt && <span className="shrink-0 whitespace-nowrap">{timeAgo(c.updatedAt, t)}</span>}
-          </span>
         )}
       </span>
       {!isEditing && (

@@ -295,4 +295,10 @@ export const de: Catalog = {
     'Das Iterationsbudget des Agenten ist aufgebraucht: Die Ausführung wurde beendet, bevor alle geplanten Schritte abgeschlossen waren. Die endgültige Antwort fasst die bisher geleistete Arbeit so gut wie möglich zusammen.',
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '„Ja, immer“ speichert eine Einstellung für Sie. Dieses Tool wird dann ohne Nachfrage ausgeführt — auch bei geplanten Ausführungen, die niemand beobachtet —, bis Sie die Freigabe widerrufen.',
+  Today: 'Heute',
+  Yesterday: 'Gestern',
+  'Previous 7 days': 'Letzte 7 Tage',
+  'Previous 30 days': 'Letzte 30 Tage',
+  Older: 'Älter',
+  'Loading conversations': 'Unterhaltungen werden geladen',
 };

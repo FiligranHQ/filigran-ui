@@ -288,4 +288,10 @@ export const zh: Catalog = {
     '智能体的迭代预算已用尽：执行在完成所有计划步骤之前已停止。最终回复是对目前已完成工作的尽力总结。',
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '“是，始终允许”会为您保存一项偏好设置。此后，该工具将无需询问即可运行（包括无人值守的计划运行），直到您撤销为止。',
+  Today: '今天',
+  Yesterday: '昨天',
+  'Previous 7 days': '过去 7 天',
+  'Previous 30 days': '过去 30 天',
+  Older: '更早',
+  'Loading conversations': '正在加载对话',
 };

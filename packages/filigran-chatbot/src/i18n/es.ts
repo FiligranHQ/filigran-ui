@@ -292,4 +292,10 @@ export const es: Catalog = {
     'Se agotó el presupuesto de iteraciones del agente: la ejecución se detuvo antes de completar todos los pasos previstos. La respuesta final es un resumen aproximado del trabajo realizado hasta ahora.',
   '“Yes, always” saves a preference for you. That tool will then run without asking — including on scheduled runs nobody is watching — until you revoke it.':
     '«Sí, siempre» guarda una preferencia para ti. Esa herramienta se ejecutará entonces sin preguntar, incluso en ejecuciones programadas que nadie supervisa, hasta que la revoques.',
+  Today: 'Hoy',
+  Yesterday: 'Ayer',
+  'Previous 7 days': 'Últimos 7 días',
+  'Previous 30 days': 'Últimos 30 días',
+  Older: 'Más antiguas',
+  'Loading conversations': 'Cargando conversaciones',
 };
