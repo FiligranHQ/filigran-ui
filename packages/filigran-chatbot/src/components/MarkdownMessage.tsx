@@ -247,7 +247,7 @@ const MARKDOWN_COMPONENTS: Components = {
   // GFM footnotes: the notes under a rule, at a smaller size.
   section: ({ className, children }) =>
     className?.includes('footnotes') ? (
-      <section className="mt-4 pt-2 border-t chat-border-200/10 text-xs chat-text-muted-500/60 [&_ol]:mb-0 [&_h2]:sr-only">{children}</section>
+      <section className="mt-4 pt-2 border-t chat-border-200/10 text-content-compact chat-text-muted-500/60 [&_ol]:mb-0 [&_h2]:sr-only">{children}</section>
     ) : (
       <section className={className}>{children}</section>
     ),

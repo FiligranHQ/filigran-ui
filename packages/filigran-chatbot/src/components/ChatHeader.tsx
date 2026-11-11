@@ -1,4 +1,4 @@
-import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger, Spinner } from '@filigran/design-system';
+import { Badge, Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger, SearchField, Spinner } from '@filigran/design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, ChatPanelMode, Translate, XtmAgent } from '../types';
 import { groupAgents, timeAgo, translate } from '../utils';
@@ -15,7 +15,6 @@ import {
   FullscreenExitIcon,
   FullscreenIcon,
   HistoryIcon,
-  SearchIcon,
   SidebarIcon,
   TrashIcon,
   UserPlusIcon,
@@ -50,8 +49,6 @@ interface ChatHeaderProps {
   /** Multi-conversation history menu (REST backend). Hidden when false. */
   historyEnabled?: boolean;
   historyMenuOpen?: boolean;
-  /** The history button opens the panel's conversation drawer instead of its menu (docked and floating). */
-  historyAsDrawer?: boolean;
   onHistoryMenuToggle?: () => void;
   onHistoryMenuClose?: () => void;
   conversations?: ChatConversationSummary[];
@@ -89,7 +86,7 @@ const AgentIcon = ({ icon, fallback, size = 16 }: { icon: string | null | undefi
     size={size}
     fallback={<span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{fallback}</span>}
     imageClassName="w-4 h-4 chat-radius-sm object-cover"
-    emojiClassName="text-sm leading-none"
+    emojiClassName="text-content-base leading-none"
   />
 );
 
@@ -171,7 +168,6 @@ export const ChatHeader = ({
   agentDashboardUrl,
   historyEnabled = false,
   historyMenuOpen = false,
-  historyAsDrawer = false,
   onHistoryMenuToggle,
   onHistoryMenuClose,
   conversations = [],
@@ -277,7 +273,10 @@ export const ChatHeader = ({
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1">
           {/* One control: icon, name and chevron all open the switcher. The
-              agent's page is an item of the menu, never this click. */}
+              agent's page is an item of the menu, never this click. Not the DS
+              Combobox: its trigger is the input field, with no slot for this
+              header trigger, the option avatars or the footer actions
+              (fds-migration/LIBRARY-FEEDBACK.md, 1). */}
           <Tooltip title={agentMenuOpen ? '' : t('Switch to another agent')} className="inline-flex min-w-0 max-w-full">
           <button
             data-ds-exempt="agent-switcher-combobox-trigger"
@@ -287,18 +286,18 @@ export const ChatHeader = ({
             aria-haspopup="listbox"
             aria-expanded={agentMenuOpen}
             data-testid="filigran-chat-agent-switcher"
-            className={`flex h-8 max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1.5 chat-radius-sm border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
+            className={`flex h-8 max-w-full min-w-0 items-center gap-1.5 text-content-base font-semibold chat-text-900/100 pl-2 pr-1.5 chat-radius-sm border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
               agentMenuOpen ? 'chat-surface-hover-100/10 chat-border-200/10' : ''
             }`}
           >
-            <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">
+            <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:size-5">
               {/* The current agent's own icon when it has one drawable, the panel's logo otherwise. */}
               <AgentIconGlyph
                 icon={selectedAgent?.icon}
-                size={18}
+                size={20}
                 fallback={logoIcon}
-                imageClassName="w-[18px] h-[18px] chat-radius-sm object-cover"
-                emojiClassName="text-base leading-none"
+                imageClassName="size-5 chat-radius-sm object-cover"
+                emojiClassName="text-title-sm leading-none"
               />
             </span>
             <span className="min-w-0 truncate">{agentName}</span>
@@ -361,11 +360,9 @@ export const ChatHeader = ({
         )}
         {showAgentSearch && (
           <div className="px-3 pb-2 pt-1">
-            <div className="relative">
-              <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 chat-text-muted-400/40" />
-              <input
+            <SearchField
+                fullWidth
                 autoFocus
-                type="text"
                 role="combobox"
                 aria-expanded
                 aria-controls="filigran-chat-agent-options"
@@ -377,9 +374,9 @@ export const ChatHeader = ({
                 onKeyDown={onAgentSearchKeyDown}
                 placeholder={t('Search agents...')}
                 aria-label={t('Search agents...')}
-                className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-content-compact chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+                onClear={() => setAgentQuery('')}
+                clearLabel={t('Clear search')}
               />
-            </div>
           </div>
         )}
         <div
@@ -425,19 +422,8 @@ export const ChatHeader = ({
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-1">
                       <span className="text-content-base font-medium chat-text-900/100 truncate">{agent.name}</span>
-                      {agent.badges?.map((badge) => (
-                        <span
-                          key={badge}
-                          className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-content-compact leading-4 text-[var(--chat-accent)]"
-                        >
-                          {badge}
-                        </span>
-                      ))}
-                      {agent.disableChat && (
-                        <span className="shrink-0 chat-radius-sm bg-[var(--chat-warning)]/10 px-1 text-content-compact leading-4 text-[var(--chat-warning)]">
-                          {t('Not recommended for chat')}
-                        </span>
-                      )}
+                      {agent.badges?.map((badge) => <Badge key={badge} content={badge} tone="brand" className="shrink-0" />)}
+                      {agent.disableChat && <Chip label={t('Not recommended for chat')} severity="high" className="shrink-0" />}
                     </div>
                     {agent.description && <div className="text-content-compact chat-text-secondary-500/40 truncate">{agent.description}</div>}
                   </div>
@@ -491,12 +477,12 @@ export const ChatHeader = ({
             label={t('Conversation history')}
             icon={<HistoryIcon size={20} />}
             onClick={onHistoryMenuToggle}
-            aria-haspopup={historyAsDrawer ? 'dialog' : 'menu'}
+            aria-haspopup="menu"
             aria-expanded={historyMenuOpen}
             active={historyMenuOpen}
           />
 
-          <Dropdown open={historyMenuOpen && !historyAsDrawer} onClose={() => onHistoryMenuClose?.()} anchorRef={historyAnchorRef} placement="bottom-end" width={300}>
+          <Dropdown open={historyMenuOpen} onClose={() => onHistoryMenuClose?.()} anchorRef={historyAnchorRef} placement="bottom-end" width={300}>
             <span className="block px-4 pt-3 pb-1 text-content-compact tracking-[1px] uppercase chat-text-muted-400/40">{t('Conversation history')}</span>
             <div className="max-h-72 overflow-y-auto filigran-chat-scrollable">
               {conversationsLoading && conversations.length === 0 && (

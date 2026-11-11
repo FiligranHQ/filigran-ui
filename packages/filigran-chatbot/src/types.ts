@@ -1449,11 +1449,6 @@ export interface ChatConversationSummary {
   lastMessagePreview?: string;
   /** Where the conversation was started (`channel`: `slack`, `teams`, `web`, …), when the backend reports it. */
   channel?: string;
-  /**
-   * Pinned by the user (`pinned`), when the backend keeps pins: the list shows
-   * it first, under Pinned. Without it, the pins made in the list are kept per browser.
-   */
-  pinned?: boolean;
 }
 
 /**

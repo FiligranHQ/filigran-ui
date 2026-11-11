@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChatIconButton } from './ChatIconButton';
-import { CloseIcon, DownloadIcon, ImageIcon, MaximizeIcon } from './icons';
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, DownloadIcon, ImageIcon, MaximizeIcon } from './icons';
 import { findChatbotRoot } from '../utils';
 import { usePanelFetch } from '../hooks/usePanelRequests';
 
@@ -11,6 +11,14 @@ interface ImageLightboxProps {
   onClose: () => void;
   /** Offered beside Close when the picture is a file the host can download. */
   onDownload?: () => void;
+  /**
+   * A picture among several (a message's attachments): the previous and next
+   * ones, by the arrow buttons or the Left and Right keys, and where this one
+   * stands ("2 / 5").
+   */
+  onPrevious?: () => void;
+  onNext?: () => void;
+  position?: string;
   t: (key: string) => string;
 }
 
@@ -19,7 +27,7 @@ interface ImageLightboxProps {
  * so it inherits the panel's stacking context and can never be painted under —
  * or over — unrelated host chrome, matching the reasoning-details dialog.
  */
-const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps) => {
+export const ImageLightbox = ({ src, alt, onClose, onDownload, onPrevious, onNext, position, t }: ImageLightboxProps) => {
   const hostRef = useRef<HTMLSpanElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -33,6 +41,16 @@ const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps)
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
+        return;
+      }
+      if (e.key === 'ArrowLeft' && onPrevious) {
+        e.preventDefault();
+        onPrevious();
+        return;
+      }
+      if (e.key === 'ArrowRight' && onNext) {
+        e.preventDefault();
+        onNext();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -50,7 +68,7 @@ const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps)
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [onClose, onPrevious, onNext]);
 
   // The overlay is the only interactive surface while open, so focus moves to
   // its close button and returns to the thumbnail on dismiss.
@@ -74,6 +92,33 @@ const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps)
             aria-label={alt.trim() || t('Image preview')}
           >
             {/* Over the scrim a transparent button has no ground: the design system's primary (brand fill) icon buttons. */}
+            {position && (
+              <span className="absolute top-4 left-4 chat-radius-sm bg-black/60 px-2 py-1 text-content-compact text-white select-none">{position}</span>
+            )}
+            {onPrevious && (
+              <ChatIconButton
+                label={t('Previous image')}
+                icon={<ChevronLeftIcon size={20} />}
+                priority="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPrevious();
+                }}
+                anchorClassName="absolute left-4 top-1/2 -translate-y-1/2 inline-flex"
+              />
+            )}
+            {onNext && (
+              <ChatIconButton
+                label={t('Next image')}
+                icon={<ChevronRightIcon size={20} />}
+                priority="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNext();
+                }}
+                anchorClassName="absolute right-4 top-1/2 -translate-y-1/2 inline-flex"
+              />
+            )}
             <div className="absolute top-4 right-4 flex gap-2">
               {onDownload && (
                 <ChatIconButton

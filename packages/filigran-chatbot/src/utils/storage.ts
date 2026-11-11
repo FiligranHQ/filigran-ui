@@ -11,7 +11,6 @@ export const STORAGE_KEYS = {
   conversationListWidth: 'filigranChatConversationListWidth',
   collapsedWorkspaces: 'filigran-chat-collapsed-workspaces',
   workspacesOpen: 'filigran-chat-workspaces-open',
-  pinnedConversations: 'filigran-chat-pinned-conversations',
   draft: 'filigranChatDraft:',
   draftRefs: 'filigranChatDraftRefs:',
   voiceCallNoticeDismissed: 'filigranChatVoiceCallNoticeDismissed',

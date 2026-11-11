@@ -186,6 +186,8 @@ test("the design system IconButton's classes compile inside the panel, reading t
     ['text-content-compact', 'font-size', '--text-content-compact'],
     ['text-content-base', 'font-size', '--text-content-base'],
     ['text-title-jumbo', 'font-size', '--text-title-jumbo'],
+    ['text-title-sm', 'font-size', '--text-title-sm'],
+    ['text-title-md', 'font-size', '--text-title-md'],
   ]) {
     const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
     assert.ok(matching.length > 0, `.${name} is compiled`);
@@ -244,11 +246,53 @@ test('no hand-written spinner in a component: the design-system Spinner only', (
   assert.deepEqual(offending, []);
 });
 
+// Chips and badges are the design-system Chip and Badge: no hand-drawn rounded, bordered, padded pill.
+test('no hand-written pill in a component: the design-system Chip and Badge only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/rounded-full border[^"'`]*\bpx-|\bpx-1 [^"'`]*leading-4/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
 // A size relative to its text (the footnote <sup> at 0.7em) is not a size of the scale and stays.
 test('no arbitrary font size in a component: the design-system type scale only', () => {
   const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
     const text = readFileSync(file, 'utf8');
     return [...text.matchAll(/\btext-\[[0-9.]+(?:rem|px)\]/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// UX round 1 of filigran-ui#521 (B5): the Tailwind size steps are not the design-system type scale either;
+// a text uses a DS named style (text-content-compact / -base, text-title-sm / -md / -jumbo).
+test('no Tailwind font size step in a component: the design-system named styles only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/(?<![\w-])text-(?:xs|sm|base|lg|[2-9]?xl)(?![\w-])/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// UX round 2 of filigran-ui#521 (B2): an icon is drawn at a design-system Icon size (16 / 20 / 24),
+// never forced to an arbitrary pixel size by its wrapper.
+test('no arbitrary pixel size on an icon wrapper: the design-system Icon sizes only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/\[&>svg\]:(?:w|h|size)-\[[^\]]+\]/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// UX round 2 of filigran-ui#521 (B1): a text field is the design-system Input (or SearchField / Textarea);
+// the only raw <input>s left are the hidden file picker and the read-only markdown task checkbox.
+test('no raw text input in a component: the design-system Input only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    if (file.endsWith('.test.tsx') || file.endsWith('.test.ts')) return [];
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/<input\b[^>]*/g)]
+      .filter((m) => !/type="(?:file|checkbox)"/.test(m[0]) && !/\n\s*type="file"/.test(text.slice(m.index, m.index + 400)))
+      .map((m) => `${file.slice(SRC.length)}: ${m[0].slice(0, 40)}`);
   });
   assert.deepEqual(offending, []);
 });

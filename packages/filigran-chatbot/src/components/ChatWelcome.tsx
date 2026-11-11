@@ -78,7 +78,7 @@ export const ChatWelcome = ({ firstName, logoIcon, agentIcon, promptSuggestions,
     */}
     <h2
       key={agentName ?? 'default'}
-      className="text-xl font-medium text-center chat-text-900/100"
+      className="text-title-md font-medium text-center chat-text-900/100"
       style={{ fontFamily: '"Geologica", sans-serif', animation: 'chat-fade-in 0.35s ease-out' }}
     >
       <Greeting firstName={firstName} agentName={agentName} t={t} />

@@ -1,4 +1,4 @@
-import { Button } from '@filigran/design-system';
+import { Button, Textarea } from '@filigran/design-system';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ToolApprovalDecision, ToolApprovalProposal, ToolApprovalVerdict } from '../types';
 import { translate } from '../utils';
@@ -121,7 +121,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
             {/* An unnamed tool is a malformed proposal, not a tool called
                 "unknown tool": the placeholder is the package's own text and
                 therefore translated here, not in the parser. */}
-            <p className="truncate font-mono text-xs chat-text-800/85">{proposal.toolName || t('unknown tool')}</p>
+            <p className="truncate font-mono text-content-compact chat-text-800/85">{proposal.toolName || t('unknown tool')}</p>
             {proposal.toolDescription && <p className="mt-0.5 text-content-compact chat-text-secondary-600/60">{proposal.toolDescription}</p>}
             {proposal.source && <p className="mt-0.5 text-content-compact chat-text-muted-400/35">{proposal.source}</p>}
           </div>
@@ -159,17 +159,15 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
 
       {!verdict && rejecting && (
         <div ref={rejectPanelRef} className="flex flex-col gap-1.5">
-          <label htmlFor={reasonId} className="text-content-compact chat-text-secondary-500/45">
-            {t('Why not? The agent sees this and can adapt (optional)')}
-          </label>
-          <textarea
+          <Textarea
             id={reasonId}
+            label={t('Why not? The agent sees this and can adapt (optional)')}
             autoFocus
             rows={2}
+            resize="none"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t('e.g. wrong environment — use staging instead')}
-            className="w-full resize-none chat-radius-sm border chat-border-200/10 chat-input-surface-white/3 px-2 py-1 text-content-compact chat-text-800/85 outline-none focus:border-[var(--chat-accent)]/50"
           />
           <div className="flex items-center gap-1.5">
             <Button variant="destructive" size="sm" disabled={disabled} startIcon={<XCircleIcon size={16} />} onClick={() => decide('reject')}>
@@ -263,7 +261,7 @@ export const ChatApprovalPrompt = ({ proposals, onSubmit, isSubmitting, error, t
 
   return (
     <div ref={rootRef} className="flex flex-col gap-2 chat-radius-md border border-[var(--chat-warning)]/20 bg-[var(--chat-warning)]/[0.02] p-3">
-      <p className="flex items-start gap-1.5 text-xs font-medium text-[var(--chat-warning)]">
+      <p className="flex items-start gap-1.5 text-content-compact font-medium text-[var(--chat-warning)]">
         <AlertTriangleIcon size={13} className="mt-0.5 shrink-0" />
         {proposals.length === 1 ? t('The agent needs your approval to run a tool:') : t('The agent needs your approval to run these tools:')}
       </p>

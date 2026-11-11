@@ -55,6 +55,14 @@
 @source inline('relative inline-flex items-center gap-2 h-6 px-2 truncate max-w-[250px] bg-feedback-neutral-secondary-transparency-30 before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:pointer-events-none before:transition-opacity before:content-[\'\'] before:bg-feedback-neutral-secondary-transparency-30 hover:before:opacity-100 focus-visible:before:opacity-100 focus-visible:ring-offset-1');
 
 /*
+ * The rest of <Chip> (UX round 1 of filigran-ui#521, B2): the attachment chip with its delete button,
+ * the file and conversation-reference chips (info when clickable), the agent pill, the warning chip;
+ * <Badge> for the agent badges; <Spinner> for every busy indicator (B1), stopped under reduced motion.
+ */
+@source inline('box-border m-0 p-0 border-0 inline-flex items-center rounded-sm transition border border-transparent bg-input-default hover:border-input-hover border-input-error hover:border-input-error focus-within:outline-none focus-within:ring-2 focus-within:ring-focus focus-within:ring-offset-2 focus-within:ring-offset-focus focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-focus h-9 h-7 w-55 w-50 w-full gap-2 px-2 pl-3 pr-4 pt-4 pb-2 pr-0 text-1 text-2 text-3 font-sans-plex font-normal font-medium leading-normal cursor-text flex-1 min-w-0 bg-transparent outline-none placeholder:text-input-placeholder disabled:placeholder:text-input-disabled text-input-value text-input-disabled text-input-label text-input-helper text-input-required text-input-error group-focus-within:text-icon-highlight resize resize-none resize-x resize-y disabled:bg-transparent disabled:border-elevation-disabled disabled:text-input-disabled disabled:pointer-events-none [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-ms-clear]:hidden flex flex-col');
+@source inline('group h-full rounded-[inherit] content-base text-default-primary text-feedback-neutral-primary text-icon-info text-icon-warning text-icon-error bg-feedback-info-secondary-transparency-30 before:bg-feedback-info-secondary-transparency-30 bg-feedback-warning-secondary-transparency-30 before:bg-feedback-warning-secondary-transparency-30 bg-feedback-error-secondary-transparency-30 before:bg-feedback-error-secondary-transparency-30 group-hover:before:opacity-100 group-focus-within:before:opacity-100 ring-focus stroke-default stroke-disabled pointer-events-none rounded-lg h-5 min-w-5 px-1.5 content-compact-medium size-4 motion-safe:animate-spin stroke-highlight sr-only');
+
+/*
  * The design-system colours those classes name, read from the host's own
  * @filigran/design-system variables (`--icon-highlight`, `--color-filigran-*`,
  * `--color-feedback-*`, `--bg-elevation-default`) where it loads the design
@@ -71,6 +79,16 @@
   --color-feedback-error-primary: var(--color-feedback-error-primary, var(--chat-danger));
   --color-feedback-error-secondary-transparency-20: var(--color-feedback-error-secondary-transparency-20, color-mix(in srgb, var(--chat-danger) 20%, transparent));
   --color-feedback-neutral-secondary-transparency-30: var(--color-feedback-neutral-secondary-transparency-30, color-mix(in srgb, currentColor 14%, transparent));
+  --color-feedback-info-secondary-transparency-30: var(--color-feedback-info-secondary-transparency-30, color-mix(in srgb, var(--chat-accent) 14%, transparent));
+  --color-feedback-warning-secondary-transparency-30: var(--color-feedback-warning-secondary-transparency-30, color-mix(in srgb, var(--chat-warning) 14%, transparent));
+  --color-feedback-error-secondary-transparency-30: var(--color-feedback-error-secondary-transparency-30, color-mix(in srgb, var(--chat-danger) 14%, transparent));
+  --color-feedback-neutral-primary: var(--color-feedback-neutral-primary, currentColor);
+  --color-icon-info: var(--icon-info, var(--chat-accent));
+  --color-icon-warning: var(--icon-warning, var(--chat-warning));
+  --color-icon-error: var(--icon-error, var(--chat-danger));
+  --color-highlight: var(--stroke-highlight, var(--icon-highlight, var(--chat-accent)));
+  --color-default: var(--stroke-default, currentColor);
+  --color-disabled: var(--stroke-disabled, color-mix(in oklab, currentColor 40%, transparent));
   --color-focus: var(--bg-elevation-default, var(--filigran-chat-surface, var(--chat-default-surface)));
   --color-filigran-brand-tertiary: var(--color-filigran-brand-tertiary, color-mix(in srgb, var(--chat-accent) 85%, black));
   --color-filigran-brand-primary-transparency-55: var(--color-filigran-brand-primary-transparency-55, color-mix(in srgb, var(--chat-accent) 55%, transparent));
@@ -96,6 +114,10 @@
      base (14px) for titles, rows and the message text, title-jumbo for the welcome emoji. No arbitrary text-[..rem]. */
   --text-content-compact: var(--text-content-compact, var(--text-2, 0.75rem));
   --text-title-jumbo: var(--text-title-jumbo, var(--text-10, 2.625rem));
+  /* Title steps of the DS named styles (UX round 1 of filigran-ui#521, B5): title-sm (16px) for the voice-call
+     agent name and the header agent emoji, title-md (20px) for the welcome greeting. No text-xs/sm/base/lg/xl. */
+  --text-title-sm: var(--text-title-sm, var(--text-4, 1rem));
+  --text-title-md: var(--text-title-md, var(--text-6, 1.25rem));
   --color-default-primary: var(--text-default-primary, currentColor);
   --color-default-disabled: var(--text-default-disabled, color-mix(in oklab, currentColor 40%, transparent));
   /* One name for the DS's two disabled tokens: the fill (--bg-) and the border (--border-elevation-disabled) share it. */
@@ -104,6 +126,17 @@
   --font-content-button: var(--font-content-button, inherit);
   --leading-content-button: var(--leading-content-button, 1.5);
   --tracking-content-button: var(--tracking-content-button, normal);
+  /* The design system SearchField and Textarea (UX round 1 of filigran-ui#521, B3): field fill, placeholder,
+     label, helper, error, and the 12/14/16px steps they name (text-1/2/3). */
+  --color-input-default: var(--bg-input-default, var(--filigran-chat-surface-subtle, color-mix(in oklab, currentColor 6%, transparent)));
+  --color-input-placeholder: var(--text-input-placeholder, color-mix(in oklab, currentColor 55%, transparent));
+  --color-input-label: var(--text-input-label, color-mix(in oklab, currentColor 70%, transparent));
+  --color-input-helper: var(--text-input-helper, color-mix(in oklab, currentColor 70%, transparent));
+  --color-input-required: var(--text-input-required, var(--chat-danger));
+  --color-input-error: var(--text-input-error, var(--chat-danger));
+  --text-1: var(--text-1, 0.75rem);
+  --text-2: var(--text-2, 0.75rem);
+  --text-3: var(--text-3, 0.875rem);
 }
 
 @plugin "tailwindcss-scoped-preflight" {
