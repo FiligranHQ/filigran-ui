@@ -186,6 +186,8 @@ test("the design system IconButton's classes compile inside the panel, reading t
     ['text-content-compact', 'font-size', '--text-content-compact'],
     ['text-content-base', 'font-size', '--text-content-base'],
     ['text-title-jumbo', 'font-size', '--text-title-jumbo'],
+    ['text-title-sm', 'font-size', '--text-title-sm'],
+    ['text-title-md', 'font-size', '--text-title-md'],
   ]) {
     const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
     assert.ok(matching.length > 0, `.${name} is compiled`);
@@ -258,6 +260,16 @@ test('no arbitrary font size in a component: the design-system type scale only',
   const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
     const text = readFileSync(file, 'utf8');
     return [...text.matchAll(/\btext-\[[0-9.]+(?:rem|px)\]/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// UX round 1 of filigran-ui#521 (B5): the Tailwind size steps are not the design-system type scale either;
+// a text uses a DS named style (text-content-compact / -base, text-title-sm / -md / -jumbo).
+test('no Tailwind font size step in a component: the design-system named styles only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/(?<![\w-])text-(?:xs|sm|base|lg|[2-9]?xl)(?![\w-])/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
   });
   assert.deepEqual(offending, []);
 });

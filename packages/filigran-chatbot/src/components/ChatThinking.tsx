@@ -376,7 +376,7 @@ function ThinkingTextBubble({ text, action }: { text: string; action?: React.Rea
             : ''
         }`}
       >
-        <p className="m-0 whitespace-pre-wrap break-words text-xs leading-5 chat-text-secondary-500/45">{text}</p>
+        <p className="m-0 whitespace-pre-wrap break-words text-content-compact leading-5 chat-text-secondary-500/45">{text}</p>
       </div>
     </div>
   );
@@ -521,18 +521,18 @@ export const ChatThinking = ({
               <>
                 {/* Read as the locale's sentence, as the voice call says it, not the two run together. */}
                 <span className="sr-only">{withAgent(t, answeringAgentName, label)}</span>
-                <span aria-hidden="true" className="text-xs font-medium text-[var(--chat-accent)]/80 shrink-0">
+                <span aria-hidden="true" className="text-content-compact font-medium text-[var(--chat-accent)]/80 shrink-0">
                   {answeringAgentName}
                 </span>
               </>
             )}
-            <span aria-hidden={answeringAgentName ? true : undefined} className="text-sm chat-text-secondary-500/50 transition-all duration-300">
+            <span aria-hidden={answeringAgentName ? true : undefined} className="text-content-base chat-text-secondary-500/50 transition-all duration-300">
               {label}
             </span>
             {waitLeftS !== undefined ? (
-              <span className="text-xs chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(Math.ceil(waitLeftS))}</span>
+              <span className="text-content-compact chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(Math.ceil(waitLeftS))}</span>
             ) : (
-              showElapsed && <span className="text-xs chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(elapsedS)}</span>
+              showElapsed && <span className="text-content-compact chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(elapsedS)}</span>
             )}
             {agentStatus?.status === 'wait_start' && onSkipWait && (
               <Button priority="secondary" size="sm" className="ml-1 shrink-0" onClick={onSkipWait}>

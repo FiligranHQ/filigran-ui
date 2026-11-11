@@ -811,7 +811,7 @@ const MessageRow = memo(
               a thread that changed hands mid-way must keep each answer under
               the agent that wrote it.
             */}
-            <span className="font-semibold text-xs chat-text-900/100">{msg.agentName ?? agentName}</span>
+            <span className="font-semibold text-content-compact chat-text-900/100">{msg.agentName ?? agentName}</span>
           </div>
         )}
 

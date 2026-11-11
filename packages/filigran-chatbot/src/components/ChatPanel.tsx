@@ -1656,7 +1656,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         )}
         <div className={showConversationSidebar ? 'relative flex flex-1 flex-col min-w-0' : 'contents'} {...dropHandlers}>
           {dropping && (
-            <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center chat-radius-md border-2 border-dashed border-[var(--chat-accent)] bg-[var(--chat-accent)]/10 text-sm font-medium text-[var(--chat-accent)]">
+            <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center chat-radius-md border-2 border-dashed border-[var(--chat-accent)] bg-[var(--chat-accent)]/10 text-content-base font-medium text-[var(--chat-accent)]">
               {t('Drop files to attach them')}
             </div>
           )}
@@ -1746,7 +1746,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             />
           )}
           {readOnly ? (
-            readOnlyNotice && <div className="px-4 py-3 border-t chat-border-200/10 text-sm chat-text-secondary-500/50">{readOnlyNotice}</div>
+            readOnlyNotice && <div className="px-4 py-3 border-t chat-border-200/10 text-content-base chat-text-secondary-500/50">{readOnlyNotice}</div>
           ) : (
             <ChatInput
               header={composerHeader}

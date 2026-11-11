@@ -86,7 +86,7 @@ const AgentIcon = ({ icon, fallback, size = 16 }: { icon: string | null | undefi
     size={size}
     fallback={<span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{fallback}</span>}
     imageClassName="w-4 h-4 chat-radius-sm object-cover"
-    emojiClassName="text-sm leading-none"
+    emojiClassName="text-content-base leading-none"
   />
 );
 
@@ -283,7 +283,7 @@ export const ChatHeader = ({
             aria-haspopup="listbox"
             aria-expanded={agentMenuOpen}
             data-testid="filigran-chat-agent-switcher"
-            className={`flex h-8 max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1.5 chat-radius-sm border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
+            className={`flex h-8 max-w-full min-w-0 items-center gap-1.5 text-content-base font-semibold chat-text-900/100 pl-2 pr-1.5 chat-radius-sm border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
               agentMenuOpen ? 'chat-surface-hover-100/10 chat-border-200/10' : ''
             }`}
           >
@@ -294,7 +294,7 @@ export const ChatHeader = ({
                 size={18}
                 fallback={logoIcon}
                 imageClassName="w-[18px] h-[18px] chat-radius-sm object-cover"
-                emojiClassName="text-base leading-none"
+                emojiClassName="text-title-sm leading-none"
               />
             </span>
             <span className="min-w-0 truncate">{agentName}</span>

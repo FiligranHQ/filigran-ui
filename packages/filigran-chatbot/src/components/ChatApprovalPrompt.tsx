@@ -121,7 +121,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
             {/* An unnamed tool is a malformed proposal, not a tool called
                 "unknown tool": the placeholder is the package's own text and
                 therefore translated here, not in the parser. */}
-            <p className="truncate font-mono text-xs chat-text-800/85">{proposal.toolName || t('unknown tool')}</p>
+            <p className="truncate font-mono text-content-compact chat-text-800/85">{proposal.toolName || t('unknown tool')}</p>
             {proposal.toolDescription && <p className="mt-0.5 text-content-compact chat-text-secondary-600/60">{proposal.toolDescription}</p>}
             {proposal.source && <p className="mt-0.5 text-content-compact chat-text-muted-400/35">{proposal.source}</p>}
           </div>
@@ -261,7 +261,7 @@ export const ChatApprovalPrompt = ({ proposals, onSubmit, isSubmitting, error, t
 
   return (
     <div ref={rootRef} className="flex flex-col gap-2 chat-radius-md border border-[var(--chat-warning)]/20 bg-[var(--chat-warning)]/[0.02] p-3">
-      <p className="flex items-start gap-1.5 text-xs font-medium text-[var(--chat-warning)]">
+      <p className="flex items-start gap-1.5 text-content-compact font-medium text-[var(--chat-warning)]">
         <AlertTriangleIcon size={13} className="mt-0.5 shrink-0" />
         {proposals.length === 1 ? t('The agent needs your approval to run a tool:') : t('The agent needs your approval to run these tools:')}
       </p>

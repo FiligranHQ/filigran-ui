@@ -113,7 +113,7 @@ export const ChatVoiceCall = ({
           )}
           <span className="text-[var(--chat-accent)] [&>svg]:w-10 [&>svg]:h-10">{logoIcon}</span>
         </button>
-        <h2 className="max-w-full truncate text-base font-semibold chat-text-900/100">{agentName}</h2>
+        <h2 className="max-w-full truncate text-title-sm font-semibold chat-text-900/100">{agentName}</h2>
         <p aria-live="polite" className="text-center text-content-base chat-text-secondary-500/60">
           {label}
         </p>
