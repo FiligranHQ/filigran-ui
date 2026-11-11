@@ -1,5 +1,7 @@
 # @filigran/chatbot
 
+> **Moved.** This package now lives in [XTM-Foundation/filigran-design-system](https://github.com/XTM-Foundation/filigran-design-system/tree/main/packages/filigran-chatbot) and is released from there under the same npm name, `@filigran/chatbot`. The last version published from this repository is **3.24.1**; 3.25.0 and later come from the design-system repository. Open issues and pull requests there; nothing new lands here.
+
 Filigran chat panel — a standalone React + Tailwind chatbot component with SSE streaming, multi-agent support, and full markdown rendering.
 
 ## Features
