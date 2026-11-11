@@ -322,7 +322,8 @@ export const ChatInput = ({
   // sidebar, fullscreen, floating): a status when there is one, else the
   // disclaimer. How to send is the Send button's tooltip, not a line of its
   // own. The line keeps its height, so the composer never jumps.
-  const footerLine = 'text-center text-content-compact chat-text-muted-400/30 opacity-70 mt-1.5 min-h-[1lh] truncate';
+  // No opacity on top of the muted token: it took the line to 3.7:1 in the light theme (4.5:1 is the floor).
+  const footerLine = 'text-center text-content-compact chat-text-muted-400/30 mt-1.5 min-h-[1lh] truncate';
   const sendTooltip = hasFilesUploading ? t('Files uploading...') : t('Enter to send · Shift+Enter for new line');
 
   // The transcript's reading column and gutters: the composer's left edge is the messages'.
