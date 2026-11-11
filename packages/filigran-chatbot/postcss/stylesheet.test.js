@@ -156,3 +156,143 @@ test("every default of the panel's own look is declared for both modes on the pa
     assert.ok(dark.has(token), `${token} has no dark default`);
   }
 });
+
+test("the design system IconButton's classes compile inside the panel, reading the host's design-system tokens first", () => {
+  for (const [name, prop, token] of [
+    ['text-icon-highlight', 'color', '--icon-highlight'],
+    ['h-9', 'height', null],
+    ['rounded-sm', 'border-radius', null],
+    ['text-feedback-error-primary', 'color', '--color-feedback-error-primary'],
+    ['hover\\\\:bg-filigran-brand-primary-transparency-10', 'background-color', '--color-filigran-brand-primary-transparency-10'],
+    // The design system Chip of the welcome screen's suggestions (xtm-one#10911 UX round 2, B1).
+    ['bg-feedback-neutral-secondary-transparency-30', 'background-color', '--color-feedback-neutral-secondary-transparency-30'],
+    ['h-6', 'height', null],
+    // The design system Button of the approval, artifact and retry actions (chatbot 3.23.0, slice 2).
+    ['bg-filigran-brand-primary', 'background-color', '--color-filigran-brand-primary'],
+    ['text-negative-primary', 'color', '--text-negative-primary'],
+    ['hover\\\\:bg-filigran-brand-tertiary', 'background-color', '--color-filigran-brand-tertiary'],
+    ['border-filigran-brand-primary-transparency-55', 'border-color', '--color-filigran-brand-primary-transparency-55'],
+    ['text-content-button', 'font-size', '--text-content-button'],
+    // The design system Menu of the view switcher (chatbot 3.23.0, slice 2).
+    ['bg-elevation-highlight', 'background-color', '--bg-elevation-highlight'],
+    ['data-\\\\\\[highlighted\\\\\\]\\\\:bg-input-hover', 'background-color', '--bg-input-hover'],
+    ['text-input-value', 'color', '--text-input-value'],
+    ['min-h-9', 'min-height', null],
+    // Its group rule (the conversation row's move-to-workspace menu, slice 2).
+    ['border-elevation-subtle', 'border-color', '--border-elevation-subtle'],
+    // The one elevation shadow of every floating surface (menus, the floating panel, the reasoning dialog; slice 3).
+    ['shadow-global-shadow', '--tw-shadow', '--shadow-global-shadow'],
+    // The design-system type scale of every chat text (slice 3).
+    ['text-content-compact', 'font-size', '--text-content-compact'],
+    ['text-content-base', 'font-size', '--text-content-base'],
+    ['text-title-jumbo', 'font-size', '--text-title-jumbo'],
+    ['text-title-sm', 'font-size', '--text-title-sm'],
+    ['text-title-md', 'font-size', '--text-title-md'],
+  ]) {
+    const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
+    assert.ok(matching.length > 0, `.${name} is compiled`);
+    for (const rule of matching) {
+      for (const selector of rule.selectors) assert.ok(selector.includes(PANEL_SCOPE), `unscoped .${name}: ${selector}`);
+      const decl = rule.nodes.find((node) => node.type === 'decl' && node.prop === prop);
+      assert.ok(decl, `.${name} sets ${prop}`);
+      if (token) assert.match(decl.value, new RegExp(`var\\(${token},`), `.${name} reads ${token} with a fallback: ${decl.value}`);
+    }
+  }
+});
+
+// Surfaces follow the design system (chatbot 3.23.0, slice 3): a colour literal
+// lives only in the copy of its palette (`--chat-ds-*`) or in the code colours
+// it has no token for (`--chat-default-hl-*`); every other rule reads a token.
+const COLOUR_LITERAL = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(/i;
+const LITERAL_ALLOWED = /^--chat-(?:ds-|default-hl-)/;
+
+test('no colour literal in the stylesheet outside the design-system palette copy and the code colours', () => {
+  const sourceRoot = postcss.parse(readFileSync(SOURCE, 'utf8'));
+  const offending = [];
+  sourceRoot.walkDecls((decl) => {
+    if (COLOUR_LITERAL.test(decl.value) && !LITERAL_ALLOWED.test(decl.prop)) offending.push(`${decl.prop}: ${decl.value}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+test('no hand-written shadow or rgb colour in a component: the design-system elevation shadow only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/shadow-\[[^\]]*\]|\bshadow-(?:sm|md|lg|xl|2xl)\b|\brgba?\(/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// Feedback colours read the panel's tones (`--chat-danger`, `--chat-warning`, `--chat-success`), which a host
+// sets from its design system; a Tailwind palette shade (red-500, amber-600, emerald-400...) would ignore it.
+test('no Tailwind palette shade in a component: the feedback tones and the design-system tokens only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [
+      ...text.matchAll(
+        /\b(?:text|bg|border|stroke|fill|ring|outline|from|to|via|decoration|divide|placeholder|caret)-(?:red|amber|emerald|green|yellow|orange|blue|gray|slate|zinc|neutral|stone|rose|pink|purple|violet|indigo|sky|cyan|teal|lime|fuchsia)-\d{2,3}\b/g,
+      ),
+    ].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// Busy indicators are the design-system Spinner (sizes, tone, reduced-motion stop): no hand-spun ring.
+test('no hand-written spinner in a component: the design-system Spinner only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/\banimate-spin\b|from '\.\/Spinner'/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// Chips and badges are the design-system Chip and Badge: no hand-drawn rounded, bordered, padded pill.
+test('no hand-written pill in a component: the design-system Chip and Badge only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/rounded-full border[^"'`]*\bpx-|\bpx-1 [^"'`]*leading-4/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// A size relative to its text (the footnote <sup> at 0.7em) is not a size of the scale and stays.
+test('no arbitrary font size in a component: the design-system type scale only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/\btext-\[[0-9.]+(?:rem|px)\]/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// UX round 1 of filigran-ui#521 (B5): the Tailwind size steps are not the design-system type scale either;
+// a text uses a DS named style (text-content-compact / -base, text-title-sm / -md / -jumbo).
+test('no Tailwind font size step in a component: the design-system named styles only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/(?<![\w-])text-(?:xs|sm|base|lg|[2-9]?xl)(?![\w-])/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// UX round 2 of filigran-ui#521 (B2): an icon is drawn at a design-system Icon size (16 / 20 / 24),
+// never forced to an arbitrary pixel size by its wrapper.
+test('no arbitrary pixel size on an icon wrapper: the design-system Icon sizes only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/\[&>svg\]:(?:w|h|size)-\[[^\]]+\]/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+// UX round 2 of filigran-ui#521 (B1): a text field is the design-system Input (or SearchField / Textarea);
+// the only raw <input>s left are the hidden file picker and the read-only markdown task checkbox.
+test('no raw text input in a component: the design-system Input only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    if (file.endsWith('.test.tsx') || file.endsWith('.test.ts')) return [];
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/<input\b[^>]*/g)]
+      .filter((m) => !/type="(?:file|checkbox)"/.test(m[0]) && !/\n\s*type="file"/.test(text.slice(m.index, m.index + 400)))
+      .map((m) => `${file.slice(SRC.length)}: ${m[0].slice(0, 40)}`);
+  });
+  assert.deepEqual(offending, []);
+});

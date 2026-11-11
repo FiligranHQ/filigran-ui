@@ -1,3 +1,4 @@
+import { Badge, Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger, SearchField, Spinner } from '@filigran/design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, ChatPanelMode, Translate, XtmAgent } from '../types';
 import { groupAgents, timeAgo, translate } from '../utils';
@@ -14,15 +15,14 @@ import {
   FullscreenExitIcon,
   FullscreenIcon,
   HistoryIcon,
-  SearchIcon,
   SidebarIcon,
   TrashIcon,
   UserPlusIcon,
 } from './icons';
+import { ChatIconButton } from './ChatIconButton';
 import { ClearAllConversations } from './ClearAllConversations';
 import { ConversationListFailed } from './ConversationListFailed';
 import { Dropdown } from './Dropdown';
-import { Spinner } from './Spinner';
 import { Tooltip } from './Tooltip';
 
 interface ChatHeaderProps {
@@ -79,9 +79,6 @@ interface ChatHeaderProps {
   t: Translate;
 }
 
-const headerButton =
-  'w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors';
-
 /** An agent's own icon when it has one the panel or the host can draw, the panel's logo otherwise. */
 const AgentIcon = ({ icon, fallback, size = 16 }: { icon: string | null | undefined; fallback: React.ReactNode; size?: number }) => (
   <AgentIconGlyph
@@ -89,7 +86,7 @@ const AgentIcon = ({ icon, fallback, size = 16 }: { icon: string | null | undefi
     size={size}
     fallback={<span className="text-[var(--chat-accent)] [&>svg]:w-4 [&>svg]:h-4">{fallback}</span>}
     imageClassName="w-4 h-4 chat-radius-sm object-cover"
-    emojiClassName="text-sm leading-none"
+    emojiClassName="text-content-base leading-none"
   />
 );
 
@@ -103,7 +100,10 @@ const modeOptions: { mode: ChatMode; label: (t: Translate) => string; getIcon: (
   { mode: 'fullscreen', label: (t) => t('Full screen'), getIcon: (p) => <FullscreenIcon {...p} /> },
 ];
 
-const menuItem = 'w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover-100/10 transition-colors';
+// The footer actions of the panel's own menus (the agent switcher, the history)
+// are the design system's tertiary Button, full width and start aligned: those
+// menus hold a search field and two-action rows, which the DS Menu cannot.
+const footerAction = 'w-full justify-start';
 
 /**
  * The switcher's "Open agent page" item: the address followed in place, unless
@@ -111,40 +111,38 @@ const menuItem = 'w-full flex items-center gap-2 px-4 py-1.5 text-left hover:cha
  * opens the address as the browser does. The menu closes either way.
  */
 const AgentPageItem = ({ link, onDone, t }: { link: { href?: string; onClick?: () => void }; onDone: () => void; t: Translate }) => {
-  const content = (
-    <>
-      <BotIcon size={18} className="chat-text-muted-400/40 shrink-0" />
-      <span className="text-[0.8125rem] chat-text-secondary-700/70">{t('Open agent page')}</span>
-    </>
-  );
   if (!link.href) {
     return (
-      <button
-        type="button"
+      <Button
+        priority="tertiary"
+        size="sm"
+        startIcon={<BotIcon size={16} />}
         onClick={() => {
           onDone();
           link.onClick?.();
         }}
-        className={menuItem}
+        className={footerAction}
       >
-        {content}
-      </button>
+        {t('Open agent page')}
+      </Button>
     );
   }
   return (
-    <a
-      href={link.href}
-      data-testid="filigran-chat-agent-page-link"
-      onClick={(e) => {
-        onDone();
-        if (!link.onClick || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-        e.preventDefault();
-        link.onClick();
-      }}
-      className={menuItem}
-    >
-      {content}
-    </a>
+    <Button asChild priority="tertiary" size="sm" className={footerAction}>
+      <a
+        href={link.href}
+        data-testid="filigran-chat-agent-page-link"
+        onClick={(e) => {
+          onDone();
+          if (!link.onClick || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          e.preventDefault();
+          link.onClick();
+        }}
+      >
+        <BotIcon size={16} className="shrink-0" />
+        {t('Open agent page')}
+      </a>
+    </Button>
   );
 };
 
@@ -275,27 +273,31 @@ export const ChatHeader = ({
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1">
           {/* One control: icon, name and chevron all open the switcher. The
-              agent's page is an item of the menu, never this click. */}
+              agent's page is an item of the menu, never this click. Not the DS
+              Combobox: its trigger is the input field, with no slot for this
+              header trigger, the option avatars or the footer actions
+              (fds-migration/LIBRARY-FEEDBACK.md, 1). */}
           <Tooltip title={agentMenuOpen ? '' : t('Switch to another agent')} className="inline-flex min-w-0 max-w-full">
           <button
+            data-ds-exempt="agent-switcher-combobox-trigger"
             ref={agentAnchorRef}
             type="button"
             onClick={onAgentMenuToggle}
             aria-haspopup="listbox"
             aria-expanded={agentMenuOpen}
             data-testid="filigran-chat-agent-switcher"
-            className={`flex h-8 max-w-full min-w-0 items-center gap-1.5 text-sm font-semibold chat-text-900/100 pl-2 pr-1.5 chat-radius-sm border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
+            className={`flex h-8 max-w-full min-w-0 items-center gap-1.5 text-content-base font-semibold chat-text-900/100 pl-2 pr-1.5 chat-radius-sm border border-transparent hover:chat-surface-hover-100/10 hover:chat-border-200/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--chat-accent)] transition-colors ${
               agentMenuOpen ? 'chat-surface-hover-100/10 chat-border-200/10' : ''
             }`}
           >
-            <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">
+            <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:size-5">
               {/* The current agent's own icon when it has one drawable, the panel's logo otherwise. */}
               <AgentIconGlyph
                 icon={selectedAgent?.icon}
-                size={18}
+                size={20}
                 fallback={logoIcon}
-                imageClassName="w-[18px] h-[18px] chat-radius-sm object-cover"
-                emojiClassName="text-base leading-none"
+                imageClassName="size-5 chat-radius-sm object-cover"
+                emojiClassName="text-title-sm leading-none"
               />
             </span>
             <span className="min-w-0 truncate">{agentName}</span>
@@ -310,26 +312,26 @@ export const ChatHeader = ({
               <span aria-hidden className="shrink-0 chat-text-muted-400/30">
                 /
               </span>
-              <span data-testid="filigran-chat-header-title" className="min-w-0 truncate px-1 text-[0.8125rem] chat-text-secondary-700/70">
+              <span data-testid="filigran-chat-header-title" className="min-w-0 truncate px-1 text-content-base chat-text-secondary-700/70">
                 {title}
               </span>
             </>
           )}
         </div>
         {transferredFrom && (
-          <div className="pl-10 pr-2 text-[0.6rem] font-normal chat-text-muted-400/30">
+          <div className="pl-10 pr-2 text-content-compact font-normal chat-text-muted-400/30">
             {translate(t, 'Transferred from {agent}', { agent: transferredFrom })}
           </div>
         )}
         {subtitle && (
-          <div data-testid="filigran-chat-header-subtitle" className="truncate pl-10 pr-2 text-[0.6rem] font-normal chat-text-muted-400/40">
+          <div data-testid="filigran-chat-header-subtitle" className="truncate pl-10 pr-2 text-content-compact font-normal chat-text-muted-400/40">
             {subtitle}
           </div>
         )}
       </div>
 
       <Dropdown open={agentMenuOpen} onClose={onAgentMenuClose} anchorRef={agentAnchorRef} width={280}>
-        <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{t('Switch to another agent')}</span>
+        <span className="block px-4 pt-3 pb-1 text-content-compact tracking-[1px] uppercase chat-text-muted-400/40">{t('Switch to another agent')}</span>
         {/* Three distinct states, because an empty array alone cannot tell them
             apart — and treating "failed" as "still loading" is what left this
             menu spinning forever against an unreachable backend.
@@ -342,27 +344,25 @@ export const ChatHeader = ({
             there: it carries the agent-dashboard links below. */}
         {agents.length === 0 && agentsLoading && (
           <div className="px-4 py-2">
-            <Spinner size={16} />
+            <Spinner size="sm" />
           </div>
         )}
         {agents.length === 0 && !agentsLoading && agentsError && (
           <div className="px-4 py-3 flex items-start gap-2">
-            <AlertTriangleIcon size={14} className="mt-0.5 shrink-0 text-amber-500 dark:text-amber-400" />
-            <span className="text-[0.75rem] leading-5 chat-text-secondary-600/60">
+            <AlertTriangleIcon size={14} className="mt-0.5 shrink-0 text-[var(--chat-warning)]" />
+            <span className="text-content-compact leading-5 chat-text-secondary-600/60">
               {t('Could not reach the assistant service. Check the connection and try again.')}
             </span>
           </div>
         )}
         {agents.length === 0 && !agentsLoading && !agentsError && (
-          <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('Agent switching is not available here')}</div>
+          <div className="px-4 py-3 text-content-compact chat-text-muted-400/40">{t('Agent switching is not available here')}</div>
         )}
         {showAgentSearch && (
           <div className="px-3 pb-2 pt-1">
-            <div className="relative">
-              <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 chat-text-muted-400/40" />
-              <input
+            <SearchField
+                fullWidth
                 autoFocus
-                type="text"
                 role="combobox"
                 aria-expanded
                 aria-controls="filigran-chat-agent-options"
@@ -374,9 +374,9 @@ export const ChatHeader = ({
                 onKeyDown={onAgentSearchKeyDown}
                 placeholder={t('Search agents...')}
                 aria-label={t('Search agents...')}
-                className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
+                onClear={() => setAgentQuery('')}
+                clearLabel={t('Clear search')}
               />
-            </div>
           </div>
         )}
         <div
@@ -387,12 +387,12 @@ export const ChatHeader = ({
           className="max-h-[320px] overflow-y-auto filigran-chat-scrollable"
         >
           {agents.length > 0 && filteredAgents.length === 0 && (
-            <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('No agent matches')}</div>
+            <div className="px-4 py-3 text-content-compact chat-text-muted-400/40">{t('No agent matches')}</div>
           )}
           {agentGroups.map(({ group, agents: groupMembers }) => (
             <div key={group ?? ''} role="group" aria-label={group ?? undefined}>
               {group && (
-                <span className="block px-4 pt-2 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40">{group}</span>
+                <span className="block px-4 pt-2 pb-0.5 text-content-compact font-medium uppercase tracking-wide chat-text-muted-400/40">{group}</span>
               )}
               {groupMembers.map((agent) => {
                 const index = orderedAgents.indexOf(agent);
@@ -400,6 +400,7 @@ export const ChatHeader = ({
                 const isActive = index === activeAgentIndex;
                 return (
                 <button
+                  data-ds-exempt="agent-listbox-option"
                   key={agent.id}
                   id={`filigran-chat-agent-option-${agent.id}`}
                   type="button"
@@ -420,22 +421,11 @@ export const ChatHeader = ({
                   </div>
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-1">
-                      <span className="text-[0.8125rem] font-medium chat-text-900/100 truncate">{agent.name}</span>
-                      {agent.badges?.map((badge) => (
-                        <span
-                          key={badge}
-                          className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] leading-4 text-[var(--chat-accent)]"
-                        >
-                          {badge}
-                        </span>
-                      ))}
-                      {agent.disableChat && (
-                        <span className="shrink-0 chat-radius-sm bg-amber-500/10 px-1 text-[0.6rem] leading-4 text-amber-600 dark:text-amber-400">
-                          {t('Not recommended for chat')}
-                        </span>
-                      )}
+                      <span className="text-content-base font-medium chat-text-900/100 truncate">{agent.name}</span>
+                      {agent.badges?.map((badge) => <Badge key={badge} content={badge} tone="brand" className="shrink-0" />)}
+                      {agent.disableChat && <Chip label={t('Not recommended for chat')} severity="high" className="shrink-0" />}
                     </div>
-                    {agent.description && <div className="text-[0.7rem] chat-text-secondary-500/40 truncate">{agent.description}</div>}
+                    {agent.description && <div className="text-content-compact chat-text-secondary-500/40 truncate">{agent.description}</div>}
                   </div>
                   {isCurrent && <CheckIcon size={14} className="ml-auto shrink-0 text-[var(--chat-accent)]" />}
                 </button>
@@ -445,33 +435,35 @@ export const ChatHeader = ({
           ))}
         </div>
         <div className="h-px chat-border-fill-200/10 mx-2" />
-        <div>
+        <div className="flex flex-col p-1">
           {agentLink && <AgentPageItem link={agentLink} onDone={onAgentMenuClose} t={t} />}
           {agentDashboardUrl && (
-            <button
-              type="button"
+            <Button
+              priority="tertiary"
+              size="sm"
+              startIcon={<ExternalLinkIcon size={16} />}
               onClick={() => {
                 onAgentMenuClose();
                 window.open(`${agentDashboardUrl}/agents`, '_blank');
               }}
-              className="w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover-100/10 transition-colors"
+              className={footerAction}
             >
-              <ExternalLinkIcon size={18} className="chat-text-muted-400/40 shrink-0" />
-              <span className="text-[0.8125rem] chat-text-secondary-700/70">{t('Browse agents')}</span>
-            </button>
+              {t('Browse agents')}
+            </Button>
           )}
           {agentDashboardUrl && (
-            <button
-              type="button"
+            <Button
+              priority="tertiary"
+              size="sm"
+              startIcon={<UserPlusIcon size={16} />}
               onClick={() => {
                 onAgentMenuClose();
                 window.open(`${agentDashboardUrl}/agents/new`, '_blank');
               }}
-              className="w-full flex items-center gap-2 px-4 py-1.5 text-left hover:chat-surface-hover-100/10 transition-colors"
+              className={footerAction}
             >
-              <UserPlusIcon size={18} className="chat-text-muted-400/40 shrink-0" />
-              <span className="text-[0.8125rem] chat-text-secondary-700/70">{t('Create agent')}</span>
-            </button>
+              {t('Create agent')}
+            </Button>
           )}
         </div>
       </Dropdown>
@@ -480,26 +472,22 @@ export const ChatHeader = ({
 
       {historyEnabled && (
         <>
-          <Tooltip title={t('Conversation history')}>
-            <button
-              ref={historyAnchorRef}
-              type="button"
-              onClick={onHistoryMenuToggle}
-              aria-label={t('Conversation history')}
-              aria-haspopup="menu"
-              aria-expanded={historyMenuOpen}
-              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
-            >
-              <HistoryIcon size={18} />
-            </button>
-          </Tooltip>
+          <ChatIconButton
+            ref={historyAnchorRef}
+            label={t('Conversation history')}
+            icon={<HistoryIcon size={20} />}
+            onClick={onHistoryMenuToggle}
+            aria-haspopup="menu"
+            aria-expanded={historyMenuOpen}
+            active={historyMenuOpen}
+          />
 
           <Dropdown open={historyMenuOpen} onClose={() => onHistoryMenuClose?.()} anchorRef={historyAnchorRef} placement="bottom-end" width={300}>
-            <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{t('Conversation history')}</span>
+            <span className="block px-4 pt-3 pb-1 text-content-compact tracking-[1px] uppercase chat-text-muted-400/40">{t('Conversation history')}</span>
             <div className="max-h-72 overflow-y-auto filigran-chat-scrollable">
               {conversationsLoading && conversations.length === 0 && (
                 <div className="px-4 py-2">
-                  <Spinner size={16} />
+                  <Spinner size="sm" />
                 </div>
               )}
               {!conversationsLoading &&
@@ -507,7 +495,7 @@ export const ChatHeader = ({
                 (conversationsFailed ? (
                   <ConversationListFailed onRetry={() => onRetryConversations?.()} className="px-4 py-3" t={t} />
                 ) : (
-                  <div className="px-4 py-3 text-[0.75rem] chat-text-muted-400/40">{t('No conversations yet')}</div>
+                  <div className="px-4 py-3 text-content-compact chat-text-muted-400/40">{t('No conversations yet')}</div>
                 ))}
               {conversations.map((conv) => {
                 const isActive = conv.conversationId === activeConversationId;
@@ -519,38 +507,44 @@ export const ChatHeader = ({
                       isActive ? 'bg-[var(--chat-accent)]/10' : ''
                     }`}
                   >
-                    <button type="button" onClick={() => onSelectConversation?.(conv.conversationId)} className="flex-1 min-w-0 text-left">
-                      <div className="text-[0.8125rem] font-medium chat-text-900/100 truncate">{conv.title || t('Untitled conversation')}</div>
-                      {when && <div className="text-[0.7rem] chat-text-muted-500/40 truncate">{when}</div>}
+                    <button
+                      data-ds-exempt="history-two-action-row"
+                      type="button"
+                      onClick={() => onSelectConversation?.(conv.conversationId)}
+                      className="flex-1 min-w-0 text-left"
+                    >
+                      <div className="text-content-base font-medium chat-text-900/100 truncate">{conv.title || t('Untitled conversation')}</div>
+                      {when && <div className="text-content-compact chat-text-muted-500/40 truncate">{when}</div>}
                     </button>
                     {onDeleteConversation && (
-                      <Tooltip title={t('Delete conversation')} className="inline-flex shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => onDeleteConversation(conv.conversationId)}
-                          aria-label={t('Delete conversation')}
-                          className="shrink-0 p-1 chat-radius-sm chat-text-muted-400/30 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 dark:hover:text-red-400 transition-all"
-                        >
-                          <TrashIcon size={14} />
-                        </button>
-                      </Tooltip>
+                      <ChatIconButton
+                        label={t('Delete conversation')}
+                        icon={<TrashIcon size={16} />}
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => onDeleteConversation(conv.conversationId)}
+                        className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                      />
                     )}
                   </div>
                 );
               })}
             </div>
             <div className="h-px chat-border-fill-200/10 mx-2" />
-            <button
-              type="button"
-              onClick={() => {
-                onHistoryMenuClose?.();
-                onNewChat();
-              }}
-              className="w-full flex items-center gap-2 px-4 py-2 text-left hover:chat-surface-hover-100/10 transition-colors"
-            >
-              <EditIcon size={16} className="chat-text-muted-400/40 shrink-0" />
-              <span className="text-[0.8125rem] chat-text-secondary-700/70">{t('New conversation')}</span>
-            </button>
+            <div className="p-1">
+              <Button
+                priority="tertiary"
+                size="sm"
+                startIcon={<EditIcon size={16} />}
+                onClick={() => {
+                  onHistoryMenuClose?.();
+                  onNewChat();
+                }}
+                className={footerAction}
+              >
+                {t('New conversation')}
+              </Button>
+            </div>
             {onClearAll && conversations.length > 0 && (
               <ClearAllConversations
                 onClear={() => {
@@ -559,7 +553,6 @@ export const ChatHeader = ({
                 }}
                 action={clearAllAction}
                 className="px-3 pb-2"
-                iconButtonClass="p-1 chat-radius-sm chat-text-muted-400/40 hover:chat-surface-hover-100/10 transition-colors"
                 t={t}
               />
             )}
@@ -569,61 +562,38 @@ export const ChatHeader = ({
 
       {actions}
 
-      <Tooltip title={t('New chat')}>
-        <button type="button" onClick={onNewChat} aria-label={t('New chat')} className={headerButton}>
-          <EditIcon size={18} />
-        </button>
-      </Tooltip>
+      <ChatIconButton label={t('New chat')} icon={<EditIcon size={20} />} onClick={onNewChat} />
 
       {mode !== 'inline' && onModeChange && (
-        <>
-          <Tooltip title={t('Switch view')}>
-            <button
+        // The design system's Menu, kept inside the panel's stacking context
+        // (portalled={false}) and non-modal: the host page stays live beside the panel.
+        <Menu open={modeMenuOpen} onOpenChange={(open) => (open ? onModeMenuToggle() : onModeMenuClose())} modal={false}>
+          <MenuTrigger asChild>
+            <ChatIconButton
               ref={modeAnchorRef}
-              type="button"
-              aria-label={t('Switch view')}
-              onClick={onModeMenuToggle}
-              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
-            >
-              <CurrentModeIcon size={18} />
-            </button>
-          </Tooltip>
-
-          <Dropdown open={modeMenuOpen} onClose={onModeMenuClose} anchorRef={modeAnchorRef} placement="bottom-end" width={180}>
-            <span className="block px-4 pt-3 pb-1 text-[0.68rem] tracking-[1px] uppercase chat-text-muted-400/40">{t('Switch to')}</span>
-            <div className="pb-1">
-              {modeOptions.map((opt) => (
-                <button
-                  key={opt.mode}
-                  type="button"
-                  onClick={() => {
-                    onModeChange(opt.mode);
-                    onModeMenuClose();
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-1 text-left hover:chat-surface-hover-100/10 transition-colors ${
-                    mode === opt.mode ? 'bg-[var(--chat-accent)]/10' : ''
-                  }`}
-                >
-                  {opt.getIcon({ size: 18, className: 'chat-text-muted-400/40' })}
-                  <span className="text-[0.8125rem] chat-text-secondary-700/70">{opt.label(t)}</span>
-                </button>
-              ))}
-            </div>
-          </Dropdown>
-        </>
+              label={t('Switch view')}
+              icon={<CurrentModeIcon size={20} />}
+              active={modeMenuOpen}
+            />
+          </MenuTrigger>
+          <MenuContent portalled={false} align="end" className="z-[10000]">
+            <MenuLabel>{t('Switch to')}</MenuLabel>
+            {modeOptions.map((opt) => (
+              <MenuItem
+                key={opt.mode}
+                startIcon={opt.getIcon({ size: 16, className: '' })}
+                selected={mode === opt.mode}
+                onSelect={() => onModeChange(opt.mode)}
+              >
+                {opt.label(t)}
+              </MenuItem>
+            ))}
+          </MenuContent>
+        </Menu>
       )}
       {mode !== 'inline' && onClose && (
         <>
-          <Tooltip title={t('Close')}>
-            <button
-              type="button"
-              aria-label={t('Close')}
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
-            >
-              <CloseIcon size={18} />
-            </button>
-          </Tooltip>
+          <ChatIconButton label={t('Close')} icon={<CloseIcon size={20} />} onClick={onClose} />
         </>
       )}
     </div>

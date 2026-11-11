@@ -1916,13 +1916,13 @@ export function useChat({
     // moved on, a consult frame still arriving is past and is not shown.
     let consultsOpen = true;
 
-    const deltas = createStreamDeltas((textChanged, thinking) => {
-      if (textChanged) {
-        // Snapshot the segment id and text: the state updater runs
-        // asynchronously and `currentAssistantId` / `accumulated` may
-        // already belong to the NEXT segment by then.
+    const deltas = createStreamDeltas((revealed, thinking) => {
+      if (revealed !== null) {
+        // Snapshot the segment id: the state updater runs asynchronously and
+        // `currentAssistantId` may already belong to the NEXT segment by then.
+        // `revealed` is the part of `accumulated` revealed so far.
         const segId = currentAssistantId;
-        const text = accumulated;
+        const text = revealed;
         setAgentStatus((prev) => ({ status: 'streaming', thinkingContent: prev?.thinkingContent }));
         setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: text } : m)));
       }
@@ -1942,6 +1942,7 @@ export function useChat({
       if (!doneReceived) return;
       // Nothing of the closed segment may land in the new one.
       deltas.flush();
+      deltas.reset();
       doneReceived = false;
       answered = false;
       accumulated = '';
@@ -1981,6 +1982,7 @@ export function useChat({
         // A re-attached turn is replayed from its start: what it had written
         // so far arrives again, whole, its consults included.
         accumulated = '';
+        deltas.reset();
         setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: '' } : m)));
         setAgentStatus({ status: 'thinking', elapsedS: parsed.elapsedS, elapsedStartMs });
       } else if (parsed.status === 'stream_retract') {
@@ -1988,6 +1990,7 @@ export function useChat({
         // precede tool calls — discard the answer bubble (the text re-arrives
         // as thinking_text right after, so it lands in the reasoning window).
         accumulated = '';
+        deltas.reset();
         setMessages((prev) => prev.map((m) => (m.id === segId ? { ...m, content: '' } : m)));
         setAgentStatus((prev) => ({ status: 'analyzing', thinkingContent: prev?.thinkingContent }));
       } else if (parsed.status === 'tool_heartbeat') {
@@ -2107,7 +2110,7 @@ export function useChat({
         case 'stream':
           ensureSegment();
           accumulated += parsed.content;
-          deltas.text();
+          deltas.text(accumulated);
           return 'continue';
         case 'done':
           applyDone(parsed);

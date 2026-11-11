@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Input, SearchField, Spinner } from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
@@ -9,7 +10,6 @@ import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/st
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
 import { ConversationListFailed } from './ConversationListFailed';
-import { Dropdown } from './Dropdown';
 import {
   BotIcon,
   CheckIcon,
@@ -21,12 +21,11 @@ import {
   FolderInputIcon,
   FolderPlusIcon,
   PencilIcon,
-  SearchIcon,
   SidebarIcon,
   TrashIcon,
 } from './icons';
-import { Spinner } from './Spinner';
 import { ChatNotice } from './ChatNotice';
+import { ChatIconButton } from './ChatIconButton';
 import { Tooltip } from './Tooltip';
 
 /**
@@ -132,8 +131,7 @@ function readListWidth(key: string): number {
   return Number.isNaN(parsed) ? LIST_WIDTH.default : clampListWidth(parsed);
 }
 
-const iconButton = 'p-1 chat-radius-sm chat-text-muted-400/30 hover:chat-icon-hover transition-colors disabled:opacity-40 disabled:pointer-events-none';
-const sectionLabel = 'text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40';
+const sectionLabel = 'text-content-compact font-medium uppercase tracking-wide chat-text-muted-400/40';
 
 /**
  * Persistent conversation list for fullscreen mode, mirroring the XTM One web
@@ -284,27 +282,8 @@ export const ConversationSidebar = ({
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1 border-r chat-border-200/10 px-2 py-3 shrink-0">
-        <Tooltip title={t('Show conversations')}>
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label={t('Show conversations')}
-            aria-expanded={false}
-            className="w-8 h-8 flex items-center justify-center chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
-          >
-            <SidebarIcon size={17} />
-          </button>
-        </Tooltip>
-        <Tooltip title={t('New conversation')}>
-          <button
-            type="button"
-            onClick={() => onNewChat()}
-            aria-label={t('New conversation')}
-            className="w-8 h-8 flex items-center justify-center chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
-          >
-            <EditIcon size={17} />
-          </button>
-        </Tooltip>
+        <ChatIconButton label={t('Show conversations')} icon={<SidebarIcon size={20} />} aria-expanded={false} onClick={onToggleCollapsed} />
+        <ChatIconButton label={t('New conversation')} icon={<EditIcon size={20} />} onClick={() => onNewChat()} />
       </div>
     );
   }
@@ -335,51 +314,35 @@ export const ConversationSidebar = ({
     <div className="relative shrink-0 flex flex-col border-r chat-border-200/10" style={{ width }}>
       <ListResizeHandle width={width} onResize={resize} t={t} />
       <div className="flex items-center gap-1 px-3 py-3">
-        <button
-          type="button"
-          onClick={() => onNewChat()}
-          className="flex-1 flex items-center gap-2 chat-radius-sm border chat-border-200/10 px-3 py-1.5 text-[0.8125rem] chat-text-secondary-700/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
-        >
-          <EditIcon size={15} />
+        <Button priority="secondary" className="flex-1 justify-start" startIcon={<EditIcon size={16} />} onClick={() => onNewChat()}>
           {t('New conversation')}
-        </button>
+        </Button>
         {headerActions}
-        <Tooltip title={t('Hide conversations')}>
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label={t('Hide conversations')}
-            aria-expanded
-            className="w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 transition-colors"
-          >
-            <SidebarIcon size={17} />
-          </button>
-        </Tooltip>
+        <ChatIconButton label={t('Hide conversations')} icon={<SidebarIcon size={20} />} aria-expanded onClick={onToggleCollapsed} />
       </div>
 
       {searchOffered && (
         <div className="px-3 pb-2">
-          <div className="relative">
-            <SearchIcon size={12} className="absolute left-2 top-1/2 -translate-y-1/2 chat-text-muted-400/40" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape' && !isComposing(e)) setQuery('');
-              }}
-              placeholder={t('Search conversations...')}
-              aria-label={t('Search conversations...')}
-              className="w-full h-7 pl-7 pr-2 chat-radius-sm chat-surface-subtle-100/6 text-[0.75rem] chat-text-900/100 placeholder:chat-text-muted-400/40 outline-hidden focus:ring-1 focus:ring-[var(--chat-accent)]"
-            />
-          </div>
+          <SearchField
+            fullWidth
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              // An IME composing its text keeps its Escape.
+              if (e.key === 'Escape' && isComposing(e)) e.preventDefault();
+            }}
+            onClear={() => setQuery('')}
+            clearLabel={t('Clear search')}
+            placeholder={t('Search conversations...')}
+            aria-label={t('Search conversations...')}
+          />
         </div>
       )}
 
       <div className="flex-1 overflow-y-auto px-2 pb-3 filigran-chat-scrollable">
         {loading && conversations.length === 0 && (
           <div className="px-3 py-2">
-            <Spinner size={16} />
+            <Spinner size="sm" />
           </div>
         )}
 
@@ -397,6 +360,7 @@ export const ConversationSidebar = ({
               <div className="mb-1">
                 <div className="group/wsh flex items-center gap-1 chat-radius-sm px-1.5 py-1 hover:chat-surface-hover-100/6">
                   <button
+                    data-ds-exempt="disclosure-row"
                     type="button"
                     onClick={() => showWorkspaces(!workspacesOpen)}
                     aria-expanded={workspacesOpen}
@@ -404,22 +368,18 @@ export const ConversationSidebar = ({
                   >
                     <ChevronRightIcon size={12} className={`shrink-0 chat-text-muted-400/30 transition-transform ${workspacesOpen ? 'rotate-90' : ''}`} />
                     <FolderIcon size={14} className="shrink-0 text-[var(--chat-accent)]" />
-                    <span className="truncate text-[0.8125rem] font-medium chat-text-800/80">{t('Workspaces')}</span>
-                    <span className="ml-auto shrink-0 pr-1 text-[0.625rem] tabular-nums chat-text-muted-400/30">{grouped.groups.length}</span>
+                    <span className="truncate text-content-base font-medium chat-text-800/80">{t('Workspaces')}</span>
+                    <span className="ml-auto shrink-0 pr-1 text-content-compact tabular-nums chat-text-muted-400/30">{grouped.groups.length}</span>
                   </button>
-                  <Tooltip title={t('New workspace')}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        showWorkspaces(true);
-                        setCreatingWorkspace(true);
-                      }}
-                      aria-label={t('New workspace')}
-                      className={iconButton}
-                    >
-                      <FolderPlusIcon size={14} />
-                    </button>
-                  </Tooltip>
+                  <ChatIconButton
+                    label={t('New workspace')}
+                    icon={<FolderPlusIcon size={16} />}
+                    size="sm"
+                    onClick={() => {
+                      showWorkspaces(true);
+                      setCreatingWorkspace(true);
+                    }}
+                  />
                 </div>
                 {workspacesOpen && (
                   <div className="pl-2">
@@ -469,27 +429,23 @@ export const ConversationSidebar = ({
             <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
               <div className="flex items-center justify-between px-2 pb-1 pt-2">
                 <span className={sectionLabel}>{t('Conversations')}</span>
-                <Tooltip title={t('New conversation outside a workspace')}>
-                  <button type="button" onClick={() => onNewChat()} aria-label={t('New conversation outside a workspace')} className={iconButton}>
-                    <EditIcon size={13} />
-                  </button>
-                </Tooltip>
+                <ChatIconButton label={t('New conversation outside a workspace')} icon={<EditIcon size={16} />} size="sm" onClick={() => onNewChat()} />
               </div>
               {filtered.map(renderRow)}
-              {noConversationYet && <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">{t('No conversations yet')}</p>}
+              {noConversationYet && <p className="px-3 py-1.5 text-content-compact chat-text-muted-400/30">{t('No conversations yet')}</p>}
             </DropZone>
-            {q && filtered.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>}
+            {q && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
           </>
         ) : (
           <>
-            {!loading && conversations.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{t('No conversations yet')}</p>}
-            {conversations.length > 0 && filtered.length === 0 && <p className="px-3 py-2 text-[0.75rem] chat-text-muted-400/40">{noMatch}</p>}
+            {!loading && conversations.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{t('No conversations yet')}</p>}
+            {conversations.length > 0 && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
             {filtered.map(renderRow)}
           </>
         )}
         {typeof sections === 'function' ? <HostSections draw={sections} query={search} /> : sections}
         {onClearAll && conversations.length > 0 && !q && (
-          <ClearAllConversations onClear={onClearAll} action={clearAllAction} className="px-2 pt-3" iconButtonClass={iconButton} t={t} />
+          <ClearAllConversations onClear={onClearAll} action={clearAllAction} className="px-2 pt-3" t={t} />
         )}
       </div>
 
@@ -637,7 +593,7 @@ const DropZone = ({
 const EmptyWorkspaceHint = ({ t }: { t: (key: string) => string }) => {
   const { before, after, hasSlot } = translateAround(t, 'Drop a conversation here, or start one with {icon}.', 'icon');
   return (
-    <p className="px-3 py-1.5 text-[0.65rem] chat-text-muted-400/30">
+    <p className="px-3 py-1.5 text-content-compact chat-text-muted-400/30">
       {before}
       {hasSlot && (
         <span role="img" aria-label={t('New conversation in this workspace')} className="inline-block align-[-1px]">
@@ -674,7 +630,7 @@ const NameField = ({
     onSubmit(value.trim());
   };
   return (
-    <input
+    <Input
       ref={inputRef}
       value={value}
       maxLength={200}
@@ -692,7 +648,7 @@ const NameField = ({
       onBlur={commit}
       placeholder={placeholder}
       aria-label={placeholder}
-      className="mx-2 mb-1 w-[calc(100%-1rem)] chat-radius-sm chat-input-surface-white/10 px-2 py-1 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
+      className="mx-2 mb-1 w-[calc(100%-1rem)]"
     />
   );
 };
@@ -747,6 +703,7 @@ const WorkspaceGroupSection = ({
           />
         ) : (
           <button
+            data-ds-exempt="disclosure-row"
             type="button"
             onClick={onToggle}
             disabled={!toggleable}
@@ -755,62 +712,43 @@ const WorkspaceGroupSection = ({
           >
             <ChevronRightIcon size={12} className={`shrink-0 chat-text-muted-400/30 transition-transform ${open ? 'rotate-90' : ''}`} />
             <FolderIcon size={14} className="shrink-0 text-[var(--chat-accent)]" />
-            <span className="truncate text-[0.8125rem] font-medium chat-text-800/80">{workspace ? workspace.name : t('Other workspaces')}</span>
+            <span className="truncate text-content-base font-medium chat-text-800/80">{workspace ? workspace.name : t('Other workspaces')}</span>
             {isMyDefault && (
-              <span className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-[0.6rem] text-[var(--chat-accent)]">{t('default')}</span>
+              <span className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-content-compact text-[var(--chat-accent)]">{t('default')}</span>
             )}
-            <span className="ml-auto shrink-0 pr-1 text-[0.625rem] tabular-nums chat-text-muted-400/30">{count}</span>
+            <span className="ml-auto shrink-0 pr-1 text-content-compact tabular-nums chat-text-muted-400/30">{count}</span>
           </button>
         )}
         {workspace && manageable && !renaming && (
           <span className="flex shrink-0 items-center opacity-0 group-hover/ws:opacity-100 focus-within:opacity-100 transition-opacity">
             {confirmingDelete ? (
               <>
-                <span className="px-1 text-[0.65rem] text-red-600 dark:text-red-400">{t('Delete?')}</span>
-                <button
-                  type="button"
+                <span className="px-1 text-content-compact text-[var(--chat-danger)]">{t('Delete?')}</span>
+                <ChatIconButton
+                  label={t('Delete workspace')}
+                  icon={<CheckIcon size={16} />}
+                  variant="destructive"
+                  size="sm"
                   onClick={() => {
                     setConfirmingDelete(false);
                     onDelete(workspace.id);
                   }}
-                  aria-label={t('Delete workspace')}
-                  className={`${iconButton} hover:text-red-500`}
-                >
-                  <CheckIcon size={13} />
-                </button>
-                <button type="button" onClick={() => setConfirmingDelete(false)} aria-label={t('Cancel')} className={iconButton}>
-                  <CloseIcon size={13} />
-                </button>
+                />
+                <ChatIconButton label={t('Cancel')} icon={<CloseIcon size={16} />} size="sm" onClick={() => setConfirmingDelete(false)} />
               </>
             ) : (
               <>
-                <Tooltip title={t('New conversation in this workspace')}>
-                  <button
-                    type="button"
-                    onClick={() => onNewChat(workspace.id)}
-                    aria-label={t('New conversation in this workspace')}
-                    className={iconButton}
-                  >
-                    <EditIcon size={13} />
-                  </button>
-                </Tooltip>
-                <Tooltip title={t('Rename workspace')}>
-                  <button type="button" onClick={() => setRenaming(true)} aria-label={t('Rename workspace')} className={iconButton}>
-                    <PencilIcon size={13} />
-                  </button>
-                </Tooltip>
+                <ChatIconButton label={t('New conversation in this workspace')} icon={<EditIcon size={16} />} size="sm" onClick={() => onNewChat(workspace.id)} />
+                <ChatIconButton label={t('Rename workspace')} icon={<PencilIcon size={16} />} size="sm" onClick={() => setRenaming(true)} />
                 {/* The default cannot be deleted: every person keeps one. */}
                 {!workspace.isDefault && (
-                  <Tooltip title={t('Delete workspace')}>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingDelete(true)}
-                      aria-label={t('Delete workspace')}
-                      className={`${iconButton} hover:text-red-500`}
-                    >
-                      <TrashIcon size={13} />
-                    </button>
-                  </Tooltip>
+                  <ChatIconButton
+                    label={t('Delete workspace')}
+                    icon={<TrashIcon size={16} />}
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setConfirmingDelete(true)}
+                  />
                 )}
               </>
             )}
@@ -820,7 +758,7 @@ const WorkspaceGroupSection = ({
       {open && (
         <div className="space-y-0.5 pb-1 pl-3">
           {pending && (
-            <div className="flex items-center gap-2 chat-radius-sm bg-[var(--chat-accent)]/10 px-2.5 py-1.5 text-[0.75rem] text-[var(--chat-accent)]">
+            <div className="flex items-center gap-2 chat-radius-sm bg-[var(--chat-accent)]/10 px-2.5 py-1.5 text-content-compact text-[var(--chat-accent)]">
               <EditIcon size={12} />
               {t('New conversation — send a message to start it')}
             </div>
@@ -842,7 +780,7 @@ const RowAgentIcon = ({ icon }: { icon: string | undefined }) => (
     size={14}
     fallback={<BotIcon size={13} />}
     imageClassName="h-4 w-4 chat-radius-sm object-cover"
-    emojiClassName="text-[0.8125rem] leading-none"
+    emojiClassName="text-content-base leading-none"
   />
 );
 
@@ -885,7 +823,6 @@ const ConversationRow = ({
   t: (key: string) => string;
 }) => {
   const [moveOpen, setMoveOpen] = useState(false);
-  const moveAnchor = useRef<HTMLButtonElement>(null);
   const movable = !!fileable && !isEditing;
   return (
     <div
@@ -924,7 +861,7 @@ const ConversationRow = ({
       </span>
       <span className="min-w-0 flex-1">
         {isEditing ? (
-          <input
+          <Input
             autoFocus
             value={draftTitle}
             onChange={(e) => onDraftTitleChange(e.target.value)}
@@ -939,12 +876,11 @@ const ConversationRow = ({
             }}
             onBlur={onCommitRename}
             aria-label={t('Conversation title')}
-            className="w-full chat-radius-sm chat-input-surface-white/10 px-1.5 py-0.5 text-[0.8125rem] chat-text-900/100 outline-hidden ring-1 ring-[var(--chat-accent)]"
           />
         ) : (
           // The whole title on hover when the row still cuts it.
           <Tooltip title={c.title || t('Untitled conversation')} truncated>
-            <span className={`block min-w-0 truncate text-[0.8125rem] ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
+            <span className={`block min-w-0 truncate text-content-base ${isActive ? 'chat-text-900/100' : 'chat-text-secondary-700/70'}`}>
               {c.title || t('Untitled conversation')}
             </span>
           </Tooltip>
@@ -958,10 +894,10 @@ const ConversationRow = ({
           than padded with a placeholder.
         */}
         {c.lastMessagePreview && !isEditing && (
-          <span className="block truncate text-[0.7rem] chat-text-secondary-500/50">{c.lastMessagePreview}</span>
+          <span className="block truncate text-content-compact chat-text-secondary-500/50">{c.lastMessagePreview}</span>
         )}
         {(c.agentName || c.updatedAt || channel || workspaceName) && !isEditing && (
-          <span className="flex min-w-0 items-center gap-1 text-[0.65rem] chat-text-muted-400/30">
+          <span className="flex min-w-0 items-center gap-1 text-content-compact chat-text-muted-400/30">
             {channel && (
               <Tooltip title={translate(t, 'Started in {channel}', { channel })}>
                 <span role="img" aria-label={translate(t, 'Started in {channel}', { channel })} className="flex shrink-0">
@@ -979,14 +915,7 @@ const ConversationRow = ({
               </span>
             )}
             {c.agentName && (
-              <Tooltip title={c.agentName} truncated>
-                <span
-                  data-agent-pill=""
-                  className="min-w-0 truncate rounded-full border chat-border-200/10 chat-surface-subtle-100/6 px-1.5 leading-4 chat-text-secondary-500/50"
-                >
-                  {c.agentName}
-                </span>
-              </Tooltip>
+              <Chip data-agent-pill="" label={c.agentName} className="min-w-0 max-w-full" />
             )}
             {c.updatedAt && <span className="shrink-0 whitespace-nowrap">{timeAgo(c.updatedAt, t)}</span>}
           </span>
@@ -997,7 +926,7 @@ const ConversationRow = ({
         // width, so the title and the agent pill take the whole row.
         <span
           data-row-actions=""
-          className="pointer-events-none absolute right-1.5 top-1/2 flex -translate-y-1/2 chat-radius-sm border chat-border-200/10 chat-menu-surface opacity-0 shadow-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100"
+          className="pointer-events-none absolute inset-y-0 right-1.5 my-auto flex h-fit chat-radius-sm border chat-border-200/10 chat-menu-surface opacity-0 shadow-global-shadow transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100"
         >
           {actions && (
             // The row selects on click and on Enter/Space: the host's controls keep theirs.
@@ -1006,90 +935,69 @@ const ConversationRow = ({
             </span>
           )}
           {movable && (
-            <>
-              <Tooltip title={moveOpen ? '' : t('Move to workspace')}>
-                <button
-                  ref={moveAnchor}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMoveOpen((v) => !v);
-                  }}
-                  aria-label={t('Move to workspace')}
-                  aria-expanded={moveOpen}
-                  className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
-                >
-                  <FolderInputIcon size={13} />
-                </button>
-              </Tooltip>
-              <Dropdown open={moveOpen} onClose={() => setMoveOpen(false)} anchorRef={moveAnchor} placement="bottom-end" width={220}>
-                <div className="py-1" onClick={(e) => e.stopPropagation()}>
-                  <p className="px-3 pb-1 pt-1.5 text-[0.625rem] font-medium uppercase tracking-wide chat-text-muted-400/40">
-                    {t('Move to workspace')}
-                  </p>
-                  {fileable.map((w) => (
-                    <button
-                      key={w.id}
-                      type="button"
-                      disabled={w.id === c.workspaceId}
-                      onClick={() => {
-                        setMoveOpen(false);
-                        onMove(c.conversationId, w.id);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[0.8125rem] chat-text-secondary-700/80 hover:chat-surface-hover-100/10 disabled:opacity-40"
-                    >
-                      <FolderIcon size={13} className="shrink-0 text-[var(--chat-accent)]" />
-                      <span className="truncate">{w.name}</span>
-                      {w.id === c.workspaceId && <CheckIcon size={12} className="ml-auto shrink-0" />}
-                    </button>
-                  ))}
-                  <div className="my-1 h-px chat-border-fill-200/10" />
-                  <button
-                    type="button"
-                    disabled={!c.workspaceId}
-                    onClick={() => {
-                      setMoveOpen(false);
-                      onMove(c.conversationId, null);
-                    }}
-                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[0.8125rem] chat-text-secondary-700/80 hover:chat-surface-hover-100/10 disabled:opacity-40"
+            // The design system's Menu, kept inside the panel's stacking context
+            // (portalled={false}) and non-modal, like the header's view switcher.
+            // The actions bar is centred without a transform, so the menu's
+            // fixed position is the viewport's, never clipped by the list.
+            <Menu open={moveOpen} onOpenChange={setMoveOpen} modal={false}>
+              <MenuTrigger asChild>
+                <ChatIconButton
+                  label={t('Move to workspace')}
+                  icon={<FolderInputIcon size={16} />}
+                  size="sm"
+                  tooltip={!moveOpen}
+                  active={moveOpen}
+                  // The row selects on click: the menu's trigger keeps its own.
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </MenuTrigger>
+              <MenuContent portalled={false} align="end" className="z-[10000]" onClick={(e) => e.stopPropagation()}>
+                <MenuLabel>{t('Move to workspace')}</MenuLabel>
+                {fileable.map((w) => (
+                  <MenuItem
+                    key={w.id}
+                    startIcon={<FolderIcon size={16} />}
+                    selected={w.id === c.workspaceId}
+                    disabled={w.id === c.workspaceId}
+                    onSelect={() => onMove(c.conversationId, w.id)}
                   >
-                    <CloseIcon size={13} className="shrink-0" />
-                    {t('Remove from workspace')}
-                  </button>
-                </div>
-              </Dropdown>
-            </>
+                    {w.name}
+                  </MenuItem>
+                ))}
+                <MenuSeparator />
+                <MenuItem
+                  startIcon={<CloseIcon size={16} />}
+                  disabled={!c.workspaceId}
+                  onSelect={() => onMove(c.conversationId, null)}
+                >
+                  {t('Remove from workspace')}
+                </MenuItem>
+              </MenuContent>
+            </Menu>
           )}
           {onStartRename && (
-            <Tooltip title={t('Rename conversation')}>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStartRename(c.conversationId, c.title || '');
-                }}
-                aria-label={t('Rename conversation')}
-                className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-[var(--chat-accent)]"
-              >
-                <EditIcon size={13} />
-              </button>
-            </Tooltip>
-          )}
-          <Tooltip title={t('Delete conversation')}>
-            <button
-              type="button"
+            <ChatIconButton
+              label={t('Rename conversation')}
+              icon={<EditIcon size={16} />}
+              size="sm"
               onClick={(e) => {
-                // The row is the click target for selection, so deleting
-                // must not also open the conversation on its way out.
                 e.stopPropagation();
-                onDelete(c.conversationId);
+                onStartRename(c.conversationId, c.title || '');
               }}
-              aria-label={t('Delete conversation')}
-              className="p-1 chat-radius-sm chat-text-muted-400/30 hover:text-red-500 dark:hover:text-red-400"
-            >
-              <TrashIcon size={13} />
-            </button>
-          </Tooltip>
+            />
+          )}
+          <ChatIconButton
+            label={t('Delete conversation')}
+            icon={<TrashIcon size={16} />}
+            variant="destructive"
+            size="sm"
+            onClick={(e) => {
+              // The row is the click target for selection, so deleting
+              // must not also open the conversation on its way out.
+              e.stopPropagation();
+              onDelete(c.conversationId);
+            }}
+          />
         </span>
       )}
     </div>

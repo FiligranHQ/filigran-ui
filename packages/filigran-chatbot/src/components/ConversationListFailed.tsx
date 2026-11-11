@@ -1,3 +1,5 @@
+import { Button } from '@filigran/design-system';
+
 import type { Translate } from '../types';
 
 interface ConversationListFailedProps {
@@ -12,14 +14,10 @@ interface ConversationListFailedProps {
 export function ConversationListFailed({ onRetry, className, t }: ConversationListFailedProps) {
   return (
     <div role="alert" data-testid="filigran-chat-conversation-list-error" className={`flex flex-col items-start gap-2 ${className}`}>
-      <p className="m-0 text-[0.75rem] chat-text-secondary-600/60">{t('Could not load your conversations.')}</p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="chat-radius-sm border chat-border-200/10 px-2.5 py-0.5 text-[0.72rem] font-medium chat-text-secondary-700/80 transition-colors hover:chat-surface-hover-100/6"
-      >
+      <p className="m-0 text-content-compact chat-text-secondary-600/60">{t('Could not load your conversations.')}</p>
+      <Button priority="secondary" size="sm" onClick={onRetry}>
         {t('Retry')}
-      </button>
+      </Button>
     </div>
   );
 }

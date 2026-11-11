@@ -1,9 +1,9 @@
+import { Button, Spinner } from '@filigran/design-system';
 import { useEffect, useState } from 'react';
 import type { ChatArtifact, ChatArtifactKind, Translate } from '../types';
 import { artifactDownloadLabel, artifactFacts, artifactKindLabel, artifactLink, isRenderInProgress, translate, videoRenderLabel } from '../utils';
 import { pollInTurn } from '../utils/polling';
 import { ClapperboardIcon, DownloadIcon, ExternalLinkIcon, FileTextIcon, PresentationIcon } from './icons';
-import { Spinner } from './Spinner';
 
 /** How often a card asks again about a video that is still rendering, and for how long. */
 const REFRESH_INTERVAL_MS = 10_000;
@@ -14,9 +14,6 @@ const KIND_ICONS: Record<ChatArtifactKind, typeof PresentationIcon> = {
   report: FileTextIcon,
   video: ClapperboardIcon,
 };
-
-const ACTION =
-  'inline-flex items-center gap-1 chat-radius-sm border chat-border-200/10 px-2 py-1 text-[0.7rem] chat-text-secondary-700/70 transition-colors hover:border-[var(--chat-accent)] hover:text-[var(--chat-accent)] disabled:opacity-50 disabled:cursor-default outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
 
 interface ArtifactCardProps {
   artifact: ChatArtifact;
@@ -86,11 +83,11 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh, onOpen }: Art
           <Icon size={18} />
         </span>
         <span className="flex flex-col min-w-0 flex-1 gap-0.5">
-          <span className="truncate text-[0.8125rem] font-medium chat-text-900/100">{title}</span>
-          {facts && <span className="text-[0.7rem] chat-text-secondary-500/50">{facts}</span>}
+          <span className="truncate text-content-base font-medium chat-text-900/100">{title}</span>
+          {facts && <span className="text-content-compact chat-text-secondary-500/50">{facts}</span>}
           {renderLabel && (
-            <span className="flex items-center gap-1.5 text-[0.7rem] chat-text-secondary-500/50" aria-live="polite">
-              {following && <Spinner size={10} />}
+            <span className="flex items-center gap-1.5 text-content-compact chat-text-secondary-500/50" aria-live="polite">
+              {following && <Spinner size="sm" />}
               {renderLabel}
             </span>
           )}
@@ -99,30 +96,33 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh, onOpen }: Art
       {(link || onOpen || downloads.length > 0) && (
         <div className="flex flex-wrap items-center gap-1.5 pl-[28px]">
           {onOpen && (
-            <button type="button" className={ACTION} onClick={() => onOpen(current)}>
+            <Button priority="secondary" size="sm" onClick={() => onOpen(current)}>
               {t('Open')}
-            </button>
+            </Button>
           )}
           {link && (
-            <a href={link} target="_blank" rel="noopener noreferrer" className={ACTION}>
-              {t('Open in XTM One')}
-              <ExternalLinkIcon size={12} />
-            </a>
+            <Button asChild priority="secondary" size="sm">
+              <a href={link} target="_blank" rel="noopener noreferrer">
+                {t('Open in XTM One')}
+                <ExternalLinkIcon size={16} />
+              </a>
+            </Button>
           )}
           {downloads.map((format) => {
             const label = artifactDownloadLabel(format, t);
             return (
-              <button
+              <Button
                 key={format}
-                type="button"
-                className={ACTION}
+                priority="secondary"
+                size="sm"
                 disabled={busyFormat !== null}
+                loading={busyFormat === format}
                 aria-label={translate(t, 'Download {format}', { format: label })}
+                startIcon={<DownloadIcon size={16} />}
                 onClick={() => void download(format)}
               >
-                {busyFormat === format ? <Spinner size={11} /> : <DownloadIcon size={12} />}
                 {label}
-              </button>
+              </Button>
             );
           })}
         </div>

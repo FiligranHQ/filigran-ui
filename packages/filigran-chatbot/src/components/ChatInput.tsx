@@ -1,7 +1,9 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import { Button, Chip, Spinner } from '@filigran/design-system';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
 import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon, XCircleIcon } from './icons';
+import { ChatIconButton } from './ChatIconButton';
 import { ChatNotice } from './ChatNotice';
 import { useMentionMenu } from '../hooks/useMentionMenu';
 import { useDictation } from '../hooks/useDictation';
@@ -10,6 +12,7 @@ import { referencedConversations } from '../utils/conversationRefs';
 import { hasFailedUpload } from '../utils/failedUpload';
 import { isComposing } from '../utils/keyboard';
 import { pastedText, spliceText } from '../utils/copy';
+import { translate } from '../utils';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
 import { MentionMenu } from './MentionMenu';
 import { PromptPicker } from './PromptPicker';
@@ -106,6 +109,24 @@ function focusIsFree(field: HTMLElement): boolean {
     (active as HTMLElement).isContentEditable;
   return !editable;
 }
+
+/**
+ * What an attached file shows before its name: a 24 px thumbnail of a
+ * picture, read from the file in the browser (object URL, revoked with the
+ * chip), else the file glyph.
+ */
+const PendingFileGlyph = ({ file }: { file: ChatFile }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  const raw = file.rawFile;
+  useEffect(() => {
+    if (!raw || !file.type.startsWith('image/') || typeof URL.createObjectURL !== 'function') return;
+    const next = URL.createObjectURL(raw);
+    setUrl(next);
+    return () => URL.revokeObjectURL(next);
+  }, [raw, file.type]);
+  if (url) return <img src={url} alt="" aria-hidden="true" className="size-6 shrink-0 chat-radius-sm object-cover" />;
+  return <FileIcon size={14} />;
+};
 
 const MAX_TEXTAREA_HEIGHT = 120;
 const NO_REFS: ChatConversationRef[] = [];
@@ -300,7 +321,7 @@ export const ChatInput = ({
   // sidebar, fullscreen, floating): a status when there is one, else the
   // disclaimer. How to send is the Send button's tooltip, not a line of its
   // own. The line keeps its height, so the composer never jumps.
-  const footerLine = 'text-center text-[0.65rem] chat-text-muted-400/30 opacity-70 mt-1.5 min-h-[1lh] truncate';
+  const footerLine = 'text-center text-content-compact chat-text-muted-400/30 opacity-70 mt-1.5 min-h-[1lh] truncate';
   const sendTooltip = hasFilesUploading ? t('Files uploading...') : t('Enter to send · Shift+Enter for new line');
 
   return (
@@ -340,13 +361,13 @@ export const ChatInput = ({
         </ChatNotice>
       )}
       {heldMessage && (
-        <div className="mb-2 flex items-center gap-2 chat-radius-md border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-[0.75rem]">
+        <div className="mb-2 flex items-center gap-2 chat-radius-md border border-dashed border-[var(--chat-accent-40)] px-2.5 py-1.5 text-content-compact">
           <span className="shrink-0 chat-text-secondary-500/50">{t('Sends when the answer ends:')}</span>
           <span className="min-w-0 flex-1 truncate chat-text-800/80">{heldMessage.displayText ?? (heldMessage.text || t('Attached files'))}</span>
           {onCancelHeld && (
-            <button type="button" onClick={onCancelHeld} className="shrink-0 chat-text-muted-400/40 hover:text-[var(--chat-danger)]">
+            <Button variant="destructive" priority="tertiary" size="sm" className="shrink-0" onClick={onCancelHeld}>
               {t('Cancel')}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -362,33 +383,28 @@ export const ChatInput = ({
       {hasAttachments && (
         <div className="flex gap-1.5 flex-wrap mb-2">
           {attachedFiles.map((f, i) => (
-            <span
-              key={i}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[0.7rem] ${
-                f.uploadStatus === 'error'
-                  ? 'border-[var(--chat-danger)]/25 bg-[var(--chat-danger)]/[0.06] text-[var(--chat-danger)]'
-                  : f.uploadStatus === 'pending'
-                    ? 'chat-border-200/10 chat-text-muted-400/40'
-                    : 'chat-border-200/10 chat-text-secondary-600/60'
-              }`}
-            >
-              {f.uploadStatus === 'pending' ? (
-                <span className="w-3.5 h-3.5 border border-current/30 border-t-current rounded-full animate-spin" />
-              ) : (
-                <FileIcon size={14} />
-              )}
-              {f.name}
+            <span key={i} data-testid="filigran-chat-attachment" className="inline-flex min-w-0 max-w-full items-center gap-1">
+              <Chip
+                label={f.name}
+                severity={f.uploadStatus === 'error' ? 'critical' : 'neutral'}
+                startIcon={
+                  <>
+                    {f.uploadStatus === 'pending' && <Spinner size="sm" tone="inherit" />}
+                    {f.uploadStatus !== 'pending' && <PendingFileGlyph file={f} />}
+                  </>
+                }
+                aria-busy={f.uploadStatus === 'pending' || undefined}
+                onDelete={() => onFileRemove?.(i)}
+                deleteLabel={translate(t, 'Remove {name}', { name: f.name })}
+              />
               {f.uploadStatus === 'error' && (
-                <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1">
+                <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1 text-content-compact text-[var(--chat-danger)]">
                   <XCircleIcon size={12} className="shrink-0" />
                   <Tooltip title={f.uploadError ?? t('Upload failed')} className="inline-flex min-w-0">
                     <span className="max-w-[16rem] truncate">{f.uploadError ?? t('Upload failed')}</span>
                   </Tooltip>
                 </span>
               )}
-              <button type="button" onClick={() => onFileRemove?.(i)} className="ml-0.5 chat-text-muted-400/30 hover:chat-text-secondary-600/60">
-                ×
-              </button>
             </span>
           ))}
         </div>
@@ -405,8 +421,11 @@ export const ChatInput = ({
         // The agent is working: the working glow plays, focused or not, and
         // the focus ring stands aside until the turn ends (index.css).
         data-working={isLoading ? '' : undefined}
+        // Dictation keeps its red border; otherwise the border is the design
+        // system Textarea's: none at rest, the hover tone under the pointer (index.css).
+        data-listening={dictation.listening ? '' : undefined}
         className={`filigran-chat-composer-box relative flex flex-col border chat-composer-surface px-2 pt-1 pb-1.5 transition-colors ${
-          dictation.listening ? 'border-[var(--chat-danger)]/50' : 'chat-border-200/10'
+          dictation.listening ? 'border-[var(--chat-danger)]/50' : ''
         } ${isLoading ? 'filigran-chat-active-border' : ''}`}
       >
         <textarea
@@ -423,7 +442,7 @@ export const ChatInput = ({
           {...mentionMenu.textareaAria}
           onPaste={handlePaste}
           rows={1}
-          className="filigran-chat-composer-field w-full bg-transparent border-none outline-hidden resize-none text-[0.8125rem] px-1 py-1.5 chat-text-900/100 placeholder:chat-text-muted-400/30 filigran-chat-scrollable"
+          className="filigran-chat-composer-field w-full bg-transparent border-none outline-hidden resize-none text-content-base px-1 py-1.5 chat-text-900/100 placeholder:chat-text-muted-400/30 filigran-chat-scrollable"
           style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}
         />
         <MentionMenu
@@ -450,14 +469,7 @@ export const ChatInput = ({
                   e.target.value = '';
                 }}
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                aria-label={t('Attach files')}
-                className="w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm chat-text-muted-400/30 hover:chat-surface-hover-100/10 mr-0.5 transition-colors"
-              >
-                <AttachFileIcon size={18} />
-              </button>
+              <ChatIconButton label={t('Attach files')} icon={<AttachFileIcon size={20} />} onClick={() => fileInputRef.current?.click()} />
             </>
           )}
           {prompts && prompts.length > 0 && <PromptPicker prompts={prompts} onPick={handlePromptPick} t={t} />}
@@ -472,71 +484,44 @@ export const ChatInput = ({
             {quota && <QuotaIndicator quota={quota} t={t} />}
           </span>
           {dictation.supported && (
-            <Tooltip title={dictation.listening ? t('Stop dictation') : t('Dictate a message')}>
-              <button
-                type="button"
-                onClick={dictation.toggle}
-                aria-label={t('Dictate a message')}
-                aria-pressed={dictation.listening}
-                className={`relative w-8 h-8 flex items-center justify-center shrink-0 chat-radius-sm mr-0.5 transition-colors ${
-                  dictation.listening
-                    ? 'text-[var(--chat-danger)] bg-[var(--chat-danger)]/10 hover:bg-[var(--chat-danger)]/20'
-                    : 'chat-text-muted-400/30 hover:chat-surface-hover-100/10'
-                }`}
-              >
-                {dictation.listening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
-                {dictation.listening && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--chat-danger)] motion-safe:animate-pulse" />}
-              </button>
-            </Tooltip>
+            // A toggle: the design system's pressed look, in the error tone while it listens.
+            <ChatIconButton
+              label={t('Dictate a message')}
+              tooltip={dictation.listening ? t('Stop dictation') : t('Dictate a message')}
+              icon={
+                <span className="relative inline-flex">
+                  {dictation.listening ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
+                  {dictation.listening && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[var(--chat-danger)] motion-safe:animate-pulse" />}
+                </span>
+              }
+              variant={dictation.listening ? 'destructive' : 'default'}
+              active={dictation.listening}
+              onClick={dictation.toggle}
+            />
           )}
           {showHoldSend && (
-            <Tooltip title={t('Send when the answer ends')}>
-              <button
-                type="button"
-                onClick={send}
-                aria-label={t('Send when the answer ends')}
-                className="p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
-              >
-                <SendIcon size={18} />
-              </button>
-            </Tooltip>
+            <ChatIconButton label={t('Send when the answer ends')} icon={<SendIcon size={20} />} priority="secondary" onClick={send} />
           )}
           {showSteerSend && (
-            <Tooltip title={t('Send now')}>
-              <button
-                type="button"
-                onClick={send}
-                aria-label={t('Send now')}
-                className="p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20"
-              >
-                <SendIcon size={18} />
-              </button>
-            </Tooltip>
+            <ChatIconButton label={t('Send now')} icon={<SendIcon size={20} />} priority="secondary" onClick={send} />
           )}
-          <Tooltip title={isLoading ? t('Stop generating') : sendTooltip}>
-            <button
-              type="button"
-              onClick={isLoading ? onStop : send}
-              aria-label={isLoading ? t('Stop generating') : t('Send')}
-              disabled={!isLoading && !canSend}
-              className={`p-1.5 chat-radius-sm w-8 h-8 flex items-center justify-center transition-all duration-150 ${
-                isLoading
-                  ? 'text-[var(--chat-danger)] bg-[var(--chat-danger)]/10 hover:bg-[var(--chat-danger)]/20 ml-0.5'
-                  : canSend
-                    ? 'text-[var(--chat-accent)] bg-[var(--chat-accent)]/10 hover:bg-[var(--chat-accent)]/20'
-                    : 'chat-text-muted-300/20 cursor-not-allowed'
-              }`}
-            >
-              {isLoading ? <StopCircleIcon size={18} /> : <SendIcon size={18} />}
-            </button>
-          </Tooltip>
+          {/* The main action of the row: the design system's primary IconButton (its own disabled look), the error tone to stop. */}
+          <ChatIconButton
+            label={isLoading ? t('Stop generating') : t('Send')}
+            tooltip={isLoading ? t('Stop generating') : sendTooltip}
+            icon={isLoading ? <StopCircleIcon size={20} /> : <SendIcon size={20} />}
+            priority={isLoading ? 'secondary' : 'primary'}
+            variant={isLoading ? 'destructive' : 'default'}
+            disabled={!isLoading && !canSend}
+            onClick={isLoading ? onStop : send}
+          />
         </div>
       </div>
 
       {/* The footer's one line: words heard but not yet final, else a status,
           else the disclaimer. */}
       {dictation.interim ? (
-        <p className="flex items-center justify-center gap-1.5 text-[0.65rem] italic text-[var(--chat-danger)] mt-1.5 min-h-[1lh]">
+        <p className="flex items-center justify-center gap-1.5 text-content-compact italic text-[var(--chat-danger)] mt-1.5 min-h-[1lh]">
           <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-[var(--chat-danger)] motion-safe:animate-pulse" />
           <span className="truncate">{dictation.interim}</span>
         </p>

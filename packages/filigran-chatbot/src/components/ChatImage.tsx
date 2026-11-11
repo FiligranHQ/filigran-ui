@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CloseIcon, DownloadIcon, ImageIcon, MaximizeIcon } from './icons';
+import { ChatIconButton } from './ChatIconButton';
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, DownloadIcon, ImageIcon, MaximizeIcon } from './icons';
 import { findChatbotRoot } from '../utils';
 import { usePanelFetch } from '../hooks/usePanelRequests';
 
@@ -10,6 +11,14 @@ interface ImageLightboxProps {
   onClose: () => void;
   /** Offered beside Close when the picture is a file the host can download. */
   onDownload?: () => void;
+  /**
+   * A picture among several (a message's attachments): the previous and next
+   * ones, by the arrow buttons or the Left and Right keys, and where this one
+   * stands ("2 / 5").
+   */
+  onPrevious?: () => void;
+  onNext?: () => void;
+  position?: string;
   t: (key: string) => string;
 }
 
@@ -18,7 +27,7 @@ interface ImageLightboxProps {
  * so it inherits the panel's stacking context and can never be painted under —
  * or over — unrelated host chrome, matching the reasoning-details dialog.
  */
-const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps) => {
+export const ImageLightbox = ({ src, alt, onClose, onDownload, onPrevious, onNext, position, t }: ImageLightboxProps) => {
   const hostRef = useRef<HTMLSpanElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -32,6 +41,16 @@ const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps)
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
+        return;
+      }
+      if (e.key === 'ArrowLeft' && onPrevious) {
+        e.preventDefault();
+        onPrevious();
+        return;
+      }
+      if (e.key === 'ArrowRight' && onNext) {
+        e.preventDefault();
+        onNext();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -49,7 +68,7 @@ const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps)
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [onClose, onPrevious, onNext]);
 
   // The overlay is the only interactive surface while open, so focus moves to
   // its close button and returns to the thumbnail on dismiss.
@@ -72,29 +91,56 @@ const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps)
             aria-modal="true"
             aria-label={alt.trim() || t('Image preview')}
           >
+            {/* Over the scrim a transparent button has no ground: the design system's primary (brand fill) icon buttons. */}
+            {position && (
+              <span className="absolute top-4 left-4 chat-radius-sm bg-black/60 px-2 py-1 text-content-compact text-white select-none">{position}</span>
+            )}
+            {onPrevious && (
+              <ChatIconButton
+                label={t('Previous image')}
+                icon={<ChevronLeftIcon size={20} />}
+                priority="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPrevious();
+                }}
+                anchorClassName="absolute left-4 top-1/2 -translate-y-1/2 inline-flex"
+              />
+            )}
+            {onNext && (
+              <ChatIconButton
+                label={t('Next image')}
+                icon={<ChevronRightIcon size={20} />}
+                priority="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNext();
+                }}
+                anchorClassName="absolute right-4 top-1/2 -translate-y-1/2 inline-flex"
+              />
+            )}
             <div className="absolute top-4 right-4 flex gap-2">
               {onDownload && (
-                <button
-                  type="button"
+                <ChatIconButton
+                  label={t('Download')}
+                  icon={<DownloadIcon size={20} />}
+                  priority="primary"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDownload();
                   }}
-                  aria-label={t('Download')}
-                  className="rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
-                >
-                  <DownloadIcon size={20} />
-                </button>
+                />
               )}
-              <button
+              <ChatIconButton
                 ref={closeButtonRef}
-                type="button"
-                onClick={onClose}
-                aria-label={t('Close')}
-                className="rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
-              >
-                <CloseIcon size={20} />
-              </button>
+                label={t('Close')}
+                icon={<CloseIcon size={20} />}
+                priority="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose();
+                }}
+              />
             </div>
             <img src={src} alt={alt} className="max-h-[90%] max-w-[90%] chat-radius-md object-contain" onClick={(e) => e.stopPropagation()} />
           </div>,
@@ -193,14 +239,14 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
   const displaySrc = fetched.src;
 
   if (fetched.status === 'failed' || (displaySrc !== null && undecodable === displaySrc)) {
-    return <p className="my-2 text-[0.75rem] italic chat-text-muted-400/40">{t('Image could not be loaded')}</p>;
+    return <p className="my-2 text-content-compact italic chat-text-muted-400/40">{t('Image could not be loaded')}</p>;
   }
 
   if (!displaySrc) {
     return (
       <span className="my-3 inline-flex items-center gap-2 chat-radius-md border chat-border-200/10 px-3 py-2">
         <ImageIcon size={14} className="shrink-0 animate-pulse text-[var(--chat-accent)]" />
-        <span className="text-[0.7rem] chat-text-muted-500/40">{t('Loading image…')}</span>
+        <span className="text-content-compact chat-text-muted-500/40">{t('Loading image…')}</span>
       </span>
     );
   }
@@ -216,14 +262,15 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
           onError={() => setUndecodable(displaySrc)}
           className={`max-w-full cursor-zoom-in chat-radius-sm object-contain ${maxHeightClass}`}
         />
-        <button
-          type="button"
+        <ChatIconButton
+          label={t('Expand image')}
+          icon={<MaximizeIcon size={16} />}
+          priority="primary"
+          size="sm"
           onClick={() => setExpanded(true)}
-          aria-label={t('Expand image')}
-          className="absolute top-2 right-2 chat-radius-sm bg-black/50 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover/img:opacity-100 focus-visible:opacity-100"
-        >
-          <MaximizeIcon size={14} />
-        </button>
+          className="opacity-0 group-hover/img:opacity-100 focus-visible:opacity-100"
+          anchorClassName="absolute top-2 right-2 inline-flex"
+        />
       </span>
       {expanded && <ImageLightbox src={displaySrc} alt={alt} onClose={() => setExpanded(false)} onDownload={onDownload} t={t} />}
     </>

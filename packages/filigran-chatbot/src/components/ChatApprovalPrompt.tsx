@@ -1,3 +1,4 @@
+import { Button, Textarea } from '@filigran/design-system';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ToolApprovalDecision, ToolApprovalProposal, ToolApprovalVerdict } from '../types';
 import { translate } from '../utils';
@@ -73,9 +74,6 @@ function useRevealIntoView<T extends HTMLElement>(active: boolean) {
   return ref;
 }
 
-const BUTTON_BASE =
-  'inline-flex items-center gap-1.5 chat-radius-sm px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50';
-
 interface ApprovalCardProps {
   proposal: ToolApprovalProposal;
   decision: ToolApprovalDecision | undefined;
@@ -115,24 +113,24 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
   };
 
   return (
-    <div data-testid="filigran-chat-approval" className="chat-radius-md border border-amber-500/25 bg-amber-500/[0.04] p-3 flex flex-col gap-2">
+    <div data-testid="filigran-chat-approval" className="chat-radius-md border border-[var(--chat-warning)]/25 bg-[var(--chat-warning)]/[0.04] p-3 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex items-start gap-2">
-          <WrenchIcon size={13} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <WrenchIcon size={13} className="mt-0.5 shrink-0 text-[var(--chat-warning)]" />
           <div className="min-w-0">
             {/* An unnamed tool is a malformed proposal, not a tool called
                 "unknown tool": the placeholder is the package's own text and
                 therefore translated here, not in the parser. */}
-            <p className="truncate font-mono text-xs chat-text-800/85">{proposal.toolName || t('unknown tool')}</p>
-            {proposal.toolDescription && <p className="mt-0.5 text-[0.7rem] chat-text-secondary-600/60">{proposal.toolDescription}</p>}
-            {proposal.source && <p className="mt-0.5 text-[0.65rem] chat-text-muted-400/35">{proposal.source}</p>}
+            <p className="truncate font-mono text-content-compact chat-text-800/85">{proposal.toolName || t('unknown tool')}</p>
+            {proposal.toolDescription && <p className="mt-0.5 text-content-compact chat-text-secondary-600/60">{proposal.toolDescription}</p>}
+            {proposal.source && <p className="mt-0.5 text-content-compact chat-text-muted-400/35">{proposal.source}</p>}
           </div>
         </div>
         {verdict && (
           <span
             className={
-              'shrink-0 chat-radius-sm px-1.5 py-0.5 text-[0.65rem] font-medium ' +
-              (verdict === 'reject' ? 'bg-red-500/15 text-red-600 dark:text-red-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300')
+              'shrink-0 chat-radius-sm px-1.5 py-0.5 text-content-compact font-medium ' +
+              (verdict === 'reject' ? 'bg-[var(--chat-danger)]/15 text-[var(--chat-danger)]' : 'bg-[var(--chat-success)]/15 text-[var(--chat-success)]')
             }
           >
             {verdict === 'reject' ? t('Declined') : verdict === 'approve_always' ? t('Always allowed') : t('Approved')}
@@ -145,7 +143,7 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
           {argumentNames.map((name) => {
             const schema = argumentSchema(proposal.inputSchema, name);
             return (
-              <div key={name} className="text-[0.7rem]">
+              <div key={name} className="text-content-compact">
                 <div className="flex flex-wrap items-baseline gap-1.5">
                   <span className="font-mono chat-text-secondary-700/75">{name}</span>
                   {schema.description && <span className="chat-text-secondary-500/45">— {schema.description}</span>}
@@ -161,73 +159,48 @@ const ApprovalCard = ({ proposal, decision, onDecide, disabled, t }: ApprovalCar
 
       {!verdict && rejecting && (
         <div ref={rejectPanelRef} className="flex flex-col gap-1.5">
-          <label htmlFor={reasonId} className="text-[0.7rem] chat-text-secondary-500/45">
-            {t('Why not? The agent sees this and can adapt (optional)')}
-          </label>
-          <textarea
+          <Textarea
             id={reasonId}
+            label={t('Why not? The agent sees this and can adapt (optional)')}
             autoFocus
             rows={2}
+            resize="none"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t('e.g. wrong environment — use staging instead')}
-            className="w-full resize-none chat-radius-sm border chat-border-200/10 chat-input-surface-white/3 px-2 py-1 text-[0.7rem] chat-text-800/85 outline-none focus:border-[var(--chat-accent)]/50"
           />
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => decide('reject')}
-              className={`${BUTTON_BASE} bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-300`}
-            >
-              <XCircleIcon size={13} />
+            <Button variant="destructive" size="sm" disabled={disabled} startIcon={<XCircleIcon size={16} />} onClick={() => decide('reject')}>
               {t('Decline this call')}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              priority="tertiary"
+              size="sm"
               disabled={disabled}
               onClick={() => {
                 setRejecting(false);
                 setReason('');
               }}
-              className={`${BUTTON_BASE} chat-text-secondary-500/50 hover:chat-surface-hover-100/5`}
             >
               {t('Back')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {!verdict && !rejecting && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => setRejecting(true)}
-            className={`${BUTTON_BASE} text-red-600 hover:bg-red-500/10 dark:text-red-300`}
-          >
-            <XCircleIcon size={13} />
+          <Button variant="destructive" priority="tertiary" size="sm" disabled={disabled} startIcon={<XCircleIcon size={16} />} onClick={() => setRejecting(true)}>
             {t('No')}
-          </button>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => decide('approve')}
-            className={`${BUTTON_BASE} bg-[var(--chat-accent)] text-white hover:opacity-90`}
-          >
-            <CheckIcon size={13} />
+          </Button>
+          <Button size="sm" disabled={disabled} startIcon={<CheckIcon size={16} />} onClick={() => decide('approve')}>
             {t('Yes')}
-          </button>
+          </Button>
           {/* This is the one verdict whose effect outlives the turn: its tooltip says so. */}
           <Tooltip title={t('Also applies to your scheduled runs, until you revoke it')}>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => decide('approve_always')}
-            className={`${BUTTON_BASE} border chat-border-200/15 chat-text-secondary-700/70 hover:chat-surface-hover-100/5`}
-          >
-            {t('Yes, always')}
-          </button>
+            <Button priority="secondary" size="sm" disabled={disabled} onClick={() => decide('approve_always')}>
+              {t('Yes, always')}
+            </Button>
           </Tooltip>
         </div>
       )}
@@ -287,8 +260,8 @@ export const ChatApprovalPrompt = ({ proposals, onSubmit, isSubmitting, error, t
   const rootRef = useRevealIntoView<HTMLDivElement>(true);
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-2 chat-radius-md border border-amber-500/20 bg-amber-500/[0.02] p-3">
-      <p className="flex items-start gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+    <div ref={rootRef} className="flex flex-col gap-2 chat-radius-md border border-[var(--chat-warning)]/20 bg-[var(--chat-warning)]/[0.02] p-3">
+      <p className="flex items-start gap-1.5 text-content-compact font-medium text-[var(--chat-warning)]">
         <AlertTriangleIcon size={13} className="mt-0.5 shrink-0" />
         {proposals.length === 1 ? t('The agent needs your approval to run a tool:') : t('The agent needs your approval to run these tools:')}
       </p>
@@ -328,17 +301,12 @@ export const ChatApprovalPrompt = ({ proposals, onSubmit, isSubmitting, error, t
         {/* The counter earns its place only when there is more than one thing
             to count; on a single proposal it reads as a progress bar for a
             one-step process. */}
-        <span className="text-[0.7rem] chat-text-muted-500/40">
+        <span className="text-content-compact chat-text-muted-500/40">
           {proposals.length > 1 ? translate(t, '{decided}/{total} decided', { decided: decidedCount, total: proposals.length }) : ''}
         </span>
-        <button
-          type="button"
-          disabled={!allDecided || busy}
-          onClick={() => submit(proposals.map((p) => decisions[p.toolCallId]))}
-          className={`${BUTTON_BASE} bg-[var(--chat-accent)] text-white hover:opacity-90`}
-        >
+        <Button size="sm" disabled={!allDecided || busy} onClick={() => submit(proposals.map((p) => decisions[p.toolCallId]))}>
           {busy ? t('Sending…') : t('Confirm')}
-        </button>
+        </Button>
       </div>
     </div>
   );

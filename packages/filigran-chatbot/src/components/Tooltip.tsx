@@ -40,7 +40,8 @@ const TOOLTIP_MAX_WIDTH = 300;
  * `--text-default-primary`, ...), so the bubble is the host's tooltip exactly,
  * and falls back to the design system's values otherwise. It is not the
  * library component itself: that one portals to `document.body`, outside the
- * panel's stacking context, where a host bar would hide it (below).
+ * panel's stacking context, where a host bar would hide it (below). Recorded as
+ * a library gap in fds-migration/LIBRARY-FEEDBACK.md (2, portal container).
  */
 export const Tooltip = ({ title, children, truncated = false, className = 'inline-flex' }: TooltipProps) => {
   const wrapperClassName = truncated ? 'flex min-w-0 max-w-full' : className;

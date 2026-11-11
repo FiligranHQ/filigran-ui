@@ -445,7 +445,7 @@ import { ChatToggleButton } from '@filigran/chatbot';
 | `label`       | `string`                  | built-in     | Button text, already translated by the host; omit for `t('Ask Assistant')` |
 | `t`           | `(key: string) => string` | —            | The host's translations; the panel's catalog in `locale` answers the rest  |
 | `locale`      | `string`                  | browser's    | The default label's language, by the panel's rule (see Internationalization) |
-| `accentColor` | `string`                  | `'#7b5cff'`  | Button background color                                                    |
+| `accentColor` | `string`                  | ignored      | Deprecated since 3.23.0: the toggle is the design system's secondary Button |
 | `icon`        | `React.ReactNode`         | default icon | Custom icon                                                                |
 
 ## API Contract
@@ -1289,10 +1289,12 @@ both. The same variables may be set in CSS on an ancestor instead.
 | `surfaceHover`     | `--filigran-chat-surface-hover`     | A row or a button under the pointer |
 | `inputSurface`     | `--filigran-chat-input-surface`     | A text field: the composer (no fill unless set), a rename field, the feedback and approval comments |
 | `inputRadius`      | `--filigran-chat-input-radius`      | The composer's corners (0.75rem unset) |
+| `inputBorderHover` | `--filigran-chat-input-border-hover` | The composer's border under the pointer; none at rest, as the design system's Textarea (`border` unset) |
 | `inputMinHeight`   | `--filigran-chat-input-min-height`  | The composer field's height at rest, before it grows with the text (two lines unset) |
 | `focusRing`        | `--filigran-chat-focus-ring`        | The 2 px ring around the composer while it has the focus (the accent unset) |
 | `danger`           | `--filigran-chat-danger`            | The tone of every error state: error notices, a failed upload, dictation, stop (a red unset, e.g. `var(--color-error)`) |
 | `warning`          | `--filigran-chat-warning`           | The tone of every warning notice (an amber unset, e.g. `var(--color-warning)`) |
+| `success`          | `--filigran-chat-success`           | The tone of an approved tool call and a successful trace step (a green unset, e.g. `var(--color-success)`) |
 | `headerBackground` | `--filigran-chat-header-background` | The header's background, a colour or an image (`none` for the surface alone) |
 | `text`             | `--filigran-chat-text`              | Text |
 | `textMuted`        | `--filigran-chat-text-muted`        | Times, labels, hints and placeholders |

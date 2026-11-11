@@ -1,3 +1,4 @@
+import { Button } from '@filigran/design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AgentStatusState, ChatToolLabels, ConsultStatus, IconProps, Translate } from '../types';
 import { askHost } from '../utils/askHost';
@@ -370,12 +371,12 @@ function ThinkingTextBubble({ text, action }: { text: string; action?: React.Rea
           isOverflowing
             ? // -webkit- twin first: Safari/WebKit ignores unprefixed mask-image
               // on older versions, which would silently drop the top dissolve.
-              ' [-webkit-mask-image:linear-gradient(to_bottom,transparent_0,rgb(0_0_0/0.25)_1.5rem,rgb(0_0_0/0.7)_3rem,black_4.5rem)]' +
-              ' [mask-image:linear-gradient(to_bottom,transparent_0,rgb(0_0_0/0.25)_1.5rem,rgb(0_0_0/0.7)_3rem,black_4.5rem)]'
+              ' [-webkit-mask-image:linear-gradient(to_bottom,transparent_0,color-mix(in_srgb,black_25%,transparent)_1.5rem,color-mix(in_srgb,black_70%,transparent)_3rem,black_4.5rem)]' +
+              ' [mask-image:linear-gradient(to_bottom,transparent_0,color-mix(in_srgb,black_25%,transparent)_1.5rem,color-mix(in_srgb,black_70%,transparent)_3rem,black_4.5rem)]'
             : ''
         }`}
       >
-        <p className="m-0 whitespace-pre-wrap break-words text-xs leading-5 chat-text-secondary-500/45">{text}</p>
+        <p className="m-0 whitespace-pre-wrap break-words text-content-compact leading-5 chat-text-secondary-500/45">{text}</p>
       </div>
     </div>
   );
@@ -520,27 +521,23 @@ export const ChatThinking = ({
               <>
                 {/* Read as the locale's sentence, as the voice call says it, not the two run together. */}
                 <span className="sr-only">{withAgent(t, answeringAgentName, label)}</span>
-                <span aria-hidden="true" className="text-xs font-medium text-[var(--chat-accent)]/80 shrink-0">
+                <span aria-hidden="true" className="text-content-compact font-medium text-[var(--chat-accent)]/80 shrink-0">
                   {answeringAgentName}
                 </span>
               </>
             )}
-            <span aria-hidden={answeringAgentName ? true : undefined} className="text-sm chat-text-secondary-500/50 transition-all duration-300">
+            <span aria-hidden={answeringAgentName ? true : undefined} className="text-content-base chat-text-secondary-500/50 transition-all duration-300">
               {label}
             </span>
             {waitLeftS !== undefined ? (
-              <span className="text-xs chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(Math.ceil(waitLeftS))}</span>
+              <span className="text-content-compact chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(Math.ceil(waitLeftS))}</span>
             ) : (
-              showElapsed && <span className="text-xs chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(elapsedS)}</span>
+              showElapsed && <span className="text-content-compact chat-text-muted-400/30 tabular-nums shrink-0">{formatElapsed(elapsedS)}</span>
             )}
             {agentStatus?.status === 'wait_start' && onSkipWait && (
-              <button
-                type="button"
-                onClick={onSkipWait}
-                className="ml-1 shrink-0 chat-radius-sm border border-[var(--chat-accent)]/40 px-2 py-0.5 text-xs text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors"
-              >
+              <Button priority="secondary" size="sm" className="ml-1 shrink-0" onClick={onSkipWait}>
                 {t('Continue now')}
-              </button>
+              </Button>
             )}
           </div>
         </div>

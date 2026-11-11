@@ -3,6 +3,7 @@ import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { CheckIcon, CopyIcon } from './icons';
+import { ChatIconButton } from './ChatIconButton';
 import { ChatImage } from './ChatImage';
 import { HostRenderBoundary, HostRenderFallback } from './HostRenderBoundary';
 import type { ChatCodeBlockRenderer } from '../types';
@@ -109,15 +110,14 @@ const MarkdownCode = ({ className, children }: { className?: string; children?: 
     const block = (
       <div className="my-3 chat-radius-md border chat-border-200/10 overflow-hidden chat-code-block">
         <div className="flex items-center justify-between px-3 py-1.5 border-b chat-border-200/10 chat-surface-subtle-100/3 select-none">
-          <span className="text-[0.7rem] chat-text-muted-500/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
-          <button
-            type="button"
+          <span className="text-content-compact chat-text-muted-500/40 font-mono">{match?.[1] ?? 'plaintext'}</span>
+          <ChatIconButton
+            label={copiedBlock === codeStr ? t('Copied') : t('Copy code')}
+            icon={copiedBlock === codeStr ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+            size="sm"
+            active={copiedBlock === codeStr}
             onClick={() => onCopyCode(codeStr)}
-            aria-label={copiedBlock === codeStr ? t('Copied') : t('Copy code')}
-            className="p-0.5 chat-radius-sm hover:chat-surface-hover-200/10 transition-colors"
-          >
-            {copiedBlock === codeStr ? <CheckIcon size={14} className="text-green-500" /> : <CopyIcon size={14} className="chat-text-muted-400/40" />}
-          </button>
+          />
         </div>
         <pre className="m-0 px-3 py-2 overflow-x-auto">
           <code className="chat-code leading-[1.7] chat-text-800/90 whitespace-pre" data-language={match?.[1]?.toLowerCase()}>
@@ -247,7 +247,7 @@ const MARKDOWN_COMPONENTS: Components = {
   // GFM footnotes: the notes under a rule, at a smaller size.
   section: ({ className, children }) =>
     className?.includes('footnotes') ? (
-      <section className="mt-4 pt-2 border-t chat-border-200/10 text-xs chat-text-muted-500/60 [&_ol]:mb-0 [&_h2]:sr-only">{children}</section>
+      <section className="mt-4 pt-2 border-t chat-border-200/10 text-content-compact chat-text-muted-500/60 [&_ol]:mb-0 [&_h2]:sr-only">{children}</section>
     ) : (
       <section className={className}>{children}</section>
     ),

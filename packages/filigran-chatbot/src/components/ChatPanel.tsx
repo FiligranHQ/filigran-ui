@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Button } from '@filigran/design-system';
 import type {
   ChatArtifact,
   ChatArtifactKind,
@@ -35,6 +36,7 @@ import { useLatestCallback, useShallowStable } from '../hooks/useStableProps';
 import { useVoiceCall } from '../hooks/useVoiceCall';
 import { PanelRequestsProvider, usePanelRequests, type PanelRequests } from '../hooks/usePanelRequests';
 import { watchSessionEnd } from '../utils/sessionEnd';
+import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
 import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
 import { AgentIconRendererProvider } from './AgentIconGlyph';
 import { ChatNotice } from './ChatNotice';
@@ -145,6 +147,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     onAgentChange: onAgentChangeProp,
     readOnly = false,
     readOnlyNotice,
+    voiceCallNotice,
     getRequestExtras: getRequestExtrasProp,
     onStreamEvent: onStreamEventProp,
     markerRenderers: markerRenderersProp,
@@ -1410,6 +1413,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     headerContext.conversation?.channel ?? (restoredChannel?.conversationId === conversationId ? restoredChannel.channel : undefined),
     channelLabel,
   );
+  // The host's voice-call tip, closed for the rest of the browser session.
+  const voiceNoticeKey = storageKey(storageKeyPrefix, STORAGE_KEYS.voiceCallNoticeDismissed);
+  const [voiceNoticeDismissed, setVoiceNoticeDismissed] = useState(() => readStorage('session', voiceNoticeKey) === '1');
+  const dismissVoiceNotice = useCallback(() => {
+    setVoiceNoticeDismissed(true);
+    writeStorage('session', voiceNoticeKey, '1');
+  }, [voiceNoticeKey]);
   const voice = useVoiceCall({
     send: (text, hooks) =>
       handleSendMessageRef.current({ text, source: 'voice', onSent: hooks.onAccepted, onNotSent: hooks.onNotSent, onSteered: hooks.onSteered }),
@@ -1506,7 +1516,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       case 'sidebar':
         return `${base} fixed right-0 bottom-0 flex flex-col chat-surface-raised border-l chat-border-200/10 z-[1200]`;
       case 'floating':
-        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised chat-radius-md shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border chat-border-200/10`;
+        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised chat-radius-md shadow-global-shadow z-[1300] border chat-border-200/10`;
       case 'fullscreen':
         return `${base} fixed right-0 bottom-0 left-0 flex flex-col chat-surface z-[1400]`;
       case 'inline':
@@ -1646,7 +1656,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         )}
         <div className={showConversationSidebar ? 'relative flex flex-1 flex-col min-w-0' : 'contents'} {...dropHandlers}>
           {dropping && (
-            <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center chat-radius-md border-2 border-dashed border-[var(--chat-accent)] bg-[var(--chat-accent)]/10 text-sm font-medium text-[var(--chat-accent)]">
+            <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center chat-radius-md border-2 border-dashed border-[var(--chat-accent)] bg-[var(--chat-accent)]/10 text-content-base font-medium text-[var(--chat-accent)]">
               {t('Drop files to attach them')}
             </div>
           )}
@@ -1665,17 +1675,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               role="alert"
               className="flex-1 flex flex-col items-center justify-center gap-3 px-6 py-6 text-center"
             >
-              <AlertTriangleIcon size={18} className="text-amber-500 dark:text-amber-400" />
-              <p className="max-w-sm text-[0.8125rem] leading-6 chat-text-secondary-600/60">
+              <AlertTriangleIcon size={18} className="text-[var(--chat-warning)]" />
+              <p className="max-w-sm text-content-base leading-6 chat-text-secondary-600/60">
                 {refusedRestore.detail ?? t('This conversation could not be loaded.')}
               </p>
-              <button
-                type="button"
-                onClick={retryRefusedRestore}
-                className="chat-radius-sm border chat-border-200/10 px-3 py-1 text-[0.75rem] font-medium chat-text-secondary-700/80 transition-colors hover:chat-surface-hover-100/6"
-              >
+              <Button priority="secondary" size="sm" onClick={retryRefusedRestore}>
                 {t('Retry')}
-              </button>
+              </Button>
             </div>
           ) : messages.length === 0 ? (
             welcome ? (
@@ -1684,6 +1690,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               <ChatWelcome
                 firstName={firstName}
                 logoIcon={resolvedLogo}
+                agentIcon={selectedAgent?.icon}
                 // The agent's own suggestions when the backend serves them, the
                 // host's list otherwise, none when there is neither. The agent's
                 // description is not passed: it is picker and agent-page prose.
@@ -1739,7 +1746,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             />
           )}
           {readOnly ? (
-            readOnlyNotice && <div className="px-4 py-3 border-t chat-border-200/10 text-sm chat-text-secondary-500/50">{readOnlyNotice}</div>
+            readOnlyNotice && <div className="px-4 py-3 border-t chat-border-200/10 text-content-base chat-text-secondary-500/50">{readOnlyNotice}</div>
           ) : (
             <ChatInput
               header={composerHeader}
@@ -1794,6 +1801,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           onInterrupt={voice.interrupt}
           onToggleMute={voice.toggleMute}
           onEnd={voice.end}
+          notice={voiceNoticeDismissed ? undefined : voiceCallNotice}
+          onDismissNotice={dismissVoiceNotice}
           t={t}
         />
       )}

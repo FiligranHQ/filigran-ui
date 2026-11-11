@@ -1769,5 +1769,5 @@ test("the host's theme is set on the panel root, where every part of the panel r
   assert.equal(root.style.getPropertyValue('--filigran-chat-surface'), 'rgb(1, 2, 3)');
   assert.equal(root.style.getPropertyValue('--filigran-chat-user-background'), 'transparent');
   assert.equal(root.style.getPropertyValue('--filigran-chat-text'), '', 'an entry not given keeps the panel’s own');
-  assert.ok(container.querySelector('[data-testid="filigran-chat-user-message"]')!.classList.contains('chat-user-bubble'));
+  assert.ok(container.querySelector('[data-testid="filigran-chat-user-message"]')!.closest('.chat-user-bubble'), 'the text sits in the themed bubble');
 });

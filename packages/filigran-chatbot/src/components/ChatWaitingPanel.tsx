@@ -1,3 +1,4 @@
+import { Button } from '@filigran/design-system';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Translate } from '../types';
 import { ExternalLinkIcon, GamepadIcon } from './icons';
@@ -75,9 +76,6 @@ interface ChatWaitingPanelProps {
   content?: ReactNode;
 }
 
-const PLAY_CLASS =
-  'inline-flex items-center gap-1.5 self-start chat-radius-sm text-xs text-[var(--chat-accent)] opacity-80 transition-opacity hover:opacity-100 focus-visible:opacity-100';
-
 /**
  * Waiting experience shown below the status bubble during longer waits:
  * rotating messages, and an invitation to play XTM One's Space Invaders arcade
@@ -126,29 +124,25 @@ export const ChatWaitingPanel = ({ t, enabled = true, onPlay, playUrl, keepEndIn
         <span
           key={current}
           aria-hidden
-          className="text-xs chat-text-muted-500/45"
+          className="text-content-compact chat-text-muted-500/45"
           style={reducedMotion ? undefined : { animation: 'chat-fade-in 0.4s ease-out' }}
         >
           {current}
           <span className={`ml-0.5 inline-block w-1 h-3 align-middle bg-[var(--chat-accent)]/60 ${reducedMotion ? '' : 'animate-pulse'}`} />
         </span>
         {onPlay ? (
-          <button type="button" onClick={onPlay} className={PLAY_CLASS}>
-            <span aria-hidden className="inline-flex">
-              <GamepadIcon size={13} />
-            </span>
+          <Button priority="tertiary" size="sm" className="self-start" startIcon={<GamepadIcon size={16} />} onClick={onPlay}>
             {t('Play Space Invaders')}
-          </button>
+          </Button>
         ) : playUrl ? (
-          <a href={playUrl} target="_blank" rel="noopener noreferrer" className={PLAY_CLASS}>
-            <span aria-hidden className="inline-flex">
-              <GamepadIcon size={13} />
-            </span>
-            {t('Play Space Invaders in XTM One')}
-            <span aria-hidden className="inline-flex">
-              <ExternalLinkIcon size={11} />
-            </span>
-          </a>
+          // The design system's tertiary Button drawn on the link (asChild): the glyphs go inside it.
+          <Button asChild priority="tertiary" size="sm" className="self-start">
+            <a href={playUrl} target="_blank" rel="noopener noreferrer">
+              <GamepadIcon size={16} />
+              {t('Play Space Invaders in XTM One')}
+              <ExternalLinkIcon size={16} />
+            </a>
+          </Button>
         ) : null}
       </div>
     </div>

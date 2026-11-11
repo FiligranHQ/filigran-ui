@@ -1,6 +1,8 @@
+import { Chip } from '@filigran/design-system';
+
 import type { Translate } from '../types';
 import { translate, translateAround } from '../utils';
-import { Tooltip } from './Tooltip';
+import { AgentIconGlyph } from './AgentIconGlyph';
 
 /**
  * The greeting, as one sentence the locale owns end to end. The agent's name is
@@ -21,7 +23,14 @@ const Greeting = ({ firstName, agentName, t }: { firstName: string; agentName?: 
 
 interface ChatWelcomeProps {
   firstName: string;
+  /** The panel's mark, drawn when the agent has no icon of its own the panel or the host can draw. */
   logoIcon: React.ReactNode;
+  /**
+   * The selected agent's own icon (an image URL, an emoji, or a name the host
+   * draws through `renderAgentIcon`), as the header and the conversation rows
+   * show it: the screen names who is about to answer by its mark too.
+   */
+  agentIcon?: string | null;
   /**
    * Already translated by the caller — see `ChatPanel`. Only the agent's own
    * suggestions (or the host's list): an empty list shows no suggestion at all,
@@ -44,13 +53,21 @@ interface ChatWelcomeProps {
 }
 
 /**
- * The new-conversation screen: the agent's mark, one greeting line naming the
- * agent, and the agent's own suggestions as compact chips. Deliberately short —
- * the composer below is what the screen is for.
+ * The new-conversation screen: the agent's own mark, one greeting line naming
+ * the agent, and the agent's own suggestions as design-system chips.
+ * Deliberately short: the composer below is what the screen is for.
  */
-export const ChatWelcome = ({ firstName, logoIcon, promptSuggestions, onPromptClick, agentName, suggestionsLoading = false, t }: ChatWelcomeProps) => (
+export const ChatWelcome = ({ firstName, logoIcon, agentIcon, promptSuggestions, onPromptClick, agentName, suggestionsLoading = false, t }: ChatWelcomeProps) => (
   <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
-    <span className="text-[var(--chat-accent)] mb-3 [&>svg]:w-10 [&>svg]:h-10">{logoIcon}</span>
+    <span data-chat-welcome-mark="" className="flex items-center justify-center text-[var(--chat-accent)] mb-3 [&>svg]:w-10 [&>svg]:h-10">
+      <AgentIconGlyph
+        icon={agentIcon}
+        size={40}
+        fallback={logoIcon}
+        imageClassName="w-10 h-10 chat-radius-sm object-cover"
+        emojiClassName="text-title-jumbo leading-none"
+      />
+    </span>
 
     {/*
       Naming the agent here is the only confirmation that switching in the
@@ -61,7 +78,7 @@ export const ChatWelcome = ({ firstName, logoIcon, promptSuggestions, onPromptCl
     */}
     <h2
       key={agentName ?? 'default'}
-      className="text-xl font-medium text-center chat-text-900/100"
+      className="text-title-md font-medium text-center chat-text-900/100"
       style={{ fontFamily: '"Geologica", sans-serif', animation: 'chat-fade-in 0.35s ease-out' }}
     >
       <Greeting firstName={firstName} agentName={agentName} t={t} />
@@ -72,19 +89,14 @@ export const ChatWelcome = ({ firstName, logoIcon, promptSuggestions, onPromptCl
     {onPromptClick && (suggestionsLoading || promptSuggestions.length > 0) && (
       <div role="group" aria-label={t('Suggestions')} aria-busy={suggestionsLoading || undefined} className="mt-5 flex w-full max-w-[480px] flex-wrap justify-center gap-2">
         {suggestionsLoading
-          ? // Placeholder chips rather than an empty gap: the row is about to be
-            // replaced by the new agent's own suggestions.
-            [0, 1, 2].map((i) => <div key={i} aria-hidden className="h-8 w-32 rounded-full border chat-border-200/10 chat-skeleton-card animate-pulse" />)
-          : promptSuggestions.map((prompt) => (
-              <Tooltip key={prompt} title={prompt} className="inline-flex min-w-0 max-w-full">
-              <button
-                type="button"
-                onClick={() => onPromptClick(prompt)}
-                className="h-8 max-w-full truncate rounded-full border chat-border-200/10 bg-transparent px-3 text-[0.8125rem] chat-text-800/100 transition-colors hover:bg-[var(--chat-accent-10)] hover:border-[var(--chat-accent-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent)]"
-              >
-                {prompt}
-              </button>
-              </Tooltip>
+          ? // Placeholder chips of the chip's own box rather than an empty gap:
+            // the row is about to be replaced by the new agent's own suggestions.
+            [0, 1, 2].map((i) => <div key={i} aria-hidden className="h-6 w-32 chat-radius-sm chat-skeleton-card animate-pulse" />)
+          : // The design system's Chip with onClick: filled, 24px, its label cut at
+            // 250px with its own tooltip carrying the whole prompt while it is cut.
+            // The focus ring takes the brand colour (the host's, else the accent).
+            promptSuggestions.map((prompt) => (
+              <Chip key={prompt} label={prompt} onClick={() => onPromptClick(prompt)} className="focus-visible:ring-filigran-brand-primary" />
             ))}
       </div>
     )}

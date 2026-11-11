@@ -1,0 +1,159 @@
+/**
+ * The panel's icon-only control is the design system's IconButton with the
+ * panel's tooltip - `yarn test`.
+ */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
+import { act } from 'react';
+
+import { installDom, settle } from '../../test/dom.ts';
+
+installDom();
+// After the page: react-dom reads at load whether it fires input events.
+const { createRoot } = await import('react-dom/client');
+const { ChatIconButton } = await import('./ChatIconButton.tsx');
+const { CloseIcon, TrashIcon } = await import('./icons/index.tsx');
+
+async function render(node: React.ReactNode) {
+  const panel = document.createElement('div');
+  panel.className = 'filigran-chatbot';
+  document.body.appendChild(panel);
+  const root = createRoot(panel);
+  await act(async () => {
+    root.render(node);
+    await settle();
+  });
+  return panel;
+}
+
+test('an icon-only control is a design-system IconButton: tertiary, 36 px, named, its glyph hidden', async () => {
+  let clicks = 0;
+  const panel = await render(<ChatIconButton label="Close" icon={<CloseIcon size={20} />} onClick={() => (clicks += 1)} />);
+  const button = panel.querySelector('button')!;
+  assert.equal(button.getAttribute('aria-label'), 'Close');
+  assert.equal(button.getAttribute('type'), 'button');
+  const classes = button.className.split(/\s+/);
+  for (const name of ['h-9', 'w-9', 'rounded-sm', 'text-icon-highlight', 'focus-visible:ring-2', 'focus-visible:ring-filigran-brand-primary']) {
+    assert.ok(classes.includes(name), `${name} in ${button.className}`);
+  }
+  assert.equal(button.querySelector('span')!.getAttribute('aria-hidden'), 'true');
+  await act(async () => {
+    button.click();
+    await settle();
+  });
+  assert.equal(clicks, 1);
+});
+
+test('a delete in a row is the destructive small IconButton, and a menu toggle says it is pressed', async () => {
+  const panel = await render(
+    <>
+      <ChatIconButton label="Delete conversation" icon={<TrashIcon size={16} />} variant="destructive" size="sm" />
+      <ChatIconButton label="Switch view" icon={<CloseIcon size={20} />} active aria-haspopup="menu" aria-expanded />
+    </>,
+  );
+  const [remove, toggle] = [...panel.querySelectorAll('button')];
+  assert.ok(remove.className.split(/\s+/).includes('h-6'));
+  assert.ok(remove.className.split(/\s+/).includes('text-feedback-error-primary'));
+  assert.equal(toggle.getAttribute('aria-pressed'), 'true');
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+});
+
+test('over a scrim the control is the filled primary IconButton, and an end-call is the filled destructive one', async () => {
+  const panel = await render(
+    <>
+      <ChatIconButton label="Download" icon={<CloseIcon size={20} />} priority="primary" />
+      <ChatIconButton label="End voice call" icon={<CloseIcon size={20} />} priority="primary" variant="destructive" />
+      <ChatIconButton label="Mute microphone" icon={<CloseIcon size={20} />} priority="secondary" />
+    </>,
+  );
+  const [download, end, mute] = [...panel.querySelectorAll('button')].map((b) => b.className.split(/\s+/));
+  assert.ok(download.includes('bg-filigran-brand-primary'), download.join(' '));
+  assert.ok(end.includes('bg-feedback-error-primary'), end.join(' '));
+  assert.ok(mute.includes('border'), mute.join(' '));
+});
+
+// The components migrated so far (chatbot 3.23.0, slice 2); the rest of the
+// panel joins this list as it moves to ChatIconButton.
+const MIGRATED = [
+  'ChatHeader.tsx',
+  'ConversationSidebar.tsx',
+  'ClearAllConversations.tsx',
+  'ReasoningDetailsDialog.tsx',
+  'ChatNotice.tsx',
+  'ChatImage.tsx',
+  'ChatVoiceCall.tsx',
+  'ChatInput.tsx',
+  'PromptPicker.tsx',
+  'ArtifactCard.tsx',
+  'ChatApprovalPrompt.tsx',
+  'ConversationListFailed.tsx',
+  'ChatMessages.tsx',
+  'MarkdownMessage.tsx',
+];
+
+// The text buttons migrated to the design system's Button (chatbot 3.23.0, slice 2).
+const TEXT_BUTTONS = [
+  'ArtifactCard.tsx',
+  'ChatApprovalPrompt.tsx',
+  'ConversationListFailed.tsx',
+  'ChatThinking.tsx',
+  'ChatWaitingPanel.tsx',
+  'WorkingFiles.tsx',
+  'ContextUsageIndicator.tsx',
+  'ChatToggleButton.tsx',
+  'ClearAllConversations.tsx',
+  'ChatPanel.tsx',
+];
+
+for (const file of TEXT_BUTTONS) {
+  test(`${file} draws no raw <button>: every text action is the design system's Button`, () => {
+    const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /<button\b/, 'a raw <button> is left');
+    assert.match(source, /from '@filigran\/design-system'/);
+  });
+}
+
+// Files whose remaining raw <button>s are only audited exemptions: a combobox
+// trigger, listbox options and two-action rows the DS Menu cannot hold, the
+// prompt picker rows (its panel holds a search field, which the DS Menu cannot),
+// the disclosure rows of the workspace list and of the tool-call trace (the
+// design system has no disclosure), the download card and the conversation-ref
+// chip (content cards, not actions of a DS Button variant). Each says why as
+// its first attribute and has a row in the audit table. `usesDs` names the
+// files that also draw design-system components.
+const EXEMPT_ONLY: { file: string; usesDs: boolean }[] = [
+  { file: 'ChatHeader.tsx', usesDs: true },
+  { file: 'ConversationSidebar.tsx', usesDs: true },
+  { file: 'ChatMessages.tsx', usesDs: true },
+  { file: 'PromptPicker.tsx', usesDs: false },
+  { file: 'ReasoningDetailsDialog.tsx', usesDs: false },
+];
+
+for (const { file, usesDs } of EXEMPT_ONLY) {
+  test(`${file} draws a raw <button> only as an audited data-ds-exempt row`, () => {
+    const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /<button(?!\s+data-ds-exempt="[^"]+")/, 'a raw <button> without data-ds-exempt is left');
+    if (usesDs) assert.match(source, /from '@filigran\/design-system'/);
+  });
+}
+
+// After slice 2 no component of the panel draws an unaudited raw <button>: every
+// raw one left carries data-ds-exempt="<why>" as its first attribute.
+test('no component draws a raw <button> without data-ds-exempt', () => {
+  const dir = new URL('./', import.meta.url);
+  const offenders = readdirSync(dir)
+    .filter((f) => f.endsWith('.tsx') && !f.includes('.test.'))
+    .filter((f) => /<button(?!\s+data-ds-exempt="[^"]+")/.test(readFileSync(new URL(`./${f}`, dir), 'utf8')));
+  assert.deepEqual(offenders, []);
+});
+
+for (const file of MIGRATED) {
+  test(`${file} draws no hand-styled icon button: every icon-only control goes through ChatIconButton`, () => {
+    // A button that is not an icon-only control (the voice call's avatar) says so
+    // as its first attribute, `data-ds-exempt="<why>"`, and is listed in the audit table.
+    const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8').replace(/<button\s+data-ds-exempt="[^"]+"/g, '<exempt');
+    assert.doesNotMatch(source, /w-[78] h-[78] flex items-center justify-center/, 'a hand-styled icon button is left');
+    assert.doesNotMatch(source, /<button[^>]*\saria-label=/, 'a raw <button> named only by aria-label is an icon-only control');
+  });
+}

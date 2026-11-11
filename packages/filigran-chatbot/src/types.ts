@@ -401,6 +401,8 @@ export interface ChatPanelTheme {
   inputSurface?: string;
   /** The composer's corners, as the host's text fields draw theirs (`--filigran-chat-input-radius`, `radiusMd` unset). */
   inputRadius?: string;
+  /** The composer's border under the pointer, the design system's `--border-input-hover`; none at rest (`--filigran-chat-input-border-hover`, `border` unset). */
+  inputBorderHover?: string;
   /** The small corner of every control, chip and avatar tile, the design system's `--radius-sm` (`--filigran-chat-radius-sm`, 4px unset). */
   radiusSm?: string;
   /** The card corner of every card, bubble, status indicator, menu and dialog, the design system's `--radius-md` (`--filigran-chat-radius-md`, 12px unset). */
@@ -413,6 +415,8 @@ export interface ChatPanelTheme {
   danger?: string;
   /** The warning tone of every warning notice (`--filigran-chat-warning`, an amber unset). */
   warning?: string;
+  /** The success tone of an approved tool call and a successful trace step (`--filigran-chat-success`, a green unset). */
+  success?: string;
   /** The header's background, a colour or an image; `none` for the surface alone (`--filigran-chat-header-background`). */
   headerBackground?: string;
   /** Text (`--filigran-chat-text`). */
@@ -668,6 +672,13 @@ export interface ChatPanelProps {
   readOnly?: boolean;
   /** Shown in place of the composer while `readOnly`. */
   readOnlyNotice?: React.ReactNode;
+  /**
+   * A tip shown at the top of a voice call (for example which models answer
+   * fast enough to talk to), in an info notice the user can close. Once
+   * closed it stays closed for the browser session (`sessionStorage`, under
+   * `storageKeyPrefix`). Without it the call shows no tip.
+   */
+  voiceCallNotice?: React.ReactNode;
   /**
    * Fields merged into every REST message body, read at send time: the host's
    * own per-message options (tool selection, run mode). They never override
@@ -1134,6 +1145,11 @@ export interface ChatToggleButtonProps {
   t?: Translate;
   /** BCP 47 tag of the label's language when the host does not translate it (see `ChatPanelProps.locale`). */
   locale?: string;
+  /**
+   * @deprecated since 3.23.0: the toggle is the design system's secondary
+   * Button and takes its colours from the host's design-system tokens; the
+   * value is ignored. Kept so a host that passes it still compiles.
+   */
   accentColor?: string;
   icon?: React.ReactNode;
 }

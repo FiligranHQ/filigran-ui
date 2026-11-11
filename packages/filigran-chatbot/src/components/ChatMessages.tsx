@@ -50,13 +50,16 @@ import {
   VolumeIcon,
   VolumeOffIcon,
 } from './icons';
+import { Button, Chip, Textarea } from '@filigran/design-system';
 import { ArtifactCard } from './ArtifactCard';
+import { ChatIconButton } from './ChatIconButton';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
 import { ChatImage } from './ChatImage';
 import { ChatNotice } from './ChatNotice';
 import { ChatThinking, type ThinkingOverrides } from './ChatThinking';
 import { HostRenderBoundary, HostRenderFallback, HostRendered } from './HostRenderBoundary';
 import { MarkdownMessage } from './MarkdownMessage';
+import { MessageAttachments, type MessageAttachmentItem } from './MessageAttachments';
 import { ReasoningDetailsDialog } from './ReasoningDetailsDialog';
 import { Tooltip } from './Tooltip';
 import { askHost } from '../utils/askHost';
@@ -208,16 +211,16 @@ function isImageAttachment(att: ChatAttachment): boolean {
  * tabbing onto one sees it through `focus-visible` / `focus-within`.
  */
 const SHOWN_ON_HOVER = 'group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
-const FOOTER_BUTTON = 'p-1 chat-radius-sm transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]';
-const ACCENT_ON_HOVER = 'hover:text-[var(--chat-accent)] focus-visible:text-[var(--chat-accent)]';
-const REVEALED_BUTTON = `opacity-0 ${SHOWN_ON_HOVER} ${ACCENT_ON_HOVER}`;
+// The footer's controls are the design system's small tertiary icon buttons
+// (ChatIconButton); these classes only reveal them, the DS draws every state.
+const REVEALED_BUTTON = `opacity-0 transition-opacity ${SHOWN_ON_HOVER}`;
 /**
  * The reasoning details button stays dimly in view, so a turn that reasoned is
  * noticed, and reads like its neighbours once they show.
  */
-const DIMMED_BUTTON = `opacity-50 ${SHOWN_ON_HOVER} ${ACCENT_ON_HOVER}`;
+const DIMMED_BUTTON = `opacity-50 transition-opacity ${SHOWN_ON_HOVER}`;
 /** A control in its "on" state (the given rating, the message being read) stays in view. */
-const ACTIVE_BUTTON = 'opacity-100 text-[var(--chat-accent)]';
+const ACTIVE_BUTTON = 'opacity-100';
 
 /** When the message was sent; the tooltip spells the date out. */
 const MessageTime = ({ timestamp, locale }: { timestamp: Date; locale?: string }) => {
@@ -225,7 +228,7 @@ const MessageTime = ({ timestamp, locale }: { timestamp: Date; locale?: string }
   if (!time) return null;
   return (
     <Tooltip title={time.full}>
-      <time dateTime={time.iso} className="px-1 text-[0.65rem] tabular-nums chat-text-muted-400/40 select-none">
+      <time dateTime={time.iso} className="px-1 text-content-compact tabular-nums chat-text-muted-400/40 select-none">
         <span aria-hidden="true">{time.label}</span>
         <span className="sr-only">{time.full}</span>
       </time>
@@ -250,16 +253,14 @@ const MessageCopyButton = ({ text, label, t }: { text: string; label: string; t:
 
   const name = copied ? t('Copied!') : label;
   return (
-    <Tooltip title={name}>
-      <button
-        type="button"
-        onClick={handleCopy}
-        aria-label={name}
-        className={`${FOOTER_BUTTON} ${copied ? 'opacity-100 text-green-500 dark:text-green-400' : REVEALED_BUTTON}`}
-      >
-        {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-      </button>
-    </Tooltip>
+    <ChatIconButton
+      label={name}
+      icon={copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+      size="sm"
+      active={copied}
+      onClick={handleCopy}
+      className={copied ? ACTIVE_BUTTON : REVEALED_BUTTON}
+    />
   );
 };
 
@@ -290,24 +291,23 @@ const MessageFeedbackButtons = ({
     if (locked && !active) return null;
     const Icon = target === 'up' ? ThumbsUpIcon : ThumbsDownIcon;
     return (
-      <Tooltip title={locked ? t('Feedback already submitted') : label}>
-        <button
-          ref={target === 'down' ? downRef : undefined}
-          type="button"
-          onClick={() => {
-            if (!inert) onChange(active ? null : target);
-          }}
-          aria-label={label}
-          aria-pressed={active}
-          // Not `disabled`: a disabled button takes no focus and no hover, so
-          // it could not say why it does not answer.
-          aria-disabled={inert || undefined}
-          aria-describedby={locked ? lockedId : undefined}
-          className={`${FOOTER_BUTTON} ${active ? ACTIVE_BUTTON : REVEALED_BUTTON} ${inert ? 'cursor-default' : ''}`}
-        >
-          <Icon size={14} filled={active} />
-        </button>
-      </Tooltip>
+      <ChatIconButton
+        ref={target === 'down' ? downRef : undefined}
+        label={label}
+        tooltip={locked ? t('Feedback already submitted') : true}
+        icon={<Icon size={16} filled={active} />}
+        size="sm"
+        active={active}
+        onClick={() => {
+          if (!inert) onChange(active ? null : target);
+        }}
+        aria-pressed={active}
+        // Not `disabled`: a disabled button takes no focus and no hover, so
+        // it could not say why it does not answer.
+        aria-disabled={inert || undefined}
+        aria-describedby={locked ? lockedId : undefined}
+        className={`${active ? ACTIVE_BUTTON : REVEALED_BUTTON} ${inert ? 'cursor-default' : ''}`}
+      />
     );
   };
 
@@ -342,11 +342,10 @@ const FeedbackComment = ({
 
   return (
     <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 chat-radius-md border chat-border-200/10 chat-surface-subtle-50/4 p-2">
-      <label htmlFor={id} className="text-[0.7rem] chat-text-secondary-600/60">
-        {t('Tell us what went wrong (optional)')}
-      </label>
-      <textarea
+      <Textarea
         id={id}
+        label={t('Tell us what went wrong (optional)')}
+        resize="vertical"
         // Opened by the user's own thumbs down, to be typed into.
         autoFocus
         rows={2}
@@ -367,29 +366,30 @@ const FeedbackComment = ({
           }
         }}
         placeholder={t('What could be improved?')}
-        className="w-full resize-y chat-radius-sm border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-[0.75rem] leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
-        <button
-          type="button"
+        <Button
+          priority="tertiary"
+          size="sm"
           onClick={() => {
             if (!pending) onSkip();
           }}
           aria-disabled={pending || undefined}
-          className="chat-radius-sm px-2 py-0.5 text-[0.7rem] chat-text-secondary-500/50 transition-colors hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
         >
           {t('Skip')}
-        </button>
-        <button
-          type="button"
+        </Button>
+        {/* aria-disabled, not disabled: the focus stays on the form while it saves. */}
+        <Button
+          priority="primary"
+          size="sm"
           onClick={() => {
             if (canSave) onSave(text);
           }}
           aria-disabled={!canSave || undefined}
-          className={`chat-radius-sm px-2 py-0.5 text-[0.7rem] text-white bg-[var(--chat-accent)] transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)] ${canSave ? 'hover:opacity-90' : 'opacity-50 cursor-default'}`}
+          className={canSave ? undefined : 'opacity-50 cursor-default'}
         >
           {t('Save')}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -399,11 +399,14 @@ const FeedbackComment = ({
 const ReadAloudButton = ({ speaking, onToggle, t }: { speaking: boolean; onToggle: () => void; t: (key: string) => string }) => {
   const name = speaking ? t('Stop reading') : t('Read aloud');
   return (
-    <Tooltip title={name}>
-      <button type="button" onClick={onToggle} aria-label={name} className={`${FOOTER_BUTTON} ${speaking ? ACTIVE_BUTTON : REVEALED_BUTTON}`}>
-        {speaking ? <VolumeOffIcon size={14} /> : <VolumeIcon size={14} />}
-      </button>
-    </Tooltip>
+    <ChatIconButton
+      label={name}
+      icon={speaking ? <VolumeOffIcon size={16} /> : <VolumeIcon size={16} />}
+      size="sm"
+      active={speaking}
+      onClick={onToggle}
+      className={speaking ? ACTIVE_BUTTON : REVEALED_BUTTON}
+    />
   );
 };
 
@@ -540,6 +543,7 @@ const MessageRow = memo(
       return (
         <Tooltip key={key} title={t('Download')} className="inline-flex min-w-0 max-w-[90%]">
         <button
+          data-ds-exempt="download-card"
           type="button"
           onClick={() => onDownloadFile?.(att)}
           className={`group flex w-full min-w-0 items-center gap-2 text-left chat-radius-md border px-2.5 py-1.5 transition-colors cursor-pointer ${
@@ -552,9 +556,9 @@ const MessageRow = memo(
             <FileIcon size={16} />
           </span>
           <span className="flex flex-col min-w-0 flex-1">
-            <span className="truncate text-[0.75rem] chat-text-900/100">{att.filename}</span>
+            <span className="truncate text-content-compact chat-text-900/100">{att.filename}</span>
             {(att.type || sizeLabel) && (
-              <span className="text-[0.65rem] chat-text-muted-400/40 uppercase">{[att.type, sizeLabel].filter(Boolean).join(' · ')}</span>
+              <span className="text-content-compact chat-text-muted-400/40 uppercase">{[att.type, sizeLabel].filter(Boolean).join(' · ')}</span>
             )}
           </span>
           <span className="shrink-0 chat-text-muted-400/30 group-hover:text-[var(--chat-accent)]">
@@ -564,19 +568,6 @@ const MessageRow = memo(
         </Tooltip>
       );
     };
-
-    // A user-uploaded file shown as a non-clickable chip — used while the upload
-    // is still in flight (no server `fileId` yet) or when no download handler is
-    // wired by the host.
-    const renderFileChip = (name: string, key: string) => (
-      <span
-        key={key}
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border-200/10 text-[0.7rem] chat-text-secondary-600/60"
-      >
-        <FileIcon size={14} />
-        {name}
-      </span>
-    );
 
     const renderArtifactCard = (artifact: ChatArtifact, key: string) => (
       <ArtifactCard key={key} artifact={artifact} t={t} onDownload={onDownloadArtifact} onRefresh={onRefreshArtifact} onOpen={onArtifactOpen} />
@@ -628,7 +619,7 @@ const MessageRow = memo(
         if (part.type === 'text') {
           if (part.value.trim()) {
             blocks.push(
-              <div key={`t-${i}`} className="max-w-[90%] pl-1 py-1 text-[0.8125rem] leading-7">
+              <div key={`t-${i}`} className="max-w-[90%] pl-1 py-1 text-content-base leading-7">
                 <MarkdownMessage
                   content={part.value}
                   streaming={isStreaming}
@@ -699,7 +690,7 @@ const MessageRow = memo(
       if (blocks.length === 0 && !isStreaming && !msg.stopped) {
         const generatedNothing = !content.trim() && !msg.attachments?.length && !msg.artifacts?.length;
         blocks.push(
-          <span key="empty" className="pl-1 text-[0.8125rem] chat-text-muted-400/40 italic">
+          <span key="empty" className="pl-1 text-content-base chat-text-muted-400/40 italic">
             {generatedNothing ? t('No response was generated. Please try again.') : '...'}
           </span>,
         );
@@ -708,69 +699,64 @@ const MessageRow = memo(
       return blocks;
     };
 
-    // Build the file cards shown on a user message. A successfully-uploaded file
-    // carries a server `fileId`, so it renders as the same download card as an
-    // agent-generated attachment (re-using the host download proxy via
-    // `onDownloadFile`) — uploaded files must stay downloadable, not just
-    // displayed. Files still uploading (no `fileId` / not `done`) or hosts
-    // without a download handler fall back to a static chip. On conversation
-    // restore the backend re-surfaces user uploads as `attachments` (there are
-    // no live `files`), so those are rendered too.
-    const buildUserFileBlocks = (): React.ReactNode[] => {
-      const blocks: React.ReactNode[] = [];
+    // The files of a user message, shown inside its bubble above the text. A
+    // successfully-uploaded file carries a server `fileId`, so it opens through
+    // the host download proxy (`onDownloadFile`) like an agent's attachment, and
+    // a picture the host can serve is a thumbnail. Files still uploading (no
+    // `fileId` / not `done`) or hosts without a download handler show as a chip
+    // that does nothing. On conversation restore the backend re-surfaces user
+    // uploads as `attachments` (there are no live `files`), so those count too.
+    const userAttachmentItems = (): MessageAttachmentItem[] => {
+      const items: MessageAttachmentItem[] = [];
       const seen = new Set<string>();
+      const fromAttachment = (att: ChatAttachment, key: string): MessageAttachmentItem => ({
+        key,
+        filename: att.filename,
+        type: att.type?.toUpperCase() ?? fileExtensionLabel(att.filename),
+        size: att.size,
+        imageUrl: onDownloadFile && resolveAttachmentUrl && isImageAttachment(att) ? resolveAttachmentUrl(att) : undefined,
+        onOpen: onDownloadFile ? () => onDownloadFile(att) : undefined,
+      });
 
       (msg.files ?? []).forEach((f, i) => {
-        const downloadable = !!(onDownloadFile && f.fileId && f.uploadStatus === 'done');
-        if (downloadable && f.fileId) {
+        if (onDownloadFile && f.fileId && f.uploadStatus === 'done') {
           seen.add(f.fileId);
-          blocks.push(
-            renderAttachmentCard(
+          items.push(
+            fromAttachment(
               { fileId: f.fileId, filename: f.name, type: fileExtensionLabel(f.name), size: f.size, contentType: f.type },
               `file-${f.fileId}-${i}`,
             ),
           );
         } else {
-          blocks.push(renderFileChip(f.name, `file-${i}`));
+          items.push({ key: `file-${i}`, filename: f.name, type: fileExtensionLabel(f.name), size: f.size });
         }
       });
 
       (msg.attachments ?? []).forEach((att, i) => {
         if (seen.has(att.fileId)) return;
         seen.add(att.fileId);
-        blocks.push(onDownloadFile ? renderAttachmentCard(att, `att-${att.fileId}-${i}`) : renderFileChip(att.filename, `att-${i}`));
+        items.push(fromAttachment(att, `att-${att.fileId}-${i}`));
       });
 
-      return blocks;
+      return items;
     };
+    const userAttachments = isAssistant ? [] : userAttachmentItems();
 
     // A conversation the message referenced with `@`: it opens in the panel
     // when the panel can open it, and otherwise just says what was referenced.
     const renderConversationRef = (ref: ChatConversationRef, i: number) => {
       const label = ref.title || (ref.key ? `@${ref.key}` : t('Untitled conversation'));
-      const chip = 'inline-flex items-center gap-1 max-w-[240px] px-2 py-0.5 rounded-full border text-[0.7rem]';
-      const content = (
-        <>
-          <MessageSquareIcon size={13} className="shrink-0" />
-          <span className="truncate">{label}</span>
-        </>
-      );
+      const icon = <MessageSquareIcon size={16} />;
       if (onOpenConversation && openableConversationIds?.has(ref.conversationId)) {
         return (
           <Tooltip key={`ref-${ref.conversationId}-${i}`} title={t('Open conversation')}>
-            <button
-              type="button"
-              onClick={() => onOpenConversation(ref.conversationId)}
-              className={`${chip} border-[var(--chat-accent-40)] text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]`}
-            >
-              {content}
-            </button>
+            <Chip label={label} severity="info" startIcon={icon} onClick={() => onOpenConversation(ref.conversationId)} />
           </Tooltip>
         );
       }
       return (
         <Tooltip key={`ref-${ref.conversationId}-${i}`} title={ref.key ? `@${ref.key}` : ''}>
-          <span className={`${chip} chat-border-200/10 chat-text-secondary-600/60`}>{content}</span>
+          <Chip label={label} startIcon={icon} />
         </Tooltip>
       );
     };
@@ -828,12 +814,8 @@ const MessageRow = memo(
               a thread that changed hands mid-way must keep each answer under
               the agent that wrote it.
             */}
-            <span className="font-semibold text-xs chat-text-900/100">{msg.agentName ?? agentName}</span>
+            <span className="font-semibold text-content-compact chat-text-900/100">{msg.agentName ?? agentName}</span>
           </div>
-        )}
-
-        {!isAssistant && ((msg.files?.length ?? 0) > 0 || (msg.attachments?.length ?? 0) > 0) && (
-          <div className="flex gap-1.5 flex-wrap mb-1.5 justify-end">{buildUserFileBlocks()}</div>
         )}
 
         {!isAssistant && (msg.conversationRefs?.length ?? 0) > 0 && (
@@ -843,12 +825,18 @@ const MessageRow = memo(
         {isAssistant ? (
           <div data-testid="filigran-chat-assistant-message" className="flex flex-col gap-1.5 w-full items-start">
             {buildAssistantBlocks()}
-            {msg.stopped && !isStreaming && <p className="pl-1 text-[0.75rem] italic chat-text-muted-400/40">{t('Stopped')}</p>}
+            {msg.stopped && !isStreaming && <p className="pl-1 text-content-compact italic chat-text-muted-400/40">{t('Stopped')}</p>}
             {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-full ml-1 animate-pulse" />}
           </div>
         ) : (
-          <div data-testid="filigran-chat-user-message" className="max-w-[90%] chat-user-bubble leading-6 whitespace-pre-wrap break-words">
-            {userText}
+          // One message, one bubble: its files sit inside it, above the text.
+          <div className="flex max-w-[90%] flex-col items-end gap-1.5 chat-user-bubble" data-testid="filigran-chat-user-bubble">
+            {userAttachments.length > 0 && <MessageAttachments items={userAttachments} requestHeaders={requestHeaders} t={t} />}
+            {(!!userText || userAttachments.length === 0) && (
+              <div data-testid="filigran-chat-user-message" className="w-full leading-6 whitespace-pre-wrap break-words">
+                {userText}
+              </div>
+            )}
           </div>
         )}
 
@@ -869,20 +857,16 @@ const MessageRow = memo(
           <div className="mt-0.5 flex flex-wrap items-center gap-0.5 chat-text-muted-400/40 select-none">
             {!msg.timestampUnknown && <MessageTime timestamp={msg.timestamp} locale={locale} />}
             {hasReasoningDetails && (
-              <Tooltip title={reasoningLabel}>
-                <button
-                  type="button"
-                  onClick={() => setShowReasoning((v) => !v)}
-                  className={`${FOOTER_BUTTON} ${
-                    cutShort ? 'opacity-100 text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300' : DIMMED_BUTTON
-                  }`}
-                  aria-label={reasoningLabel}
-                  aria-haspopup="dialog"
-                  aria-expanded={showReasoning}
-                >
-                  {cutShort ? <AlertTriangleIcon size={14} /> : <InfoIcon size={14} />}
-                </button>
-              </Tooltip>
+              <ChatIconButton
+                label={reasoningLabel}
+                // A reply cut short shows its warning glyph in the panel's warning tone.
+                icon={cutShort ? <AlertTriangleIcon size={16} className="text-[var(--chat-warning)]" /> : <InfoIcon size={16} />}
+                size="sm"
+                onClick={() => setShowReasoning((v) => !v)}
+                className={cutShort ? 'opacity-100' : DIMMED_BUTTON}
+                aria-haspopup="dialog"
+                aria-expanded={showReasoning}
+              />
             )}
             {showActions && (
               <>
@@ -1327,15 +1311,16 @@ export const ChatMessages = ({
     >
       {(hasEarlierMessages || onLoadEarlier) && (
         <div className="flex justify-center">
-          <button
-            type="button"
+          <Button
+            priority="secondary"
+            size="sm"
+            // disabled, not loading: the label itself says it loads, which the DS spinner would hide.
             disabled={loadingEarlier}
+            startIcon={<ChevronDownIcon size={16} className="rotate-180" />}
             onClick={() => void showEarlier()}
-            className="flex items-center gap-1.5 rounded-full border chat-border-200/10 px-3 py-1 text-[0.7rem] chat-text-secondary-500/50 transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)]"
           >
-            <ChevronDownIcon size={13} className="rotate-180" />
             {loadingEarlier ? t('Loading earlier messages…') : t('Load earlier messages')}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -1392,20 +1377,19 @@ export const ChatMessages = ({
           of the view to hold the way back to the end. */}
       <div className="sticky bottom-0 z-10 h-0">
         {!following && (
-          <Tooltip title={t('Scroll to bottom')} className="absolute bottom-1 left-1/2 inline-flex -translate-x-1/2">
-          <button
-            type="button"
+          // Over the thread's text: the outlined (secondary) DS icon button on the menu surface.
+          <ChatIconButton
+            label={t('Scroll to bottom')}
+            icon={<ChevronDownIcon size={20} />}
+            priority="secondary"
+            anchorClassName="absolute bottom-1 left-1/2 inline-flex -translate-x-1/2"
+            className="chat-menu-surface"
             onClick={() => {
               // The button goes once the view follows: the focus moves to the thread, not to the page.
               scrollRef.current?.focus({ preventScroll: true });
               follower.reveal();
             }}
-            aria-label={t('Scroll to bottom')}
-            className="rounded-full border chat-border-200/10 chat-menu-surface p-1.5 chat-text-secondary-500/50 shadow-md transition-colors hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
-          >
-            <ChevronDownIcon size={16} />
-          </button>
-          </Tooltip>
+          />
         )}
       </div>
     </div>

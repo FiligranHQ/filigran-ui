@@ -8,5 +8,4 @@ export { ChatThinking } from './ChatThinking';
 export { ChatWelcome } from './ChatWelcome';
 export { Dropdown } from './Dropdown';
 export { MarkdownMessage } from './MarkdownMessage';
-export { Spinner } from './Spinner';
 export { Tooltip } from './Tooltip';

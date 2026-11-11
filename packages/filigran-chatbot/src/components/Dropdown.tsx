@@ -16,6 +16,11 @@ interface DropdownProps {
 const GAP = 4;
 const EDGE_MARGIN = 8;
 
+/**
+ * The panel's floating list, portalled into the chatbot root (`findChatbotRoot`)
+ * where the theme is declared, not the DS `Menu`/`Popover`, which portal to
+ * `document.body` under host bars (fds-migration/LIBRARY-FEEDBACK.md, 2).
+ */
 export const Dropdown = ({ open, onClose, anchorRef, placement = 'bottom-start', width = 280, children }: DropdownProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -56,7 +61,7 @@ export const Dropdown = ({ open, onClose, anchorRef, placement = 'bottom-start',
   return createPortal(
     <div
       ref={panelRef}
-      className="fixed z-[10000] chat-radius-md overflow-hidden border chat-border-200/10 chat-menu-surface shadow-xl"
+      className="fixed z-[10000] chat-radius-md overflow-hidden border chat-border-200/10 chat-menu-surface shadow-global-shadow"
       style={{ top: pos.top, left: pos.left, width }}
     >
       {children}

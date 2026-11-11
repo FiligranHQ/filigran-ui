@@ -17,6 +17,128 @@
  */
 @source '../';
 
+/*
+ * The classes @filigran/design-system's <Icon> puts on every glyph (its size
+ * variants and alignment) and the fill a pressed feedback glyph takes: the
+ * package is external to the bundle, so its source is never scanned here.
+ */
+@source inline('inline-block shrink-0 align-middle size-4 size-5 size-6 fill-current');
+
+/*
+ * The classes @filigran/design-system's <IconButton> renders (default and
+ * destructive, tertiary priority, sizes sm and md, its focus ring, disabled and
+ * active states), for the same reason: the package is not scanned here.
+ */
+@source inline('border-0 bg-transparent p-0 m-0 box-border text-inherit cursor-pointer font-[family-name:inherit] font-[number:inherit] text-[length:inherit] leading-[inherit] inline-flex items-center justify-center rounded-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-focus disabled:pointer-events-none focus-visible:ring-filigran-brand-primary focus-visible:ring-feedback-error-primary disabled:text-icon-disabled aria-disabled:text-icon-disabled aria-disabled:bg-transparent h-6 w-6 h-9 w-9 text-icon-highlight hover:bg-filigran-brand-primary-transparency-10 active:bg-filigran-brand-primary-transparency-10 bg-filigran-brand-primary-transparency-10 text-feedback-error-primary hover:bg-feedback-error-secondary-transparency-20 active:bg-feedback-error-secondary-transparency-20 bg-feedback-error-secondary-transparency-20');
+
+/*
+ * The classes @filigran/design-system's <Button> renders (default and
+ * destructive, primary, secondary and tertiary priority, sizes sm and md, its
+ * label type, focus ring, disabled state) and the filled and outlined
+ * <IconButton>: the approval card, the artifact card, the composer's held
+ * message and file chips, the conversation list's retry.
+ */
+@source inline('no-underline whitespace-nowrap gap-2 text-content-button font-content-button font-semibold leading-content-button tracking-content-button data-[disabled]:pointer-events-none h-6 px-2 h-9 px-4 border disabled:bg-elevation-disabled disabled:text-default-primary disabled:border-transparent data-[disabled]:bg-elevation-disabled data-[disabled]:text-default-primary data-[disabled]:border-transparent disabled:text-default-disabled disabled:border-elevation-disabled data-[disabled]:text-default-disabled data-[disabled]:border-elevation-disabled aria-disabled:bg-elevation-disabled aria-disabled:text-default-primary aria-disabled:border-elevation-disabled bg-filigran-brand-primary text-negative-primary hover:bg-filigran-brand-tertiary active:bg-filigran-brand-tertiary border-filigran-brand-primary-transparency-55 text-filigran-brand-primary bg-feedback-error-primary hover:bg-feedback-error-tertiary active:bg-feedback-error-tertiary border-feedback-error-primary');
+
+/*
+ * The classes @filigran/design-system's <Menu> renders (MenuContent,
+ * MenuItem, MenuLabel, MenuSeparator): the panel surface, the 36 px row, its
+ * hover, selected and disabled states, the caption label, the group rule.
+ */
+@source inline('group/menu-item relative flex min-h-9 w-full cursor-pointer select-none items-end items-center gap-2 px-2 px-4 py-1 pb-1 h-8 text-left outline-none font-content-base text-content-base leading-content-base tracking-content-base font-content-caption text-content-caption leading-content-caption tracking-content-caption text-input-value text-default-secondary data-[highlighted]:bg-input-hover data-[selected]:bg-input-hover data-[state=open]:bg-input-hover data-[disabled]:pointer-events-none data-[disabled]:text-input-disabled group-data-[highlighted]/menu-item:text-default-primary group-data-[disabled]/menu-item:text-default-disabled ring-focus focus-visible:z-10 rounded-sm bg-elevation-highlight min-w-50 max-w-75 shadow-global-shadow max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-x-hidden overflow-y-auto opacity-0 transition-opacity duration-150 motion-reduce:transition-none data-[state=open]:opacity-100 data-[state=closed]:opacity-0 z-[10000] my-1 h-px border-t border-elevation-subtle');
+
+/*
+ * The classes @filigran/design-system's <Chip> renders for the welcome screen's
+ * suggestions (neutral, clickable, md, no delete): its fill and the stacked
+ * hover and focus layer, its box, its label cut, its focus ring.
+ */
+@source inline('relative inline-flex items-center gap-2 h-6 px-2 truncate max-w-[250px] bg-feedback-neutral-secondary-transparency-30 before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:pointer-events-none before:transition-opacity before:content-[\'\'] before:bg-feedback-neutral-secondary-transparency-30 hover:before:opacity-100 focus-visible:before:opacity-100 focus-visible:ring-offset-1');
+
+/*
+ * The rest of <Chip> (UX round 1 of filigran-ui#521, B2): the attachment chip with its delete button,
+ * the file and conversation-reference chips (info when clickable), the agent pill, the warning chip;
+ * <Badge> for the agent badges; <Spinner> for every busy indicator (B1), stopped under reduced motion.
+ */
+@source inline('box-border m-0 p-0 border-0 inline-flex items-center rounded-sm transition border border-transparent bg-input-default hover:border-input-hover border-input-error hover:border-input-error focus-within:outline-none focus-within:ring-2 focus-within:ring-focus focus-within:ring-offset-2 focus-within:ring-offset-focus focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-focus h-9 h-7 w-55 w-50 w-full gap-2 px-2 pl-3 pr-4 pt-4 pb-2 pr-0 text-1 text-2 text-3 font-sans-plex font-normal font-medium leading-normal cursor-text flex-1 min-w-0 bg-transparent outline-none placeholder:text-input-placeholder disabled:placeholder:text-input-disabled text-input-value text-input-disabled text-input-label text-input-helper text-input-required text-input-error group-focus-within:text-icon-highlight resize resize-none resize-x resize-y disabled:bg-transparent disabled:border-elevation-disabled disabled:text-input-disabled disabled:pointer-events-none [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-ms-clear]:hidden flex flex-col');
+@source inline('group h-full rounded-[inherit] content-base text-default-primary text-feedback-neutral-primary text-icon-info text-icon-warning text-icon-error bg-feedback-info-secondary-transparency-30 before:bg-feedback-info-secondary-transparency-30 bg-feedback-warning-secondary-transparency-30 before:bg-feedback-warning-secondary-transparency-30 bg-feedback-error-secondary-transparency-30 before:bg-feedback-error-secondary-transparency-30 group-hover:before:opacity-100 group-focus-within:before:opacity-100 ring-focus stroke-default stroke-disabled pointer-events-none rounded-lg h-5 min-w-5 px-1.5 content-compact-medium size-4 motion-safe:animate-spin stroke-highlight sr-only');
+
+/*
+ * The design-system colours those classes name, read from the host's own
+ * @filigran/design-system variables (`--icon-highlight`, `--color-filigran-*`,
+ * `--color-feedback-*`, `--bg-elevation-default`) where it loads the design
+ * system, so the panel's controls are the host's; the panel's accent, danger
+ * tone and surface otherwise. `inline reference`: the value goes into each
+ * utility, and no variable is declared on the panel, which would shadow the
+ * host's.
+ */
+@theme inline reference {
+  --color-icon-highlight: var(--icon-highlight, var(--chat-accent));
+  --color-icon-disabled: var(--icon-disabled, color-mix(in oklab, currentColor 40%, transparent));
+  --color-filigran-brand-primary: var(--color-filigran-brand-primary, var(--chat-accent));
+  --color-filigran-brand-primary-transparency-10: var(--color-filigran-brand-primary-transparency-10, color-mix(in srgb, var(--chat-accent) 10%, transparent));
+  --color-feedback-error-primary: var(--color-feedback-error-primary, var(--chat-danger));
+  --color-feedback-error-secondary-transparency-20: var(--color-feedback-error-secondary-transparency-20, color-mix(in srgb, var(--chat-danger) 20%, transparent));
+  --color-feedback-neutral-secondary-transparency-30: var(--color-feedback-neutral-secondary-transparency-30, color-mix(in srgb, currentColor 14%, transparent));
+  --color-feedback-info-secondary-transparency-30: var(--color-feedback-info-secondary-transparency-30, color-mix(in srgb, var(--chat-accent) 14%, transparent));
+  --color-feedback-warning-secondary-transparency-30: var(--color-feedback-warning-secondary-transparency-30, color-mix(in srgb, var(--chat-warning) 14%, transparent));
+  --color-feedback-error-secondary-transparency-30: var(--color-feedback-error-secondary-transparency-30, color-mix(in srgb, var(--chat-danger) 14%, transparent));
+  --color-feedback-neutral-primary: var(--color-feedback-neutral-primary, currentColor);
+  --color-icon-info: var(--icon-info, var(--chat-accent));
+  --color-icon-warning: var(--icon-warning, var(--chat-warning));
+  --color-icon-error: var(--icon-error, var(--chat-danger));
+  --color-highlight: var(--stroke-highlight, var(--icon-highlight, var(--chat-accent)));
+  --color-default: var(--stroke-default, currentColor);
+  --color-disabled: var(--stroke-disabled, color-mix(in oklab, currentColor 40%, transparent));
+  --color-focus: var(--bg-elevation-default, var(--filigran-chat-surface, var(--chat-default-surface)));
+  --color-filigran-brand-tertiary: var(--color-filigran-brand-tertiary, color-mix(in srgb, var(--chat-accent) 85%, black));
+  --color-filigran-brand-primary-transparency-55: var(--color-filigran-brand-primary-transparency-55, color-mix(in srgb, var(--chat-accent) 55%, transparent));
+  --color-feedback-error-tertiary: var(--color-feedback-error-tertiary, color-mix(in srgb, var(--chat-danger) 85%, black));
+  --color-negative-primary: var(--text-negative-primary, var(--color-white));
+  /* The design system Menu (the view switcher): its panel, row hover, row text and label. */
+  --color-elevation-highlight: var(--bg-elevation-highlight, var(--filigran-chat-surface-raised, var(--chat-default-menu-surface)));
+  --color-input-hover: var(--bg-input-hover, var(--filigran-chat-surface-hover, var(--chat-default-icon-hover)));
+  --color-input-value: var(--text-input-value, currentColor);
+  --color-input-disabled: var(--text-input-disabled, color-mix(in oklab, currentColor 40%, transparent));
+  --color-default-secondary: var(--text-default-secondary, color-mix(in oklab, currentColor 70%, transparent));
+  --color-elevation-subtle: var(--border-elevation-subtle, var(--filigran-chat-border, color-mix(in oklab, currentColor 12%, transparent)));
+  --shadow-global-shadow: var(--shadow-global-shadow, var(--chat-ds-global-shadow));
+  --text-content-base: var(--text-content-base, 0.875rem);
+  --font-content-base: var(--font-content-base, inherit);
+  --leading-content-base: var(--leading-content-base, 1.5);
+  --tracking-content-base: var(--tracking-content-base, normal);
+  --text-content-caption: var(--text-content-caption, 0.75rem);
+  --font-content-caption: var(--font-content-caption, inherit);
+  --leading-content-caption: var(--leading-content-caption, 1.5);
+  --tracking-content-caption: var(--tracking-content-caption, normal);
+  /* The type scale of every chat text (chatbot 3.23.0, slice 3): compact (12px) for meta lines, labels and chips,
+     base (14px) for titles, rows and the message text, title-jumbo for the welcome emoji. No arbitrary text-[..rem]. */
+  --text-content-compact: var(--text-content-compact, var(--text-2, 0.75rem));
+  --text-title-jumbo: var(--text-title-jumbo, var(--text-10, 2.625rem));
+  /* Title steps of the DS named styles (UX round 1 of filigran-ui#521, B5): title-sm (16px) for the voice-call
+     agent name and the header agent emoji, title-md (20px) for the welcome greeting. No text-xs/sm/base/lg/xl. */
+  --text-title-sm: var(--text-title-sm, var(--text-4, 1rem));
+  --text-title-md: var(--text-title-md, var(--text-6, 1.25rem));
+  --color-default-primary: var(--text-default-primary, currentColor);
+  --color-default-disabled: var(--text-default-disabled, color-mix(in oklab, currentColor 40%, transparent));
+  /* One name for the DS's two disabled tokens: the fill (--bg-) and the border (--border-elevation-disabled) share it. */
+  --color-elevation-disabled: var(--bg-elevation-disabled, color-mix(in oklab, currentColor 12%, transparent));
+  --text-content-button: var(--text-content-button, var(--text-3, 0.875rem));
+  --font-content-button: var(--font-content-button, inherit);
+  --leading-content-button: var(--leading-content-button, 1.5);
+  --tracking-content-button: var(--tracking-content-button, normal);
+  /* The design system SearchField and Textarea (UX round 1 of filigran-ui#521, B3): field fill, placeholder,
+     label, helper, error, and the 12/14/16px steps they name (text-1/2/3). */
+  --color-input-default: var(--bg-input-default, var(--filigran-chat-surface-subtle, color-mix(in oklab, currentColor 6%, transparent)));
+  --color-input-placeholder: var(--text-input-placeholder, color-mix(in oklab, currentColor 55%, transparent));
+  --color-input-label: var(--text-input-label, color-mix(in oklab, currentColor 70%, transparent));
+  --color-input-helper: var(--text-input-helper, color-mix(in oklab, currentColor 70%, transparent));
+  --color-input-required: var(--text-input-required, var(--chat-danger));
+  --color-input-error: var(--text-input-error, var(--chat-danger));
+  --text-1: var(--text-1, 0.75rem);
+  --text-2: var(--text-2, 0.75rem);
+  --text-3: var(--text-3, 0.875rem);
+}
+
 @plugin "tailwindcss-scoped-preflight" {
   isolationStrategy: inside;
   selector: .filigran-chatbot;
@@ -31,6 +153,34 @@
  * look. A class names that look: `chat-text-secondary-700/80` is gray-700 in
  * light mode and white at 80% in dark, as `--chat-dark` says which.
  */
+/*
+ * The design system's palette and elevation shadow (@filigran/design-system
+ * src/tokens/theme.css, 1.5.0), copied value for value: the only colour
+ * literals of the panel's own look besides the code colours below. A host that
+ * loads the design system passes its semantic tokens (`--bg-elevation-*`,
+ * `--border-elevation-*`, `--text-*`), read first everywhere; these are the
+ * panel's look without them. postcss/stylesheet.test.js refuses a colour
+ * literal anywhere else.
+ */
+.filigran-chatbot {
+  --chat-ds-white: #ffffff;
+  --chat-ds-gray-50: #f4f4f6;
+  --chat-ds-gray-100: #f2f2f3;
+  --chat-ds-gray-200: #cacbce;
+  --chat-ds-gray-300: #afb0b6;
+  --chat-ds-gray-400: #95969d;
+  --chat-ds-gray-900: #18191b;
+  --chat-ds-grayblue-500: #1f3965;
+  --chat-ds-grayblue-600: #182a4e;
+  --chat-ds-grayblue-700: #13213e;
+  --chat-ds-grayblue-850: #0d172b;
+  /* The context usage bar's six categories (ContextUsageIndicator). */
+  --chat-ds-purple-300: #a47af0;
+  --chat-ds-turquoise-300: #52ffd1;
+  --chat-ds-red-300: #f57266;
+  --chat-ds-green-300: #72e978;
+  --chat-ds-global-shadow: 0px 2px 4px 0px #00000066;
+}
 .filigran-chatbot {
   --chat-dark: 0;
   /*
@@ -56,19 +206,24 @@
    */
   --chat-danger: var(--filigran-chat-danger, var(--color-red-700));
   --chat-warning: var(--filigran-chat-warning, var(--color-amber-800));
-  --chat-default-surface: var(--color-gray-50);
-  --chat-default-surface-raised: var(--color-white);
-  --chat-default-menu-surface: var(--color-white);
-  --chat-default-answer-text: var(--color-gray-900);
-  --chat-default-code-block: var(--color-gray-50);
-  --chat-default-code-inline: var(--color-gray-100);
-  --chat-default-skeleton-fill: color-mix(in oklab, var(--color-gray-200) 70%, transparent);
-  --chat-default-skeleton-card: color-mix(in oklab, var(--color-gray-100) 50%, transparent);
-  --chat-default-icon-hover: color-mix(in oklab, var(--color-gray-200) 60%, transparent);
-  --chat-default-detail-surface: color-mix(in oklab, var(--color-gray-50) 50%, transparent);
-  --chat-default-table-head: var(--color-gray-100);
-  --chat-default-table-stripe: color-mix(in oklab, var(--color-gray-50) 70%, transparent);
-  /* Code colours: GitHub light, contrast 4.5:1 or more on the block. */
+  /* The success tone (an approved tool call, a successful trace step): green-700 on the light surfaces. */
+  --chat-success: var(--filigran-chat-success, var(--color-green-700));
+  /* The design system's light elevation layers: page gray-50, card white, menu white. */
+  --chat-default-surface: var(--chat-ds-gray-50);
+  --chat-default-surface-raised: var(--chat-ds-white);
+  --chat-default-menu-surface: var(--chat-ds-white);
+  --chat-default-answer-text: var(--chat-ds-gray-900);
+  --chat-default-code-block: var(--chat-ds-gray-50);
+  --chat-default-code-inline: var(--chat-ds-gray-100);
+  --chat-default-skeleton-fill: color-mix(in oklab, var(--chat-ds-gray-200) 70%, transparent);
+  --chat-default-skeleton-card: color-mix(in oklab, var(--chat-ds-gray-100) 50%, transparent);
+  --chat-default-icon-hover: color-mix(in oklab, var(--chat-ds-gray-200) 60%, transparent);
+  --chat-default-detail-surface: color-mix(in oklab, var(--chat-ds-gray-50) 50%, transparent);
+  --chat-default-table-head: var(--chat-ds-gray-100);
+  --chat-default-table-stripe: color-mix(in oklab, var(--chat-ds-gray-50) 70%, transparent);
+  /* Code colours: GitHub light, contrast 4.5:1 or more on the block. The design
+     system has no syntax palette; these stay the panel's own (audit table of
+     filigran-ui#521, documented exemption). */
   --chat-default-hl-comment: #6e7781;
   --chat-default-hl-string: #0a3069;
   --chat-default-hl-number: #0550ae;
@@ -83,9 +238,11 @@
   --chat-dark: 1;
   --chat-danger: var(--filigran-chat-danger, var(--color-red-400));
   --chat-warning: var(--filigran-chat-warning, var(--color-amber-300));
-  --chat-default-surface: #161622;
-  --chat-default-surface-raised: #1e1e2e;
-  --chat-default-menu-surface: #2a2a3e;
+  --chat-success: var(--filigran-chat-success, var(--color-green-400));
+  /* The design system's dark elevation layers (grayblue 850 / 700 / 600). */
+  --chat-default-surface: var(--chat-ds-grayblue-850);
+  --chat-default-surface-raised: var(--chat-ds-grayblue-700);
+  --chat-default-menu-surface: var(--chat-ds-grayblue-600);
   --chat-default-answer-text: color-mix(in oklab, var(--color-white) 90%, transparent);
   --chat-default-code-block: color-mix(in oklab, var(--color-white) 3%, transparent);
   --chat-default-code-inline: color-mix(in oklab, var(--color-white) 8%, transparent);
@@ -95,7 +252,7 @@
   --chat-default-detail-surface: color-mix(in oklab, var(--color-white) 1%, transparent);
   --chat-default-table-head: color-mix(in oklab, var(--color-white) 8%, transparent);
   --chat-default-table-stripe: color-mix(in oklab, var(--color-white) 2.5%, transparent);
-  /* Code colours: GitHub dark. */
+  /* Code colours: GitHub dark (documented exemption, as in light). */
   --chat-default-hl-comment: #8b949e;
   --chat-default-hl-string: #a5d6ff;
   --chat-default-hl-number: #79c0ff;
@@ -165,6 +322,14 @@
  */
 .filigran-chat-composer-box {
   border-radius: var(--filigran-chat-input-radius, var(--chat-radius-md));
+}
+/* The design system's Textarea: no border at rest, the hover tone under the
+ * pointer. Dictation keeps its red border (data-listening). */
+.filigran-chat-composer-box:not([data-listening]) {
+  border-color: transparent;
+}
+.filigran-chat-composer-box:not([data-listening]):hover {
+  border-color: var(--filigran-chat-input-border-hover, var(--filigran-chat-border, color-mix(in oklab, currentColor 24%, transparent)));
 }
 .filigran-chat-composer-box:not([data-working]):has(textarea:focus) {
   outline: 2px solid var(--filigran-chat-focus-ring, var(--chat-accent));
@@ -237,12 +402,12 @@
  * the global shadow, IBM Plex Sans 12px / 150%, 300px at most.
  */
 .filigran-chatbot {
-  --chat-default-tooltip-surface: #cacbce;
-  --chat-default-tooltip-text: #18191b;
+  --chat-default-tooltip-surface: var(--chat-ds-gray-200);
+  --chat-default-tooltip-text: var(--chat-ds-gray-900);
 }
 .dark .filigran-chatbot {
-  --chat-default-tooltip-surface: #1f3965;
-  --chat-default-tooltip-text: #f2f2f3;
+  --chat-default-tooltip-surface: var(--chat-ds-grayblue-500);
+  --chat-default-tooltip-text: var(--chat-ds-gray-100);
 }
 @utility chat-tooltip {
   box-sizing: border-box;
@@ -250,7 +415,7 @@
   border-radius: var(--radius-sm, 4px);
   background-color: var(--filigran-chat-tooltip-surface, var(--border-elevation-subtle, var(--chat-default-tooltip-surface)));
   color: var(--filigran-chat-tooltip-text, var(--text-default-primary, var(--chat-default-tooltip-text)));
-  box-shadow: var(--shadow-global-shadow, 0px 2px 4px 0px #00000066);
+  box-shadow: var(--shadow-global-shadow, var(--chat-ds-global-shadow));
   font-family: var(--font-content-compact, 'IBM Plex Sans', var(--font-sans));
   font-size: var(--text-content-compact, 12px);
   font-weight: var(--font-weight-content-compact, 400);
@@ -344,12 +509,11 @@
   }
 }
 
+/* The scrollbar thumb: the panel's text colour at 15 % (25 % on hover), so one
+   rule reads in both modes and follows a host's text token. */
 .filigran-chat-scrollable {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
-}
-.dark .filigran-chat-scrollable {
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: color-mix(in oklab, currentColor 15%, transparent) transparent;
 }
 .filigran-chat-scrollable::-webkit-scrollbar {
   width: 6px;
@@ -358,17 +522,11 @@
   background: transparent;
 }
 .filigran-chat-scrollable::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: color-mix(in oklab, currentColor 15%, transparent);
   border-radius: 9999px;
 }
-.dark .filigran-chat-scrollable::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-}
 .filigran-chat-scrollable::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.25);
-}
-.dark .filigran-chat-scrollable::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: color-mix(in oklab, currentColor 25%, transparent);
 }
 
 @keyframes chat-dot {
@@ -390,17 +548,17 @@
 @keyframes chat-reasoning-glow {
   0%,
   100% {
-    border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 15%, transparent);
+    border-left-color: color-mix(in srgb, var(--chat-accent) 15%, transparent);
   }
   50% {
-    border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 35%, transparent);
+    border-left-color: color-mix(in srgb, var(--chat-accent) 35%, transparent);
   }
 }
 
 /* The reasoning window's breathing accent edge (its left border only, no shadow);
    under reduced motion it stands still on a static accent border. */
 .filigran-chat-reasoning {
-  border-left-color: color-mix(in srgb, var(--chat-accent, hsl(197 100% 53%)) 25%, transparent);
+  border-left-color: color-mix(in srgb, var(--chat-accent) 25%, transparent);
   animation:
     chat-reasoning-glow 3s ease-in-out infinite,
     chat-fade-in 0.5s ease-out;
@@ -446,15 +604,32 @@
     color-mix(in srgb, var(--chat-accent) 25%, transparent) 150deg,
     transparent 220deg
   );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask: linear-gradient(black 0 0) content-box, linear-gradient(black 0 0);
   -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  mask: linear-gradient(black 0 0) content-box exclude, linear-gradient(black 0 0);
   animation: chat-active-border-spin 3s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .filigran-chat-active-border::before {
     animation: none;
     background: color-mix(in srgb, var(--chat-accent) 70%, transparent);
+  }
+}
+
+/* The dashed orbit of the voice-call button while the question is processed: a 112px
+   decoration around the agent logo, not a busy indicator (the label below says it),
+   so it is not the design-system Spinner. Still under reduced motion. */
+@keyframes chat-voice-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.filigran-chat-voice-orbit {
+  animation: chat-voice-orbit 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .filigran-chat-voice-orbit {
+    animation: none;
   }
 }
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
+import { ChatIconButton } from './ChatIconButton';
 import { AlertTriangleIcon, CloseIcon, InfoIcon, XCircleIcon } from './icons';
-import { Tooltip } from './Tooltip';
 
 /** How serious a notice is: its colour and its icon follow. */
 export type ChatNoticeTone = 'error' | 'warning' | 'info';
@@ -54,24 +54,21 @@ export const ChatNotice = ({
       role={role}
       data-tone={tone}
       data-testid={rest['data-testid']}
-      className={`filigran-chat-notice flex items-start gap-2 chat-radius-md border px-2.5 py-1.5 text-[0.75rem] leading-5 ${TONE_CLASS[tone]} ${className}`}
+      className={`filigran-chat-notice flex items-start gap-2 chat-radius-md border px-2.5 py-1.5 text-content-compact leading-5 ${TONE_CLASS[tone]} ${className}`}
     >
       <Icon size={14} className="mt-[3px] shrink-0" />
       <div className="min-w-0 flex-1 break-words">{children}</div>
       {onDismiss && (
-        // A 24 px hit area (WCAG 2.5.8) around the 12 px glyph, pulled into the
-        // padding so the notice keeps its height; the panel's own tooltip.
-        <Tooltip title={dismissLabel ?? ''}>
-          <button
-            type="button"
-            onClick={onDismiss}
-            aria-label={dismissLabel}
-            data-testid="filigran-chat-notice-dismiss"
-            className="-my-0.5 -mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center chat-radius-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
-          >
-            <CloseIcon size={12} />
-          </button>
-        </Tooltip>
+        // The design system's small icon button (24 px, WCAG 2.5.8), pulled into
+        // the padding so the notice keeps its height.
+        <ChatIconButton
+          label={dismissLabel ?? ''}
+          icon={<CloseIcon size={16} />}
+          size="sm"
+          onClick={onDismiss}
+          data-testid="filigran-chat-notice-dismiss"
+          anchorClassName="-my-0.5 -mr-1.5 inline-flex shrink-0"
+        />
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+import { Button } from '@filigran/design-system';
 import { useRef, useState } from 'react';
 import type { ChatContextBreakdown, ChatContextUsage, Translate } from '../types';
 import { compactCount, translate } from '../utils';
@@ -31,16 +32,17 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * two glances cannot be compared against itself.
  *
  * `color` is both the swatch and the stacked-bar segment, so the bar is readable
- * without a legend lookup. Labels name what the user can act on, not the
+ * without a legend lookup: a shade of the design system's palette, declared once
+ * in assets/index.css (`--chat-ds-*`), never a literal here. Labels name what the user can act on, not the
  * backend's internals: "Tool results" rather than "role=tool messages".
  */
 const ROWS: ReadonlyArray<{ field: keyof ChatContextBreakdown; label: (t: Translate) => string; color: string }> = [
-  { field: 'system', label: (t) => t('System prompt'), color: '#9ca3af' },
-  { field: 'tools', label: (t) => t('Tool definitions'), color: '#a78bfa' },
-  { field: 'dynamicTools', label: (t) => t('MCP & dynamic tools'), color: '#f0abfc' },
-  { field: 'summary', label: (t) => t('Summarized conversation'), color: '#fb7185' },
-  { field: 'toolResults', label: (t) => t('Tool results'), color: '#34d399' },
-  { field: 'conversation', label: (t) => t('Conversation'), color: '#a1a1aa' },
+  { field: 'system', label: (t) => t('System prompt'), color: 'var(--chat-ds-gray-400)' },
+  { field: 'tools', label: (t) => t('Tool definitions'), color: 'var(--chat-ds-purple-300)' },
+  { field: 'dynamicTools', label: (t) => t('MCP & dynamic tools'), color: 'var(--chat-ds-turquoise-300)' },
+  { field: 'summary', label: (t) => t('Summarized conversation'), color: 'var(--chat-ds-red-300)' },
+  { field: 'toolResults', label: (t) => t('Tool results'), color: 'var(--chat-ds-green-300)' },
+  { field: 'conversation', label: (t) => t('Conversation'), color: 'var(--chat-ds-gray-300)' },
 ];
 
 /**
@@ -65,8 +67,8 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
   const pruning = ratio >= PRUNE_RATIO;
   const compacting = ratio >= COMPACTION_RATIO;
 
-  const ringColor = pruning ? 'text-red-500' : compacting ? 'text-amber-500' : 'text-[var(--chat-accent)]';
-  const textColor = pruning ? 'text-red-500 dark:text-red-400' : compacting ? 'text-amber-600 dark:text-amber-400' : 'chat-text-muted-400/30';
+  const ringColor = pruning ? 'text-[var(--chat-danger)]' : compacting ? 'text-[var(--chat-warning)]' : 'text-[var(--chat-accent)]';
+  const textColor = pruning ? 'text-[var(--chat-danger)]' : compacting ? 'text-[var(--chat-warning)]' : 'chat-text-muted-400/30';
 
   const percent = Math.round(ratio * 100);
   const counts = `${compactCount(used)}/${compactCount(limit)}`;
@@ -90,7 +92,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
   const gauge = (
     <span className="flex items-center gap-1.5">
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className={ringColor} aria-hidden="true">
-        <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} className="stroke-gray-200 dark:stroke-white/15" />
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} className="stroke-[var(--chat-ds-gray-200)] dark:stroke-white/15" />
         <circle
           cx={SIZE / 2}
           cy={SIZE / 2}
@@ -107,7 +109,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
           className="transition-[stroke-dashoffset] duration-500"
         />
       </svg>
-      <span className={`text-[0.68rem] tabular-nums ${textColor}`}>{percent}%</span>
+      <span className={`text-content-compact tabular-nums ${textColor}`}>{percent}%</span>
     </span>
   );
 
@@ -124,25 +126,26 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
   return (
     <>
       <Tooltip title={open ? '' : translate(t, '{summary} — click for details', { summary })}>
-        <button
+        {/* The design system's small tertiary Button around the gauge (its hover, focus ring and active states). */}
+        <Button
           ref={anchorRef}
-          type="button"
+          priority="tertiary"
+          size="sm"
           onClick={() => setOpen((prev) => !prev)}
           aria-label={`${summary} (${percent}%)`}
           aria-haspopup="dialog"
           aria-expanded={open}
-          className="flex items-center chat-radius-sm px-1 -mx-1 py-0.5 transition-colors hover:chat-surface-hover-100/10"
         >
           {gauge}
-        </button>
+        </Button>
       </Tooltip>
 
       <Dropdown open={open} onClose={() => setOpen(false)} anchorRef={anchorRef} placement="bottom-end" width={296}>
         <div className="px-3.5 pt-3 pb-1 flex items-baseline justify-between gap-3">
-          <span className={`text-[0.8125rem] tabular-nums ${textColor}`}>{translate(t, '{percent}% full', { percent })}</span>
+          <span className={`text-content-base tabular-nums ${textColor}`}>{translate(t, '{percent}% full', { percent })}</span>
           {/* The tilde is load-bearing: these are char-derived estimates, and a
               bare "168k/200k" would read as a measured count. */}
-          <span className="text-[0.7rem] tabular-nums chat-text-muted-400/40 shrink-0">~{tokens}</span>
+          <span className="text-content-compact tabular-nums chat-text-muted-400/40 shrink-0">~{tokens}</span>
         </div>
 
         {/* One stacked bar over the whole window: the segments are the legend's
@@ -174,8 +177,8 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
                   dot: a round swatch reads as a bullet rather than as the key
                   to the bar's segment. */}
               <span className="h-2 w-2 shrink-0 chat-radius-sm" style={{ backgroundColor: row.color }} aria-hidden="true" />
-              <span className="text-[0.75rem] chat-text-secondary-700/70 truncate">{row.label(t)}</span>
-              <span className="ml-auto text-[0.7rem] tabular-nums chat-text-muted-500/40 shrink-0">{compactCount(breakdown?.[row.field] ?? 0)}</span>
+              <span className="text-content-compact chat-text-secondary-700/70 truncate">{row.label(t)}</span>
+              <span className="ml-auto text-content-compact tabular-nums chat-text-muted-500/40 shrink-0">{compactCount(breakdown?.[row.field] ?? 0)}</span>
             </div>
           ))}
         </div>
@@ -183,7 +186,7 @@ export const ContextUsageIndicator = ({ usage, t }: ContextUsageIndicatorProps) 
         {compacting && (
           // The one line that turns a readout into something actionable: at this
           // point the backend is already dropping detail from older turns.
-          <p className={`px-3.5 pt-1 pb-3 text-[0.68rem] leading-snug ${textColor}`}>{headline}</p>
+          <p className={`px-3.5 pt-1 pb-3 text-content-compact leading-snug ${textColor}`}>{headline}</p>
         )}
       </Dropdown>
     </>

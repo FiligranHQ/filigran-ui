@@ -12,6 +12,7 @@ import {
   XCircleIcon,
 } from './icons';
 import { cleanReasoningText, hostToolLabel } from './ChatThinking';
+import { ChatIconButton } from './ChatIconButton';
 import { ChatNotice } from './ChatNotice';
 import { findChatbotRoot, translate } from '../utils';
 
@@ -57,20 +58,21 @@ const ToolCallRow = ({
   return (
     <div className="border chat-border-200/6 chat-radius-md overflow-hidden">
       <button
+        data-ds-exempt="disclosure-row"
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
         className="w-full flex items-center gap-2.5 px-3 py-2 hover:chat-surface-hover-50/3 transition-colors text-left"
       >
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center chat-radius-sm bg-[var(--chat-accent)]/10 text-[0.65rem] font-medium text-[var(--chat-accent)]">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center chat-radius-sm bg-[var(--chat-accent)]/10 text-content-compact font-medium text-[var(--chat-accent)]">
           {index + 1}
         </span>
         {entry.success ? (
-          <CheckCircleIcon size={12} className="shrink-0 text-emerald-500 dark:text-emerald-400" />
+          <CheckCircleIcon size={12} className="shrink-0 text-[var(--chat-success)]" />
         ) : (
-          <XCircleIcon size={12} className="shrink-0 text-red-500 dark:text-red-400" />
+          <XCircleIcon size={12} className="shrink-0 text-[var(--chat-danger)]" />
         )}
-        <span className="flex-1 min-w-0 text-[0.8125rem] chat-text-secondary-700/80 truncate font-mono">
+        <span className="flex-1 min-w-0 text-content-base chat-text-secondary-700/80 truncate font-mono">
           {toolDisplayName(entry.name, toolLabels)}
         </span>
         <ChevronDownIcon size={14} className={`shrink-0 chat-text-muted-400/50 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
@@ -80,15 +82,15 @@ const ToolCallRow = ({
         <div className="border-t chat-border-200/6">
           {hasInput && (
             <div className="px-3 py-2 border-b chat-border-100/4 chat-detail-surface">
-              <p className="m-0 mb-1.5 text-[0.6rem] chat-text-muted-500/40 uppercase tracking-wider font-medium">{t('Input')}</p>
-              <pre className="m-0 text-[0.7rem] chat-text-secondary-600/60 font-mono whitespace-pre-wrap break-all leading-relaxed max-h-40 overflow-y-auto filigran-chat-scrollable">
+              <p className="m-0 mb-1.5 text-content-compact chat-text-muted-500/40 uppercase tracking-wider font-medium">{t('Input')}</p>
+              <pre className="m-0 text-content-compact chat-text-secondary-600/60 font-mono whitespace-pre-wrap break-all leading-relaxed max-h-40 overflow-y-auto filigran-chat-scrollable">
                 {inputDisplay}
               </pre>
             </div>
           )}
           <div className="px-3 py-2 chat-detail-surface">
-            <p className="m-0 mb-1.5 text-[0.6rem] chat-text-muted-500/40 uppercase tracking-wider font-medium">{t('Output')}</p>
-            <pre className="m-0 text-[0.7rem] chat-text-secondary-600/60 font-mono whitespace-pre-wrap break-all leading-relaxed max-h-48 overflow-y-auto filigran-chat-scrollable">
+            <p className="m-0 mb-1.5 text-content-compact chat-text-muted-500/40 uppercase tracking-wider font-medium">{t('Output')}</p>
+            <pre className="m-0 text-content-compact chat-text-secondary-600/60 font-mono whitespace-pre-wrap break-all leading-relaxed max-h-48 overflow-y-auto filigran-chat-scrollable">
               {outputDisplay || t('(no output)')}
             </pre>
           </div>
@@ -193,23 +195,15 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
               aria-modal="true"
               aria-label={t('Reasoning details')}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md max-h-full flex flex-col chat-radius-md border chat-border-200/10 chat-surface-raised shadow-[0_8px_32px_rgba(0,0,0,0.25)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+              className="w-full max-w-md max-h-full flex flex-col chat-radius-md border chat-border-200/10 chat-surface-raised shadow-global-shadow"
             >
               <div className="px-4 pt-3.5 pb-2.5 border-b chat-border-200/10">
                 <div className="flex items-center gap-2">
                   <WrenchIcon size={15} className="text-[var(--chat-accent)]" />
-                  <span className="flex-1 text-[0.875rem] font-semibold chat-text-900/100">{t('Reasoning details')}</span>
-                  <button
-                    ref={closeButtonRef}
-                    type="button"
-                    onClick={onClose}
-                    aria-label={t('Close')}
-                    className="w-7 h-7 flex items-center justify-center chat-radius-sm hover:chat-surface-hover-100/10 chat-text-muted-500/40 hover:chat-text-secondary-700/70 transition-colors"
-                  >
-                    <CloseIcon size={16} />
-                  </button>
+                  <span className="flex-1 text-content-base font-semibold chat-text-900/100">{t('Reasoning details')}</span>
+                  <ChatIconButton ref={closeButtonRef} label={t('Close')} icon={<CloseIcon size={16} />} size="sm" onClick={onClose} />
                 </div>
-                <p className="m-0 mt-0.5 text-[0.72rem] chat-text-muted-500/40">{summaryParts.join(' · ')}</p>
+                <p className="m-0 mt-0.5 text-content-compact chat-text-muted-500/40">{summaryParts.join(' · ')}</p>
               </div>
 
               <div className="px-4 py-3 overflow-y-auto filigran-chat-scrollable flex flex-col gap-3">
@@ -237,10 +231,10 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
                   <div>
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <BrainIcon size={13} className="text-[var(--chat-accent)]/70" />
-                      <span className="text-[0.72rem] font-medium chat-text-secondary-500/50">{t('Model reasoning')}</span>
+                      <span className="text-content-compact font-medium chat-text-secondary-500/50">{t('Model reasoning')}</span>
                     </div>
                     <div className="chat-radius-md border chat-border-200/6 chat-detail-surface px-2.5 py-2 max-h-44 overflow-y-auto filigran-chat-scrollable">
-                      <p className="m-0 whitespace-pre-wrap break-words text-[0.72rem] leading-5 chat-text-secondary-500/45">
+                      <p className="m-0 whitespace-pre-wrap break-words text-content-compact leading-5 chat-text-secondary-500/45">
                         {cleanReasoningText(reasoning)}
                       </p>
                     </div>
@@ -260,11 +254,11 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
                     <div>
                       {tools.map((tn, i) => (
                         <div key={`${tn}-${i}`} className="flex items-center gap-3 py-2 border-b chat-border-100/4 last:border-0">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center chat-radius-sm bg-[var(--chat-accent)]/10 text-[0.65rem] font-medium text-[var(--chat-accent)]">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center chat-radius-sm bg-[var(--chat-accent)]/10 text-content-compact font-medium text-[var(--chat-accent)]">
                             {i + 1}
                           </span>
                           <WrenchIcon size={12} className="shrink-0 chat-text-muted-400/50" />
-                          <span className="text-[0.8125rem] chat-text-secondary-700/80 truncate font-mono">{toolDisplayName(tn, toolLabels)}</span>
+                          <span className="text-content-base chat-text-secondary-700/80 truncate font-mono">{toolDisplayName(tn, toolLabels)}</span>
                         </div>
                       ))}
                     </div>
@@ -275,15 +269,15 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
                   <div>
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <ArrowRightLeftIcon size={13} className="text-[var(--chat-accent)]/70" />
-                      <span className="text-[0.72rem] font-medium chat-text-secondary-500/50">{t('Transfer chain')}</span>
+                      <span className="text-content-compact font-medium chat-text-secondary-500/50">{t('Transfer chain')}</span>
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {transfers.map((tr, i) => (
                         // Composite key: the same agent can appear twice in a
                         // chain (A -> B -> A) and older payloads have no id.
                         <div key={`${tr.agentId}-${i}`} className="flex items-center gap-1.5">
-                          {i > 0 && <span className="chat-text-muted-300/30 text-[0.72rem]">→</span>}
-                          <span className="inline-flex items-center gap-1 chat-radius-sm bg-[var(--chat-accent)]/10 px-2 py-0.5 text-[0.72rem] font-medium text-[var(--chat-accent)]">
+                          {i > 0 && <span className="chat-text-muted-300/30 text-content-compact">→</span>}
+                          <span className="inline-flex items-center gap-1 chat-radius-sm bg-[var(--chat-accent)]/10 px-2 py-0.5 text-content-compact font-medium text-[var(--chat-accent)]">
                             <BotIcon size={12} />
                             {tr.agentName}
                           </span>

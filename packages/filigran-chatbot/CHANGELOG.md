@@ -8,6 +8,36 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.23.0 — 2026-11-11
+
+### Changed
+
+- The composer draws its border as the design system's Textarea: none at
+  rest, `theme.inputBorderHover` (`--filigran-chat-input-border-hover`, the
+  panel border unset) under the pointer. Dictation keeps its red border and
+  the focus keeps its 2 px ring.
+- The panel's own look (no host theme) is the design system's palette: dark
+  surfaces grayblue 850 / 700 / 600 instead of three ad-hoc navy shades, the
+  tooltip, scrollbar and context usage colours from its scale, and every
+  floating surface (menus, the floating panel, the reasoning dialog, the row
+  actions bar) takes its one elevation shadow, `--shadow-global-shadow`. Host
+  tokens still win. The code colours stay GitHub's (the design system has no
+  syntax palette). A stylesheet test refuses any other colour literal and any
+  hand-written shadow in a component.
+- Every chat text uses the design system's type scale: meta lines, labels,
+  chips and counts are `text-content-compact` (12 px, was 9.6 to 12 px in
+  seven ad-hoc sizes), titles, rows, the composer and the message text
+  `text-content-base` (14 px, was 13 px), the welcome emoji
+  `text-title-jumbo`. Host tokens still win. A stylesheet test refuses any
+  arbitrary `text-[..rem]` or `text-[..px]` in a component.
+- Every error, warning and success colour reads the panel's feedback tones
+  instead of a Tailwind red, amber or emerald: the approval card and its
+  verdict badge, the context and quota gauges, the trace steps, the agent
+  list warnings, the voice call error ring, the delete confirmation. New theme
+  entry `theme.success` (`--filigran-chat-success`, a green unset) beside
+  `danger` and `warning`. A stylesheet test refuses any Tailwind palette shade
+  in a component.
+
 ## 3.22.0 — 2026-11-11
 
 ### Added

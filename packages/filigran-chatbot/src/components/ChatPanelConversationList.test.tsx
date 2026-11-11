@@ -62,6 +62,14 @@ const click = (element: Element | undefined) =>
     (element as HTMLElement).click();
     await settle(10);
   });
+// The design system's Menu opens on pointer down or on the keyboard, never on a
+// bare click: the test opens it the keyboard's way and picks a row by its role.
+const openMenu = (element: Element | undefined) =>
+  act(async () => {
+    element?.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await settle(10);
+  });
+const menuItem = (label: string) => [...document.body.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent?.trim() === label);
 
 test('a workspace group the user opened stays open when the list is hidden and shown again', async () => {
   fakeBackend([
@@ -104,8 +112,8 @@ test('a move the host refuses leaves the conversation where it was; one it agree
       return answer;
     },
   });
-  await click(button('Move to workspace'));
-  await click(button('Shared hunts'));
+  await openMenu(button('Move to workspace'));
+  await click(menuItem('Shared hunts'));
   assert.equal(asked.length, 1);
   assert.equal(asked[0][0].conversationId, 'c1');
   assert.equal(asked[0][1]?.id, 'w1');
@@ -113,8 +121,8 @@ test('a move the host refuses leaves the conversation where it was; one it agree
   assert.equal(alertText(), null, 'a refusal is the host’s: nothing to say');
 
   answer = true;
-  await click(button('Move to workspace'));
-  await click(button('Shared hunts'));
+  await openMenu(button('Move to workspace'));
+  await click(menuItem('Shared hunts'));
   assert.deepEqual(requests.find((r) => r.method === 'PATCH')?.body, { workspace_id: 'w1' });
 });
 
@@ -330,6 +338,22 @@ test('the agent own suggestions show as chips on the empty state', async () => {
     [...group!.querySelectorAll('button')].map((b) => b.textContent),
     ['Hunt APT28 in the last week', 'Triage new alerts'],
   );
+  // The design system's Chip (xtm-one#10911 UX round 2, B1): its 24px filled box, never a bordered pill.
+  for (const chip of group!.querySelectorAll('button')) {
+    assert.ok(chip.className.includes('h-6'), `a DS chip box: ${chip.className}`);
+    assert.ok(!chip.className.includes('rounded-full'), 'no pill');
+  }
+});
+
+test('the empty state draws the selected agent own icon, the panel mark only when it has none (xtm-one#10911 UX round 2, B4)', async () => {
+  fakeBackend([
+    (req) => (req.url === '/api/chat/agents' ? json([{ id: 'a1', name: 'Hunter', slug: 'hunter', icon: '🕵️', description: null }]) : undefined),
+    listRoute([]),
+  ]);
+  await render({});
+  const mark = container.querySelector('[data-chat-welcome-mark]');
+  assert.ok(mark, 'the welcome mark');
+  assert.equal(mark!.querySelector('[data-agent-icon="emoji"]')?.textContent, '🕵️');
 });
 
 test('the header shows the title and subtitle the host draws from the conversation, and its switcher links the agent page', async () => {
