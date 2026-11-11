@@ -244,7 +244,7 @@ test("a user's uploaded picture is downloaded from its lightbox", async () => {
   assert.equal(requests.filter((r) => r.url === '/api/chat/files/up1/download').length, 1);
 });
 
-test("a picture's lightbox is named after the picture, keeps Tab on its own controls, and its Expand button shows on focus", async () => {
+test("a picture's lightbox is named after the picture, keeps Tab on its own controls, and its thumbnail is a focusable button", async () => {
   fakeBackend([
     agentsRoute,
     restoreRoute([
@@ -256,9 +256,9 @@ test("a picture's lightbox is named after the picture, keeps Tab on its own cont
   await render({ conversationId: 'c1', requestHeaders: { Authorization: 'Bearer a' } });
   const picture = container.querySelector('img[alt="shot.png"]');
   assert.ok(picture, `the uploaded picture is shown: ${text()}`);
-  const expand = picture.parentElement?.querySelector('button');
-  assert.ok(expand, 'the picture has its Expand button beside it');
-  assert.ok(expand.className.includes('focus-visible:opacity-100'), 'visible once focused');
+  const thumbnail = picture.closest('button');
+  assert.ok(thumbnail, 'the thumbnail is a button: Enter and Space open it');
+  assert.ok(thumbnail.className.includes('focus-visible:ring-2'), 'with a ring once focused');
   await click(picture);
   const dialog = container.querySelector('[role="dialog"]')!;
   assert.equal(dialog.getAttribute('aria-label'), 'shot.png', 'named after the picture');
