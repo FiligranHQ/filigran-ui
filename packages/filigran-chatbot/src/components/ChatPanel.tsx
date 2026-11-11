@@ -372,6 +372,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     skipWait,
     readPendingApprovals,
     heldMessage,
+    heldReason,
     notice,
     fileNotice,
     dismissNotice,
@@ -1745,6 +1746,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               steerAttachments={steerAttachments}
               canHold={holdSendsDuringTurn}
               heldMessage={heldMessage}
+              heldReason={heldReason}
               notice={notice}
               fileNotice={fileNotice}
               onDismissNotice={dismissNotice}
