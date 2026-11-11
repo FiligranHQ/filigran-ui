@@ -1,10 +1,9 @@
-import { Button } from '@filigran/design-system';
+import { Button, Spinner } from '@filigran/design-system';
 import { useEffect, useState } from 'react';
 import type { ChatArtifact, ChatArtifactKind, Translate } from '../types';
 import { artifactDownloadLabel, artifactFacts, artifactKindLabel, artifactLink, isRenderInProgress, translate, videoRenderLabel } from '../utils';
 import { pollInTurn } from '../utils/polling';
 import { ClapperboardIcon, DownloadIcon, ExternalLinkIcon, FileTextIcon, PresentationIcon } from './icons';
-import { Spinner } from './Spinner';
 
 /** How often a card asks again about a video that is still rendering, and for how long. */
 const REFRESH_INTERVAL_MS = 10_000;
@@ -88,7 +87,7 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh, onOpen }: Art
           {facts && <span className="text-content-compact chat-text-secondary-500/50">{facts}</span>}
           {renderLabel && (
             <span className="flex items-center gap-1.5 text-content-compact chat-text-secondary-500/50" aria-live="polite">
-              {following && <Spinner size={10} />}
+              {following && <Spinner size="sm" />}
               {renderLabel}
             </span>
           )}
@@ -117,8 +116,9 @@ export const ArtifactCard = ({ artifact, t, onDownload, onRefresh, onOpen }: Art
                 priority="secondary"
                 size="sm"
                 disabled={busyFormat !== null}
+                loading={busyFormat === format}
                 aria-label={translate(t, 'Download {format}', { format: label })}
-                startIcon={busyFormat === format ? <Spinner size={16} /> : <DownloadIcon size={16} />}
+                startIcon={<DownloadIcon size={16} />}
                 onClick={() => void download(format)}
               >
                 {label}

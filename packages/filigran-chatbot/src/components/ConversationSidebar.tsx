@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from '@filigran/design-system';
+import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Spinner } from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
@@ -25,7 +25,6 @@ import {
   SidebarIcon,
   TrashIcon,
 } from './icons';
-import { Spinner } from './Spinner';
 import { ChatNotice } from './ChatNotice';
 import { ChatIconButton } from './ChatIconButton';
 import { Tooltip } from './Tooltip';
@@ -345,7 +344,7 @@ export const ConversationSidebar = ({
       <div className="flex-1 overflow-y-auto px-2 pb-3 filigran-chat-scrollable">
         {loading && conversations.length === 0 && (
           <div className="px-3 py-2">
-            <Spinner size={16} />
+            <Spinner size="sm" />
           </div>
         )}
 

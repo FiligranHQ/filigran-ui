@@ -583,6 +583,23 @@
   }
 }
 
+/* The dashed orbit of the voice-call button while the question is processed: a 112px
+   decoration around the agent logo, not a busy indicator (the label below says it),
+   so it is not the design-system Spinner. Still under reduced motion. */
+@keyframes chat-voice-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.filigran-chat-voice-orbit {
+  animation: chat-voice-orbit 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .filigran-chat-voice-orbit {
+    animation: none;
+  }
+}
+
 @keyframes chat-fade-in {
   from {
     opacity: 0;

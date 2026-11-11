@@ -109,7 +109,7 @@ export const ChatVoiceCall = ({
         >
           {live && <span className="absolute inset-0 rounded-full border border-[var(--chat-accent-40)] animate-ping" aria-hidden="true" />}
           {phase === 'processing' && (
-            <span className="absolute inset-3 rounded-full border-2 border-dashed border-[var(--chat-accent-40)] animate-spin" aria-hidden="true" />
+            <span className="absolute inset-3 rounded-full border-2 border-dashed border-[var(--chat-accent-40)] filigran-chat-voice-orbit" aria-hidden="true" />
           )}
           <span className="text-[var(--chat-accent)] [&>svg]:w-10 [&>svg]:h-10">{logoIcon}</span>
         </button>

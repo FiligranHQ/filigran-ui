@@ -1,4 +1,4 @@
-import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger } from '@filigran/design-system';
+import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger, Spinner } from '@filigran/design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, ChatPanelMode, Translate, XtmAgent } from '../types';
 import { groupAgents, timeAgo, translate } from '../utils';
@@ -24,7 +24,6 @@ import { ChatIconButton } from './ChatIconButton';
 import { ClearAllConversations } from './ClearAllConversations';
 import { ConversationListFailed } from './ConversationListFailed';
 import { Dropdown } from './Dropdown';
-import { Spinner } from './Spinner';
 import { Tooltip } from './Tooltip';
 
 interface ChatHeaderProps {
@@ -343,7 +342,7 @@ export const ChatHeader = ({
             there: it carries the agent-dashboard links below. */}
         {agents.length === 0 && agentsLoading && (
           <div className="px-4 py-2">
-            <Spinner size={16} />
+            <Spinner size="sm" />
           </div>
         )}
         {agents.length === 0 && !agentsLoading && agentsError && (
@@ -499,7 +498,7 @@ export const ChatHeader = ({
             <div className="max-h-72 overflow-y-auto filigran-chat-scrollable">
               {conversationsLoading && conversations.length === 0 && (
                 <div className="px-4 py-2">
-                  <Spinner size={16} />
+                  <Spinner size="sm" />
                 </div>
               )}
               {!conversationsLoading &&

@@ -1,4 +1,4 @@
-import { Button } from '@filigran/design-system';
+import { Button, Spinner } from '@filigran/design-system';
 import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
@@ -375,11 +375,8 @@ export const ChatInput = ({
                     : 'chat-border-200/10 chat-text-secondary-600/60'
               }`}
             >
-              {f.uploadStatus === 'pending' ? (
-                <span className="w-3.5 h-3.5 border border-current/30 border-t-current rounded-full animate-spin" />
-              ) : (
-                <FileIcon size={14} />
-              )}
+              {f.uploadStatus === 'pending' && <Spinner size="sm" tone="inherit" />}
+              {f.uploadStatus !== 'pending' && <FileIcon size={14} />}
               {f.name}
               {f.uploadStatus === 'error' && (
                 <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1">
