@@ -244,6 +244,15 @@ test('no hand-written spinner in a component: the design-system Spinner only', (
   assert.deepEqual(offending, []);
 });
 
+// Chips and badges are the design-system Chip and Badge: no hand-drawn rounded, bordered, padded pill.
+test('no hand-written pill in a component: the design-system Chip and Badge only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/rounded-full border[^"'`]*\bpx-|\bpx-1 [^"'`]*leading-4/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
 // A size relative to its text (the footnote <sup> at 0.7em) is not a size of the scale and stays.
 test('no arbitrary font size in a component: the design-system type scale only', () => {
   const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {

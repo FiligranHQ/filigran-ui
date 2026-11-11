@@ -55,6 +55,13 @@
 @source inline('relative inline-flex items-center gap-2 h-6 px-2 truncate max-w-[250px] bg-feedback-neutral-secondary-transparency-30 before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:pointer-events-none before:transition-opacity before:content-[\'\'] before:bg-feedback-neutral-secondary-transparency-30 hover:before:opacity-100 focus-visible:before:opacity-100 focus-visible:ring-offset-1');
 
 /*
+ * The rest of <Chip> (UX round 1 of filigran-ui#521, B2): the attachment chip with its delete button,
+ * the file and conversation-reference chips (info when clickable), the agent pill, the warning chip;
+ * <Badge> for the agent badges; <Spinner> for every busy indicator (B1), stopped under reduced motion.
+ */
+@source inline('group h-full rounded-[inherit] content-base text-default-primary text-feedback-neutral-primary text-icon-info text-icon-warning text-icon-error bg-feedback-info-secondary-transparency-30 before:bg-feedback-info-secondary-transparency-30 bg-feedback-warning-secondary-transparency-30 before:bg-feedback-warning-secondary-transparency-30 bg-feedback-error-secondary-transparency-30 before:bg-feedback-error-secondary-transparency-30 group-hover:before:opacity-100 group-focus-within:before:opacity-100 ring-focus stroke-default stroke-disabled pointer-events-none rounded-lg h-5 min-w-5 px-1.5 content-compact-medium size-4 motion-safe:animate-spin stroke-highlight sr-only');
+
+/*
  * The design-system colours those classes name, read from the host's own
  * @filigran/design-system variables (`--icon-highlight`, `--color-filigran-*`,
  * `--color-feedback-*`, `--bg-elevation-default`) where it loads the design
@@ -71,6 +78,16 @@
   --color-feedback-error-primary: var(--color-feedback-error-primary, var(--chat-danger));
   --color-feedback-error-secondary-transparency-20: var(--color-feedback-error-secondary-transparency-20, color-mix(in srgb, var(--chat-danger) 20%, transparent));
   --color-feedback-neutral-secondary-transparency-30: var(--color-feedback-neutral-secondary-transparency-30, color-mix(in srgb, currentColor 14%, transparent));
+  --color-feedback-info-secondary-transparency-30: var(--color-feedback-info-secondary-transparency-30, color-mix(in srgb, var(--chat-accent) 14%, transparent));
+  --color-feedback-warning-secondary-transparency-30: var(--color-feedback-warning-secondary-transparency-30, color-mix(in srgb, var(--chat-warning) 14%, transparent));
+  --color-feedback-error-secondary-transparency-30: var(--color-feedback-error-secondary-transparency-30, color-mix(in srgb, var(--chat-danger) 14%, transparent));
+  --color-feedback-neutral-primary: var(--color-feedback-neutral-primary, currentColor);
+  --color-icon-info: var(--icon-info, var(--chat-accent));
+  --color-icon-warning: var(--icon-warning, var(--chat-warning));
+  --color-icon-error: var(--icon-error, var(--chat-danger));
+  --color-highlight: var(--stroke-highlight, var(--icon-highlight, var(--chat-accent)));
+  --color-default: var(--stroke-default, currentColor);
+  --color-disabled: var(--stroke-disabled, color-mix(in oklab, currentColor 40%, transparent));
   --color-focus: var(--bg-elevation-default, var(--filigran-chat-surface, var(--chat-default-surface)));
   --color-filigran-brand-tertiary: var(--color-filigran-brand-tertiary, color-mix(in srgb, var(--chat-accent) 85%, black));
   --color-filigran-brand-primary-transparency-55: var(--color-filigran-brand-primary-transparency-55, color-mix(in srgb, var(--chat-accent) 55%, transparent));

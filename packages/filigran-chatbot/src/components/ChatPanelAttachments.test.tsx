@@ -28,7 +28,7 @@ const attach = (...files: File[]) =>
 const sized = (name: string, size: number, type = 'application/pdf') => new File([new Uint8Array(size)], name, { type });
 const notice = () => container.querySelector('[data-testid="filigran-chat-file-notice"]')?.textContent ?? null;
 const steerNotice = () => container.querySelector('[data-testid="filigran-chat-composer-notice"]')?.textContent ?? null;
-const chips = () => [...container.querySelectorAll('[data-testid="filigran-chat-composer"] .rounded-full')].map((e) => e.textContent ?? '');
+const chips = () => [...container.querySelectorAll('[data-testid="filigran-chat-composer"] [data-testid="filigran-chat-attachment"]')].map((e) => e.textContent ?? '');
 const textarea = () => container.querySelector<HTMLTextAreaElement>('textarea')!;
 const sendButton = () => container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!;
 

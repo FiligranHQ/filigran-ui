@@ -50,7 +50,7 @@ import {
   VolumeIcon,
   VolumeOffIcon,
 } from './icons';
-import { Button } from '@filigran/design-system';
+import { Button, Chip } from '@filigran/design-system';
 import { ArtifactCard } from './ArtifactCard';
 import { ChatIconButton } from './ChatIconButton';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
@@ -573,15 +573,7 @@ const MessageRow = memo(
     // A user-uploaded file shown as a non-clickable chip — used while the upload
     // is still in flight (no server `fileId` yet) or when no download handler is
     // wired by the host.
-    const renderFileChip = (name: string, key: string) => (
-      <span
-        key={key}
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border chat-border-200/10 text-content-compact chat-text-secondary-600/60"
-      >
-        <FileIcon size={14} />
-        {name}
-      </span>
-    );
+    const renderFileChip = (name: string, key: string) => <Chip key={key} label={name} startIcon={<FileIcon size={16} />} />;
 
     const renderArtifactCard = (artifact: ChatArtifact, key: string) => (
       <ArtifactCard key={key} artifact={artifact} t={t} onDownload={onDownloadArtifact} onRefresh={onRefreshArtifact} onOpen={onArtifactOpen} />
@@ -753,30 +745,17 @@ const MessageRow = memo(
     // when the panel can open it, and otherwise just says what was referenced.
     const renderConversationRef = (ref: ChatConversationRef, i: number) => {
       const label = ref.title || (ref.key ? `@${ref.key}` : t('Untitled conversation'));
-      const chip = 'inline-flex items-center gap-1 max-w-[240px] px-2 py-0.5 rounded-full border text-content-compact';
-      const content = (
-        <>
-          <MessageSquareIcon size={13} className="shrink-0" />
-          <span className="truncate">{label}</span>
-        </>
-      );
+      const icon = <MessageSquareIcon size={16} />;
       if (onOpenConversation && openableConversationIds?.has(ref.conversationId)) {
         return (
           <Tooltip key={`ref-${ref.conversationId}-${i}`} title={t('Open conversation')}>
-            <button
-              data-ds-exempt="conversation-ref-chip"
-              type="button"
-              onClick={() => onOpenConversation(ref.conversationId)}
-              className={`${chip} border-[var(--chat-accent-40)] text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]`}
-            >
-              {content}
-            </button>
+            <Chip label={label} severity="info" startIcon={icon} onClick={() => onOpenConversation(ref.conversationId)} />
           </Tooltip>
         );
       }
       return (
         <Tooltip key={`ref-${ref.conversationId}-${i}`} title={ref.key ? `@${ref.key}` : ''}>
-          <span className={`${chip} chat-border-200/10 chat-text-secondary-600/60`}>{content}</span>
+          <Chip label={label} startIcon={icon} />
         </Tooltip>
       );
     };

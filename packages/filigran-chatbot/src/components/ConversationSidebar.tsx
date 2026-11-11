@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Spinner } from '@filigran/design-system';
+import { Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Spinner } from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
@@ -918,14 +918,7 @@ const ConversationRow = ({
               </span>
             )}
             {c.agentName && (
-              <Tooltip title={c.agentName} truncated>
-                <span
-                  data-agent-pill=""
-                  className="min-w-0 truncate rounded-full border chat-border-200/10 chat-surface-subtle-100/6 px-1.5 leading-4 chat-text-secondary-500/50"
-                >
-                  {c.agentName}
-                </span>
-              </Tooltip>
+              <Chip data-agent-pill="" label={c.agentName} className="min-w-0 max-w-full" />
             )}
             {c.updatedAt && <span className="shrink-0 whitespace-nowrap">{timeAgo(c.updatedAt, t)}</span>}
           </span>

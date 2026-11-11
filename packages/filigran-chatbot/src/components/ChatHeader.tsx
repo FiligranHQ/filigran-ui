@@ -1,4 +1,4 @@
-import { Button, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger, Spinner } from '@filigran/design-system';
+import { Badge, Button, Chip, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger, Spinner } from '@filigran/design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatConversationSummary, ChatMode, ChatPanelMode, Translate, XtmAgent } from '../types';
 import { groupAgents, timeAgo, translate } from '../utils';
@@ -422,19 +422,8 @@ export const ChatHeader = ({
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-1">
                       <span className="text-content-base font-medium chat-text-900/100 truncate">{agent.name}</span>
-                      {agent.badges?.map((badge) => (
-                        <span
-                          key={badge}
-                          className="shrink-0 chat-radius-sm bg-[var(--chat-accent)]/10 px-1 text-content-compact leading-4 text-[var(--chat-accent)]"
-                        >
-                          {badge}
-                        </span>
-                      ))}
-                      {agent.disableChat && (
-                        <span className="shrink-0 chat-radius-sm bg-[var(--chat-warning)]/10 px-1 text-content-compact leading-4 text-[var(--chat-warning)]">
-                          {t('Not recommended for chat')}
-                        </span>
-                      )}
+                      {agent.badges?.map((badge) => <Badge key={badge} content={badge} tone="brand" className="shrink-0" />)}
+                      {agent.disableChat && <Chip label={t('Not recommended for chat')} severity="high" className="shrink-0" />}
                     </div>
                     {agent.description && <div className="text-content-compact chat-text-secondary-500/40 truncate">{agent.description}</div>}
                   </div>

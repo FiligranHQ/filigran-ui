@@ -1,8 +1,8 @@
-import { Button, Spinner } from '@filigran/design-system';
+import { Button, Chip, Spinner } from '@filigran/design-system';
 import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
-import { AttachFileIcon, CloseIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon, XCircleIcon } from './icons';
+import { AttachFileIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon, XCircleIcon } from './icons';
 import { ChatIconButton } from './ChatIconButton';
 import { ChatNotice } from './ChatNotice';
 import { useMentionMenu } from '../hooks/useMentionMenu';
@@ -365,33 +365,28 @@ export const ChatInput = ({
       {hasAttachments && (
         <div className="flex gap-1.5 flex-wrap mb-2">
           {attachedFiles.map((f, i) => (
-            <span
-              key={i}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-content-compact ${
-                f.uploadStatus === 'error'
-                  ? 'border-[var(--chat-danger)]/25 bg-[var(--chat-danger)]/[0.06] text-[var(--chat-danger)]'
-                  : f.uploadStatus === 'pending'
-                    ? 'chat-border-200/10 chat-text-muted-400/40'
-                    : 'chat-border-200/10 chat-text-secondary-600/60'
-              }`}
-            >
-              {f.uploadStatus === 'pending' && <Spinner size="sm" tone="inherit" />}
-              {f.uploadStatus !== 'pending' && <FileIcon size={14} />}
-              {f.name}
+            <span key={i} data-testid="filigran-chat-attachment" className="inline-flex min-w-0 max-w-full items-center gap-1">
+              <Chip
+                label={f.name}
+                severity={f.uploadStatus === 'error' ? 'critical' : 'neutral'}
+                startIcon={
+                  <>
+                    {f.uploadStatus === 'pending' && <Spinner size="sm" tone="inherit" />}
+                    {f.uploadStatus !== 'pending' && <FileIcon size={16} />}
+                  </>
+                }
+                aria-busy={f.uploadStatus === 'pending' || undefined}
+                onDelete={() => onFileRemove?.(i)}
+                deleteLabel={translate(t, 'Remove {name}', { name: f.name })}
+              />
               {f.uploadStatus === 'error' && (
-                <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1">
+                <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1 text-content-compact text-[var(--chat-danger)]">
                   <XCircleIcon size={12} className="shrink-0" />
                   <Tooltip title={f.uploadError ?? t('Upload failed')} className="inline-flex min-w-0">
                     <span className="max-w-[16rem] truncate">{f.uploadError ?? t('Upload failed')}</span>
                   </Tooltip>
                 </span>
               )}
-              <ChatIconButton
-                label={translate(t, 'Remove {name}', { name: f.name })}
-                icon={<CloseIcon size={16} />}
-                size="sm"
-                onClick={() => onFileRemove?.(i)}
-              />
             </span>
           ))}
         </div>
