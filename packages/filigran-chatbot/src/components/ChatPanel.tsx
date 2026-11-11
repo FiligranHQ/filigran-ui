@@ -48,7 +48,7 @@ import { statusSentence } from './ChatThinking';
 import { ChatVoiceCall } from './ChatVoiceCall';
 import { waitingGameUrl } from './ChatWaitingPanel';
 import { ChatWelcome } from './ChatWelcome';
-import { ConversationSidebar } from './ConversationSidebar';
+import { ConversationSidebar, type SidebarWorkspaces } from './ConversationSidebar';
 
 const FLOATING_WIDTH = 380;
 const FLOATING_HEIGHT = 560;
@@ -523,27 +523,33 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // A host may give the thread the whole width (a rail, a task pane): the
   // header's history menu then stands in for the list.
   const showConversationSidebar = isWide && historyEnabled && !hideConversationList;
+  // A docked panel or a floating window has no room for the list beside the
+  // thread (UX spec A): it opens as a drawer over it from the header's history
+  // button and closes on a pick.
+  const listAsDrawer = !isWide && historyEnabled && !hideConversationList;
+  const [listDrawerOpen, setListDrawerOpen] = useState(false);
+  const listShown = showConversationSidebar || (listAsDrawer && listDrawerOpen);
 
   // Re-read on entry AND whenever the active conversation changes, so a chat
   // created by the first send appears in the list. The header menu could fetch
   // lazily on open; a permanent list has no such moment, and a stale sidebar
   // that never shows the conversation you are in is worse than no sidebar.
   useEffect(() => {
-    if (showConversationSidebar) void refreshConversations();
-  }, [showConversationSidebar, conversationId, refreshConversations]);
+    if (listShown) void refreshConversations();
+  }, [listShown, conversationId, refreshConversations]);
 
   // The workspaces are also changed elsewhere (the XTM One web chat, another
   // tab): read on entry, after every write the sidebar makes (the hook
   // re-reads them), on each conversation switch, at the end of each turn and
   // on each return to the page - a group deleted there must not linger here.
   useEffect(() => {
-    if (showConversationSidebar) void refreshWorkspaces();
-  }, [showConversationSidebar, conversationId, refreshWorkspaces]);
+    if (listShown) void refreshWorkspaces();
+  }, [listShown, conversationId, refreshWorkspaces]);
 
   // Back to the page (from the XTM One tab, say): both lists may have moved.
   const lastReturnRefreshRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!showConversationSidebar) return;
+    if (!listShown) return;
     const onReturn = () => {
       if (document.visibilityState !== 'visible') return;
       const now = Date.now();
@@ -558,7 +564,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       document.removeEventListener('visibilitychange', onReturn);
       window.removeEventListener('focus', onReturn);
     };
-  }, [showConversationSidebar, refreshConversations, refreshWorkspaces]);
+  }, [listShown, refreshConversations, refreshWorkspaces]);
 
   // The host hears when a turn starts or stops running, once per change, with
   // how it ended, and that it stopped when the panel goes away in the middle
@@ -588,15 +594,20 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       // stays "New conversation" until the turn is read back. A conversation
       // that could not be created in its workspace (deleted elsewhere) is
       // read back unfiled: the workspaces are re-read with it.
-      if (showConversationSidebar) {
+      if (listShown) {
         void refreshConversations();
         void refreshWorkspaces();
       }
     }
     wasLoadingRef.current = turnRunning;
-  }, [turnRunning, refreshQuota, showConversationSidebar, refreshConversations, refreshWorkspaces]);
+  }, [turnRunning, refreshQuota, listShown, refreshConversations, refreshWorkspaces]);
 
   const handleHistoryMenuToggle = () => {
+    // The drawer reads its lists on opening (`listShown`).
+    if (listAsDrawer) {
+      setListDrawerOpen((open) => !open);
+      return;
+    }
     // Computed from the committed state in the event handler — NOT inside the
     // state updater, which must stay pure (StrictMode/concurrent rendering may
     // invoke updaters more than once, which would duplicate the fetch).
@@ -611,6 +622,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
 
   const handleSelectConversation = (id: string) => {
     setHistoryMenuOpen(false);
+    setListDrawerOpen(false);
     handleSwitchConversation(id);
   };
 
@@ -1539,6 +1551,34 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     }
   })();
 
+  // The workspaces as the list offers them, beside the thread or in its drawer.
+  const sidebarWorkspaces: SidebarWorkspaces | undefined = workspacesEnabled
+    ? {
+        list: workspaces,
+        pendingWorkspaceId,
+        onCreate: createWorkspace,
+        onRename: renameWorkspace,
+        onDelete: async (id) => {
+          const result = await deleteWorkspace(id);
+          if (result.ok) {
+            // The next conversation must not be created in it.
+            clearPendingWorkspace(id);
+            // Its conversations are back in no workspace (`workspace_id: null`).
+            void refreshConversations();
+          }
+          return result;
+        },
+        onMove: handleMoveConversation,
+        onNewChat: (workspaceId) => {
+          setListDrawerOpen(false);
+          handleNewChat(workspaceId);
+          // Still there? Deleted elsewhere, the list drops it and
+          // the pending workspace with it, before the first send.
+          void refreshWorkspaces();
+        },
+      }
+    : undefined;
+
   const containerStyle: React.CSSProperties = {
     ...cssVars,
     ...(mode === 'sidebar'
@@ -1579,7 +1619,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         actions={headerActions}
         agentDashboardUrl={agentDashboardUrl}
         historyEnabled={historyEnabled && !showConversationSidebar}
-        historyMenuOpen={historyMenuOpen}
+        historyMenuOpen={listAsDrawer ? listDrawerOpen : historyMenuOpen}
+        historyAsDrawer={listAsDrawer}
         onHistoryMenuToggle={handleHistoryMenuToggle}
         onHistoryMenuClose={() => setHistoryMenuOpen(false)}
         conversations={conversations}
@@ -1602,7 +1643,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
         agentLink={agentLink}
         t={t}
       />
-      {listNotice && (!showConversationSidebar || sidebarCollapsed) && (
+      {listNotice && (!showConversationSidebar || sidebarCollapsed) && !(listAsDrawer && listDrawerOpen) && (
         <ChatNotice tone="error" className="mx-3 mt-2 shrink-0" onDismiss={() => setListNotice(null)} dismissLabel={t('Close')}>
           {listNotice.text}
         </ChatNotice>
@@ -1611,7 +1652,59 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           stays full width above both: it carries the agent picker, the mode
           switcher and close, which belong to the panel rather than to either
           column. `min-h-0` lets the thread scroll instead of growing the row. */}
-      <div className={showConversationSidebar ? 'flex flex-1 min-h-0' : 'contents'}>
+      {/* A docked panel or a floating window: the column stays as it was, and
+          the list opens over it as a drawer (`listAsDrawer`). */}
+      <div className={showConversationSidebar ? 'flex flex-1 min-h-0' : listAsDrawer ? 'relative flex flex-1 flex-col min-h-0' : 'contents'}>
+        {listAsDrawer && listDrawerOpen && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('Conversation history')}
+            data-testid="filigran-chat-list-drawer"
+            className="absolute inset-0 z-20 flex"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.stopPropagation();
+                setListDrawerOpen(false);
+              }
+            }}
+          >
+            <ConversationSidebar
+              overlay
+              conversations={conversations}
+              loading={conversationsLoading}
+              failed={conversationsFailed}
+              onRetry={() => void refreshConversations()}
+              activeConversationId={conversationId}
+              collapsed={false}
+              onToggleCollapsed={() => setListDrawerOpen(false)}
+              onSelect={handleSelectConversation}
+              onDelete={(id) => void handleDeleteConversation(id)}
+              onRename={(id, title) => void handleRenameConversation(id, title)}
+              onNewChat={() => {
+                setListDrawerOpen(false);
+                handleNewChat();
+              }}
+              workspaces={sidebarWorkspaces}
+              storageKeyPrefix={storageKeyPrefix}
+              expandedGroups={openedWorkspaceGroups}
+              onGroupOpenedChange={onWorkspaceGroupOpenedChange}
+              rowActions={sidebarRowActions}
+              headerActions={sidebarHeaderActions}
+              sections={sidebarSections}
+              onClearAll={clearConversations ? () => void handleClearAll() : undefined}
+              clearAllAction={clearAllAction}
+              searchThreshold={sidebarSearchThreshold}
+              channelLabel={channelLabel}
+              generatingConversationId={isLoading ? conversationId : null}
+              notice={listNotice?.text ?? null}
+              onNotice={sayListNotice}
+              t={t}
+            />
+            {/* The thread under the drawer, dimmed: a click on it closes the drawer. */}
+            <div aria-hidden="true" data-testid="filigran-chat-list-drawer-scrim" className="flex-1 bg-black/30 dark:bg-black/50" onClick={() => setListDrawerOpen(false)} />
+          </div>
+        )}
         {showConversationSidebar && (
           <ConversationSidebar
             conversations={conversations}
@@ -1625,33 +1718,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             onDelete={(id) => void handleDeleteConversation(id)}
             onRename={(id, title) => void handleRenameConversation(id, title)}
             onNewChat={handleNewChat}
-            workspaces={
-              workspacesEnabled
-                ? {
-                    list: workspaces,
-                    pendingWorkspaceId,
-                    onCreate: createWorkspace,
-                    onRename: renameWorkspace,
-                    onDelete: async (id) => {
-                      const result = await deleteWorkspace(id);
-                      if (result.ok) {
-                        // The next conversation must not be created in it.
-                        clearPendingWorkspace(id);
-                        // Its conversations are back in no workspace (`workspace_id: null`).
-                        void refreshConversations();
-                      }
-                      return result;
-                    },
-                    onMove: handleMoveConversation,
-                    onNewChat: (workspaceId) => {
-                      handleNewChat(workspaceId);
-                      // Still there? Deleted elsewhere, the list drops it and
-                      // the pending workspace with it, before the first send.
-                      void refreshWorkspaces();
-                    },
-                  }
-                : undefined
-            }
+            workspaces={sidebarWorkspaces}
             storageKeyPrefix={storageKeyPrefix}
             expandedGroups={openedWorkspaceGroups}
             onGroupOpenedChange={onWorkspaceGroupOpenedChange}

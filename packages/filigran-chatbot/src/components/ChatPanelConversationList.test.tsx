@@ -710,6 +710,40 @@ test('the header names the channel a restore reports, before the list is read', 
   assert.equal(container.querySelector('[data-testid="filigran-chat-header-subtitle"]')?.textContent, 'Agent · Teams');
 });
 
+test('a docked panel and a floating window open the list as a drawer over the thread, closed by a pick, the scrim or Escape', async () => {
+  for (const mode of ['sidebar', 'floating'] as const) {
+    const requests = fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'Old hunt' }]), restoreRoute]);
+    await render({ mode });
+    const drawer = () => container.querySelector('[data-testid="filigran-chat-list-drawer"]');
+    const listReads = () => requests.filter((r) => r.url === '/api/chat/sessions' && r.method === 'GET').length;
+    assert.equal(drawer(), null, `${mode}: no list beside the thread`);
+    assert.equal(listReads(), 0, `${mode}: nothing read before it opens`);
+
+    await click(button('Conversation history'));
+    assert.ok(drawer(), `${mode}: the drawer opens`);
+    assert.equal(button('Conversation history')?.getAttribute('aria-expanded'), 'true');
+    assert.ok(listReads() > 0, `${mode}: read on opening`);
+    assert.equal(container.querySelector('[role="separator"]'), null, `${mode}: no resize handle in the drawer`);
+    assert.ok(rows().some((row) => row.textContent?.includes('Old hunt')));
+
+    await click(rows().find((row) => row.textContent?.includes('Old hunt')));
+    assert.equal(drawer(), null, `${mode}: a pick closes it`);
+
+    await click(button('Conversation history'));
+    await click(container.querySelector('[data-testid="filigran-chat-list-drawer-scrim"]')!);
+    assert.equal(drawer(), null, `${mode}: the scrim closes it`);
+
+    await click(button('Conversation history'));
+    await act(async () => {
+      drawer()!.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await settle(10);
+    });
+    assert.equal(drawer(), null, `${mode}: Escape closes it`);
+    await act(async () => root.unmount());
+    root = createRoot(container);
+  }
+});
+
 test('a restored conversation whose agent is not in the list warns of no agent, never of the one picked', async () => {
   fakeBackend([
     (req) =>

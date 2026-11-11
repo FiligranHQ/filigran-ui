@@ -113,6 +113,11 @@ interface ConversationSidebarProps {
    * rail when even its minimum would.
    */
   panelWidth?: number | null;
+  /**
+   * Drawn as a drawer over a docked panel or a floating window (UX spec A): its
+   * default width, a raised surface, no resize handle and no rail.
+   */
+  overlay?: boolean;
   /** The conversation whose answer is being written: its row ends with a spinner. */
   generatingConversationId?: string | null;
   /** What failed in the list, said under it. */
@@ -207,6 +212,7 @@ export const ConversationSidebar = ({
   searchThreshold = SEARCH_THRESHOLD,
   channelLabel,
   panelWidth = null,
+  overlay = false,
   generatingConversationId = null,
   notice,
   onNotice,
@@ -341,7 +347,7 @@ export const ConversationSidebar = ({
   // Collapsed, or no room beside a readable conversation: a 48 px rail of
   // three icon buttons. Expand and Search are offered only where the list has
   // room to open.
-  if (collapsed || layout.rail) {
+  if (!overlay && (collapsed || layout.rail)) {
     return (
       <div data-testid="filigran-chat-list-rail" className="flex w-12 shrink-0 flex-col items-center gap-1 border-r chat-border-200/10 py-3">
         <ChatIconButton label={t('New conversation')} icon={<EditIcon size={20} />} onClick={() => onNewChat()} />
@@ -397,8 +403,12 @@ export const ConversationSidebar = ({
     ));
 
   return (
-    <div className="relative shrink-0 flex flex-col border-r chat-border-200/10" style={{ width: layout.width }}>
-      <ListResizeHandle width={layout.width} max={layout.max} onResize={resize} t={t} />
+    <div
+      className={`relative shrink-0 flex flex-col border-r chat-border-200/10 ${overlay ? 'h-full max-w-[85%] chat-surface-raised shadow-global-shadow' : ''}`}
+      style={{ width: overlay ? LIST_WIDTH.default : layout.width }}
+      data-testid={overlay ? 'filigran-chat-list-drawer-panel' : undefined}
+    >
+      {!overlay && <ListResizeHandle width={layout.width} max={layout.max} onResize={resize} t={t} />}
       <div className="flex items-center gap-1 px-3 py-3">
         <Button priority="secondary" className="min-w-0 flex-1 justify-start" startIcon={<EditIcon size={16} />} onClick={() => onNewChat()}>
           {t('New conversation')}

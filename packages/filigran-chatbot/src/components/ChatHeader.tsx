@@ -50,6 +50,8 @@ interface ChatHeaderProps {
   /** Multi-conversation history menu (REST backend). Hidden when false. */
   historyEnabled?: boolean;
   historyMenuOpen?: boolean;
+  /** The history button opens the panel's conversation drawer instead of its menu (docked and floating). */
+  historyAsDrawer?: boolean;
   onHistoryMenuToggle?: () => void;
   onHistoryMenuClose?: () => void;
   conversations?: ChatConversationSummary[];
@@ -169,6 +171,7 @@ export const ChatHeader = ({
   agentDashboardUrl,
   historyEnabled = false,
   historyMenuOpen = false,
+  historyAsDrawer = false,
   onHistoryMenuToggle,
   onHistoryMenuClose,
   conversations = [],
@@ -488,12 +491,12 @@ export const ChatHeader = ({
             label={t('Conversation history')}
             icon={<HistoryIcon size={20} />}
             onClick={onHistoryMenuToggle}
-            aria-haspopup="menu"
+            aria-haspopup={historyAsDrawer ? 'dialog' : 'menu'}
             aria-expanded={historyMenuOpen}
             active={historyMenuOpen}
           />
 
-          <Dropdown open={historyMenuOpen} onClose={() => onHistoryMenuClose?.()} anchorRef={historyAnchorRef} placement="bottom-end" width={300}>
+          <Dropdown open={historyMenuOpen && !historyAsDrawer} onClose={() => onHistoryMenuClose?.()} anchorRef={historyAnchorRef} placement="bottom-end" width={300}>
             <span className="block px-4 pt-3 pb-1 text-content-compact tracking-[1px] uppercase chat-text-muted-400/40">{t('Conversation history')}</span>
             <div className="max-h-72 overflow-y-auto filigran-chat-scrollable">
               {conversationsLoading && conversations.length === 0 && (
