@@ -290,13 +290,13 @@ export const ChatHeader = ({
               agentMenuOpen ? 'chat-surface-hover-100/10 chat-border-200/10' : ''
             }`}
           >
-            <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">
+            <span className="flex shrink-0 items-center text-[var(--chat-accent)] [&>svg]:size-5">
               {/* The current agent's own icon when it has one drawable, the panel's logo otherwise. */}
               <AgentIconGlyph
                 icon={selectedAgent?.icon}
-                size={18}
+                size={20}
                 fallback={logoIcon}
-                imageClassName="w-[18px] h-[18px] chat-radius-sm object-cover"
+                imageClassName="size-5 chat-radius-sm object-cover"
                 emojiClassName="text-title-sm leading-none"
               />
             </span>
