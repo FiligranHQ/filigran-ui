@@ -371,8 +371,8 @@ function ThinkingTextBubble({ text, action }: { text: string; action?: React.Rea
           isOverflowing
             ? // -webkit- twin first: Safari/WebKit ignores unprefixed mask-image
               // on older versions, which would silently drop the top dissolve.
-              ' [-webkit-mask-image:linear-gradient(to_bottom,transparent_0,rgb(0_0_0/0.25)_1.5rem,rgb(0_0_0/0.7)_3rem,black_4.5rem)]' +
-              ' [mask-image:linear-gradient(to_bottom,transparent_0,rgb(0_0_0/0.25)_1.5rem,rgb(0_0_0/0.7)_3rem,black_4.5rem)]'
+              ' [-webkit-mask-image:linear-gradient(to_bottom,transparent_0,color-mix(in_srgb,black_25%,transparent)_1.5rem,color-mix(in_srgb,black_70%,transparent)_3rem,black_4.5rem)]' +
+              ' [mask-image:linear-gradient(to_bottom,transparent_0,color-mix(in_srgb,black_25%,transparent)_1.5rem,color-mix(in_srgb,black_70%,transparent)_3rem,black_4.5rem)]'
             : ''
         }`}
       >

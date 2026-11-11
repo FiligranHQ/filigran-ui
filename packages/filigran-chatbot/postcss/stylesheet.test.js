@@ -180,6 +180,8 @@ test("the design system IconButton's classes compile inside the panel, reading t
     ['min-h-9', 'min-height', null],
     // Its group rule (the conversation row's move-to-workspace menu, slice 2).
     ['border-elevation-subtle', 'border-color', '--border-elevation-subtle'],
+    // The one elevation shadow of every floating surface (menus, the floating panel, the reasoning dialog; slice 3).
+    ['shadow-global-shadow', '--tw-shadow', '--shadow-global-shadow'],
   ]) {
     const matching = rules.filter((rule) => rule.selectors.some((selector) => hasClass(selector, name)));
     assert.ok(matching.length > 0, `.${name} is compiled`);
@@ -190,4 +192,27 @@ test("the design system IconButton's classes compile inside the panel, reading t
       if (token) assert.match(decl.value, new RegExp(`var\\(${token},`), `.${name} reads ${token} with a fallback: ${decl.value}`);
     }
   }
+});
+
+// Surfaces follow the design system (chatbot 3.23.0, slice 3): a colour literal
+// lives only in the copy of its palette (`--chat-ds-*`) or in the code colours
+// it has no token for (`--chat-default-hl-*`); every other rule reads a token.
+const COLOUR_LITERAL = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(/i;
+const LITERAL_ALLOWED = /^--chat-(?:ds-|default-hl-)/;
+
+test('no colour literal in the stylesheet outside the design-system palette copy and the code colours', () => {
+  const sourceRoot = postcss.parse(readFileSync(SOURCE, 'utf8'));
+  const offending = [];
+  sourceRoot.walkDecls((decl) => {
+    if (COLOUR_LITERAL.test(decl.value) && !LITERAL_ALLOWED.test(decl.prop)) offending.push(`${decl.prop}: ${decl.value}`);
+  });
+  assert.deepEqual(offending, []);
+});
+
+test('no hand-written shadow or rgb colour in a component: the design-system elevation shadow only', () => {
+  const offending = sourceFiles(join(SRC, 'components')).flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    return [...text.matchAll(/shadow-\[[^\]]*\]|\bshadow-(?:sm|md|lg|xl|2xl)\b|\brgba?\(/g)].map((m) => `${file.slice(SRC.length)}: ${m[0]}`);
+  });
+  assert.deepEqual(offending, []);
 });

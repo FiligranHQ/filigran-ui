@@ -32,16 +32,17 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * two glances cannot be compared against itself.
  *
  * `color` is both the swatch and the stacked-bar segment, so the bar is readable
- * without a legend lookup. Labels name what the user can act on, not the
+ * without a legend lookup: a shade of the design system's palette, declared once
+ * in assets/index.css (`--chat-ds-*`), never a literal here. Labels name what the user can act on, not the
  * backend's internals: "Tool results" rather than "role=tool messages".
  */
 const ROWS: ReadonlyArray<{ field: keyof ChatContextBreakdown; label: (t: Translate) => string; color: string }> = [
-  { field: 'system', label: (t) => t('System prompt'), color: '#9ca3af' },
-  { field: 'tools', label: (t) => t('Tool definitions'), color: '#a78bfa' },
-  { field: 'dynamicTools', label: (t) => t('MCP & dynamic tools'), color: '#f0abfc' },
-  { field: 'summary', label: (t) => t('Summarized conversation'), color: '#fb7185' },
-  { field: 'toolResults', label: (t) => t('Tool results'), color: '#34d399' },
-  { field: 'conversation', label: (t) => t('Conversation'), color: '#a1a1aa' },
+  { field: 'system', label: (t) => t('System prompt'), color: 'var(--chat-ds-gray-400)' },
+  { field: 'tools', label: (t) => t('Tool definitions'), color: 'var(--chat-ds-purple-300)' },
+  { field: 'dynamicTools', label: (t) => t('MCP & dynamic tools'), color: 'var(--chat-ds-turquoise-300)' },
+  { field: 'summary', label: (t) => t('Summarized conversation'), color: 'var(--chat-ds-red-300)' },
+  { field: 'toolResults', label: (t) => t('Tool results'), color: 'var(--chat-ds-green-300)' },
+  { field: 'conversation', label: (t) => t('Conversation'), color: 'var(--chat-ds-gray-300)' },
 ];
 
 /**

@@ -16,6 +16,14 @@ This file starts at 3.10.0; earlier releases are on the
   rest, `theme.inputBorderHover` (`--filigran-chat-input-border-hover`, the
   panel border unset) under the pointer. Dictation keeps its red border and
   the focus keeps its 2 px ring.
+- The panel's own look (no host theme) is the design system's palette: dark
+  surfaces grayblue 850 / 700 / 600 instead of three ad-hoc navy shades, the
+  tooltip, scrollbar and context usage colours from its scale, and every
+  floating surface (menus, the floating panel, the reasoning dialog, the row
+  actions bar) takes its one elevation shadow, `--shadow-global-shadow`. Host
+  tokens still win. The code colours stay GitHub's (the design system has no
+  syntax palette). A stylesheet test refuses any other colour literal and any
+  hand-written shadow in a component.
 
 ## 3.22.0 — 2026-11-11
 

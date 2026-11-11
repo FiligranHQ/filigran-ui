@@ -195,7 +195,7 @@ export const ReasoningDetailsDialog = ({ msg, onClose, toolLabels, t }: Reasonin
               aria-modal="true"
               aria-label={t('Reasoning details')}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md max-h-full flex flex-col chat-radius-md border chat-border-200/10 chat-surface-raised shadow-[0_8px_32px_rgba(0,0,0,0.25)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+              className="w-full max-w-md max-h-full flex flex-col chat-radius-md border chat-border-200/10 chat-surface-raised shadow-global-shadow"
             >
               <div className="px-4 pt-3.5 pb-2.5 border-b chat-border-200/10">
                 <div className="flex items-center gap-2">

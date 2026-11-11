@@ -937,7 +937,7 @@ const ConversationRow = ({
         // width, so the title and the agent pill take the whole row.
         <span
           data-row-actions=""
-          className="pointer-events-none absolute inset-y-0 right-1.5 my-auto flex h-fit chat-radius-sm border chat-border-200/10 chat-menu-surface opacity-0 shadow-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100"
+          className="pointer-events-none absolute inset-y-0 right-1.5 my-auto flex h-fit chat-radius-sm border chat-border-200/10 chat-menu-surface opacity-0 shadow-global-shadow transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100"
         >
           {actions && (
             // The row selects on click and on Enter/Space: the host's controls keep theirs.

@@ -1516,7 +1516,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
       case 'sidebar':
         return `${base} fixed right-0 bottom-0 flex flex-col chat-surface-raised border-l chat-border-200/10 z-[1200]`;
       case 'floating':
-        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised chat-radius-md shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-[1300] border chat-border-200/10`;
+        return `${base} fixed bottom-5 right-5 flex flex-col chat-surface-raised chat-radius-md shadow-global-shadow z-[1300] border chat-border-200/10`;
       case 'fullscreen':
         return `${base} fixed right-0 bottom-0 left-0 flex flex-col chat-surface z-[1400]`;
       case 'inline':
