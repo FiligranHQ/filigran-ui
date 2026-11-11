@@ -14,7 +14,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const extensions = ['.ts', '.tsx'];
 
-const external = ['react', 'react-dom', 'react/jsx-runtime', 'react-markdown', 'remark-breaks', 'remark-gfm', 'remark-parse', 'unified'];
+const external = ['@filigran/design-system', 'react', 'react-dom', 'react/jsx-runtime', 'react-markdown', 'remark-breaks', 'remark-gfm', 'remark-parse', 'unified'];
 
 // The unit tests import with `.ts` paths, as Node's type stripping requires,
 // and TypeScript only allows those in a compilation that emits nothing: the

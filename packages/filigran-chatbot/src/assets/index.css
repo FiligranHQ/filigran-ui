@@ -17,6 +17,13 @@
  */
 @source '../';
 
+/*
+ * The classes @filigran/design-system's <Icon> puts on every glyph (its size
+ * variants and alignment) and the fill a pressed feedback glyph takes: the
+ * package is external to the bundle, so its source is never scanned here.
+ */
+@source inline('inline-block shrink-0 align-middle size-4 size-5 size-6 fill-current');
+
 @plugin "tailwindcss-scoped-preflight" {
   isolationStrategy: inside;
   selector: .filigran-chatbot;

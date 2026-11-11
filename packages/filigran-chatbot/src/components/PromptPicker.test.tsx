@@ -22,10 +22,11 @@ test('the prompt template button has the size of every other composer action', a
   });
   const button = container.querySelector<HTMLButtonElement>('button[aria-label="Insert prompt template"]')!;
   assert.ok(button, 'the button renders');
-  // Attach, dictate and send are w-8 h-8 with an 18 px glyph: one control
-  // height and one icon size per row (UX round 1 on #516, finding F5).
+  // Attach, dictate and send are w-8 h-8 with a 20 px design-system glyph:
+  // one control height and one icon size per row (UX round 1 on #516,
+  // finding F5; 18 px snaps to the design system's 20).
   const classes = button.className.split(/\s+/);
   assert.ok(classes.includes('w-8') && classes.includes('h-8'), '32 x 32, as the other actions');
   assert.ok(classes.includes('shrink-0'), 'never squeezed by the row');
-  assert.equal(button.querySelector('svg')!.getAttribute('width'), '18', 'an 18 px glyph, as the other actions');
+  assert.equal(button.querySelector('svg')!.getAttribute('width'), '20', 'a 20 px glyph, as the other actions');
 });
