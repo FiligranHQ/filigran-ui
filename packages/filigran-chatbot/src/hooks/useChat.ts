@@ -2138,11 +2138,10 @@ export function useChat({
           ended = 'error';
           if (parsed.reason) {
             // A system end (a restart cut the turn, its runner was lost): its
-            // notice is no answer. What was streamed stays, marked cut short; an
-            // empty bubble goes. The host's interrupted-turn card says the rest.
-            setMessages((prev) =>
-              prev.flatMap((m) => (m.id !== segId ? [m] : m.content ? [{ ...m, interrupted: true }] : [])),
-            );
+            // notice is no answer. What was streamed stays as it is (the stored
+            // reply read back replaces it, drawn by the host's interrupted-turn
+            // card); an empty bubble goes.
+            setMessages((prev) => prev.filter((m) => !(m.id === segId && !m.content)));
             return 'end';
           }
           setMessages((prev) =>

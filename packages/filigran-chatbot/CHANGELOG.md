@@ -10,6 +10,15 @@ This file starts at 3.10.0; earlier releases are on the
 
 ## Unreleased
 
+### Fixed
+
+- A turn the backend ends with a system `error` frame (`reason` `interrupted`: a
+  platform restart cut it; `lost`: its runner vanished) no longer writes the
+  frame's notice ("The response was interrupted before it completed.") into the
+  answer bubble: what was streamed stays, an empty bubble goes, and the host's
+  interrupted-turn card says the rest once the stored reply is read back. The
+  parsed `error` action now carries `reason`. A real agent error is unchanged.
+
 ### Changed
 
 - The composer draws its border as the design system's Textarea: none at
