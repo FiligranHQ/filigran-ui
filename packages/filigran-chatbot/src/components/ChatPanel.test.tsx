@@ -48,6 +48,44 @@ test('a host-owned conversation is restored, and moving it restores the next one
   assert.equal(localStorage.getItem('filigranChatConversationId'), null);
 });
 
+test('a conversation switched back to is painted from its kept window before its read-back lands', async () => {
+  let hold: ((r: Response) => void) | null = null;
+  const requests = fakeBackend([
+    agentsRoute,
+    (req) => {
+      if (req.url !== '/api/chat/sessions' || req.method !== 'POST') return undefined;
+      const id = (req.body as { conversation_id: string }).conversation_id;
+      const body = { conversation_id: id, messages: [{ id: `m-${id}`, role: 'assistant', content: `answer of ${id}` }] };
+      // The third read-back (c1 again) is held: the kept window must show meanwhile.
+      if (sent(requests, '/api/chat/sessions').length === 3) return new Promise<Response>((resolve) => (hold = resolve));
+      return json(body);
+    },
+  ]);
+  await render({ conversationId: 'c1' });
+  assert.ok(container.textContent?.includes('answer of c1'));
+  await render({ conversationId: 'c2' });
+  assert.ok(container.textContent?.includes('answer of c2'));
+  await render({ conversationId: 'c1' });
+  assert.equal(sent(requests, '/api/chat/sessions').length, 3, 'the read-back is still issued');
+  assert.ok(container.textContent?.includes('answer of c1'), 'kept window painted at once');
+  assert.ok(!container.textContent?.includes('answer of c2'));
+  await act(async () => {
+    hold!(json({ conversation_id: 'c1', messages: [{ id: 'm-c1', role: 'assistant', content: 'fresh answer of c1' }] }));
+    await settle();
+  });
+  assert.ok(container.textContent?.includes('fresh answer of c1'), 'the read-back replaces the kept window');
+});
+
+test('the kept windows are capped, the oldest dropped first', async () => {
+  const { rememberRestoredWindow, RESTORED_WINDOWS_KEPT } = await import('./ChatPanel.tsx');
+  const windows = new Map();
+  for (let i = 0; i <= RESTORED_WINDOWS_KEPT; i += 1) rememberRestoredWindow(windows, `c${i}`, { messages: [] });
+  assert.equal(windows.size, RESTORED_WINDOWS_KEPT);
+  assert.ok(!windows.has('c0'));
+  rememberRestoredWindow(windows, 'c1', { messages: [] });
+  assert.equal([...windows.keys()].at(-1), 'c1', 'a window read again is the newest');
+});
+
 test('history is restored without an agent list', async () => {
   const requests = fakeBackend([restoreRoute([{ id: 'm1', role: 'assistant', content: 'from history' }])]);
   await render({ conversationId: 'c1', apiEndpoints: { agents: null } });
