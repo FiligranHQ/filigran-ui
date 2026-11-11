@@ -8,7 +8,34 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
-## 3.23.2 — 2026-11-11
+## 3.24.0 — 2026-11-11
+
+### Changed
+
+- The thread reads as one column per display mode, measured on the panel
+  (container query), never the viewport: a page or full screen centres the
+  messages and the composer on one axis (`max-w-200`, `max-w-220` from a
+  1536 px panel, `px-6`); a docked panel or a floating window fills its width
+  (`px-3`, `px-4` from 28rem) (#10910).
+- The conversation list beside a page or full screen is 260 px by default,
+  220 px at least and at most min(360 px, a quarter of the panel); it never
+  leaves the conversation under 680 px and folds to a 48 px rail (New chat,
+  Search, Expand) below that. A double-click on its edge resets it; width
+  and collapse are kept per browser.
+- In a docked panel or a floating window the list is never inline: the
+  header's history button opens it as a drawer over the thread (dialog,
+  scrim), closed by a pick, the scrim or Escape.
+- The conversation list is redesigned: one-line 32 px rows (title, or the
+  first words), the details (agent, channel, workspace, time) in the row's
+  tooltip and `aria-description`, the agent icon only when the list mixes
+  agents; date groups (Pinned, Today, Yesterday, Previous 7 days, Previous
+  30 days, months) under sticky 24 px headers; a header with New chat, a
+  workspace filter (design-system Select) and the design-system SearchField;
+  one 24 px More menu per row (Rename, Pin or Unpin, Move to workspace,
+  Delete confirmed in a design-system Dialog); a Spinner on the generating
+  row; Skeleton rows while loading; the Workspaces line under the list.
+- Pinned conversations: `ChatConversationSummary.pinned` when the backend
+  keeps pins, else kept per browser.
 
 ### Fixed
 
@@ -21,6 +48,11 @@ This file starts at 3.10.0; earlier releases are on the
   answer bubble: what was streamed stays, an empty bubble goes, and the host's
   interrupted-turn card says the rest once the stored reply is read back. The
   parsed `error` action now carries `reason`. A real agent error is unchanged.
+
+## 3.23.2 — 2026-11-11
+
+### Fixed
+
 - The remove button of a file waiting in the composer says "Remove <file>" in
   the panel's tooltip on hover and on keyboard focus, as every other icon
   button of the panel (#10910). `Tooltip` takes `forSelector` to name one
