@@ -7,6 +7,7 @@ import { AgentIconGlyph } from './AgentIconGlyph';
 import { channelName, conversationMatches } from '../utils/conversationList';
 import { isComposing } from '../utils/keyboard';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
+import { LIST_WIDTH, listLayout } from '../utils/layout';
 import { fileableWorkspaces, groupCanToggle, groupConversations, groupIsOpen, isNoopMove } from '../utils/workspaces';
 import { ClearAllConversations } from './ClearAllConversations';
 import { ConversationListFailed } from './ConversationListFailed';
@@ -85,6 +86,12 @@ interface ConversationSidebarProps {
   searchThreshold?: number;
   /** The host's names of the channels a conversation was started in (see `channelLabel` on the panel). */
   channelLabel?: (channel: string) => string | null | undefined;
+  /**
+   * The panel's width in px, once measured: the list never takes more than a
+   * quarter of it nor leaves the conversation under 680 px, and folds to its
+   * rail when even its minimum would.
+   */
+  panelWidth?: number | null;
   /** What failed in the list, said under it. */
   notice?: string | null;
   /** Says what failed in the list (`notice` shows it). */
@@ -115,11 +122,11 @@ function readCollapsed(key: string): Set<string> {
 }
 
 /**
- * The list's width in fullscreen, in px: dragged from its right edge between
- * `min` and `max`, back to `default` (the width it always had) on a
+ * The list's width in a page or full screen, in px (`utils/layout`): dragged
+ * from its right edge between `min` and `max`, back to `default` on a
  * double-click, remembered per browser.
  */
-export const LIST_WIDTH = { min: 224, default: 256, max: 480 } as const;
+export { LIST_WIDTH };
 /** What an arrow key moves the list's edge by. */
 const LIST_WIDTH_STEP = 16;
 
@@ -168,11 +175,14 @@ export const ConversationSidebar = ({
   clearAllAction,
   searchThreshold = SEARCH_THRESHOLD,
   channelLabel,
+  panelWidth = null,
   notice,
   onNotice,
   t,
 }: ConversationSidebarProps) => {
   const [query, setQuery] = useState('');
+  // Asked from the rail: once the list is open, its search box takes the focus.
+  const [focusSearch, setFocusSearch] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   // Guards the input's onBlur: committing and then blurring would fire the
@@ -195,7 +205,10 @@ export const ConversationSidebar = ({
   // The list's width, kept while it is collapsed and across reloads.
   const widthKey = storageKey(storageKeyPrefix, STORAGE_KEYS.conversationListWidth);
   const [width, setWidth] = useState(() => readListWidth(widthKey));
+  // What this panel leaves the list: its bounds, the width drawn, or its rail.
+  const layout = listLayout(panelWidth, width);
   const resize = (next: number, commit: boolean) => {
+    next = Math.min(next, layout.max);
     setWidth(next);
     // The default width is no choice: nothing is kept for it.
     if (commit) writeStorage('local', widthKey, next === LIST_WIDTH.default ? null : String(next));
@@ -280,11 +293,26 @@ export const ConversationSidebar = ({
   const workspacesOpen = workspacesShown || creatingWorkspace || (!!workspaces?.pendingWorkspaceId && !activeConversationId);
   const workspaceNames = useMemo(() => new Map((workspaces?.list ?? []).map((w) => [w.id, w.name])), [workspaces]);
 
-  if (collapsed) {
+  // Collapsed, or no room beside a readable conversation: a 48 px rail of
+  // three icon buttons. Expand and Search are offered only where the list has
+  // room to open.
+  if (collapsed || layout.rail) {
     return (
-      <div className="flex flex-col items-center gap-1 border-r chat-border-200/10 px-2 py-3 shrink-0">
-        <ChatIconButton label={t('Show conversations')} icon={<SidebarIcon size={20} />} aria-expanded={false} onClick={onToggleCollapsed} />
+      <div data-testid="filigran-chat-list-rail" className="flex w-12 shrink-0 flex-col items-center gap-1 border-r chat-border-200/10 py-3">
         <ChatIconButton label={t('New conversation')} icon={<EditIcon size={20} />} onClick={() => onNewChat()} />
+        {!layout.rail && (
+          <>
+            <ChatIconButton
+              label={t('Search conversations...')}
+              icon={<SearchIcon size={20} />}
+              onClick={() => {
+                setFocusSearch(true);
+                onToggleCollapsed();
+              }}
+            />
+            <ChatIconButton label={t('Show conversations')} icon={<SidebarIcon size={20} />} aria-expanded={false} onClick={onToggleCollapsed} />
+          </>
+        )}
       </div>
     );
   }
@@ -312,8 +340,8 @@ export const ConversationSidebar = ({
   );
 
   return (
-    <div className="relative shrink-0 flex flex-col border-r chat-border-200/10" style={{ width }}>
-      <ListResizeHandle width={width} onResize={resize} t={t} />
+    <div className="relative shrink-0 flex flex-col border-r chat-border-200/10" style={{ width: layout.width }}>
+      <ListResizeHandle width={layout.width} max={layout.max} onResize={resize} t={t} />
       <div className="flex items-center gap-1 px-3 py-3">
         <Button priority="secondary" className="flex-1 justify-start" startIcon={<EditIcon size={16} />} onClick={() => onNewChat()}>
           {t('New conversation')}
@@ -329,6 +357,12 @@ export const ConversationSidebar = ({
             <input
               type="text"
               value={query}
+              ref={(el) => {
+                if (el && focusSearch) {
+                  el.focus();
+                  setFocusSearch(false);
+                }
+              }}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Escape' && !isComposing(e)) setQuery('');
@@ -466,10 +500,13 @@ export const ConversationSidebar = ({
  */
 const ListResizeHandle = ({
   width,
+  max,
   onResize,
   t,
 }: {
   width: number;
+  /** The widest this panel lets the list be. */
+  max: number;
   /** `commit`: the gesture is over, the width is the one to keep. */
   onResize: (width: number, commit: boolean) => void;
   t: (key: string) => string;
@@ -491,7 +528,7 @@ const ListResizeHandle = ({
       aria-orientation="vertical"
       aria-label={t('Resize the conversation list')}
       aria-valuemin={LIST_WIDTH.min}
-      aria-valuemax={LIST_WIDTH.max}
+      aria-valuemax={max}
       aria-valuenow={width}
       tabIndex={0}
       onPointerDown={(e) => {
@@ -519,7 +556,7 @@ const ListResizeHandle = ({
               : e.key === 'Home'
                 ? LIST_WIDTH.min
                 : e.key === 'End'
-                  ? LIST_WIDTH.max
+                  ? max
                   : null;
         if (next === null) return;
         e.preventDefault();

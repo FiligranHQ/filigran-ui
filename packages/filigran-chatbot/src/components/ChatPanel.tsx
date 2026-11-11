@@ -37,6 +37,7 @@ import { useVoiceCall } from '../hooks/useVoiceCall';
 import { PanelRequestsProvider, usePanelRequests, type PanelRequests } from '../hooks/usePanelRequests';
 import { watchSessionEnd } from '../utils/sessionEnd';
 import { readStorage, STORAGE_KEYS, storageKey, writeStorage } from '../utils/storage';
+import { chatDisplayMode } from '../utils/layout';
 import { AlertTriangleIcon, DefaultLogoIcon } from './icons';
 import { AgentIconRendererProvider } from './AgentIconGlyph';
 import { ChatNotice } from './ChatNotice';
@@ -274,6 +275,17 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   );
   // Inline mode is laid out like fullscreen, inside the host's container.
   const isWide = mode === 'fullscreen' || mode === 'inline';
+  // A page and full screen read as a centred column; a docked panel and a floating window fill their width.
+  const display = chatDisplayMode(mode);
+  // The panel's own width, for the conversation list's bounds: the panel, not the screen, sets them.
+  const [panelWidth, setPanelWidth] = useState<number | null>(null);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!isWide || !el || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(([entry]) => setPanelWidth(Math.round(entry.contentRect.width)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isWide]);
 
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
 
@@ -1511,7 +1523,8 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   );
 
   const containerClasses = (() => {
-    const base = 'filigran-chatbot';
+    // `@container`: the gutters and the reading column follow the panel's width, never the viewport's.
+    const base = 'filigran-chatbot @container';
     switch (mode) {
       case 'sidebar':
         return `${base} fixed right-0 bottom-0 flex flex-col chat-surface-raised border-l chat-border-200/10 z-[1200]`;
@@ -1538,7 +1551,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   };
 
   return (
-    <div ref={rootRef} className={containerClasses} style={containerStyle} data-testid="filigran-chat-panel" {...noDropHandlers}>
+    <div ref={rootRef} className={containerClasses} style={containerStyle} data-testid="filigran-chat-panel" data-display={display} {...noDropHandlers}>
       {mode === 'sidebar' && resizable && (
         <div onMouseDown={handleResizeStart} className="absolute top-0 -left-1 bottom-0 w-2 cursor-col-resize z-10 group">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 bottom-0 w-0.5 chat-radius-sm bg-[var(--chat-accent)] opacity-0 transition-opacity group-hover:opacity-100 group-active:opacity-100" />
@@ -1649,6 +1662,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             clearAllAction={clearAllAction}
             searchThreshold={sidebarSearchThreshold}
             channelLabel={channelLabel}
+            panelWidth={panelWidth}
             notice={listNotice?.text ?? null}
             onNotice={sayListNotice}
             t={t}
@@ -1742,6 +1756,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               collapseUnnamedFiles={collapseUnnamedFiles}
               ttsRoute={ttsRoute}
               thinking={thinking}
+              display={display}
               t={t}
             />
           )}
