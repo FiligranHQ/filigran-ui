@@ -273,7 +273,10 @@ export const ChatHeader = ({
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1">
           {/* One control: icon, name and chevron all open the switcher. The
-              agent's page is an item of the menu, never this click. */}
+              agent's page is an item of the menu, never this click. Not the DS
+              Combobox: its trigger is the input field, with no slot for this
+              header trigger, the option avatars or the footer actions
+              (fds-migration/LIBRARY-FEEDBACK.md, 1). */}
           <Tooltip title={agentMenuOpen ? '' : t('Switch to another agent')} className="inline-flex min-w-0 max-w-full">
           <button
             data-ds-exempt="agent-switcher-combobox-trigger"
