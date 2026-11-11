@@ -59,13 +59,37 @@ test('a delete in a row is the destructive small IconButton, and a menu toggle s
   assert.equal(toggle.getAttribute('aria-expanded'), 'true');
 });
 
+test('over a scrim the control is the filled primary IconButton, and an end-call is the filled destructive one', async () => {
+  const panel = await render(
+    <>
+      <ChatIconButton label="Download" icon={<CloseIcon size={20} />} priority="primary" />
+      <ChatIconButton label="End voice call" icon={<CloseIcon size={20} />} priority="primary" variant="destructive" />
+      <ChatIconButton label="Mute microphone" icon={<CloseIcon size={20} />} priority="secondary" />
+    </>,
+  );
+  const [download, end, mute] = [...panel.querySelectorAll('button')].map((b) => b.className.split(/\s+/));
+  assert.ok(download.includes('bg-filigran-brand-primary'), download.join(' '));
+  assert.ok(end.includes('bg-feedback-error-primary'), end.join(' '));
+  assert.ok(mute.includes('border'), mute.join(' '));
+});
+
 // The components migrated so far (chatbot 3.23.0, slice 2); the rest of the
 // panel joins this list as it moves to ChatIconButton.
-const MIGRATED = ['ChatHeader.tsx', 'ConversationSidebar.tsx', 'ClearAllConversations.tsx', 'ReasoningDetailsDialog.tsx'];
+const MIGRATED = [
+  'ChatHeader.tsx',
+  'ConversationSidebar.tsx',
+  'ClearAllConversations.tsx',
+  'ReasoningDetailsDialog.tsx',
+  'ChatNotice.tsx',
+  'ChatImage.tsx',
+  'ChatVoiceCall.tsx',
+];
 
 for (const file of MIGRATED) {
   test(`${file} draws no hand-styled icon button: every icon-only control goes through ChatIconButton`, () => {
-    const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+    // A button that is not an icon-only control (the voice call's avatar) says so
+    // as its first attribute, `data-ds-exempt="<why>"`, and is listed in the audit table.
+    const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8').replace(/<button\s+data-ds-exempt="[^"]+"/g, '<exempt');
     assert.doesNotMatch(source, /w-[78] h-[78] flex items-center justify-center/, 'a hand-styled icon button is left');
     assert.doesNotMatch(source, /<button[^>]*\saria-label=/, 'a raw <button> named only by aria-label is an icon-only control');
   });

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Translate } from '../types';
 import type { VoiceCallSnapshot } from '../hooks/voiceCallController';
 import { MicIcon, MicOffIcon, PhoneOffIcon, VolumeOffIcon } from './icons';
+import { ChatIconButton } from './ChatIconButton';
 import { ChatNotice } from './ChatNotice';
 
 /** A transcript line longer than this is cut: the thread under the call holds it whole. */
@@ -70,7 +71,6 @@ export const ChatVoiceCall = ({
             : '';
   const tappable = phase === 'speaking' || phase === 'processing';
   const live = phase === 'speaking' || (phase === 'listening' && !muted);
-  const roundButton = 'w-12 h-12 rounded-full flex items-center justify-center border transition-colors disabled:opacity-40';
 
   return (
     <div
@@ -96,7 +96,9 @@ export const ChatVoiceCall = ({
       )}
 
       <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-1 px-4">
+        {/* Not an icon button: the 112 px avatar of the call, the whole of it a tap target (design-system exemption, audit table of filigran-ui#521). */}
         <button
+          data-ds-exempt="voice-call-avatar"
           type="button"
           onClick={tappable ? onInterrupt : undefined}
           disabled={!tappable}
@@ -148,34 +150,23 @@ export const ChatVoiceCall = ({
       )}
 
       <div className="flex items-center justify-center gap-5 px-4 pb-5 pt-3">
-        <button
-          type="button"
+        {/* The design system's icon buttons: outlined mute and skip, the error fill for the end of the call, a muted microphone in the error tone. */}
+        <ChatIconButton
+          label={muted ? t('Unmute microphone') : t('Mute microphone')}
+          icon={muted ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
+          priority="secondary"
+          variant={muted ? 'destructive' : 'default'}
+          active={muted}
           onClick={onToggleMute}
-          aria-label={muted ? t('Unmute microphone') : t('Mute microphone')}
-          aria-pressed={muted}
-          className={`${roundButton} ${
-            muted ? 'border-red-400/40 bg-red-500/10 text-red-500' : 'chat-border-200/10 chat-text-secondary-600/70 hover:chat-surface-hover-100/6'
-          }`}
-        >
-          {muted ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
-        </button>
-        <button
-          type="button"
-          onClick={onEnd}
-          aria-label={t('End voice call')}
-          className="w-14 h-14 rounded-full flex items-center justify-center bg-red-500 text-white hover:bg-red-600 transition-colors"
-        >
-          <PhoneOffIcon size={22} />
-        </button>
-        <button
-          type="button"
-          onClick={onInterrupt}
+        />
+        <ChatIconButton label={t('End voice call')} icon={<PhoneOffIcon size={20} />} priority="primary" variant="destructive" onClick={onEnd} />
+        <ChatIconButton
+          label={t('Skip response')}
+          icon={<VolumeOffIcon size={20} />}
+          priority="secondary"
           disabled={phase !== 'speaking'}
-          aria-label={t('Skip response')}
-          className={`${roundButton} chat-border-200/10 chat-text-secondary-600/70 hover:chat-surface-hover-100/6`}
-        >
-          <VolumeOffIcon size={20} />
-        </button>
+          onClick={onInterrupt}
+        />
       </div>
     </div>
   );

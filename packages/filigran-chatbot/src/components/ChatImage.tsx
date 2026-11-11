@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ChatIconButton } from './ChatIconButton';
 import { CloseIcon, DownloadIcon, ImageIcon, MaximizeIcon } from './icons';
 import { findChatbotRoot } from '../utils';
 import { usePanelFetch } from '../hooks/usePanelRequests';
@@ -72,29 +73,29 @@ const ImageLightbox = ({ src, alt, onClose, onDownload, t }: ImageLightboxProps)
             aria-modal="true"
             aria-label={alt.trim() || t('Image preview')}
           >
+            {/* Over the scrim a transparent button has no ground: the design system's primary (brand fill) icon buttons. */}
             <div className="absolute top-4 right-4 flex gap-2">
               {onDownload && (
-                <button
-                  type="button"
+                <ChatIconButton
+                  label={t('Download')}
+                  icon={<DownloadIcon size={20} />}
+                  priority="primary"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDownload();
                   }}
-                  aria-label={t('Download')}
-                  className="rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
-                >
-                  <DownloadIcon size={20} />
-                </button>
+                />
               )}
-              <button
+              <ChatIconButton
                 ref={closeButtonRef}
-                type="button"
-                onClick={onClose}
-                aria-label={t('Close')}
-                className="rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
-              >
-                <CloseIcon size={20} />
-              </button>
+                label={t('Close')}
+                icon={<CloseIcon size={20} />}
+                priority="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose();
+                }}
+              />
             </div>
             <img src={src} alt={alt} className="max-h-[90%] max-w-[90%] chat-radius-md object-contain" onClick={(e) => e.stopPropagation()} />
           </div>,
@@ -216,14 +217,15 @@ export const ChatImage = ({ src, alt, requestHeaders, maxHeightClass = 'max-h-[4
           onError={() => setUndecodable(displaySrc)}
           className={`max-w-full cursor-zoom-in chat-radius-sm object-contain ${maxHeightClass}`}
         />
-        <button
-          type="button"
+        <ChatIconButton
+          label={t('Expand image')}
+          icon={<MaximizeIcon size={16} />}
+          priority="primary"
+          size="sm"
           onClick={() => setExpanded(true)}
-          aria-label={t('Expand image')}
-          className="absolute top-2 right-2 chat-radius-sm bg-black/50 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover/img:opacity-100 focus-visible:opacity-100"
-        >
-          <MaximizeIcon size={14} />
-        </button>
+          className="opacity-0 group-hover/img:opacity-100 focus-visible:opacity-100"
+          anchorClassName="absolute top-2 right-2 inline-flex"
+        />
       </span>
       {expanded && <ImageLightbox src={displaySrc} alt={alt} onClose={() => setExpanded(false)} onDownload={onDownload} t={t} />}
     </>
