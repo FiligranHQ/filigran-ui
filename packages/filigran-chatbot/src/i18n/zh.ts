@@ -97,6 +97,8 @@ export const zh: Catalog = {
   'How can {agent} help you, {name}?': '{name}，{agent} 能为您做些什么？',
   'Image could not be loaded': '无法加载图片',
   'Image preview': '图片预览',
+  'Previous image': '上一张图片',
+  'Next image': '下一张图片',
   'Incorporating your message…': '正在纳入您的消息…',
   Input: '输入',
   'Insert prompt template': '插入提示词模板',

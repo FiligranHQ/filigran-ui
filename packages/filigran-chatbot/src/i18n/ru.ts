@@ -98,6 +98,8 @@ export const ru: Catalog = {
   'How can {agent} help you, {name}?': 'Чем {agent} может помочь, {name}?',
   'Image could not be loaded': 'Не удалось загрузить изображение',
   'Image preview': 'Предпросмотр изображения',
+  'Previous image': 'Предыдущее изображение',
+  'Next image': 'Следующее изображение',
   'Incorporating your message…': 'Учёт вашего сообщения…',
   Input: 'Ввод',
   'Insert prompt template': 'Вставить шаблон промпта',

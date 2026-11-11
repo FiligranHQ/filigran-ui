@@ -1,5 +1,5 @@
 import { Button } from '@filigran/design-system';
-import { useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { ChatContextUsage, ChatConversationRef, ChatFile, ChatPanelMode, ChatPromptTemplate, ChatQuotaStatus, XtmAgent } from '../types';
 import { mentionedAgentIds, type AgentMention } from '../utils/agentMentions';
 import { AttachFileIcon, CloseIcon, FileIcon, MicIcon, MicOffIcon, SendIcon, StopCircleIcon, XCircleIcon } from './icons';
@@ -109,6 +109,24 @@ function focusIsFree(field: HTMLElement): boolean {
     (active as HTMLElement).isContentEditable;
   return !editable;
 }
+
+/**
+ * What an attached file shows before its name: a 24 px thumbnail of a
+ * picture, read from the file in the browser (object URL, revoked with the
+ * chip), else the file glyph.
+ */
+const PendingFileGlyph = ({ file }: { file: ChatFile }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  const raw = file.rawFile;
+  useEffect(() => {
+    if (!raw || !file.type.startsWith('image/') || typeof URL.createObjectURL !== 'function') return;
+    const next = URL.createObjectURL(raw);
+    setUrl(next);
+    return () => URL.revokeObjectURL(next);
+  }, [raw, file.type]);
+  if (url) return <img src={url} alt="" aria-hidden="true" className="size-6 shrink-0 chat-radius-sm object-cover" />;
+  return <FileIcon size={14} />;
+};
 
 const MAX_TEXTAREA_HEIGHT = 120;
 const NO_REFS: ChatConversationRef[] = [];
@@ -378,9 +396,11 @@ export const ChatInput = ({
               {f.uploadStatus === 'pending' ? (
                 <span className="w-3.5 h-3.5 border border-current/30 border-t-current rounded-full animate-spin" />
               ) : (
-                <FileIcon size={14} />
+                <PendingFileGlyph file={f} />
               )}
-              {f.name}
+              <Tooltip title={f.name} truncated className="inline-flex min-w-0">
+                <span className="max-w-[12rem] truncate">{f.name}</span>
+              </Tooltip>
               {f.uploadStatus === 'error' && (
                 <span data-testid="filigran-chat-upload-error" className="inline-flex min-w-0 items-center gap-1">
                   <XCircleIcon size={12} className="shrink-0" />

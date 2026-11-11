@@ -98,6 +98,8 @@ export const ko: Catalog = {
   'How can {agent} help you, {name}?': '{name}님, {agent}이(가) 무엇을 도와드릴까요?',
   'Image could not be loaded': '이미지를 불러올 수 없습니다',
   'Image preview': '이미지 미리 보기',
+  'Previous image': '이전 이미지',
+  'Next image': '다음 이미지',
   'Incorporating your message…': '메시지를 반영하는 중…',
   Input: '입력',
   'Insert prompt template': '프롬프트 템플릿 삽입',

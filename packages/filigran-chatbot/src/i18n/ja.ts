@@ -98,6 +98,8 @@ export const ja: Catalog = {
   'How can {agent} help you, {name}?': '{name} さん、{agent} がお手伝いできることはありますか？',
   'Image could not be loaded': '画像を読み込めませんでした',
   'Image preview': '画像プレビュー',
+  'Previous image': '前の画像',
+  'Next image': '次の画像',
   'Incorporating your message…': 'メッセージを組み込んでいます…',
   Input: '入力',
   'Insert prompt template': 'プロンプトテンプレートを挿入',

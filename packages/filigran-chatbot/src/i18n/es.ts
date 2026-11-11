@@ -98,6 +98,8 @@ export const es: Catalog = {
   'How can {agent} help you, {name}?': '¿En qué puede ayudarle {agent}, {name}?',
   'Image could not be loaded': 'No se ha podido cargar la imagen',
   'Image preview': 'Vista previa de la imagen',
+  'Previous image': 'Imagen anterior',
+  'Next image': 'Imagen siguiente',
   'Incorporating your message…': 'Incorporando su mensaje…',
   Input: 'Entrada',
   'Insert prompt template': 'Insertar plantilla de prompt',

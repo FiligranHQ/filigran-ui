@@ -36,6 +36,7 @@ export const BrainIcon = dsIcon('brain');
 export const CheckCircleIcon = dsIcon('circle-check');
 export const CheckIcon = dsIcon('check');
 export const ChevronDownIcon = dsIcon('chevron-down');
+export const ChevronLeftIcon = dsIcon('chevron-left');
 export const ChevronRightIcon = dsIcon('chevron-right');
 export const ClapperboardIcon = dsIcon('clapperboard');
 export const CloseIcon = dsIcon('x');

@@ -99,6 +99,8 @@ export const de: Catalog = {
   'How can {agent} help you, {name}?': 'Wie kann {agent} Ihnen helfen, {name}?',
   'Image could not be loaded': 'Bild konnte nicht geladen werden',
   'Image preview': 'Bildvorschau',
+  'Previous image': 'Vorheriges Bild',
+  'Next image': 'Nächstes Bild',
   'Incorporating your message…': 'Ihre Nachricht wird einbezogen…',
   Input: 'Eingabe',
   'Insert prompt template': 'Prompt-Vorlage einfügen',
