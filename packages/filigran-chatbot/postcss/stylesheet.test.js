@@ -48,6 +48,19 @@ test('the utilities a host also defines (.flex, .hidden, .grid) apply inside the
   }
 });
 
+test('a task list nested in a list overrides the circle of nested lists with a more specific rule, at their indent', () => {
+  const declares = (rule, prop, pattern) => rule.nodes.some((node) => node.type === 'decl' && node.prop === prop && pattern.test(node.value));
+  const circle = rules.filter((rule) => rule.selectors.some((s) => s.includes('list-\\[circle\\]') && / ul\b/.test(s)) && declares(rule, 'list-style-type', /circle/));
+  const none = rules.filter((rule) => rule.selectors.some((s) => s.includes('ul.contains-task-list')) && declares(rule, 'list-style-type', /^none$/));
+  const indent = rules.filter((rule) => rule.selectors.some((s) => s.includes('ul.contains-task-list')) && declares(rule, 'padding-left', /var\(--spacing\) \* 5|1\.25rem/));
+  assert.ok(circle.length > 0, 'the nested-list circle is compiled');
+  assert.ok(none.length > 0, 'the task-list override is compiled');
+  assert.ok(indent.length > 0, 'the task-list indent is compiled');
+  // One more class in the selector than the circle rule: the override wins whatever the order.
+  const classes = (selector) => (selector.replace(/\\./g, '').match(/\.[\w-]/g) || []).length;
+  for (const rule of none) for (const selector of rule.selectors) assert.ok(classes(selector) > Math.max(...circle.flatMap((r) => r.selectors.map(classes))), selector);
+});
+
 test("the user bubble's line breaks and word wrapping compile, inside the panel", () => {
   for (const [name, prop, value] of [
     ['whitespace-pre-wrap', 'white-space', 'pre-wrap'],
