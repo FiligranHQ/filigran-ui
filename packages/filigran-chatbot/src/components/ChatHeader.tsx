@@ -441,8 +441,8 @@ export const ChatHeader = ({
                   onMouseMove={() => {
                     if (!isActive) setActiveAgentIndex(index);
                   }}
-                  className={`w-full flex items-center gap-2 px-4 py-1.5 text-left transition-colors ${
-                    isActive ? 'chat-surface-hover-100/10' : ''
+                  className={`w-full flex items-center gap-2 pl-3.5 pr-4 py-1.5 text-left transition-colors chat-menu-row ${
+                    isActive ? 'chat-surface-hover-100/10 chat-menu-row-active' : ''
                   } ${isCurrent ? 'bg-[var(--chat-accent)]/10' : ''}`}
                 >
                   <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-gradient-to-br from-[var(--chat-accent)]/20 to-[var(--chat-accent)]/5">

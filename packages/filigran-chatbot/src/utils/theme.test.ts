@@ -36,6 +36,12 @@ test('the menu surface entry sets its own variable, apart from the hover fill', 
   });
 });
 
+test('the menu active border entry sets the left track of the keyboard-active row', () => {
+  assert.deepEqual(themeVariables({ menuActiveBorder: 'var(--border-input-hover)' }), {
+    '--filigran-chat-menu-active-border': 'var(--border-input-hover)',
+  });
+});
+
 test('the radius entries pass the design-system corners to every card and control', () => {
   assert.deepEqual(themeVariables({ radiusSm: 'var(--radius-sm)', radiusMd: 'var(--radius-md)' }), {
     '--filigran-chat-radius-sm': 'var(--radius-sm)',

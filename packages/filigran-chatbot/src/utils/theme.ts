@@ -7,6 +7,7 @@ const THEME_VARIABLES: Readonly<Record<keyof ChatPanelTheme, string>> = {
   surfaceSubtle: '--filigran-chat-surface-subtle',
   surfaceHover: '--filigran-chat-surface-hover',
   menuSurface: '--filigran-chat-menu-surface',
+  menuActiveBorder: '--filigran-chat-menu-active-border',
   inputSurface: '--filigran-chat-input-surface',
   inputRadius: '--filigran-chat-input-radius',
   inputBorderHover: '--filigran-chat-input-border-hover',

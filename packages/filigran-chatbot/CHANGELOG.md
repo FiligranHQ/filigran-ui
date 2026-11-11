@@ -15,6 +15,9 @@ This file starts at 3.10.0; earlier releases are on the
 - `theme.menuSurface` (`--filigran-chat-menu-surface`): the menus' own fill, so a host pairs it with
   `surfaceHover` and the keyboard-active row of the agent switcher reads in dark as in light
   (XTM-One-Platform/xtm-one#10910).
+- `theme.menuActiveBorder` (`--filigran-chat-menu-active-border`): a 2px left track on the
+  keyboard-active row of the agent switcher, `--border-input-hover` by default, so the row reads at
+  3:1 or more against the menu whatever the hover fill (XTM-One-Platform/xtm-one#10910).
 
 ### Fixed
 
