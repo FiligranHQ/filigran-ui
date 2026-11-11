@@ -6,7 +6,7 @@ import type { IconProps } from '../../types';
  * Every glyph of the panel comes from @filigran/design-system: its <Icon name>
  * vocabulary (ICON_NAMES), its three designed sizes and currentColor. These
  * named components only keep the call sites readable; none draws its own SVG
- * (the guard in icons.test.ts fails on a <svg> anywhere else in the package,
+ * (the guard in icons.test.tsx fails on an inline SVG drawing anywhere in the package,
  * save the documented exceptions it lists).
  */
 

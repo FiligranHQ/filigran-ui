@@ -45,7 +45,7 @@ test('a requested size snaps to the 16, 20 or 24 px the design system draws', ()
 });
 
 test('every named icon renders the design-system glyph at a designed size', () => {
-  const named = Object.entries(icons).filter(([name]) => name.endsWith('Icon'));
+  const named = Object.entries(icons).flatMap(([name, value]) => (name === 'snapIconSize' ? [] : [[name, value as typeof icons.CheckIcon] as const]));
   assert.ok(named.length >= 50, 'the whole vocabulary of the panel');
   for (const [name, Component] of named) {
     const markup = renderToStaticMarkup(<Component size={14} />);
