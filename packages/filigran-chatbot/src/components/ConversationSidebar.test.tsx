@@ -611,6 +611,18 @@ test('the workspaces leave the top of the list: their folded line comes after ev
   await unmount();
 });
 
+test('beside the workspace filter, New conversation is an icon button named by its label, so the header never cuts it', async () => {
+  localStorage.clear();
+  const { container, unmount } = await renderTenWorkspaces();
+  const filter = container.querySelector('[data-testid="filigran-chat-workspace-filter"]');
+  assert.ok(filter, 'the workspace filter is shown');
+  const newChat = container.querySelector('button[aria-label="New conversation"]');
+  assert.ok(newChat, 'named for screen readers and its tooltip');
+  assert.ok(newChat!.compareDocumentPosition(filter!) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'beside the filter, before it');
+  assert.equal(newChat!.textContent?.trim(), '', 'no visible label to cut');
+  await unmount();
+});
+
 test('the conversation whose answer is being written ends its row with a labelled spinner, the others none', async () => {
   localStorage.clear();
   const { container, unmount } = await renderTenWorkspaces({ generatingConversationId: 'c1' });

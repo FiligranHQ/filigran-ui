@@ -419,6 +419,8 @@ export const ConversationSidebar = ({
       </div>
     ));
 
+  const workspaceFilterShown = !!workspaces && workspaces.list.length > 0;
+
   return (
     <div
       className={`relative shrink-0 flex flex-col border-r chat-border-200/10 ${overlay ? 'h-full max-w-[85%] chat-surface-raised shadow-global-shadow' : ''}`}
@@ -427,12 +429,18 @@ export const ConversationSidebar = ({
     >
       {!overlay && <ListResizeHandle width={layout.width} max={layout.max} onResize={resize} t={t} />}
       <div className="flex items-center gap-1 px-3 py-3">
-        <Button priority="secondary" className="min-w-0 flex-1 justify-start" startIcon={<EditIcon size={16} />} onClick={() => onNewChat()}>
-          {t('New conversation')}
-        </Button>
-        {workspaces && workspaces.list.length > 0 && (
+        {/* With the workspace filter beside it, the 260 px header has no room for the label
+            (it was cut to "New c"): the button is then the rail's icon button, named by its tooltip. */}
+        {workspaceFilterShown ? (
+          <ChatIconButton label={t('New conversation')} icon={<EditIcon size={20} />} priority="secondary" onClick={() => onNewChat()} />
+        ) : (
+          <Button priority="secondary" className="min-w-0 flex-1 justify-start" startIcon={<EditIcon size={16} />} onClick={() => onNewChat()}>
+            {t('New conversation')}
+          </Button>
+        )}
+        {workspaces && workspaceFilterShown && (
           <Select value={filter} onValueChange={setWorkspaceFilter}>
-            <SelectTrigger aria-label={t('Filter by workspace')} data-testid="filigran-chat-workspace-filter" className="w-28 shrink-0">
+            <SelectTrigger aria-label={t('Filter by workspace')} data-testid="filigran-chat-workspace-filter" className="min-w-0 flex-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
