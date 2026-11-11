@@ -50,7 +50,7 @@ import {
   VolumeIcon,
   VolumeOffIcon,
 } from './icons';
-import { Button, Chip, Textarea } from '@filigran/design-system';
+import { Button } from '@filigran/design-system';
 import { ArtifactCard } from './ArtifactCard';
 import { ChatIconButton } from './ChatIconButton';
 import { ChatApprovalPrompt } from './ChatApprovalPrompt';
@@ -59,6 +59,7 @@ import { ChatNotice } from './ChatNotice';
 import { ChatThinking, type ThinkingOverrides } from './ChatThinking';
 import { HostRenderBoundary, HostRenderFallback, HostRendered } from './HostRenderBoundary';
 import { MarkdownMessage } from './MarkdownMessage';
+import { MessageAttachments, type MessageAttachmentItem } from './MessageAttachments';
 import { ReasoningDetailsDialog } from './ReasoningDetailsDialog';
 import { Tooltip } from './Tooltip';
 import { askHost } from '../utils/askHost';
@@ -341,10 +342,11 @@ const FeedbackComment = ({
 
   return (
     <div className="mt-1 flex w-full max-w-[90%] flex-col gap-1.5 chat-radius-md border chat-border-200/10 chat-surface-subtle-50/4 p-2">
-      <Textarea
+      <label htmlFor={id} className="text-content-compact chat-text-secondary-600/60">
+        {t('Tell us what went wrong (optional)')}
+      </label>
+      <textarea
         id={id}
-        label={t('Tell us what went wrong (optional)')}
-        resize="vertical"
         // Opened by the user's own thumbs down, to be typed into.
         autoFocus
         rows={2}
@@ -365,6 +367,7 @@ const FeedbackComment = ({
           }
         }}
         placeholder={t('What could be improved?')}
+        className="w-full resize-y chat-radius-sm border chat-border-200/10 chat-input-surface-white/0 px-2 py-1 text-content-compact leading-5 chat-text-900/100 placeholder:chat-text-muted-400/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]"
       />
       <div className="flex justify-end gap-1.5">
         <Button
@@ -568,11 +571,6 @@ const MessageRow = memo(
       );
     };
 
-    // A user-uploaded file shown as a non-clickable chip — used while the upload
-    // is still in flight (no server `fileId` yet) or when no download handler is
-    // wired by the host.
-    const renderFileChip = (name: string, key: string) => <Chip key={key} label={name} startIcon={<FileIcon size={16} />} />;
-
     const renderArtifactCard = (artifact: ChatArtifact, key: string) => (
       <ArtifactCard key={key} artifact={artifact} t={t} onDownload={onDownloadArtifact} onRefresh={onRefreshArtifact} onOpen={onArtifactOpen} />
     );
@@ -703,57 +701,77 @@ const MessageRow = memo(
       return blocks;
     };
 
-    // Build the file cards shown on a user message. A successfully-uploaded file
-    // carries a server `fileId`, so it renders as the same download card as an
-    // agent-generated attachment (re-using the host download proxy via
-    // `onDownloadFile`) — uploaded files must stay downloadable, not just
-    // displayed. Files still uploading (no `fileId` / not `done`) or hosts
-    // without a download handler fall back to a static chip. On conversation
-    // restore the backend re-surfaces user uploads as `attachments` (there are
-    // no live `files`), so those are rendered too.
-    const buildUserFileBlocks = (): React.ReactNode[] => {
-      const blocks: React.ReactNode[] = [];
+    // The files of a user message, shown inside its bubble above the text. A
+    // successfully-uploaded file carries a server `fileId`, so it opens through
+    // the host download proxy (`onDownloadFile`) like an agent's attachment, and
+    // a picture the host can serve is a thumbnail. Files still uploading (no
+    // `fileId` / not `done`) or hosts without a download handler show as a chip
+    // that does nothing. On conversation restore the backend re-surfaces user
+    // uploads as `attachments` (there are no live `files`), so those count too.
+    const userAttachmentItems = (): MessageAttachmentItem[] => {
+      const items: MessageAttachmentItem[] = [];
       const seen = new Set<string>();
+      const fromAttachment = (att: ChatAttachment, key: string): MessageAttachmentItem => ({
+        key,
+        filename: att.filename,
+        type: att.type?.toUpperCase() ?? fileExtensionLabel(att.filename),
+        size: att.size,
+        imageUrl: onDownloadFile && resolveAttachmentUrl && isImageAttachment(att) ? resolveAttachmentUrl(att) : undefined,
+        onOpen: onDownloadFile ? () => onDownloadFile(att) : undefined,
+      });
 
       (msg.files ?? []).forEach((f, i) => {
-        const downloadable = !!(onDownloadFile && f.fileId && f.uploadStatus === 'done');
-        if (downloadable && f.fileId) {
+        if (onDownloadFile && f.fileId && f.uploadStatus === 'done') {
           seen.add(f.fileId);
-          blocks.push(
-            renderAttachmentCard(
+          items.push(
+            fromAttachment(
               { fileId: f.fileId, filename: f.name, type: fileExtensionLabel(f.name), size: f.size, contentType: f.type },
               `file-${f.fileId}-${i}`,
             ),
           );
         } else {
-          blocks.push(renderFileChip(f.name, `file-${i}`));
+          items.push({ key: `file-${i}`, filename: f.name, type: fileExtensionLabel(f.name), size: f.size });
         }
       });
 
       (msg.attachments ?? []).forEach((att, i) => {
         if (seen.has(att.fileId)) return;
         seen.add(att.fileId);
-        blocks.push(onDownloadFile ? renderAttachmentCard(att, `att-${att.fileId}-${i}`) : renderFileChip(att.filename, `att-${i}`));
+        items.push(fromAttachment(att, `att-${att.fileId}-${i}`));
       });
 
-      return blocks;
+      return items;
     };
+    const userAttachments = isAssistant ? [] : userAttachmentItems();
 
     // A conversation the message referenced with `@`: it opens in the panel
     // when the panel can open it, and otherwise just says what was referenced.
     const renderConversationRef = (ref: ChatConversationRef, i: number) => {
       const label = ref.title || (ref.key ? `@${ref.key}` : t('Untitled conversation'));
-      const icon = <MessageSquareIcon size={16} />;
+      const chip = 'inline-flex items-center gap-1 max-w-[240px] px-2 py-0.5 rounded-full border text-content-compact';
+      const content = (
+        <>
+          <MessageSquareIcon size={13} className="shrink-0" />
+          <span className="truncate">{label}</span>
+        </>
+      );
       if (onOpenConversation && openableConversationIds?.has(ref.conversationId)) {
         return (
           <Tooltip key={`ref-${ref.conversationId}-${i}`} title={t('Open conversation')}>
-            <Chip label={label} severity="info" startIcon={icon} onClick={() => onOpenConversation(ref.conversationId)} />
+            <button
+              data-ds-exempt="conversation-ref-chip"
+              type="button"
+              onClick={() => onOpenConversation(ref.conversationId)}
+              className={`${chip} border-[var(--chat-accent-40)] text-[var(--chat-accent)] hover:bg-[var(--chat-accent)]/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)]`}
+            >
+              {content}
+            </button>
           </Tooltip>
         );
       }
       return (
         <Tooltip key={`ref-${ref.conversationId}-${i}`} title={ref.key ? `@${ref.key}` : ''}>
-          <Chip label={label} startIcon={icon} />
+          <span className={`${chip} chat-border-200/10 chat-text-secondary-600/60`}>{content}</span>
         </Tooltip>
       );
     };
@@ -811,12 +829,8 @@ const MessageRow = memo(
               a thread that changed hands mid-way must keep each answer under
               the agent that wrote it.
             */}
-            <span className="font-semibold text-content-compact chat-text-900/100">{msg.agentName ?? agentName}</span>
+            <span className="font-semibold text-xs chat-text-900/100">{msg.agentName ?? agentName}</span>
           </div>
-        )}
-
-        {!isAssistant && ((msg.files?.length ?? 0) > 0 || (msg.attachments?.length ?? 0) > 0) && (
-          <div className="flex gap-1.5 flex-wrap mb-1.5 justify-end">{buildUserFileBlocks()}</div>
         )}
 
         {!isAssistant && (msg.conversationRefs?.length ?? 0) > 0 && (
@@ -830,8 +844,14 @@ const MessageRow = memo(
             {!isEmpty && isStreaming && <span className="inline-block w-1.5 h-4 bg-[var(--chat-accent)]/70 rounded-full ml-1 animate-pulse" />}
           </div>
         ) : (
-          <div data-testid="filigran-chat-user-message" className="max-w-[90%] chat-user-bubble leading-6 whitespace-pre-wrap break-words">
-            {userText}
+          // One message, one bubble: its files sit inside it, above the text.
+          <div className="flex max-w-[90%] flex-col items-end gap-1.5 chat-user-bubble" data-testid="filigran-chat-user-bubble">
+            {userAttachments.length > 0 && <MessageAttachments items={userAttachments} requestHeaders={requestHeaders} t={t} />}
+            {(!!userText || userAttachments.length === 0) && (
+              <div data-testid="filigran-chat-user-message" className="w-full leading-6 whitespace-pre-wrap break-words">
+                {userText}
+              </div>
+            )}
           </div>
         )}
 
