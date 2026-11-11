@@ -57,7 +57,6 @@ export const ja: Catalog = {
   Copied: 'コピーしました',
   'Copied!': 'コピー完了！',
   'Copy code': 'コードをコピー',
-  Conversations: '会話',
   'Copy message': 'メッセージをコピー',
   'Copy response': '応答をコピー',
   'Could not load your conversations.': '会話を読み込めませんでした。',
@@ -119,7 +118,6 @@ export const ja: Catalog = {
   'New chat': '新しいチャット',
   'New conversation': '新しい会話',
   'New conversation in this workspace': 'このワークスペースで新しい会話',
-  'New conversation outside a workspace': 'ワークスペース外で新しい会話',
   'New conversation — send a message to start it': '新しい会話 — メッセージを送信すると開始されます',
   'New workspace': '新しいワークスペース',
   No: 'いいえ',
@@ -307,4 +305,5 @@ export const ja: Catalog = {
   'Filter by workspace': 'ワークスペースで絞り込む',
   'All workspaces': 'すべてのワークスペース',
   'Not in a workspace': 'ワークスペース外',
+  'Writing an answer': '回答を作成中',
 };

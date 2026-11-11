@@ -57,7 +57,6 @@ export const ko: Catalog = {
   Copied: '복사됨',
   'Copied!': '복사되었습니다!',
   'Copy code': '코드 복사',
-  Conversations: '대화',
   'Copy message': '메시지 복사',
   'Copy response': '응답 복사',
   'Could not load your conversations.': '대화를 불러올 수 없습니다.',
@@ -119,7 +118,6 @@ export const ko: Catalog = {
   'New chat': '새 채팅',
   'New conversation': '새 대화',
   'New conversation in this workspace': '이 작업 공간에서 새 대화',
-  'New conversation outside a workspace': '작업 공간 밖에서 새 대화',
   'New conversation — send a message to start it': '새 대화 — 메시지를 보내 대화를 시작하세요',
   'New workspace': '새 작업 공간',
   No: '아니요',
@@ -306,4 +304,5 @@ export const ko: Catalog = {
   'Filter by workspace': '워크스페이스로 필터링',
   'All workspaces': '모든 워크스페이스',
   'Not in a workspace': '워크스페이스 밖',
+  'Writing an answer': '답변 작성 중',
 };

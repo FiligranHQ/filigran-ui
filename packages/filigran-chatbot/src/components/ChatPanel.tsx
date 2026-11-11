@@ -1663,6 +1663,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
             searchThreshold={sidebarSearchThreshold}
             channelLabel={channelLabel}
             panelWidth={panelWidth}
+            generatingConversationId={isLoading ? conversationId : null}
             notice={listNotice?.text ?? null}
             onNotice={sayListNotice}
             t={t}

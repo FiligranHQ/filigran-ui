@@ -636,7 +636,8 @@ test('the list starts a conversation outside the workspaces, after one was about
   await render({ apiEndpoints: { workspaces: '/chat/workspaces', steer: null } }, ref);
   await click(button('New conversation in this workspace'));
   assert.ok(text().includes('New conversation — send a message to start it'), 'about to start in the workspace');
-  await click(button('New conversation outside a workspace'));
+  // The header's New conversation starts one outside a workspace: the list has no second button for it.
+  await click(button('New conversation'));
   assert.ok(!text().includes('New conversation — send a message to start it'), 'no longer');
   await act(async () => {
     ref.current!.send('hello');
@@ -654,7 +655,7 @@ test('the list starts a conversation outside the workspaces, after one was about
   });
 });
 
-test('a list without workspaces offers no New conversation outside a workspace', async () => {
+test('the list offers one New conversation, in its header, with or without workspaces', async () => {
   fakeBackend([agentsRoute, listRoute([{ conversation_id: 'c1', title: 'Hunt' }])]);
   await render({});
   assert.equal(button('New conversation outside a workspace'), undefined);

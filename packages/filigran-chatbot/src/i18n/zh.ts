@@ -57,7 +57,6 @@ export const zh: Catalog = {
   Copied: '已复制',
   'Copied!': '已复制！',
   'Copy code': '复制代码',
-  Conversations: '对话',
   'Copy message': '复制消息',
   'Copy response': '复制回复',
   'Could not load your conversations.': '无法加载您的对话。',
@@ -118,7 +117,6 @@ export const zh: Catalog = {
   'New chat': '新聊天',
   'New conversation': '新对话',
   'New conversation in this workspace': '在此工作区中新建对话',
-  'New conversation outside a workspace': '在工作区外新建对话',
   'New conversation — send a message to start it': '新对话 — 发送一条消息即可开始',
   'New workspace': '新建工作区',
   No: '否',
@@ -302,4 +300,5 @@ export const zh: Catalog = {
   'Filter by workspace': '按工作区筛选',
   'All workspaces': '所有工作区',
   'Not in a workspace': '不在工作区中',
+  'Writing an answer': '正在撰写回答',
 };

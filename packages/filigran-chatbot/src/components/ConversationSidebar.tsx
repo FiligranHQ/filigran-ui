@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
   Skeleton,
+  Spinner,
 } from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
@@ -112,6 +113,8 @@ interface ConversationSidebarProps {
    * rail when even its minimum would.
    */
   panelWidth?: number | null;
+  /** The conversation whose answer is being written: its row ends with a spinner. */
+  generatingConversationId?: string | null;
   /** What failed in the list, said under it. */
   notice?: string | null;
   /** Says what failed in the list (`notice` shows it). */
@@ -169,8 +172,6 @@ function readListWidth(key: string): number {
   return Number.isNaN(parsed) ? LIST_WIDTH.default : clampListWidth(parsed);
 }
 
-const sectionLabel = 'text-content-compact font-medium uppercase tracking-wide chat-text-muted-400/40';
-
 /**
  * Persistent conversation list for fullscreen mode, mirroring the XTM One web
  * chat's sidebar - grouped by workspace when the host offers workspaces, the
@@ -206,6 +207,7 @@ export const ConversationSidebar = ({
   searchThreshold = SEARCH_THRESHOLD,
   channelLabel,
   panelWidth = null,
+  generatingConversationId = null,
   notice,
   onNotice,
   t,
@@ -379,6 +381,7 @@ export const ConversationSidebar = ({
       channel={channelName(c.channel, channelLabel)}
       workspaceName={workspaces && c.workspaceId ? (workspaceNames.get(c.workspaceId) ?? t('Other workspaces')) : null}
       showAgent={severalAgents}
+      generating={!!generatingConversationId && c.conversationId === generatingConversationId}
       t={t}
     />
   );
@@ -461,14 +464,21 @@ export const ConversationSidebar = ({
           <ConversationListFailed onRetry={() => onRetry?.()} className="px-3 py-2" t={t} />
         ) : grouped && workspaces ? (
           <>
+            {/* Every conversation, most recent first; a drop here takes one out of its workspace. */}
+            <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
+              {renderDated(filtered)}
+              {noConversationYet && <p className="px-3 py-1.5 text-content-compact chat-text-muted-400/30">{t('No conversations yet')}</p>}
+            </DropZone>
+            {q && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
             {/*
-              Conversations first: the workspaces are one line above them,
-              opened on demand, the way a desktop assistant lists its
-              projects. Hidden while searching: the list below shows every
-              match, each naming its workspace.
+              The workspaces leave the top of the list (UX spec C): one folded
+              line under the conversations, opened on demand, where they are
+              created, renamed and started from; the header filter narrows the
+              list to one of them. Hidden while searching or filtering: the
+              list then shows every match, each naming its workspace.
             */}
             {!q && !filtering && (
-              <div className="mb-1">
+              <div className="mt-2 border-t chat-border-200/10 pt-2">
                 <div className="group/wsh flex items-center gap-1 chat-radius-sm px-1.5 py-1 hover:chat-surface-hover-100/6">
                   <button
                     data-ds-exempt="disclosure-row"
@@ -536,16 +546,6 @@ export const ConversationSidebar = ({
                 )}
               </div>
             )}
-            {/* Every conversation, most recent first; a drop here takes one out of its workspace. */}
-            <DropZone onDropConversation={(conversationId) => void move(conversationId, null)} accepts>
-              <div className="flex items-center justify-between px-2 pb-1 pt-2">
-                <span className={sectionLabel}>{t('Conversations')}</span>
-                <ChatIconButton label={t('New conversation outside a workspace')} icon={<EditIcon size={16} />} size="sm" onClick={() => onNewChat()} />
-              </div>
-              {renderDated(filtered)}
-              {noConversationYet && <p className="px-3 py-1.5 text-content-compact chat-text-muted-400/30">{t('No conversations yet')}</p>}
-            </DropZone>
-            {q && filtered.length === 0 && <p className="px-3 py-2 text-content-compact chat-text-muted-400/40">{noMatch}</p>}
           </>
         ) : (
           <>
@@ -915,6 +915,7 @@ const ConversationRow = ({
   channel,
   workspaceName = null,
   showAgent = false,
+  generating = false,
   t,
 }: {
   conversation: ChatConversationSummary;
@@ -937,6 +938,8 @@ const ConversationRow = ({
   workspaceName?: string | null;
   /** Whether the row draws its agent's icon: only when the list mixes agents. */
   showAgent?: boolean;
+  /** Its answer is being written: a small spinner ends the row (UX spec C). */
+  generating?: boolean;
   t: (key: string) => string;
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1018,6 +1021,10 @@ const ConversationRow = ({
           </Tooltip>
         )}
       </span>
+      {generating && !isEditing && (
+        // Under the actions on hover: the More button takes the row's end then.
+        <Spinner size="sm" tone="inherit" label={t('Writing an answer')} className="shrink-0 group-hover:invisible group-focus-within:invisible" />
+      )}
       {!isEditing && (
         // Over the row's end, not beside it: hidden, the actions keep no
         // width, so the title and the agent pill take the whole row.

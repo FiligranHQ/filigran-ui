@@ -57,7 +57,6 @@ export const ru: Catalog = {
   Copied: 'Скопировано',
   'Copied!': 'Скопировано!',
   'Copy code': 'Копировать код',
-  Conversations: 'Диалоги',
   'Copy message': 'Копировать сообщение',
   'Copy response': 'Копировать ответ',
   'Could not load your conversations.': 'Не удалось загрузить ваши диалоги.',
@@ -119,7 +118,6 @@ export const ru: Catalog = {
   'New chat': 'Новый чат',
   'New conversation': 'Новый диалог',
   'New conversation in this workspace': 'Новый диалог в этом рабочем пространстве',
-  'New conversation outside a workspace': 'Новый диалог вне рабочего пространства',
   'New conversation — send a message to start it': 'Новый диалог — отправьте сообщение, чтобы начать его',
   'New workspace': 'Новое рабочее пространство',
   No: 'Нет',
@@ -306,4 +304,5 @@ export const ru: Catalog = {
   'Filter by workspace': 'Фильтр по рабочему пространству',
   'All workspaces': 'Все рабочие пространства',
   'Not in a workspace': 'Вне рабочего пространства',
+  'Writing an answer': 'Пишется ответ',
 };

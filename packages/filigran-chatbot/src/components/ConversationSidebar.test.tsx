@@ -600,6 +600,27 @@ test('conversations come first: ten workspaces fold into one line, and every con
   await unmount();
 });
 
+test('the workspaces leave the top of the list: their folded line comes after every conversation', async () => {
+  localStorage.clear();
+  const { container, workspacesLine, unmount } = await renderTenWorkspaces();
+  const rows = [...container.querySelectorAll('[role="button"][aria-current]')];
+  const line = workspacesLine()!;
+  assert.ok(rows.length > 0);
+  for (const row of rows) assert.ok(row.compareDocumentPosition(line) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'the line follows the conversations');
+  assert.equal(container.querySelector('button[aria-label="New conversation outside a workspace"]'), null, 'one New conversation, in the header');
+  await unmount();
+});
+
+test('the conversation whose answer is being written ends its row with a labelled spinner, the others none', async () => {
+  localStorage.clear();
+  const { container, unmount } = await renderTenWorkspaces({ generatingConversationId: 'c1' });
+  // The design system's labelled Spinner: a status region holding the words read out.
+  const spinners = [...container.querySelectorAll('[role="status"]')].filter((s) => s.textContent === 'Writing an answer');
+  assert.equal(spinners.length, 1);
+  assert.ok(spinners[0].closest('[role="button"][aria-current]')?.textContent?.startsWith('Chat 1'), 'on the generating row');
+  await unmount();
+});
+
 test('the Workspaces line opens on demand, shows every workspace with its actions, and stays open on the next visit', async () => {
   localStorage.clear();
   const first = await renderTenWorkspaces();

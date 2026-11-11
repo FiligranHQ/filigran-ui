@@ -57,7 +57,6 @@ export const es: Catalog = {
   Copied: 'Copiado',
   'Copied!': '¡Copiado!',
   'Copy code': 'Copiar código',
-  Conversations: 'Conversaciones',
   'Copy message': 'Copiar mensaje',
   'Copy response': 'Copiar respuesta',
   'Could not load your conversations.': 'No se pudieron cargar sus conversaciones.',
@@ -119,7 +118,6 @@ export const es: Catalog = {
   'New chat': 'Nuevo chat',
   'New conversation': 'Nueva conversación',
   'New conversation in this workspace': 'Nueva conversación en este espacio de trabajo',
-  'New conversation outside a workspace': 'Nueva conversación fuera de un espacio de trabajo',
   'New conversation — send a message to start it': 'Nueva conversación: envíe un mensaje para iniciarla',
   'New workspace': 'Nuevo espacio de trabajo',
   No: 'No',
@@ -306,4 +304,5 @@ export const es: Catalog = {
   'Filter by workspace': 'Filtrar por espacio de trabajo',
   'All workspaces': 'Todos los espacios de trabajo',
   'Not in a workspace': 'Fuera de un espacio de trabajo',
+  'Writing an answer': 'Escribiendo una respuesta',
 };
