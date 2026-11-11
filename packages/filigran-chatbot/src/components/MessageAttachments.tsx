@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
-import { formatFileSize } from '../utils';
+import { formatFileSize, translate } from '../utils';
 import { ImageLightbox, useImageSrc } from './ChatImage';
 import { FileIcon, FileTextIcon, ImageIcon } from './icons';
 import { Tooltip } from './Tooltip';
@@ -120,6 +120,9 @@ const ImageTile = ({ item, single, more, requestHeaders, onOpen, t }: ImageTileP
         data-ds-exempt="attachment-thumbnail"
         type="button"
         onClick={onOpen}
+        // The "+N" over the last tile is drawn for the eye only: the button names its picture and the
+        // pictures behind it ("+N" counts the tile's own picture, so N - 1 more), one key per plural branch.
+        aria-label={more > 0 ? moreLabel(t, item.filename, more - 1) : undefined}
         className={`group/tile relative overflow-hidden ${ground} cursor-zoom-in outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--chat-accent-50)] ${
           single ? 'inline-flex max-h-[240px] max-w-[280px]' : 'size-[4.5rem]'
         }`}
@@ -133,7 +136,7 @@ const ImageTile = ({ item, single, more, requestHeaders, onOpen, t }: ImageTileP
           className={single ? 'block max-h-[240px] max-w-[280px] object-contain' : 'size-full object-cover'}
         />
         {more > 0 && (
-          <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-semibold text-white">
+          <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center bg-black/55 text-content-base font-medium text-white">
             +{more}
           </span>
         )}
@@ -141,6 +144,12 @@ const ImageTile = ({ item, single, more, requestHeaders, onOpen, t }: ImageTileP
     </Tooltip>
   );
 };
+
+/** The accessible name of the "+N" tile: its picture and the count of the pictures behind it. */
+const moreLabel = (t: (key: string) => string, filename: string, count: number) =>
+  count > 1
+    ? translate(t, '{filename} and {count} more pictures', { filename, count })
+    : translate(t, '{filename} and one more picture', { filename });
 
 const FileChip = ({ item, t }: { item: MessageAttachmentItem; t: (key: string) => string }) => {
   const meta = [item.type, formatFileSize(item.size)].filter(Boolean).join(' · ');

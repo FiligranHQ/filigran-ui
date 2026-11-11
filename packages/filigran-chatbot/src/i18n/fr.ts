@@ -97,6 +97,8 @@ export const fr: Catalog = {
   'How can I help you, {name}?': 'Comment puis-je vous aider, {name} ?',
   'How can {agent} help you, {name}?': 'Comment {agent} peut-il vous aider, {name} ?',
   'Image could not be loaded': 'Impossible de charger l’image',
+  '{filename} and {count} more pictures': '{filename} et {count} autres images',
+  '{filename} and one more picture': '{filename} et une autre image',
   'Image preview': 'Aperçu de l’image',
   'Previous image': 'Image précédente',
   'Next image': 'Image suivante',

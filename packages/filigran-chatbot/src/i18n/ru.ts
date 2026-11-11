@@ -97,6 +97,8 @@ export const ru: Catalog = {
   'How can I help you, {name}?': 'Чем я могу помочь, {name}?',
   'How can {agent} help you, {name}?': 'Чем {agent} может помочь, {name}?',
   'Image could not be loaded': 'Не удалось загрузить изображение',
+  '{filename} and {count} more pictures': '{filename} и ещё изображения ({count})',
+  '{filename} and one more picture': '{filename} и ещё одно изображение',
   'Image preview': 'Предпросмотр изображения',
   'Previous image': 'Предыдущее изображение',
   'Next image': 'Следующее изображение',

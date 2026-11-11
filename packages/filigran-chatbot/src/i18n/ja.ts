@@ -97,6 +97,8 @@ export const ja: Catalog = {
   'How can I help you, {name}?': '{name} さん、何かお手伝いできることはありますか？',
   'How can {agent} help you, {name}?': '{name} さん、{agent} がお手伝いできることはありますか？',
   'Image could not be loaded': '画像を読み込めませんでした',
+  '{filename} and {count} more pictures': '{filename} ほか {count} 枚の画像',
+  '{filename} and one more picture': '{filename} ほか 1 枚の画像',
   'Image preview': '画像プレビュー',
   'Previous image': '前の画像',
   'Next image': '次の画像',

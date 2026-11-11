@@ -96,6 +96,8 @@ export const zh: Catalog = {
   'How can I help you, {name}?': '{name}，有什么可以帮您？',
   'How can {agent} help you, {name}?': '{name}，{agent} 能为您做些什么？',
   'Image could not be loaded': '无法加载图片',
+  '{filename} and {count} more pictures': '{filename} 及另外 {count} 张图片',
+  '{filename} and one more picture': '{filename} 及另外 1 张图片',
   'Image preview': '图片预览',
   'Previous image': '上一张图片',
   'Next image': '下一张图片',

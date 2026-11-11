@@ -98,6 +98,8 @@ export const de: Catalog = {
   'How can I help you, {name}?': 'Wie kann ich Ihnen helfen, {name}?',
   'How can {agent} help you, {name}?': 'Wie kann {agent} Ihnen helfen, {name}?',
   'Image could not be loaded': 'Bild konnte nicht geladen werden',
+  '{filename} and {count} more pictures': '{filename} und {count} weitere Bilder',
+  '{filename} and one more picture': '{filename} und ein weiteres Bild',
   'Image preview': 'Bildvorschau',
   'Previous image': 'Vorheriges Bild',
   'Next image': 'Nächstes Bild',

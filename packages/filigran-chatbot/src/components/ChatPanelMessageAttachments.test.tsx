@@ -50,6 +50,9 @@ test('twelve pictures show one row of four, the fourth reading +9, and the light
   const tiles = bubble().querySelectorAll('button[data-ds-exempt="attachment-thumbnail"]');
   assert.equal(tiles.length, 4);
   assert.equal(tiles[3].textContent?.trim(), '+9');
+  assert.equal(tiles[3].getAttribute('aria-label'), 'shot-3.png and 8 more pictures', 'the count is announced, not only drawn');
+  assert.equal(tiles[3].querySelector('[aria-hidden="true"]')?.className.includes('text-content-base'), true, 'the +N label uses the DS type scale');
+  assert.equal(tiles[0].getAttribute('aria-label'), null, 'a plain tile is named by its picture');
   await act(async () => {
     (tiles[0] as HTMLElement).click();
     await settle();
@@ -72,6 +75,15 @@ test('twelve pictures show one row of four, the fourth reading +9, and the light
     await settle();
   });
   assert.equal(container.querySelector('[role="dialog"]'), null, 'Escape closes it');
+});
+
+test('five pictures: the fourth tile reads +2 and announces one more picture', async () => {
+  backend(pictures(5));
+  await render({ conversationId: 'c1' });
+  const tiles = bubble().querySelectorAll('button[data-ds-exempt="attachment-thumbnail"]');
+  assert.equal(tiles.length, 4);
+  assert.equal(tiles[3].textContent?.trim(), '+2');
+  assert.equal(tiles[3].getAttribute('aria-label'), 'shot-3.png and one more picture');
 });
 
 test('three pictures are three equal tiles in one row, with no +N', async () => {
