@@ -439,6 +439,10 @@ export const ConversationSidebar = ({
           </Button>
         )}
         {workspaces && workspaceFilterShown && (
+          // The DS trigger sits in a wrapper span that keeps its content width in a
+          // flex row (Select.rfc.md 6.1): this box and its rule let it shrink, so the
+          // header fits the 220 px minimum list (UX round 1 B1, filigran-ui #523).
+          <div className="flex min-w-0 flex-1 [&>span]:min-w-0 [&>span]:flex-1" data-testid="filigran-chat-workspace-filter-box">
           <Select value={filter} onValueChange={setWorkspaceFilter}>
             <SelectTrigger aria-label={t('Filter by workspace')} data-testid="filigran-chat-workspace-filter" className="min-w-0 flex-1">
               <SelectValue />
@@ -453,6 +457,7 @@ export const ConversationSidebar = ({
               ))}
             </SelectContent>
           </Select>
+          </div>
         )}
         {headerActions}
         <ChatIconButton label={t('Hide conversations')} icon={<SidebarIcon size={20} />} aria-expanded onClick={onToggleCollapsed} />
@@ -1062,16 +1067,16 @@ const ConversationRow = ({
       </span>
       {generating && !isEditing && (
         // Under the actions on hover: the More button takes the row's end then.
-        <Spinner size="sm" tone="inherit" label={t('Writing an answer')} className="shrink-0 group-hover:invisible group-focus-within:invisible" />
+        <Spinner size="sm" tone="inherit" label={t('Writing an answer')} className={`shrink-0 ${menuOpen ? 'hidden' : 'group-hover:hidden group-focus-within:hidden'}`} />
       )}
       {!isEditing && (
-        // Over the row's end, not beside it: hidden, the actions keep no
-        // width, so the title and the agent pill take the whole row.
+        // At the row's end, in the flow: hidden, the actions keep no width, so the
+        // title takes the whole row; shown on hover or focus, they take their own
+        // room and the title truncates before them, never under them (UX round 1
+        // B2, filigran-ui #523). Focusing the row shows them, so Tab reaches them.
         <span
           data-row-actions=""
-          className={`absolute inset-y-0 right-1 my-auto flex h-fit items-center gap-0.5 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 ${
-            menuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-          }`}
+          className={`shrink-0 items-center gap-0.5 ${menuOpen ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'}`}
         >
           {actions && (
             // The row selects on click and on Enter/Space: the host's controls keep theirs.

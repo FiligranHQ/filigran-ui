@@ -623,6 +623,28 @@ test('beside the workspace filter, New conversation is an icon button named by i
   await unmount();
 });
 
+test('at the 220 px minimum the workspace filter shrinks: its box and the DS wrapper both give up their content width', async () => {
+  localStorage.clear();
+  const { container, unmount } = await renderTenWorkspaces();
+  const box = container.querySelector('[data-testid="filigran-chat-workspace-filter-box"]');
+  assert.ok(box, 'the filter sits in its own box');
+  for (const cls of ['min-w-0', 'flex-1', '[&>span]:min-w-0', '[&>span]:flex-1']) assert.ok(box!.classList.contains(cls), `box has ${cls}`);
+  const trigger = container.querySelector('[data-testid="filigran-chat-workspace-filter"]');
+  assert.equal(trigger?.parentElement?.parentElement, box, 'the DS wrapper span is the direct child the rule shrinks');
+  await unmount();
+});
+
+test('the row actions take their own room at the end of the row, never laid over the title', async () => {
+  localStorage.clear();
+  const { container, unmount } = await renderTenWorkspaces();
+  const actions = container.querySelector('[role="button"][aria-current] [data-row-actions]');
+  assert.ok(actions, 'a row has its actions');
+  assert.ok(!actions!.classList.contains('absolute'), 'in the flow, not over the title');
+  assert.ok(actions!.classList.contains('shrink-0'), 'the title truncates before them');
+  assert.ok(actions!.classList.contains('group-hover:flex') && actions!.classList.contains('group-focus-within:flex'), 'shown on hover and focus');
+  await unmount();
+});
+
 test('the conversation whose answer is being written ends its row with a labelled spinner, the others none', async () => {
   localStorage.clear();
   const { container, unmount } = await renderTenWorkspaces({ generatingConversationId: 'c1' });
