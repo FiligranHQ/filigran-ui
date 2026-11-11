@@ -8,7 +8,7 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
-## 3.21.0 — unreleased
+## 3.22.0 — 2026-11-11
 
 ### Added
 
