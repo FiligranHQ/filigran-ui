@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Button } from '@filigran/design-system';
 import type {
   ChatArtifact,
   ChatArtifactKind,
@@ -1678,13 +1679,9 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
               <p className="max-w-sm text-[0.8125rem] leading-6 chat-text-secondary-600/60">
                 {refusedRestore.detail ?? t('This conversation could not be loaded.')}
               </p>
-              <button
-                type="button"
-                onClick={retryRefusedRestore}
-                className="chat-radius-sm border chat-border-200/10 px-3 py-1 text-[0.75rem] font-medium chat-text-secondary-700/80 transition-colors hover:chat-surface-hover-100/6"
-              >
+              <Button priority="secondary" size="sm" onClick={retryRefusedRestore}>
                 {t('Retry')}
-              </button>
+              </Button>
             </div>
           ) : messages.length === 0 ? (
             welcome ? (

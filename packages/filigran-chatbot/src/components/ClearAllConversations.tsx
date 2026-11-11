@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@filigran/design-system';
 import type { Translate } from '../types';
 import { ChatIconButton } from './ChatIconButton';
 import { CheckIcon, CloseIcon, TrashIcon } from './icons';
@@ -31,7 +32,7 @@ export function ClearAllConversations({ onClear, action = 'delete', className, t
     <div className={`flex items-center gap-1 ${className}`}>
       {confirming ? (
         <>
-          <span className="flex-1 text-[0.7rem] text-red-600 dark:text-red-400">{words.ask}</span>
+          <span className="flex-1 text-[0.75rem] text-[var(--chat-danger)]">{words.ask}</span>
           <ChatIconButton
             label={words.confirm}
             icon={<CheckIcon size={16} />}
@@ -45,14 +46,9 @@ export function ClearAllConversations({ onClear, action = 'delete', className, t
           <ChatIconButton label={t('Cancel')} icon={<CloseIcon size={16} />} size="sm" onClick={() => setConfirming(false)} />
         </>
       ) : (
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          className="flex items-center gap-1.5 chat-radius-sm px-1 py-0.5 text-[0.7rem] chat-text-muted-400/40 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-        >
-          <TrashIcon size={12} />
+        <Button variant="destructive" priority="tertiary" size="sm" startIcon={<TrashIcon size={16} />} onClick={() => setConfirming(true)}>
           {words.offer}
-        </button>
+        </Button>
       )}
     </div>
   );

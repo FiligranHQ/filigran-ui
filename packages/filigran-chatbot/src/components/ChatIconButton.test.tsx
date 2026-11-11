@@ -102,6 +102,8 @@ const TEXT_BUTTONS = [
   'WorkingFiles.tsx',
   'ContextUsageIndicator.tsx',
   'ChatToggleButton.tsx',
+  'ClearAllConversations.tsx',
+  'ChatPanel.tsx',
 ];
 
 for (const file of TEXT_BUTTONS) {

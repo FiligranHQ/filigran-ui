@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { Button } from '@filigran/design-system';
 import type { ChatConversationSummary, ChatSidebarSearch, ChatWorkspace } from '../types';
 import type { WorkspaceWriteResult } from '../hooks/useWorkspaces';
 import { timeAgo, translate, translateAround } from '../utils';
@@ -316,14 +317,9 @@ export const ConversationSidebar = ({
     <div className="relative shrink-0 flex flex-col border-r chat-border-200/10" style={{ width }}>
       <ListResizeHandle width={width} onResize={resize} t={t} />
       <div className="flex items-center gap-1 px-3 py-3">
-        <button
-          type="button"
-          onClick={() => onNewChat()}
-          className="flex-1 flex items-center gap-2 chat-radius-sm border chat-border-200/10 px-3 py-1.5 text-[0.8125rem] chat-text-secondary-700/70 hover:border-[var(--chat-accent)]/40 hover:text-[var(--chat-accent)] transition-colors"
-        >
-          <EditIcon size={15} />
+        <Button priority="secondary" className="flex-1 justify-start" startIcon={<EditIcon size={16} />} onClick={() => onNewChat()}>
           {t('New conversation')}
-        </button>
+        </Button>
         {headerActions}
         <ChatIconButton label={t('Hide conversations')} icon={<SidebarIcon size={20} />} aria-expanded onClick={onToggleCollapsed} />
       </div>
