@@ -8,6 +8,16 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## 3.23.1 — 2026-11-11
+
+### Changed
+
+- A conversation switched back to is painted at once from the last window the
+  panel restored for it (up to 20 conversations kept), instead of an empty
+  thread while its history is read again. The read-back is still issued and
+  replaces it, and the event stream still waits for it. No visual change
+  (#10910: lab switch median 466 ms before, 244 ms after, old page 314 ms).
+
 ## 3.23.0 — 2026-11-11
 
 ### Changed

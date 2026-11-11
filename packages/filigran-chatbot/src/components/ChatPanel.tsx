@@ -57,7 +57,7 @@ const HIGHLIGHT_MS = 2000;
 /** How long a failure in the conversation list stays said. */
 const LIST_NOTICE_MS = 6000;
 /** What the restore route answers, as far as the panel reads it. */
-interface RestoredHistory {
+export interface RestoredHistory {
   conversation_id?: unknown;
   agent_name?: unknown;
   has_more?: unknown;
@@ -69,6 +69,24 @@ const BACKEND_DOWN_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
 const RESTORE_REFUSED_STATUSES: ReadonlySet<number> = new Set([401, 403]);
 const RESTORE_RETRY_BASE_MS = 5000;
 const RESTORE_RETRY_MAX_MS = 60000;
+/** How many restored windows a panel keeps, to paint a conversation switched back to at once. */
+export const RESTORED_WINDOWS_KEPT = 20;
+
+/**
+ * The last window restored per conversation, newest last: a conversation
+ * switched back to is painted from it at once, then replaced by the read-back
+ * that is always issued. Never a source of truth: nothing is sent, and the
+ * event stream does not open, before the read-back lands.
+ */
+export function rememberRestoredWindow(windows: Map<string, RestoredHistory>, id: string, data: RestoredHistory): void {
+  windows.delete(id);
+  windows.set(id, data);
+  while (windows.size > RESTORED_WINDOWS_KEPT) {
+    const oldest = windows.keys().next().value;
+    if (oldest === undefined) break;
+    windows.delete(oldest);
+  }
+}
 
 /**
  * The panel, its requests reporting the end of the user's session
@@ -1098,6 +1116,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
   // merely interrupted by a re-render still lands. Re-set to true on setup so
   // StrictMode's mount → unmount → remount of the same instance leaves it true.
   const isMountedRef = useRef(true);
+  const restoredWindowsRef = useRef(new Map<string, RestoredHistory>());
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -1162,6 +1181,13 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
     const requestedHeadersKey = requestHeadersKey(requestHeaders);
     // What a turn that ended out of sight is told of this read-back (see `settleUnseenEnd`).
     const readFor = historyReloadNonce;
+    // A conversation switched back to shows its last window while the read-back
+    // runs (#10910: the switch waited on the network with an empty thread).
+    const kept = hostReload ? undefined : restoredWindowsRef.current.get(requestedConversationId);
+    if (kept?.messages?.length && messagesRef.current.length === 0) {
+      setShownId(requestedConversationId);
+      setMessages(parseRestoredMessages(kept.messages));
+    }
 
     panelFetch(sessionsUrl, {
       method: 'POST',
@@ -1231,6 +1257,7 @@ const ChatPanelBody = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatP
           applyRestoredHistory(data.conversation_id, data, { merge: false, afterTurn: false, keepEarlierOffer: false });
           return;
         }
+        rememberRestoredWindow(restoredWindowsRef.current, requestedConversationId, data);
         // The agent read back is the conversation's, as when it is opened.
         if (hostReload) forgetTransfer();
         // Read back for a relayed turn the reopened event stream replayed: the
