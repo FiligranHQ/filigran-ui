@@ -313,7 +313,11 @@ export function parseRestEvent(evt: Record<string, unknown>, ctx: ProtocolContex
     const provisional = evt.provisional === true ? (true as const) : undefined;
     // A stored end describes the stored answer: the host reads it as it came.
     const end = { ...(messageId ? { messageId, raw: { ...evt } } : {}), ...(provisional ? { provisional } : {}) };
-    return type === 'error' ? { action: 'error', content: (evt.content as string) || '', ...end } : { action: 'cancelled', ...end };
+    if (type === 'cancelled') return { action: 'cancelled', ...end };
+    // A system end (`interrupted`: the platform tore the turn down; `lost`:
+    // its runner vanished) says so in `reason`: its notice is no answer text.
+    const reason = optionalString(evt.reason);
+    return { action: 'error', content: (evt.content as string) || '', ...end, ...(reason ? { reason } : {}) };
   }
   // The user's session ended: the backend closes the stream after this frame,
   // and no turn on screen can go on for this user.

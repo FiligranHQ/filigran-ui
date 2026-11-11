@@ -2136,6 +2136,14 @@ export function useChat({
           // The backend reported a failure of its own, so the generic apology
           // rather than "check the configuration": the connection plainly worked.
           ended = 'error';
+          if (parsed.reason) {
+            // A system end (a restart cut the turn, its runner was lost): its
+            // notice is no answer. What was streamed stays as it is (the stored
+            // reply read back replaces it, drawn by the host's interrupted-turn
+            // card); an empty bubble goes.
+            setMessages((prev) => prev.filter((m) => !(m.id === segId && !m.content)));
+            return 'end';
+          }
           setMessages((prev) =>
             prev.map((m) => (m.id === segId ? { ...m, content: parsed.content || t('Sorry, an error occurred. Please try again.') } : m)),
           );

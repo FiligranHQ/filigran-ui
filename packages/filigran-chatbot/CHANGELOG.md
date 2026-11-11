@@ -8,6 +8,17 @@ the versions follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 This file starts at 3.10.0; earlier releases are on the
 [releases page](https://github.com/FiligranHQ/filigran-ui/releases).
 
+## Unreleased
+
+### Fixed
+
+- A turn the backend ends with a system `error` frame (`reason` `interrupted`: a
+  platform restart cut it; `lost`: its runner vanished) no longer writes the
+  frame's notice ("The response was interrupted before it completed.") into the
+  answer bubble: what was streamed stays, an empty bubble goes, and the host's
+  interrupted-turn card says the rest once the stored reply is read back. The
+  parsed `error` action now carries `reason`. A real agent error is unchanged.
+
 ## 3.23.1 — 2026-11-11
 
 ### Changed
